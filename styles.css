@@ -1,0 +1,232 @@
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f2937;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: inherit;
+}
+
+.app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.timer-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.timer-header {
+  margin-bottom: 30px;
+}
+
+.phase-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.session-counter {
+  font-size: 1.1rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.timer-display {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 40px 0;
+}
+
+.circular-progress {
+  position: relative;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  stroke-linecap: round;
+}
+
+.time-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.time-text {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1f2937;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timer-controls {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 30px 0;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 80px;
+}
+
+.control-btn.primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.control-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+}
+
+.control-btn.secondary {
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.control-btn.secondary:hover {
+  background: rgba(107, 114, 128, 0.2);
+  transform: translateY(-1px);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
+
+.status-indicator {
+  margin-top: 20px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.running {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.paused {
+  background: rgba(251, 191, 36, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.status-badge.stopped {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+@media (max-width: 480px) {
+  .timer-container {
+    padding: 24px;
+    margin: 10px;
+  }
+  
+  .phase-title {
+    font-size: 2rem;
+  }
+  
+  .time-text {
+    font-size: 2.5rem;
+  }
+  
+  .timer-controls {
+    gap: 12px;
+  }
+  
+  .control-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    min-width: 70px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f9fafb;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  }
+  
+  .timer-container {
+    background: rgba(15, 23, 42, 0.95);
+    color: #f9fafb;
+  }
+  
+  .phase-title {
+    color: #f9fafb;
+  }
+  
+  .time-text {
+    color: #f9fafb;
+  }
+  
+  .control-btn.secondary {
+    background: rgba(148, 163, 184, 0.1);
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+  
+  .control-btn.secondary:hover {
+    background: rgba(148, 163, 184, 0.2);
+  }
+}
