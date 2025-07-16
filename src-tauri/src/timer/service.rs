@@ -8,12 +8,12 @@ use super::types::{Phase, TimerState, TimerStatus};
 use super::notifications::send_phase_notification;
 use crate::task::types::Task;
 
-pub struct TimerManager {
+pub struct TimerService {
     state: Arc<RwLock<TimerState>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
-impl TimerManager {
+impl TimerService {
     pub fn new() -> Self {
         Self {
             state: Arc::new(RwLock::new(TimerState::default())),

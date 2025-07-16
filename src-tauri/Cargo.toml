@@ -22,11 +22,27 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+rodio = "0.21.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["time", "sync", "rt-multi-thread"] }
+tokio = { version = "1", features = ["time", "sync", "rt-multi-thread", "test-util"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.0", features = ["v4"] }
 async-trait = "0.1"
-thiserror = "1.0"
+thiserror = "2.0.12"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+assert_matches = "1.5"
+serial_test = "3.0"
+tokio = { version = "1", features = ["test-util", "macros"] }
+
+[features]
+default = []
+
+[[test]]
+name = "main"
+path = "tests/main.rs"
 
