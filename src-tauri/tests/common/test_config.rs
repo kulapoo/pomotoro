@@ -4,7 +4,6 @@ use pomotoro_lib::task::types::{TaskConfig, AudioConfig};
 use std::sync::RwLock;
 use std::time::Duration;
 
-/// In-memory configuration repository for testing
 pub struct TestConfigRepository {
     config: RwLock<GlobalConfig>,
 }
@@ -47,7 +46,6 @@ impl ConfigRepositoryTrait for TestConfigRepository {
     }
 }
 
-/// Builder for creating test configurations
 pub struct TestConfigBuilder {
     config: GlobalConfig,
 }
@@ -155,7 +153,6 @@ impl Default for TestConfigBuilder {
     }
 }
 
-/// Test helper functions for configuration
 pub struct ConfigTestUtils;
 
 impl ConfigTestUtils {

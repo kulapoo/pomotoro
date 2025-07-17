@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use pomotoro_lib::audio::types::*;
 
-/// Mock audio manager for testing that doesn't require actual audio hardware
 pub struct MockAudioManager {
     library: AudioLibrary,
     active_playbacks: Arc<Mutex<HashMap<String, MockPlayback>>>,
@@ -156,7 +155,6 @@ impl MockAudioManager {
         playbacks.retain(|_, playback| playback.is_playing || playback.is_paused);
     }
 
-    // Test-specific methods
     pub fn get_playback_count(&self) -> usize {
         let playbacks = self.active_playbacks.lock().unwrap();
         playbacks.len()

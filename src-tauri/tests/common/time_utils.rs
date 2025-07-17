@@ -4,37 +4,30 @@ use tokio::time::{sleep, timeout};
 pub struct TimeUtils;
 
 impl TimeUtils {
-    /// Convert minutes to Duration
     pub fn minutes(minutes: u64) -> Duration {
         Duration::from_secs(minutes * 60)
     }
 
-    /// Convert seconds to Duration
     pub fn seconds(seconds: u64) -> Duration {
         Duration::from_secs(seconds)
     }
 
-    /// Convert milliseconds to Duration
     pub fn millis(millis: u64) -> Duration {
         Duration::from_millis(millis)
     }
 
-    /// Sleep for the specified duration
     pub async fn sleep_for(duration: Duration) {
         sleep(duration).await;
     }
 
-    /// Sleep for the specified number of milliseconds
     pub async fn sleep_millis(millis: u64) {
         sleep(Duration::from_millis(millis)).await;
     }
 
-    /// Sleep for the specified number of seconds
     pub async fn sleep_secs(secs: u64) {
         sleep(Duration::from_secs(secs)).await;
     }
 
-    /// Run an async operation with a timeout
     pub async fn with_timeout<F, T>(duration: Duration, future: F) -> Result<T, tokio::time::error::Elapsed>
     where
         F: std::future::Future<Output = T>,
@@ -86,7 +79,6 @@ impl TimeUtils {
     }
 }
 
-/// Macro to create a Duration from minutes
 #[macro_export]
 macro_rules! minutes {
     ($minutes:expr) => {
@@ -94,7 +86,6 @@ macro_rules! minutes {
     };
 }
 
-/// Macro to create a Duration from seconds
 #[macro_export]
 macro_rules! seconds {
     ($seconds:expr) => {
@@ -102,7 +93,6 @@ macro_rules! seconds {
     };
 }
 
-/// Macro to create a Duration from milliseconds
 #[macro_export]
 macro_rules! millis {
     ($millis:expr) => {
@@ -132,7 +122,6 @@ macro_rules! assert_duration_approx {
     };
 }
 
-/// Macro to assert that a duration is approximately equal with default tolerance
 #[macro_export]
 macro_rules! assert_duration_approx_default {
     ($actual:expr, $expected:expr) => {

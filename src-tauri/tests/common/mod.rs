@@ -1,4 +1,3 @@
-// pub mod fixtures; // Temporarily disabled due to structural changes
 pub mod app_builder;
 pub mod mock_audio;
 pub mod test_config;
