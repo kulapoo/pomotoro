@@ -69,7 +69,7 @@ pub async fn update_default_cycle_length(
 
 #[tauri::command]
 pub async fn update_app_preferences(
-    preferences: super::types::AppPreferences,
+    preferences: super::models::AppPreferences,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<GlobalConfig, String> {
     let mut config = config_repo
@@ -87,7 +87,7 @@ pub async fn update_app_preferences(
 
 #[tauri::command]
 pub async fn update_notification_preferences(
-    preferences: super::types::NotificationPreferences,
+    preferences: super::models::NotificationPreferences,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<GlobalConfig, String> {
     let mut config = config_repo
@@ -105,7 +105,7 @@ pub async fn update_notification_preferences(
 
 #[tauri::command]
 pub async fn update_ui_preferences(
-    preferences: super::types::UiPreferences,
+    preferences: super::models::UiPreferences,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<GlobalConfig, String> {
     let mut config = config_repo
@@ -123,7 +123,7 @@ pub async fn update_ui_preferences(
 
 #[tauri::command]
 pub async fn update_default_audio_config(
-    audio_config: crate::task::types::AudioConfig,
+    audio_config: crate::task::models::AudioConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<GlobalConfig, String> {
     let mut config = config_repo
@@ -144,7 +144,7 @@ pub async fn get_effective_task_config(
     task_id: Option<uuid::Uuid>,
     task_repo: State<'_, crate::task::TaskRepository>,
     config_repo: State<'_, ConfigRepository>,
-) -> Result<crate::task::types::TaskConfig, String> {
+) -> Result<crate::task::models::TaskConfig, String> {
     let global_config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;
@@ -163,7 +163,7 @@ pub async fn get_effective_audio_config(
     task_id: Option<uuid::Uuid>,
     task_repo: State<'_, crate::task::TaskRepository>,
     config_repo: State<'_, ConfigRepository>,
-) -> Result<crate::task::types::AudioConfig, String> {
+) -> Result<crate::task::models::AudioConfig, String> {
     let global_config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;

@@ -1,5 +1,5 @@
 use tauri::State;
-use super::types::{Task, TaskId, TaskConfig, AudioConfig};
+use super::models::{Task, TaskId, TaskConfig, AudioConfig};
 use super::repository::TaskRepository;
 
 #[derive(serde::Serialize, serde::Deserialize)]

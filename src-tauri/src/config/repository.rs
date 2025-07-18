@@ -1,68 +1,48 @@
-use super::types::GlobalConfig;
+use super::models::GlobalConfig;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use serde_json;
 use std::fs;
 use std::io::{self, Write};
 use tauri::{AppHandle, Manager};
+use thiserror::Error;
 
-pub type ConfigRepository = Arc<dyn ConfigRepositoryTrait + Send + Sync>;
+pub type ConfigRepository = Arc<dyn ConfigRepo + Send + Sync>;
 
-pub trait ConfigRepositoryTrait {
+pub trait ConfigRepo {
     fn get_config(&self) -> Result<GlobalConfig, ConfigError>;
     fn save_config(&self, config: &GlobalConfig) -> Result<(), ConfigError>;
     fn reset_to_defaults(&self) -> Result<GlobalConfig, ConfigError>;
 }
 
-#[derive(Debug)]
-pub enum ConfigError {
-    IoError(io::Error),
-    SerializationError(serde_json::Error),
-    ConfigNotFound,
-    InvalidConfig,
-}
-
-impl From<io::Error> for ConfigError {
-    fn from(error: io::Error) -> Self {
-        ConfigError::IoError(error)
-    }
-}
-
-impl From<serde_json::Error> for ConfigError {
-    fn from(error: serde_json::Error) -> Self {
-        ConfigError::SerializationError(error)
-    }
-}
-
-impl std::fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConfigError::IoError(e) => write!(f, "IO error: {}", e),
-            ConfigError::SerializationError(e) => write!(f, "Serialization error: {}", e),
-            ConfigError::ConfigNotFound => write!(f, "Configuration file not found"),
-            ConfigError::InvalidConfig => write!(f, "Invalid configuration"),
-        }
-    }
-}
-
-impl std::error::Error for ConfigError {}
-
-pub struct FileConfigRepository {
+pub struct FileConfigRepo {
     config_path: PathBuf,
     cache: Arc<RwLock<Option<GlobalConfig>>>,
 }
 
-impl FileConfigRepository {
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("IO error: {0}")]
+    IoError(#[from] io::Error),
+    #[error("Serialization error: {0}")]
+    SerializationError(#[from] serde_json::Error),
+    #[error("Configuration file not found")]
+    ConfigNotFound,
+    #[error("Invalid configuration")]
+    InvalidConfig,
+}
+
+impl FileConfigRepo {
     pub fn new(app_handle: &AppHandle) -> Result<Self, ConfigError> {
         let config_dir = app_handle
             .path()
             .app_config_dir()
             .map_err(|_| ConfigError::InvalidConfig)?;
-        
+
         fs::create_dir_all(&config_dir)?;
-        
+
         let config_path = config_dir.join("config.json");
-        
+
         Ok(Self {
             config_path,
             cache: Arc::new(RwLock::new(None)),
@@ -88,7 +68,6 @@ impl FileConfigRepository {
         Ok(())
     }
 
-
     fn update_cache(&self, config: &GlobalConfig) {
         if let Ok(mut cache) = self.cache.write() {
             *cache = Some(config.clone());
@@ -100,7 +79,7 @@ impl FileConfigRepository {
     }
 }
 
-impl ConfigRepositoryTrait for FileConfigRepository {
+impl ConfigRepo for FileConfigRepo {
     fn get_config(&self) -> Result<GlobalConfig, ConfigError> {
         if let Some(cached_config) = self.get_cached() {
             return Ok(cached_config);
@@ -133,11 +112,11 @@ impl ConfigRepositoryTrait for FileConfigRepository {
     }
 }
 
-pub struct InMemoryConfigRepository {
+pub struct InMemoryConfigRepo {
     config: Arc<RwLock<GlobalConfig>>,
 }
 
-impl InMemoryConfigRepository {
+impl InMemoryConfigRepo {
     pub fn new() -> Self {
         Self {
             config: Arc::new(RwLock::new(GlobalConfig::default())),
@@ -145,7 +124,7 @@ impl InMemoryConfigRepository {
     }
 }
 
-impl ConfigRepositoryTrait for InMemoryConfigRepository {
+impl ConfigRepo for InMemoryConfigRepo {
     fn get_config(&self) -> Result<GlobalConfig, ConfigError> {
         self.config
             .read()

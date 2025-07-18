@@ -14,7 +14,7 @@ use task::{
     get_tasks_by_tags, complete_task_session, reset_task_sessions
 };
 use config::{
-    FileConfigRepository, ConfigRepository,
+    FileConfigRepo, ConfigRepository,
     get_global_config, save_global_config, reset_global_config_to_defaults,
     update_default_timings, update_default_cycle_length, update_app_preferences,
     update_notification_preferences, update_ui_preferences, update_default_audio_config,
@@ -39,7 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let config_repository: ConfigRepository = Arc::new(
-                FileConfigRepository::new(app.handle())
+                FileConfigRepo::new(app.handle())
                     .expect("Failed to initialize config repository")
             );
             app.manage(config_repository);

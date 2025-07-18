@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use uuid::Uuid;
+use super::{TaskConfig, AudioConfig, TaskStatus};
 
 pub type TaskId = Uuid;
 
@@ -17,58 +17,6 @@ pub struct Task {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
     pub status: TaskStatus,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskConfig {
-    pub work_duration: Duration,
-    pub short_break_duration: Duration,
-    pub long_break_duration: Duration,
-    pub sessions_until_long_break: u8,
-    pub enable_screen_blocking: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AudioConfig {
-    pub work_notification_sound: Option<String>,
-    pub break_notification_sound: Option<String>,
-    pub background_sound: Option<String>,
-    pub volume: f32,
-    pub enable_background_audio: bool,
-    pub muted: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TaskStatus {
-    Active,
-    Queued,
-    Completed,
-    Paused,
-}
-
-impl Default for TaskConfig {
-    fn default() -> Self {
-        Self {
-            work_duration: Duration::from_secs(25 * 60),
-            short_break_duration: Duration::from_secs(5 * 60),
-            long_break_duration: Duration::from_secs(15 * 60),
-            sessions_until_long_break: 4,
-            enable_screen_blocking: false,
-        }
-    }
-}
-
-impl Default for AudioConfig {
-    fn default() -> Self {
-        Self {
-            work_notification_sound: None,
-            break_notification_sound: None,
-            background_sound: None,
-            volume: 0.7,
-            enable_background_audio: false,
-            muted: false,
-        }
-    }
 }
 
 impl Task {

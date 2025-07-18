@@ -5,7 +5,7 @@ pub mod time_utils;
 
 use std::sync::Arc;
 use pomotoro_lib::task::{InMemoryTaskRepository, TaskRepository};
-use pomotoro_lib::config::{InMemoryConfigRepository, ConfigRepository};
+use pomotoro_lib::config::{InMemoryConfigRepo, ConfigRepository};
 use pomotoro_lib::timer::TimerService;
 use pomotoro_lib::audio::AudioService;
 use std::sync::Mutex;
@@ -24,7 +24,7 @@ impl TestContext {
         let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
 
         let task_repo: TaskRepository = Arc::new(InMemoryTaskRepository::with_default_task());
-        let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepo::new());
         let timer_manager = Arc::new(TimerService::new());
         let audio_manager = Arc::new(Mutex::new(
             AudioService::new().expect("Failed to create audio manager")
@@ -42,7 +42,7 @@ impl TestContext {
     pub fn new_with_custom_task_repo(task_repo: TaskRepository) -> Self {
         let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
 
-        let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepo::new());
         let timer_manager = Arc::new(TimerService::new());
         let audio_manager = Arc::new(Mutex::new(
             AudioService::new().expect("Failed to create audio manager")

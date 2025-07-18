@@ -2,15 +2,15 @@ use std::time::Duration;
 use std::sync::Arc;
 use pomotoro_lib::timer::TimerService;
 use pomotoro_lib::task::{InMemoryTaskRepository, TaskRepository};
-use pomotoro_lib::config::{InMemoryConfigRepository, ConfigRepository};
-use pomotoro_lib::timer::types::{Phase, TimerStatus};
-use pomotoro_lib::task::types::TaskStatus;
+use pomotoro_lib::config::{InMemoryConfigRepo, ConfigRepository};
+use pomotoro_lib::timer::models::{Phase, TimerStatus};
+use pomotoro_lib::task::models::TaskStatus;
 
 // Helper function to create test context
 async fn create_test_context() -> (Arc<TimerService>, TaskRepository, ConfigRepository) {
     let timer_manager = Arc::new(TimerService::new());
     let task_repo: TaskRepository = Arc::new(InMemoryTaskRepository::with_default_task());
-    let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepository::new());
+    let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepo::new());
 
     (timer_manager, task_repo, config_repo)
 }

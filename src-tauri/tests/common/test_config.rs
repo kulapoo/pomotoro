@@ -1,6 +1,6 @@
-use pomotoro_lib::config::types::*;
+use pomotoro_lib::config::models::*;
 use pomotoro_lib::config::repository::*;
-use pomotoro_lib::task::types::{TaskConfig, AudioConfig};
+use pomotoro_lib::task::models::{TaskConfig, AudioConfig};
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -27,7 +27,7 @@ impl TestConfigRepository {
     }
 }
 
-impl ConfigRepositoryTrait for TestConfigRepository {
+impl pomotoro_lib::config::repository::ConfigRepo for TestConfigRepository {
     fn get_config(&self) -> Result<GlobalConfig, ConfigError> {
         let config = self.config.read().map_err(|_| ConfigError::InvalidConfig)?;
         Ok(config.clone())
@@ -205,15 +205,15 @@ impl ConfigTestUtils {
         assert_eq!(actual.default_task_config.long_break_duration, expected.default_task_config.long_break_duration);
         assert_eq!(actual.default_task_config.sessions_until_long_break, expected.default_task_config.sessions_until_long_break);
         assert_eq!(actual.default_task_config.enable_screen_blocking, expected.default_task_config.enable_screen_blocking);
-        
+
         assert_eq!(actual.default_audio_config.volume, expected.default_audio_config.volume);
         assert_eq!(actual.default_audio_config.enable_background_audio, expected.default_audio_config.enable_background_audio);
         assert_eq!(actual.default_audio_config.muted, expected.default_audio_config.muted);
-        
+
         assert_eq!(actual.app_preferences.task_cycling_behavior, expected.app_preferences.task_cycling_behavior);
         assert_eq!(actual.app_preferences.auto_start_work_after_break, expected.app_preferences.auto_start_work_after_break);
         assert_eq!(actual.app_preferences.auto_start_breaks, expected.app_preferences.auto_start_breaks);
-        
+
         assert_eq!(actual.ui_preferences.theme, expected.ui_preferences.theme);
         assert_eq!(actual.ui_preferences.always_on_top, expected.ui_preferences.always_on_top);
         assert_eq!(actual.ui_preferences.compact_mode, expected.ui_preferences.compact_mode);

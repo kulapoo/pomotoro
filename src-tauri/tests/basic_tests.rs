@@ -3,15 +3,15 @@ use std::time::Duration;
 
 use pomotoro_lib::timer::TimerService;
 use pomotoro_lib::task::{InMemoryTaskRepository, TaskRepository};
-use pomotoro_lib::config::{InMemoryConfigRepository, ConfigRepository};
-use pomotoro_lib::timer::types::{Phase, TimerStatus};
-use pomotoro_lib::task::types::TaskStatus;
+use pomotoro_lib::config::{InMemoryConfigRepo, ConfigRepository};
+use pomotoro_lib::timer::models::{Phase, TimerStatus};
+use pomotoro_lib::task::models::TaskStatus;
 
 // Helper to create test context
 fn create_test_context() -> (Arc<TimerService>, TaskRepository, ConfigRepository) {
     let timer_manager = Arc::new(TimerService::new());
     let task_repo: TaskRepository = Arc::new(InMemoryTaskRepository::with_default_task());
-    let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepository::new());
+    let config_repo: ConfigRepository = Arc::new(InMemoryConfigRepo::new());
 
     (timer_manager, task_repo, config_repo)
 }
@@ -122,7 +122,7 @@ async fn test_task_crud_operations() {
     let (_timer_manager, task_repo, _config_repo) = create_test_context();
 
     // Create a custom task
-    let mut custom_task = pomotoro_lib::task::types::Task::new("Custom Task".to_string(), 2);
+    let mut custom_task = pomotoro_lib::task::models::Task::new("Custom Task".to_string(), 2);
     custom_task = custom_task.with_tags(vec!["work".to_string(), "test".to_string()]);
 
     // Test create
@@ -222,7 +222,7 @@ async fn test_task_session_completion() {
     let (_timer_manager, task_repo, _config_repo) = create_test_context();
 
     // Create a task with 2 max sessions
-    let mut task = pomotoro_lib::task::types::Task::new("Limited Task".to_string(), 2);
+    let mut task = pomotoro_lib::task::models::Task::new("Limited Task".to_string(), 2);
     task_repo.create(task.clone()).await.unwrap();
 
     // Complete first session
@@ -244,8 +244,8 @@ async fn test_task_session_completion() {
 
 #[test]
 fn test_basic_types_and_enums() {
-    use pomotoro_lib::timer::types::{Phase, TimerStatus};
-    use pomotoro_lib::task::types::TaskStatus;
+    use pomotoro_lib::timer::models::{Phase, TimerStatus};
+    use pomotoro_lib::task::models::TaskStatus;
 
     // Test Phase enum
     assert_eq!(Phase::Work, Phase::Work);

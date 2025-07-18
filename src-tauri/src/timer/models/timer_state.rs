@@ -1,19 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::task::types::{TaskId, Task};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Phase {
-    Work,
-    ShortBreak,
-    LongBreak,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TimerStatus {
-    Stopped,
-    Running,
-    Paused,
-}
+use crate::task::models::{TaskId, Task};
+use super::enums::{Phase, TimerStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimerState {
@@ -93,7 +80,6 @@ impl TimerState {
         self.status = TimerStatus::Stopped;
     }
 
-
     pub fn switch_task(&mut self, new_task_id: TaskId, task: Option<&Task>) {
         self.active_task_id = Some(new_task_id);
         self.task_session_count = 0;
@@ -106,5 +92,4 @@ impl TimerState {
             self.remaining_seconds = self.get_phase_duration(task);
         }
     }
-
 }

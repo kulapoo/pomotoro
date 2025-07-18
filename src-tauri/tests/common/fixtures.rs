@@ -1,5 +1,5 @@
-use pomotoro_lib::task::types::{Task, TaskConfig, AudioConfig};
-use pomotoro_lib::config::types::{GlobalConfig, AppPreferences, NotificationPreferences, UiPreferences, TaskCyclingBehavior};
+use pomotoro_lib::task::models::{Task, TaskConfig, AudioConfig};
+use pomotoro_lib::config::models::{GlobalConfig, AppPreferences, NotificationPreferences, UiPreferences, TaskCyclingBehavior};
 use std::time::Duration;
 use uuid::Uuid;
 

@@ -54,13 +54,13 @@ impl TestApp {
         tokio::time::sleep(duration).await;
     }
 
-    pub async fn get_timer_state(&self) -> Result<pomotoro_lib::timer::types::TimerState, String> {
+    pub async fn get_timer_state(&self) -> Result<pomotoro_lib::timer::models::TimerState, String> {
         let timer_manager = self.timer_manager();
         let state = timer_manager.get_state().await;
         Ok(state)
     }
 
-    pub async fn start_timer(&self) -> Result<pomotoro_lib::timer::types::TimerState, String> {
+    pub async fn start_timer(&self) -> Result<pomotoro_lib::timer::models::TimerState, String> {
         let timer_manager = self.timer_manager();
         let task_repo = self.task_repo();
 
@@ -68,18 +68,18 @@ impl TestApp {
         let default_task = tasks.first().ok_or("No default task found")?;
 
         timer_manager.switch_task(default_task.id, Some(default_task)).await;
-        timer_manager.set_status(pomotoro_lib::timer::types::TimerStatus::Running).await;
+        timer_manager.set_status(pomotoro_lib::timer::models::TimerStatus::Running).await;
 
         Ok(timer_manager.get_state().await)
     }
 
-    pub async fn pause_timer(&self) -> Result<pomotoro_lib::timer::types::TimerState, String> {
+    pub async fn pause_timer(&self) -> Result<pomotoro_lib::timer::models::TimerState, String> {
         let timer_manager = self.timer_manager();
-        timer_manager.set_status(pomotoro_lib::timer::types::TimerStatus::Paused).await;
+        timer_manager.set_status(pomotoro_lib::timer::models::TimerStatus::Paused).await;
         Ok(timer_manager.get_state().await)
     }
 
-    pub async fn reset_timer(&self) -> Result<pomotoro_lib::timer::types::TimerState, String> {
+    pub async fn reset_timer(&self) -> Result<pomotoro_lib::timer::models::TimerState, String> {
         let timer_manager = self.timer_manager();
         let task_repo = self.task_repo();
 
@@ -87,20 +87,20 @@ impl TestApp {
         let default_task = tasks.first().ok_or("No default task found")?;
 
         timer_manager.reset_current_phase(Some(default_task)).await;
-        timer_manager.set_status(pomotoro_lib::timer::types::TimerStatus::Stopped).await;
+        timer_manager.set_status(pomotoro_lib::timer::models::TimerStatus::Stopped).await;
 
         Ok(timer_manager.get_state().await)
     }
 
-    pub async fn create_task(&self, task: pomotoro_lib::task::types::Task) -> Result<(), String> {
+    pub async fn create_task(&self, task: pomotoro_lib::task::models::Task) -> Result<(), String> {
         self.task_repo().create(task).await.map_err(|e| e.to_string())
     }
 
-    pub async fn get_all_tasks(&self) -> Result<Vec<pomotoro_lib::task::types::Task>, String> {
+    pub async fn get_all_tasks(&self) -> Result<Vec<pomotoro_lib::task::models::Task>, String> {
         self.task_repo().get_all().await.map_err(|e| e.to_string())
     }
 
-    pub async fn switch_task(&self, task_id: uuid::Uuid) -> Result<pomotoro_lib::timer::types::TimerState, String> {
+    pub async fn switch_task(&self, task_id: uuid::Uuid) -> Result<pomotoro_lib::timer::models::TimerState, String> {
         let timer_manager = self.timer_manager();
         let task_repo = self.task_repo();
 
@@ -111,7 +111,7 @@ impl TestApp {
         Ok(timer_manager.get_state().await)
     }
 
-    pub async fn complete_task_session(&self, task_id: uuid::Uuid) -> Result<pomotoro_lib::task::types::Task, String> {
+    pub async fn complete_task_session(&self, task_id: uuid::Uuid) -> Result<pomotoro_lib::task::models::Task, String> {
         let task_repo = self.task_repo();
 
         let mut task = task_repo.get_by_id(task_id).await
@@ -124,11 +124,11 @@ impl TestApp {
         Ok(task)
     }
 
-    pub async fn save_global_config(&self, config: pomotoro_lib::config::types::GlobalConfig) -> Result<(), String> {
+    pub async fn save_global_config(&self, config: pomotoro_lib::config::models::GlobalConfig) -> Result<(), String> {
         self.config_repo().save_config(&config).map_err(|e| e.to_string())
     }
 
-    pub async fn get_global_config(&self) -> Result<pomotoro_lib::config::types::GlobalConfig, String> {
+    pub async fn get_global_config(&self) -> Result<pomotoro_lib::config::models::GlobalConfig, String> {
         self.config_repo().get_config().map_err(|e| e.to_string())
     }
 }

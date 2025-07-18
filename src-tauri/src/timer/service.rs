@@ -4,9 +4,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 
-use super::types::{Phase, TimerState, TimerStatus};
+use super::models::{Phase, TimerState, TimerStatus};
 use super::notifications::send_phase_notification;
-use crate::task::types::Task;
+use crate::task::models::Task;
 
 pub struct TimerService {
     state: Arc<RwLock<TimerState>>,
@@ -160,7 +160,7 @@ impl TimerService {
         (current_phase, state.phase.clone())
     }
 
-    pub async fn switch_task(&self, task_id: crate::task::types::TaskId, task: Option<&Task>) {
+    pub async fn switch_task(&self, task_id: crate::task::models::TaskId, task: Option<&Task>) {
         let mut state = self.state.write().await;
         state.switch_task(task_id, task);
     }
