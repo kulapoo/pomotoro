@@ -5,17 +5,17 @@ use std::sync::RwLock;
 use std::time::Duration;
 
 pub struct TestConfigRepository {
-    config: RwLock<GlobalConfig>,
+    config: RwLock<Config>,
 }
 
 impl TestConfigRepository {
     pub fn new() -> Self {
         Self {
-            config: RwLock::new(GlobalConfig::default()),
+            config: RwLock::new(Config::default()),
         }
     }
 
-    pub fn with_config(config: GlobalConfig) -> Self {
+    pub fn with_config(config: Config) -> Self {
         Self {
             config: RwLock::new(config),
         }
@@ -23,37 +23,37 @@ impl TestConfigRepository {
 
     pub fn reset_to_defaults(&self) {
         let mut config = self.config.write().unwrap();
-        *config = GlobalConfig::default();
+        *config = Config::default();
     }
 }
 
 impl pomotoro_lib::config::repository::ConfigRepo for TestConfigRepository {
-    fn get_config(&self) -> Result<GlobalConfig, ConfigError> {
+    fn get_config(&self) -> Result<Config, ConfigError> {
         let config = self.config.read().map_err(|_| ConfigError::InvalidConfig)?;
         Ok(config.clone())
     }
 
-    fn save_config(&self, config: &GlobalConfig) -> Result<(), ConfigError> {
+    fn save_config(&self, config: &Config) -> Result<(), ConfigError> {
         let mut stored_config = self.config.write().map_err(|_| ConfigError::InvalidConfig)?;
         *stored_config = config.clone();
         Ok(())
     }
 
-    fn reset_to_defaults(&self) -> Result<GlobalConfig, ConfigError> {
+    fn reset_to_defaults(&self) -> Result<Config, ConfigError> {
         let mut config = self.config.write().map_err(|_| ConfigError::InvalidConfig)?;
-        *config = GlobalConfig::default();
+        *config = Config::default();
         Ok(config.clone())
     }
 }
 
 pub struct TestConfigBuilder {
-    config: GlobalConfig,
+    config: Config,
 }
 
 impl TestConfigBuilder {
     pub fn new() -> Self {
         Self {
-            config: GlobalConfig::default(),
+            config: Config::default(),
         }
     }
 
@@ -142,7 +142,7 @@ impl TestConfigBuilder {
         self
     }
 
-    pub fn build(self) -> GlobalConfig {
+    pub fn build(self) -> Config {
         self.config
     }
 }
@@ -156,7 +156,7 @@ impl Default for TestConfigBuilder {
 pub struct ConfigTestUtils;
 
 impl ConfigTestUtils {
-    pub fn create_fast_config() -> GlobalConfig {
+    pub fn create_fast_config() -> Config {
         TestConfigBuilder::new()
             .with_work_duration(Duration::from_secs(5))
             .with_short_break_duration(Duration::from_secs(2))
@@ -165,7 +165,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_slow_config() -> GlobalConfig {
+    pub fn create_slow_config() -> Config {
         TestConfigBuilder::new()
             .with_work_duration(Duration::from_secs(60 * 60)) // 1 hour
             .with_short_break_duration(Duration::from_secs(30 * 60)) // 30 minutes
@@ -174,7 +174,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_silent_config() -> GlobalConfig {
+    pub fn create_silent_config() -> Config {
         TestConfigBuilder::new()
             .with_muted_audio(true)
             .with_background_audio(false)
@@ -183,7 +183,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_auto_advance_config() -> GlobalConfig {
+    pub fn create_auto_advance_config() -> Config {
         TestConfigBuilder::new()
             .with_task_cycling(TaskCyclingBehavior::AutoAdvance)
             .with_auto_start_work_after_break(true)
@@ -191,7 +191,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_minimal_ui_config() -> GlobalConfig {
+    pub fn create_minimal_ui_config() -> Config {
         TestConfigBuilder::new()
             .with_compact_mode(true)
             .with_show_seconds(false)
@@ -199,7 +199,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn assert_config_equals(actual: &GlobalConfig, expected: &GlobalConfig) {
+    pub fn assert_config_equals(actual: &Config, expected: &Config) {
         assert_eq!(actual.default_task_config.work_duration, expected.default_task_config.work_duration);
         assert_eq!(actual.default_task_config.short_break_duration, expected.default_task_config.short_break_duration);
         assert_eq!(actual.default_task_config.long_break_duration, expected.default_task_config.long_break_duration);

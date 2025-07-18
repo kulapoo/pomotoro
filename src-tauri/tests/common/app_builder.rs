@@ -124,11 +124,11 @@ impl TestApp {
         Ok(task)
     }
 
-    pub async fn save_global_config(&self, config: pomotoro_lib::config::models::GlobalConfig) -> Result<(), String> {
+    pub async fn save_global_config(&self, config: pomotoro_lib::config::models::Config) -> Result<(), String> {
         self.config_repo().save_config(&config).map_err(|e| e.to_string())
     }
 
-    pub async fn get_global_config(&self) -> Result<pomotoro_lib::config::models::GlobalConfig, String> {
+    pub async fn get_global_config(&self) -> Result<pomotoro_lib::config::models::Config, String> {
         self.config_repo().get_config().map_err(|e| e.to_string())
     }
 }

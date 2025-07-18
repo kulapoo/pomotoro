@@ -4,7 +4,7 @@ use crate::task::models::{TaskConfig, AudioConfig};
 use super::{AppPreferences, NotificationPreferences, UiPreferences};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalConfig {
+pub struct Config {
     pub default_task_config: TaskConfig,
     pub default_audio_config: AudioConfig,
     pub app_preferences: AppPreferences,
@@ -12,7 +12,7 @@ pub struct GlobalConfig {
     pub ui_preferences: UiPreferences,
 }
 
-impl Default for GlobalConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             default_task_config: TaskConfig::default(),
@@ -24,7 +24,7 @@ impl Default for GlobalConfig {
     }
 }
 
-impl GlobalConfig {
+impl Config {
     pub fn update_default_timings(&mut self, work_minutes: u32, short_break_minutes: u32, long_break_minutes: u32) {
         self.default_task_config.work_duration = Duration::from_secs((work_minutes * 60) as u64);
         self.default_task_config.short_break_duration = Duration::from_secs((short_break_minutes * 60) as u64);
