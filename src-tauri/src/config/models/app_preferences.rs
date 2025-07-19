@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::enums::TaskCyclingBehavior;
+use crate::core::entities::TaskCyclingBehavior;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppPreferences {

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::enums::NotificationPosition;
+use crate::core::entities::NotificationPosition;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotificationPreferences {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::task::models::{TaskId, Task};
-use super::enums::{Phase, TimerStatus};
+use crate::core::entities::{TaskId, Phase, TimerStatus};
+use crate::task::models::Task;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimerState {

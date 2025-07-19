@@ -1,22 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AudioAsset {
-    pub id: String,
-    pub name: String,
-    pub file_path: PathBuf,
-    pub category: AudioCategory,
-    pub duration_ms: Option<u64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AudioCategory {
-    NotificationSound,
-    BackgroundAmbient,
-    CustomUpload,
-}
+use crate::core::entities::{AudioAsset, AudioCategory};
+use crate::core::utilities::AudioError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioLibrary {
@@ -41,34 +27,6 @@ pub struct PlaybackHandle {
     pub volume: f32,
 }
 
-#[derive(Debug)]
-pub enum AudioError {
-    AssetNotFound(String),
-    PlaybackFailed(String),
-    InvalidFile(String),
-    VolumeOutOfRange(f32),
-    IoError(std::io::Error),
-}
-
-impl std::fmt::Display for AudioError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AudioError::AssetNotFound(id) => write!(f, "Audio asset not found: {}", id),
-            AudioError::PlaybackFailed(msg) => write!(f, "Playback failed: {}", msg),
-            AudioError::InvalidFile(path) => write!(f, "Invalid audio file: {}", path),
-            AudioError::VolumeOutOfRange(vol) => write!(f, "Volume out of range: {}", vol),
-            AudioError::IoError(e) => write!(f, "IO error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for AudioError {}
-
-impl From<std::io::Error> for AudioError {
-    fn from(error: std::io::Error) -> Self {
-        AudioError::IoError(error)
-    }
-}
 
 impl AudioLibrary {
     pub fn new() -> Self {

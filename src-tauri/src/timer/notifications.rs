@@ -1,7 +1,7 @@
 use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
 
-use super::models::Phase;
+use crate::core::entities::Phase;
 
 pub fn send_phase_notification(app_handle: &AppHandle, from_phase: &Phase, to_phase: &Phase) {
     let (title, body) = match (from_phase, to_phase) {

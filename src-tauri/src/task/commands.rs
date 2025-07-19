@@ -1,6 +1,7 @@
 use tauri::State;
-use super::models::{Task, TaskId, TaskConfig, AudioConfig};
+use super::models::Task;
 use super::repository::TaskRepository;
+use crate::core::entities::{TaskId, TaskConfig, AudioConfig};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {

@@ -1,5 +1,6 @@
 use super::{Config, ConfigRepository};
 use tauri::State;
+use crate::core::entities::{TaskConfig, AudioConfig};
 
 #[tauri::command]
 pub async fn get_global_config(
@@ -123,7 +124,7 @@ pub async fn update_ui_preferences(
 
 #[tauri::command]
 pub async fn update_default_audio_config(
-    audio_config: crate::task::models::AudioConfig,
+    audio_config: AudioConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo
@@ -144,7 +145,7 @@ pub async fn get_effective_task_config(
     task_id: Option<uuid::Uuid>,
     task_repo: State<'_, crate::task::TaskRepository>,
     config_repo: State<'_, ConfigRepository>,
-) -> Result<crate::task::models::TaskConfig, String> {
+) -> Result<TaskConfig, String> {
     let global_config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;
@@ -163,7 +164,7 @@ pub async fn get_effective_audio_config(
     task_id: Option<uuid::Uuid>,
     task_repo: State<'_, crate::task::TaskRepository>,
     config_repo: State<'_, ConfigRepository>,
-) -> Result<crate::task::models::AudioConfig, String> {
+) -> Result<AudioConfig, String> {
     let global_config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;

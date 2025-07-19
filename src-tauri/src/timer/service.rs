@@ -4,8 +4,9 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 
-use super::models::{Phase, TimerState, TimerStatus};
+use super::models::TimerState;
 use super::notifications::send_phase_notification;
+use crate::core::entities::{Phase, TimerStatus};
 use crate::task::models::Task;
 
 pub struct TimerService {

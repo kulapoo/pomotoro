@@ -1,9 +1,10 @@
 use tauri::{AppHandle, Emitter, State};
 
 use super::service::TimerService;
-use super::models::{TimerState, TimerStatus};
+use super::models::TimerState;
 use super::notifications::send_phase_notification;
-use crate::task::models::{TaskId, Task};
+use crate::core::entities::{TaskId, TimerStatus};
+use crate::task::models::Task;
 use crate::task::repository::TaskRepository;
 
 #[derive(serde::Serialize)]

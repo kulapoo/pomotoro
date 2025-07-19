@@ -1,4 +1,5 @@
-use super::{AudioService, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioAsset};
+use super::{AudioService, AudioLibrary, PlaybackRequest, PlaybackHandle};
+use crate::core::entities::AudioAsset;
 use tauri::State;
 use std::sync::Mutex;
 

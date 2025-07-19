@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use super::enums::Theme;
+use crate::core::entities::Theme;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiPreferences {

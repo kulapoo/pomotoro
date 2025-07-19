@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use super::{TaskConfig, AudioConfig, TaskStatus};
-
-pub type TaskId = Uuid;
+use crate::core::entities::{TaskId, TaskConfig, AudioConfig, TaskStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {

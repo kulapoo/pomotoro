@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::task::models::{TaskConfig, AudioConfig};
+use crate::core::entities::{TaskConfig, AudioConfig};
 use super::{AppPreferences, NotificationPreferences, UiPreferences};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

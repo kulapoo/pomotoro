@@ -1,4 +1,6 @@
 use super::types::*;
+use crate::core::entities::AudioAsset;
+use crate::core::utilities::AudioError;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 use std::collections::HashMap;
 use std::fs::File;

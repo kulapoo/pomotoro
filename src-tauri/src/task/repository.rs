@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use super::models::{Task, TaskId, TaskStatus};
+use super::models::Task;
+use crate::core::entities::{TaskId, TaskStatus};
 
 pub type TaskRepository = Arc<dyn TaskRepositoryTrait + Send + Sync>;
 

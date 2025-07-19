@@ -1,5 +1,4 @@
-pub mod enums;
 pub mod timer_state;
 
-pub use enums::*;
 pub use timer_state::*;
+pub use crate::core::entities::{Phase, TimerStatus};

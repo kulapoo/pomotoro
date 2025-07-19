@@ -1,3 +1,4 @@
+pub mod core;
 pub mod timer;
 pub mod task;
 pub mod config;
