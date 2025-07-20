@@ -1,5 +1,6 @@
 use std::time::Duration;
-use pomotoro_lib::{config::ConfigBuilder, core::entities::{NotificationPosition, TaskCyclingBehavior, Theme}};
+use pomotoro_lib::config::ConfigBuilder;
+use pomotoro_domain::{NotificationPosition, TaskCyclingBehavior, Theme};
 
 fn main() {
     // Example of using the ConfigBuilder with flat setters

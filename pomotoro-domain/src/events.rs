@@ -7,6 +7,7 @@ pub mod timer {
     pub const GET_STATE_WITH_TASK: &str = "get_timer_state_with_task";
     pub const SWITCH_TASK: &str = "switch_active_task";
     pub const PHASE_COMPLETE: &str = "phase-complete";
+    pub const UPDATE_STATE: &str = "timer-update-state";
 }
 
 pub mod task {

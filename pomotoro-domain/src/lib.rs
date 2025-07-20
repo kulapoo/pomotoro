@@ -1,4 +1,5 @@
 pub mod errors;
+pub mod events;
 pub mod task;
 pub mod config;
 pub mod timer;

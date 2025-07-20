@@ -3,8 +3,9 @@ use tauri::{AppHandle, Emitter, State};
 use super::service::TimerService;
 use super::models::{TimerState, TimerStateWithTask};
 use super::notifications::send_phase_notification;
-use crate::core::entities::{TaskId, TimerStatus};
+use pomotoro_domain::{TaskId, TimerStatus};
 use crate::task::repository::TaskRepository;
+use pomotoro_domain::events;
 
 #[tauri::command]
 pub async fn get_timer_state(
@@ -108,7 +109,7 @@ pub async fn skip_phase(
 
     send_phase_notification(&app_handle, &current_phase, &new_phase);
 
-    let _ = app_handle.emit("phase-complete", (&current_phase, &new_phase));
+    let _ = app_handle.emit(events::timer::PHASE_COMPLETE, (&current_phase, &new_phase));
 
     let _ = timer_service.save_state(&app_handle).await;
     Ok(timer_service.get_state().await)

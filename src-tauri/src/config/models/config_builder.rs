@@ -1,5 +1,5 @@
 use std::time::Duration;
-use crate::core::entities::{TaskCyclingBehavior, NotificationPosition, Theme};
+use pomotoro_domain::{TaskCyclingBehavior, NotificationPosition, Theme};
 use super::Config;
 
 #[derive(Debug, Clone)]

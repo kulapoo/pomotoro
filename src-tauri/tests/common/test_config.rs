@@ -1,6 +1,6 @@
 use pomotoro_lib::config::models::*;
 use pomotoro_lib::config::repository::*;
-use pomotoro_lib::core::entities::{TaskConfig, AudioConfig};
+use pomotoro_domain::{TaskConfig, AudioConfig};
 use std::sync::RwLock;
 use std::time::Duration;
 

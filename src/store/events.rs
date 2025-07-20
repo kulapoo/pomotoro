@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::closure::Closure;
+use pomotoro_domain::events;
 
 use super::timer_state::TimerState;
 
@@ -23,7 +24,7 @@ pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
                 }
             }) as Box<dyn Fn(JsValue)>);
             
-            let _ = listen("timer-update", timer_update_callback.as_ref().unchecked_ref()).await;
+            let _ = listen(events::timer::UPDATE_STATE, timer_update_callback.as_ref().unchecked_ref()).await;
             
             timer_update_callback.forget();
         });
@@ -40,7 +41,7 @@ pub fn setup_phase_complete_events() {
                 }
             }) as Box<dyn Fn(JsValue)>);
             
-            let _ = listen("phase-complete", phase_complete_callback.as_ref().unchecked_ref()).await;
+            let _ = listen(events::timer::PHASE_COMPLETE, phase_complete_callback.as_ref().unchecked_ref()).await;
             
             phase_complete_callback.forget();
         });

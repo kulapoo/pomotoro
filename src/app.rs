@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::store::{TimerState, setup_timer_events, setup_phase_complete_events, ConfigResource};
 use crate::components::{TimerDisplay, TimerControls};
-use crate::app_events;
+use pomotoro_domain::events;
 
 #[wasm_bindgen]
 extern "C" {
@@ -20,7 +20,7 @@ pub fn App() -> impl IntoView {
 
     Effect::new(move |_| {
         spawn_local(async move {
-            let result = invoke(app_events::timer::GET_STATE, JsValue::NULL).await;
+            let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
             if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
                 set_timer_state.set(state);
             }

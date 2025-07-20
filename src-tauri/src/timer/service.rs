@@ -6,8 +6,9 @@ use tokio::time::interval;
 
 use super::models::TimerState;
 use super::notifications::send_phase_notification;
-use crate::core::entities::{Phase, TimerStatus};
+use pomotoro_domain::{Phase, TimerStatus};
 use crate::task::models::Task;
+use pomotoro_domain::events;
 
 pub struct TimerService {
     state: Arc<RwLock<TimerState>>,
@@ -96,7 +97,7 @@ impl TimerService {
                 if state.remaining_seconds > 0 {
                     state.remaining_seconds -= 1;
                     
-                    let _ = app_handle.emit("timer-update", state.clone());
+                    let _ = app_handle.emit(events::timer::UPDATE_STATE, state.clone());
                 } else {
                     let current_phase = state.phase.clone();
                     if let Ok((_, _new_phase)) = state.next_phase(task.as_ref()) {
@@ -104,8 +105,8 @@ impl TimerService {
                         
                         send_phase_notification(&app_handle, &current_phase, &state.phase);
                         
-                        let _ = app_handle.emit("phase-complete", (&current_phase, &state.phase));
-                        let _ = app_handle.emit("timer-update", state.clone());
+                        let _ = app_handle.emit(events::timer::PHASE_COMPLETE, (&current_phase, &state.phase));
+                        let _ = app_handle.emit(events::timer::UPDATE_STATE, state.clone());
                     
                         let state_clone_for_save = state_clone.clone();
                         drop(state);
@@ -165,7 +166,7 @@ impl TimerService {
         }
     }
 
-    pub async fn switch_task(&self, task_id: crate::core::entities::TaskId, task: Option<&Task>) {
+    pub async fn switch_task(&self, task_id: pomotoro_domain::TaskId, task: Option<&Task>) {
         let mut state = self.state.write().await;
         let _ = state.switch_task(task_id, task);
     }

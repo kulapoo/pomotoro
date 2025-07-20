@@ -1,6 +1,6 @@
 use super::{Config, ConfigRepository};
 use tauri::State;
-use crate::core::entities::{TaskConfig, AudioConfig};
+use pomotoro_domain::{TaskConfig, AudioConfig};
 
 #[tauri::command]
 pub async fn get_global_config(

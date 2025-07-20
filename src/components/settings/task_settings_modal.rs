@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use std::time::Duration;
 use pomotoro_domain::{Task, TaskConfig, AudioConfig, TaskId, TaskStatus};
 use super::{AudioConfigComponent, TimerConfigComponent};
-use crate::app_events;
+use pomotoro_domain::events;
 
 #[wasm_bindgen]
 extern "C" {
@@ -170,7 +170,7 @@ pub fn TaskSettingsModal(
                 
                 match serde_wasm_bindgen::to_value(&task_clone) {
                     Ok(task_value) => {
-                        let result = invoke(app_events::task::UPDATE, task_value).await;
+                        let result = invoke(events::task::UPDATE, task_value).await;
                         match serde_wasm_bindgen::from_value::<TaskDto>(result) {
                             Ok(updated_task) => {
                                 set_task.set(Some(updated_task.clone()));
@@ -301,7 +301,7 @@ fn load_task(
         set_error_message.set(None);
         
         let args = serde_wasm_bindgen::to_value(&task_id).unwrap_or(JsValue::NULL);
-        let result = invoke(app_events::task::GET, args).await;
+        let result = invoke(events::task::GET, args).await;
         
         match serde_wasm_bindgen::from_value::<Option<TaskDto>>(result) {
             Ok(Some(task)) => {

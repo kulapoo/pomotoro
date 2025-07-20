@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use std::time::Duration;
 use pomotoro_domain::{TaskConfig, AudioConfig};
 use super::{AudioConfigComponent, TimerConfigComponent};
-use crate::app_events;
+use pomotoro_domain::events;
 
 #[wasm_bindgen]
 extern "C" {
@@ -198,7 +198,7 @@ pub fn GlobalSettingsPanel(
 
             match serde_wasm_bindgen::to_value(&updated_config) {
                 Ok(config_value) => {
-                    let result = invoke(app_events::config::SAVE_GLOBAL, config_value).await;
+                    let result = invoke(events::config::SAVE_GLOBAL, config_value).await;
                     match serde_wasm_bindgen::from_value::<()>(result) {
                         Ok(_) => {
                             set_config.set(Some(updated_config));
@@ -219,7 +219,7 @@ pub fn GlobalSettingsPanel(
     let reset_to_defaults = move |_| {
         spawn_local(async move {
             set_loading.set(true);
-            let result = invoke(app_events::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
+            let result = invoke(events::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
             match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
                 Ok(default_config) => {
                     set_config.set(Some(default_config));
@@ -539,7 +539,7 @@ fn load_global_config(
         set_loading.set(true);
         set_error_message.set(None);
         
-        let result = invoke(app_events::config::GET_GLOBAL, JsValue::NULL).await;
+        let result = invoke(events::config::GET_GLOBAL, JsValue::NULL).await;
         match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
             Ok(config) => {
                 set_config.set(Some(config));

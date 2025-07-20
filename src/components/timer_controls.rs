@@ -2,7 +2,8 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use crate::store::{TimerState, TimerStatus};
-use crate::app_events;
+use pomotoro_domain::events;
+use web_sys::console;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,10 +20,9 @@ pub fn TimerControls(
         let current_state = timer_state.get_untracked();
         spawn_local(async move {
             let command = match current_state.status {
-                TimerStatus::Running => app_events::timer::PAUSE,
-                _ => app_events::timer::START,
+                TimerStatus::Running => events::timer::PAUSE,
+                _ => events::timer::START,
             };
-
             let result = invoke(command, JsValue::NULL).await;
             if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
                 set_timer_state.set(state);
@@ -32,7 +32,7 @@ pub fn TimerControls(
 
     let reset_timer = move |_| {
         spawn_local(async move {
-            let result = invoke(app_events::timer::RESET, JsValue::NULL).await;
+            let result = invoke(events::timer::RESET, JsValue::NULL).await;
             if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
                 set_timer_state.set(state);
             }
@@ -41,7 +41,7 @@ pub fn TimerControls(
 
     let skip_phase = move |_| {
         spawn_local(async move {
-            let result = invoke(app_events::timer::SKIP_PHASE, JsValue::NULL).await;
+            let result = invoke(events::timer::SKIP_PHASE, JsValue::NULL).await;
             if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
                 set_timer_state.set(state);
             }
