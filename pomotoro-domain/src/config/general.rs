@@ -1,8 +1,14 @@
 use serde::{Deserialize, Serialize};
-use crate::core::entities::TaskCyclingBehavior;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TaskCyclingBehavior {
+    Manual,
+    AutoAdvance,
+    RoundRobin,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppPreferences {
+pub struct General {
     pub task_cycling_behavior: TaskCyclingBehavior,
     pub max_sessions_default: u8,
     pub auto_start_breaks: bool,
@@ -11,7 +17,7 @@ pub struct AppPreferences {
     pub start_minimized: bool,
 }
 
-impl Default for AppPreferences {
+impl Default for General {
     fn default() -> Self {
         Self {
             task_cycling_behavior: TaskCyclingBehavior::Manual,

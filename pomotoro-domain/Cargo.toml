@@ -1,0 +1,11 @@
+[package]
+name = "pomotoro-domain"
+version = "0.1.0"
+edition = "2021"
+description = "Core domain entities and business logic for Pomotoro"
+
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }

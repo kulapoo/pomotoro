@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use pomotoro_lib::audio::types::*;
-use pomotoro_lib::core::entities::AudioAsset;
-use pomotoro_lib::core::utilities::AudioError;
+use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
+use pomotoro_lib::audio::DefaultAudioAssetProvider;
 
 pub struct MockAudioManager {
     library: AudioLibrary,
@@ -25,7 +24,7 @@ pub struct MockPlayback {
 impl MockAudioManager {
     pub fn new() -> Result<Self, AudioError> {
         Ok(Self {
-            library: AudioLibrary::with_default_assets(),
+            library: DefaultAudioAssetProvider::create_library_with_default_assets(),
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
             playback_counter: Arc::new(Mutex::new(0)),
         })

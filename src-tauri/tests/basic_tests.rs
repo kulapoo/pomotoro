@@ -91,16 +91,16 @@ async fn test_config_repository_defaults() {
     let config = config_repo.get_config().unwrap();
 
     // Test default timing values
-    assert_eq!(config.default_task_config.work_duration, Duration::from_secs(25 * 60));
-    assert_eq!(config.default_task_config.short_break_duration, Duration::from_secs(5 * 60));
-    assert_eq!(config.default_task_config.long_break_duration, Duration::from_secs(15 * 60));
-    assert_eq!(config.default_task_config.sessions_until_long_break, 4);
-    assert_eq!(config.default_task_config.enable_screen_blocking, false);
+    assert_eq!(config.task_config.work_duration, Duration::from_secs(25 * 60));
+    assert_eq!(config.task_config.short_break_duration, Duration::from_secs(5 * 60));
+    assert_eq!(config.task_config.long_break_duration, Duration::from_secs(15 * 60));
+    assert_eq!(config.task_config.sessions_until_long_break, 4);
+    assert_eq!(config.task_config.enable_screen_blocking, false);
 
     // Test default audio config
-    assert_eq!(config.default_audio_config.volume, 0.7);
-    assert_eq!(config.default_audio_config.enable_background_audio, false);
-    assert_eq!(config.default_audio_config.muted, false);
+    assert_eq!(config.audio_config.volume, 0.7);
+    assert_eq!(config.audio_config.enable_background_audio, false);
+    assert_eq!(config.audio_config.muted, false);
 }
 
 #[tokio::test]
@@ -122,7 +122,7 @@ async fn test_task_crud_operations() {
     let (_timer_manager, task_repo, _config_repo) = create_test_context();
 
     // Create a custom task
-    let mut custom_task = pomotoro_lib::task::models::Task::new("Custom Task".to_string(), 2);
+    let mut custom_task = pomotoro_lib::task::models::Task::new("Custom Task".to_string(), 2).unwrap();
     custom_task = custom_task.with_tags(vec!["work".to_string(), "test".to_string()]);
 
     // Test create
@@ -169,18 +169,18 @@ async fn test_config_save_and_load() {
     let mut config = config_repo.get_config().unwrap();
 
     // Modify config
-    config.default_task_config.work_duration = Duration::from_secs(30 * 60); // 30 minutes
-    config.default_audio_config.volume = 0.5;
-    config.app_preferences.auto_start_work_after_break = true;
+    config.task_config.work_duration = Duration::from_secs(30 * 60); // 30 minutes
+    config.audio_config.volume = 0.5;
+    config.general.auto_start_work_after_break = true;
 
     // Save config
     config_repo.save_config(&config).unwrap();
 
     // Load config and verify changes
     let loaded_config = config_repo.get_config().unwrap();
-    assert_eq!(loaded_config.default_task_config.work_duration, Duration::from_secs(30 * 60));
-    assert_eq!(loaded_config.default_audio_config.volume, 0.5);
-    assert_eq!(loaded_config.app_preferences.auto_start_work_after_break, true);
+    assert_eq!(loaded_config.task_config.work_duration, Duration::from_secs(30 * 60));
+    assert_eq!(loaded_config.audio_config.volume, 0.5);
+    assert_eq!(loaded_config.general.auto_start_work_after_break, true);
 }
 
 #[tokio::test]
@@ -222,11 +222,11 @@ async fn test_task_session_completion() {
     let (_timer_manager, task_repo, _config_repo) = create_test_context();
 
     // Create a task with 2 max sessions
-    let mut task = pomotoro_lib::task::models::Task::new("Limited Task".to_string(), 2);
+    let mut task = pomotoro_lib::task::models::Task::new("Limited Task".to_string(), 2).unwrap();
     task_repo.create(task.clone()).await.unwrap();
 
     // Complete first session
-    task.increment_session();
+    task.increment_session().unwrap();
     task_repo.update(task.clone()).await.unwrap();
 
     let updated_task = task_repo.get_by_id(task.id).await.unwrap().unwrap();
@@ -234,7 +234,7 @@ async fn test_task_session_completion() {
     assert_eq!(updated_task.status, TaskStatus::Queued); // New tasks start as Queued
 
     // Complete second session
-    task.increment_session();
+    task.increment_session().unwrap();
     task_repo.update(task.clone()).await.unwrap();
 
     let completed_task = task_repo.get_by_id(task.id).await.unwrap().unwrap();

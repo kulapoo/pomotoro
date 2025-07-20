@@ -1,8 +1,14 @@
 use serde::{Deserialize, Serialize};
-use crate::core::entities::Theme;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Theme {
+    Light,
+    Dark,
+    System,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiPreferences {
+pub struct Appearance {
     pub theme: Theme,
     pub show_seconds_in_display: bool,
     pub always_on_top: bool,
@@ -11,7 +17,7 @@ pub struct UiPreferences {
     pub animate_progress: bool,
 }
 
-impl Default for UiPreferences {
+impl Default for Appearance {
     fn default() -> Self {
         Self {
             theme: Theme::System,

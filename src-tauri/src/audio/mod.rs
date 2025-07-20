@@ -1,7 +1,7 @@
 pub mod service;
 pub mod commands;
-pub mod types;
+pub mod asset_provider;
 
 pub use service::*;
 pub use commands::*;
-pub use types::*;
+pub use asset_provider::*;

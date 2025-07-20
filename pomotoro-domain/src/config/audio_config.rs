@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::{Error, Result};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfig {
     pub work_notification_sound: Option<String>,
@@ -20,5 +22,14 @@ impl Default for AudioConfig {
             enable_background_audio: false,
             muted: false,
         }
+    }
+}
+
+impl AudioConfig {
+    pub fn validate(&self) -> Result<()> {
+        if self.volume < 0.0 || self.volume > 1.0 {
+            return Err(Error::InvalidDuration { duration: (self.volume * 100.0) as u32 });
+        }
+        Ok(())
     }
 }

@@ -69,15 +69,15 @@ pub async fn update_default_cycle_length(
 }
 
 #[tauri::command]
-pub async fn update_app_preferences(
-    preferences: super::models::AppPreferences,
+pub async fn update_general(
+    preferences: super::models::General,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;
 
-    config.app_preferences = preferences;
+    config.general = preferences;
 
     config_repo
         .save_config(&config)
@@ -88,14 +88,14 @@ pub async fn update_app_preferences(
 
 #[tauri::command]
 pub async fn update_notification_preferences(
-    preferences: super::models::NotificationPreferences,
+    preferences: super::models::Notification,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;
 
-    config.notification_preferences = preferences;
+    config.notification = preferences;
 
     config_repo
         .save_config(&config)
@@ -105,15 +105,15 @@ pub async fn update_notification_preferences(
 }
 
 #[tauri::command]
-pub async fn update_ui_preferences(
-    preferences: super::models::UiPreferences,
+pub async fn update_appearance(
+    preferences: super::models::Appearance,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo
         .get_config()
         .map_err(|e| e.to_string())?;
 
-    config.ui_preferences = preferences;
+    config.appearance = preferences;
 
     config_repo
         .save_config(&config)
@@ -123,7 +123,7 @@ pub async fn update_ui_preferences(
 }
 
 #[tauri::command]
-pub async fn update_default_audio_config(
+pub async fn update_audio_config(
     audio_config: AudioConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
@@ -131,7 +131,7 @@ pub async fn update_default_audio_config(
         .get_config()
         .map_err(|e| e.to_string())?;
 
-    config.default_audio_config = audio_config;
+    config.audio_config = audio_config;
 
     config_repo
         .save_config(&config)
@@ -156,7 +156,7 @@ pub async fn get_effective_task_config(
         }
     }
 
-    Ok(global_config.default_task_config)
+    Ok(global_config.task_config)
 }
 
 #[tauri::command]
@@ -175,5 +175,5 @@ pub async fn get_effective_audio_config(
         }
     }
 
-    Ok(global_config.default_audio_config)
+    Ok(global_config.audio_config)
 }

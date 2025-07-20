@@ -29,7 +29,8 @@ pub async fn create_task(
     request: CreateTaskRequest,
     repository: State<'_, TaskRepository>,
 ) -> Result<Task, String> {
-    let mut task = Task::new(request.name, request.max_sessions);
+    let mut task = Task::new(request.name, request.max_sessions)
+        .map_err(|e| e.to_string())?;
     
     if let Some(description) = request.description {
         task = task.with_description(description);
@@ -40,11 +41,13 @@ pub async fn create_task(
     }
     
     if let Some(config) = request.config {
-        task = task.with_config(config);
+        task = task.with_config(config)
+            .map_err(|e| e.to_string())?;
     }
     
     if let Some(audio_config) = request.audio_config {
-        task.audio_config = audio_config;
+        task = task.with_audio_config(audio_config)
+            .map_err(|e| e.to_string())?;
     }
 
     repository.create(task.clone()).await.map_err(|e| e.to_string())?;
@@ -139,7 +142,8 @@ pub async fn complete_task_session(
         .map_err(|e| e.to_string())?
         .ok_or("Task not found")?;
 
-    task.increment_session();
+    task.increment_session()
+        .map_err(|e| e.to_string())?;
     repository.update(task.clone()).await.map_err(|e| e.to_string())?;
     Ok(task)
 }

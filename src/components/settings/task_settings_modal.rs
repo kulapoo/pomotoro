@@ -2,7 +2,10 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
+use std::time::Duration;
+use pomotoro_domain::{Task, TaskConfig, AudioConfig, TaskId, TaskStatus};
 use super::{AudioConfigComponent, TimerConfigComponent};
+use crate::app_events;
 
 #[wasm_bindgen]
 extern "C" {
@@ -11,51 +14,77 @@ extern "C" {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Task {
+pub struct TaskDto {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
     pub max_sessions: u8,
     pub current_sessions: u8,
     pub tags: Vec<String>,
-    pub config: TaskConfig,
+    pub config: TaskConfigDto,
     pub audio_config: AudioConfig,
     pub status: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskConfig {
-    pub work_duration: Duration,
-    pub short_break_duration: Duration,
-    pub long_break_duration: Duration,
+pub struct TaskConfigDto {
+    pub work_duration: DurationDto,
+    pub short_break_duration: DurationDto,
+    pub long_break_duration: DurationDto,
     pub sessions_until_long_break: u8,
     pub enable_screen_blocking: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Duration {
+pub struct DurationDto {
     pub secs: u64,
     pub nanos: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AudioConfig {
-    pub work_notification_sound: Option<String>,
-    pub break_notification_sound: Option<String>,
-    pub background_sound: Option<String>,
-    pub volume: f32,
-    pub enable_background_audio: bool,
-    pub muted: bool,
+impl From<Task> for TaskDto {
+    fn from(task: Task) -> Self {
+        Self {
+            id: task.id.to_string(),
+            name: task.name,
+            description: task.description,
+            max_sessions: task.max_sessions,
+            current_sessions: task.current_sessions,
+            tags: task.tags,
+            config: TaskConfigDto {
+                work_duration: DurationDto {
+                    secs: task.config.work_duration.as_secs(),
+                    nanos: task.config.work_duration.subsec_nanos(),
+                },
+                short_break_duration: DurationDto {
+                    secs: task.config.short_break_duration.as_secs(),
+                    nanos: task.config.short_break_duration.subsec_nanos(),
+                },
+                long_break_duration: DurationDto {
+                    secs: task.config.long_break_duration.as_secs(),
+                    nanos: task.config.long_break_duration.subsec_nanos(),
+                },
+                sessions_until_long_break: task.config.sessions_until_long_break,
+                enable_screen_blocking: task.config.enable_screen_blocking,
+            },
+            audio_config: task.audio_config,
+            status: match task.status {
+                TaskStatus::Active => "active".to_string(),
+                TaskStatus::Queued => "queued".to_string(),
+                TaskStatus::Completed => "completed".to_string(),
+                TaskStatus::Paused => "paused".to_string(),
+            },
+        }
+    }
 }
 
 #[component]
 pub fn TaskSettingsModal(
     _task_id: Signal<Option<String>>,
     #[prop(optional)] _on_close: Option<Callback<()>>,
-    #[prop(optional)] _on_save: Option<Callback<Task>>,
+    #[prop(optional)] _on_save: Option<Callback<TaskDto>>,
 ) -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
-    let (task, set_task) = signal::<Option<Task>>(None);
+    let (task, set_task) = signal::<Option<TaskDto>>(None);
     let (loading, set_loading) = signal(false);
     let (error_message, set_error_message) = signal::<Option<String>>(None);
     
@@ -141,8 +170,8 @@ pub fn TaskSettingsModal(
                 
                 match serde_wasm_bindgen::to_value(&task_clone) {
                     Ok(task_value) => {
-                        let result = invoke("update_task", task_value).await;
-                        match serde_wasm_bindgen::from_value::<Task>(result) {
+                        let result = invoke(app_events::task::UPDATE, task_value).await;
+                        match serde_wasm_bindgen::from_value::<TaskDto>(result) {
                             Ok(updated_task) => {
                                 set_task.set(Some(updated_task.clone()));
                                 if let Some(cb) = _on_save {
@@ -233,18 +262,7 @@ pub fn TaskSettingsModal(
                             </div>
                         </div>
 
-                        <TimerConfigComponent
-                            work_minutes=work_minutes
-                            set_work_minutes=set_work_minutes
-                            short_break_minutes=short_break_minutes
-                            set_short_break_minutes=set_short_break_minutes
-                            long_break_minutes=long_break_minutes
-                            set_long_break_minutes=set_long_break_minutes
-                            sessions_until_long_break=sessions_until_long_break
-                            set_sessions_until_long_break=set_sessions_until_long_break
-                            enable_screen_blocking=enable_screen_blocking
-                            set_enable_screen_blocking=set_enable_screen_blocking
-                        />
+                        <TimerConfigComponent />
 
                         <AudioConfigComponent
                             volume=volume
@@ -274,7 +292,7 @@ pub fn TaskSettingsModal(
 
 fn load_task(
     task_id: String,
-    set_task: WriteSignal<Option<Task>>,
+    set_task: WriteSignal<Option<TaskDto>>,
     set_loading: WriteSignal<bool>,
     set_error_message: WriteSignal<Option<String>>,
 ) {
@@ -283,9 +301,9 @@ fn load_task(
         set_error_message.set(None);
         
         let args = serde_wasm_bindgen::to_value(&task_id).unwrap_or(JsValue::NULL);
-        let result = invoke("get_task", args).await;
+        let result = invoke(app_events::task::GET, args).await;
         
-        match serde_wasm_bindgen::from_value::<Option<Task>>(result) {
+        match serde_wasm_bindgen::from_value::<Option<TaskDto>>(result) {
             Ok(Some(task)) => {
                 set_task.set(Some(task));
             }

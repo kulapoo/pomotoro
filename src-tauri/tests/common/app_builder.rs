@@ -118,7 +118,7 @@ impl TestApp {
             .map_err(|e| e.to_string())?
             .ok_or("Task not found")?;
 
-        task.increment_session();
+        task.increment_session().map_err(|e| e.to_string())?;
         task_repo.update(task.clone()).await.map_err(|e| e.to_string())?;
 
         Ok(task)

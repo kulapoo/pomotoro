@@ -1,17 +1,10 @@
 use tauri::{AppHandle, Emitter, State};
 
 use super::service::TimerService;
-use super::models::TimerState;
+use super::models::{TimerState, TimerStateWithTask};
 use super::notifications::send_phase_notification;
 use crate::core::entities::{TaskId, TimerStatus};
-use crate::task::models::Task;
 use crate::task::repository::TaskRepository;
-
-#[derive(serde::Serialize)]
-pub struct TimerStateWithTask {
-    pub timer_state: TimerState,
-    pub active_task: Option<Task>,
-}
 
 #[tauri::command]
 pub async fn get_timer_state(
@@ -139,10 +132,7 @@ pub async fn get_timer_state_with_task(
         None
     };
 
-    Ok(TimerStateWithTask {
-        timer_state,
-        active_task,
-    })
+    Ok(TimerStateWithTask::new(timer_state, active_task))
 }
 
 #[tauri::command]

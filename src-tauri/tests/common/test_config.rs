@@ -1,6 +1,6 @@
 use pomotoro_lib::config::models::*;
 use pomotoro_lib::config::repository::*;
-use pomotoro_lib::task::models::{TaskConfig, AudioConfig};
+use pomotoro_lib::core::entities::{TaskConfig, AudioConfig};
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -58,87 +58,87 @@ impl TestConfigBuilder {
     }
 
     pub fn with_work_duration(mut self, duration: Duration) -> Self {
-        self.config.default_task_config.work_duration = duration;
+        self.config.task_config.work_duration = duration;
         self
     }
 
     pub fn with_short_break_duration(mut self, duration: Duration) -> Self {
-        self.config.default_task_config.short_break_duration = duration;
+        self.config.task_config.short_break_duration = duration;
         self
     }
 
     pub fn with_long_break_duration(mut self, duration: Duration) -> Self {
-        self.config.default_task_config.long_break_duration = duration;
+        self.config.task_config.long_break_duration = duration;
         self
     }
 
     pub fn with_sessions_until_long_break(mut self, sessions: u8) -> Self {
-        self.config.default_task_config.sessions_until_long_break = sessions;
+        self.config.task_config.sessions_until_long_break = sessions;
         self
     }
 
     pub fn with_screen_blocking(mut self, enabled: bool) -> Self {
-        self.config.default_task_config.enable_screen_blocking = enabled;
+        self.config.task_config.enable_screen_blocking = enabled;
         self
     }
 
     pub fn with_audio_volume(mut self, volume: f32) -> Self {
-        self.config.default_audio_config.volume = volume;
+        self.config.audio_config.volume = volume;
         self
     }
 
     pub fn with_background_audio(mut self, enabled: bool) -> Self {
-        self.config.default_audio_config.enable_background_audio = enabled;
+        self.config.audio_config.enable_background_audio = enabled;
         self
     }
 
     pub fn with_muted_audio(mut self, muted: bool) -> Self {
-        self.config.default_audio_config.muted = muted;
+        self.config.audio_config.muted = muted;
         self
     }
 
     pub fn with_task_cycling(mut self, behavior: TaskCyclingBehavior) -> Self {
-        self.config.app_preferences.task_cycling_behavior = behavior;
+        self.config.general.task_cycling_behavior = behavior;
         self
     }
 
     pub fn with_auto_start_work_after_break(mut self, enabled: bool) -> Self {
-        self.config.app_preferences.auto_start_work_after_break = enabled;
+        self.config.general.auto_start_work_after_break = enabled;
         self
     }
 
     pub fn with_auto_start_breaks(mut self, enabled: bool) -> Self {
-        self.config.app_preferences.auto_start_breaks = enabled;
+        self.config.general.auto_start_breaks = enabled;
         self
     }
 
     pub fn with_desktop_notifications(mut self, enabled: bool) -> Self {
-        self.config.notification_preferences.enable_desktop_notifications = enabled;
+        self.config.notification.enable_desktop_notifications = enabled;
         self
     }
 
     pub fn with_notification_sounds(mut self, enabled: bool) -> Self {
-        self.config.notification_preferences.enable_sound_notifications = enabled;
+        self.config.notification.enable_sound_notifications = enabled;
         self
     }
 
     pub fn with_theme(mut self, theme: Theme) -> Self {
-        self.config.ui_preferences.theme = theme;
+        self.config.appearance.theme = theme;
         self
     }
 
     pub fn with_always_on_top(mut self, enabled: bool) -> Self {
-        self.config.ui_preferences.always_on_top = enabled;
+        self.config.appearance.always_on_top = enabled;
         self
     }
 
     pub fn with_show_seconds(mut self, enabled: bool) -> Self {
-        self.config.ui_preferences.show_seconds_in_display = enabled;
+        self.config.appearance.show_seconds_in_display = enabled;
         self
     }
 
     pub fn with_compact_mode(mut self, enabled: bool) -> Self {
-        self.config.ui_preferences.compact_mode = enabled;
+        self.config.appearance.compact_mode = enabled;
         self
     }
 
@@ -200,24 +200,24 @@ impl ConfigTestUtils {
     }
 
     pub fn assert_config_equals(actual: &Config, expected: &Config) {
-        assert_eq!(actual.default_task_config.work_duration, expected.default_task_config.work_duration);
-        assert_eq!(actual.default_task_config.short_break_duration, expected.default_task_config.short_break_duration);
-        assert_eq!(actual.default_task_config.long_break_duration, expected.default_task_config.long_break_duration);
-        assert_eq!(actual.default_task_config.sessions_until_long_break, expected.default_task_config.sessions_until_long_break);
-        assert_eq!(actual.default_task_config.enable_screen_blocking, expected.default_task_config.enable_screen_blocking);
+        assert_eq!(actual.task_config.work_duration, expected.task_config.work_duration);
+        assert_eq!(actual.task_config.short_break_duration, expected.task_config.short_break_duration);
+        assert_eq!(actual.task_config.long_break_duration, expected.task_config.long_break_duration);
+        assert_eq!(actual.task_config.sessions_until_long_break, expected.task_config.sessions_until_long_break);
+        assert_eq!(actual.task_config.enable_screen_blocking, expected.task_config.enable_screen_blocking);
 
-        assert_eq!(actual.default_audio_config.volume, expected.default_audio_config.volume);
-        assert_eq!(actual.default_audio_config.enable_background_audio, expected.default_audio_config.enable_background_audio);
-        assert_eq!(actual.default_audio_config.muted, expected.default_audio_config.muted);
+        assert_eq!(actual.audio_config.volume, expected.audio_config.volume);
+        assert_eq!(actual.audio_config.enable_background_audio, expected.audio_config.enable_background_audio);
+        assert_eq!(actual.audio_config.muted, expected.audio_config.muted);
 
-        assert_eq!(actual.app_preferences.task_cycling_behavior, expected.app_preferences.task_cycling_behavior);
-        assert_eq!(actual.app_preferences.auto_start_work_after_break, expected.app_preferences.auto_start_work_after_break);
-        assert_eq!(actual.app_preferences.auto_start_breaks, expected.app_preferences.auto_start_breaks);
+        assert_eq!(actual.general.task_cycling_behavior, expected.general.task_cycling_behavior);
+        assert_eq!(actual.general.auto_start_work_after_break, expected.general.auto_start_work_after_break);
+        assert_eq!(actual.general.auto_start_breaks, expected.general.auto_start_breaks);
 
-        assert_eq!(actual.ui_preferences.theme, expected.ui_preferences.theme);
-        assert_eq!(actual.ui_preferences.always_on_top, expected.ui_preferences.always_on_top);
-        assert_eq!(actual.ui_preferences.compact_mode, expected.ui_preferences.compact_mode);
-        assert_eq!(actual.ui_preferences.show_seconds_in_display, expected.ui_preferences.show_seconds_in_display);
+        assert_eq!(actual.appearance.theme, expected.appearance.theme);
+        assert_eq!(actual.appearance.always_on_top, expected.appearance.always_on_top);
+        assert_eq!(actual.appearance.compact_mode, expected.appearance.compact_mode);
+        assert_eq!(actual.appearance.show_seconds_in_display, expected.appearance.show_seconds_in_display);
     }
 
     pub fn assert_task_config_equals(actual: &TaskConfig, expected: &TaskConfig) {

@@ -2,7 +2,10 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
+use std::time::Duration;
+use pomotoro_domain::{TaskConfig, AudioConfig};
 use super::{AudioConfigComponent, TimerConfigComponent};
+use crate::app_events;
 
 #[wasm_bindgen]
 extern "C" {
@@ -11,8 +14,8 @@ extern "C" {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GlobalConfig {
-    pub default_task_config: TaskConfig,
+pub struct GlobalConfigDto {
+    pub default_task_config: TaskConfigDto,
     pub default_audio_config: AudioConfig,
     pub app_preferences: AppPreferences,
     pub notification_preferences: NotificationPreferences,
@@ -20,28 +23,18 @@ pub struct GlobalConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskConfig {
-    pub work_duration: Duration,
-    pub short_break_duration: Duration,
-    pub long_break_duration: Duration,
+pub struct TaskConfigDto {
+    pub work_duration: DurationDto,
+    pub short_break_duration: DurationDto,
+    pub long_break_duration: DurationDto,
     pub sessions_until_long_break: u8,
     pub enable_screen_blocking: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Duration {
+pub struct DurationDto {
     pub secs: u64,
     pub nanos: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AudioConfig {
-    pub work_notification_sound: Option<String>,
-    pub break_notification_sound: Option<String>,
-    pub background_sound: Option<String>,
-    pub volume: f32,
-    pub enable_background_audio: bool,
-    pub muted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +72,7 @@ pub fn GlobalSettingsPanel(
     #[prop(optional)] _is_open: Signal<bool>,
     #[prop(optional)] _on_close: Option<Callback<()>>,
 ) -> impl IntoView {
-    let (config, set_config) = signal::<Option<GlobalConfig>>(None);
+    let (config, set_config) = signal::<Option<GlobalConfigDto>>(None);
     let (loading, set_loading) = signal(false);
     let (error_message, set_error_message) = signal::<Option<String>>(None);
     let (active_tab, set_active_tab) = signal("general");
@@ -161,11 +154,11 @@ pub fn GlobalSettingsPanel(
             set_loading.set(true);
             set_error_message.set(None);
 
-            let updated_config = GlobalConfig {
-                default_task_config: TaskConfig {
-                    work_duration: Duration { secs: (work_minutes.get() * 60) as u64, nanos: 0 },
-                    short_break_duration: Duration { secs: (short_break_minutes.get() * 60) as u64, nanos: 0 },
-                    long_break_duration: Duration { secs: (long_break_minutes.get() * 60) as u64, nanos: 0 },
+            let updated_config = GlobalConfigDto {
+                default_task_config: TaskConfigDto {
+                    work_duration: DurationDto { secs: (work_minutes.get() * 60) as u64, nanos: 0 },
+                    short_break_duration: DurationDto { secs: (short_break_minutes.get() * 60) as u64, nanos: 0 },
+                    long_break_duration: DurationDto { secs: (long_break_minutes.get() * 60) as u64, nanos: 0 },
                     sessions_until_long_break: sessions_until_long_break.get(),
                     enable_screen_blocking: enable_screen_blocking.get(),
                 },
@@ -205,7 +198,7 @@ pub fn GlobalSettingsPanel(
 
             match serde_wasm_bindgen::to_value(&updated_config) {
                 Ok(config_value) => {
-                    let result = invoke("save_global_config", config_value).await;
+                    let result = invoke(app_events::config::SAVE_GLOBAL, config_value).await;
                     match serde_wasm_bindgen::from_value::<()>(result) {
                         Ok(_) => {
                             set_config.set(Some(updated_config));
@@ -226,8 +219,8 @@ pub fn GlobalSettingsPanel(
     let reset_to_defaults = move |_| {
         spawn_local(async move {
             set_loading.set(true);
-            let result = invoke("reset_global_config_to_defaults", JsValue::NULL).await;
-            match serde_wasm_bindgen::from_value::<GlobalConfig>(result) {
+            let result = invoke(app_events::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
+            match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
                 Ok(default_config) => {
                     set_config.set(Some(default_config));
                 }
@@ -363,18 +356,7 @@ pub fn GlobalSettingsPanel(
                         </Show>
 
                         <Show when=move || active_tab.get() == "timer">
-                            <TimerConfigComponent
-                                work_minutes=work_minutes
-                                set_work_minutes=set_work_minutes
-                                short_break_minutes=short_break_minutes
-                                set_short_break_minutes=set_short_break_minutes
-                                long_break_minutes=long_break_minutes
-                                set_long_break_minutes=set_long_break_minutes
-                                sessions_until_long_break=sessions_until_long_break
-                                set_sessions_until_long_break=set_sessions_until_long_break
-                                enable_screen_blocking=enable_screen_blocking
-                                set_enable_screen_blocking=set_enable_screen_blocking
-                            />
+                            <TimerConfigComponent />
                         </Show>
 
                         <Show when=move || active_tab.get() == "audio">
@@ -549,7 +531,7 @@ pub fn GlobalSettingsPanel(
 }
 
 fn load_global_config(
-    set_config: WriteSignal<Option<GlobalConfig>>,
+    set_config: WriteSignal<Option<GlobalConfigDto>>,
     set_loading: WriteSignal<bool>,
     set_error_message: WriteSignal<Option<String>>,
 ) {
@@ -557,8 +539,8 @@ fn load_global_config(
         set_loading.set(true);
         set_error_message.set(None);
         
-        let result = invoke("get_global_config", JsValue::NULL).await;
-        match serde_wasm_bindgen::from_value::<GlobalConfig>(result) {
+        let result = invoke(app_events::config::GET_GLOBAL, JsValue::NULL).await;
+        match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
             Ok(config) => {
                 set_config.set(Some(config));
             }

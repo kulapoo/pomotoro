@@ -1,5 +1,5 @@
-use super::{AudioService, AudioLibrary, PlaybackRequest, PlaybackHandle};
-use crate::core::entities::AudioAsset;
+use super::AudioService;
+use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle};
 use tauri::State;
 use std::sync::Mutex;
 

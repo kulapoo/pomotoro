@@ -65,7 +65,7 @@ impl TimerService {
             
         let mut state = self.state.write().await;
         *state = saved_state;
-        state.status = TimerStatus::Stopped;
+        let _ = state.set_status(TimerStatus::Stopped);
         
         Ok(())
     }
@@ -99,30 +99,31 @@ impl TimerService {
                     let _ = app_handle.emit("timer-update", state.clone());
                 } else {
                     let current_phase = state.phase.clone();
-                    state.next_phase(task.as_ref());
-                    state.status = TimerStatus::Stopped;
+                    if let Ok((_, _new_phase)) = state.next_phase(task.as_ref()) {
+                        let _ = state.set_status(TimerStatus::Stopped);
+                        
+                        send_phase_notification(&app_handle, &current_phase, &state.phase);
+                        
+                        let _ = app_handle.emit("phase-complete", (&current_phase, &state.phase));
+                        let _ = app_handle.emit("timer-update", state.clone());
                     
-                    send_phase_notification(&app_handle, &current_phase, &state.phase);
-                    
-                    let _ = app_handle.emit("phase-complete", (&current_phase, &state.phase));
-                    let _ = app_handle.emit("timer-update", state.clone());
-                    
-                    let state_clone_for_save = state_clone.clone();
-                    drop(state);
-                    
-                    let state_path = match Self::get_state_file_path(&app_handle).await {
-                        Ok(path) => path,
-                        Err(_) => {
-                            break;
+                        let state_clone_for_save = state_clone.clone();
+                        drop(state);
+                        
+                        let state_path = match Self::get_state_file_path(&app_handle).await {
+                            Ok(path) => path,
+                            Err(_) => {
+                                break;
+                            }
+                        };
+                        
+                        let state_to_save = state_clone_for_save.read().await;
+                        if let Ok(json) = serde_json::to_string_pretty(&*state_to_save) {
+                            let _ = tokio::fs::write(state_path, json).await;
                         }
-                    };
-                    
-                    let state_to_save = state_clone_for_save.read().await;
-                    if let Ok(json) = serde_json::to_string_pretty(&*state_to_save) {
-                        let _ = tokio::fs::write(state_path, json).await;
+                        
+                        break;
                     }
-                    
-                    break;
                 }
             }
         });
@@ -145,7 +146,7 @@ impl TimerService {
 
     pub async fn set_status(&self, status: TimerStatus) {
         let mut state = self.state.write().await;
-        state.status = status;
+        let _ = state.set_status(status);
     }
 
     pub async fn reset_current_phase(&self, task: Option<&Task>) {
@@ -156,14 +157,17 @@ impl TimerService {
     pub async fn skip_to_next_phase(&self, task: Option<&Task>) -> (Phase, Phase) {
         let mut state = self.state.write().await;
         let current_phase = state.phase.clone();
-        state.next_phase(task);
-        state.status = TimerStatus::Stopped;
-        (current_phase, state.phase.clone())
+        if let Ok((old_phase, new_phase)) = state.next_phase(task) {
+            let _ = state.set_status(TimerStatus::Stopped);
+            (old_phase, new_phase)
+        } else {
+            (current_phase, state.phase.clone())
+        }
     }
 
-    pub async fn switch_task(&self, task_id: crate::task::models::TaskId, task: Option<&Task>) {
+    pub async fn switch_task(&self, task_id: crate::core::entities::TaskId, task: Option<&Task>) {
         let mut state = self.state.write().await;
-        state.switch_task(task_id, task);
+        let _ = state.switch_task(task_id, task);
     }
 
 }

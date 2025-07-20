@@ -1,6 +1,5 @@
-use super::types::*;
-use crate::core::entities::AudioAsset;
-use crate::core::utilities::AudioError;
+use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
+use super::asset_provider::DefaultAudioAssetProvider;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 use std::collections::HashMap;
 use std::fs::File;
@@ -30,7 +29,7 @@ impl AudioService {
 
         Ok(Self {
             stream_handle,
-            library: AudioLibrary::with_default_assets(),
+            library: DefaultAudioAssetProvider::create_library_with_default_assets(),
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
         })
     }

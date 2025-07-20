@@ -17,8 +17,8 @@ use task::{
 use config::{
     FileConfigRepo, ConfigRepository,
     get_global_config, save_global_config, reset_global_config_to_defaults,
-    update_default_timings, update_default_cycle_length, update_app_preferences,
-    update_notification_preferences, update_ui_preferences, update_default_audio_config,
+    update_default_timings, update_default_cycle_length, update_general,
+    update_notification_preferences, update_appearance, update_audio_config,
     get_effective_task_config, get_effective_audio_config
 };
 use audio::{
@@ -75,10 +75,10 @@ pub fn run() {
             reset_global_config_to_defaults,
             update_default_timings,
             update_default_cycle_length,
-            update_app_preferences,
+            update_general,
             update_notification_preferences,
-            update_ui_preferences,
-            update_default_audio_config,
+            update_appearance,
+            update_audio_config,
             get_effective_task_config,
             get_effective_audio_config,
             get_audio_library,

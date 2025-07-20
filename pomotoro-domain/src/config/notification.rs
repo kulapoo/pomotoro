@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
-use crate::core::entities::NotificationPosition;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum NotificationPosition {
+    TopRight,
+    TopLeft,
+    BottomRight,
+    BottomLeft,
+    Center,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NotificationPreferences {
+pub struct Notification {
     pub enable_desktop_notifications: bool,
     pub enable_sound_notifications: bool,
     pub show_phase_transition_notifications: bool,
@@ -11,7 +19,7 @@ pub struct NotificationPreferences {
     pub auto_dismiss_delay_seconds: u32,
 }
 
-impl Default for NotificationPreferences {
+impl Default for Notification {
     fn default() -> Self {
         Self {
             enable_desktop_notifications: true,

@@ -11,7 +11,7 @@ impl TaskFixtures {
     }
 
     pub fn work_task() -> Task {
-        Task::new("Work Project".to_string(), 4)
+        Task::new("Work Project".to_string(), 4).unwrap()
             .with_tags(vec!["work".to_string(), "project".to_string()])
             .with_description("Important work project".to_string())
     }
@@ -25,9 +25,9 @@ impl TaskFixtures {
             enable_screen_blocking: true,
         };
 
-        Task::new("Study Session".to_string(), 3)
+        Task::new("Study Session".to_string(), 3).unwrap()
             .with_tags(vec!["study".to_string(), "learning".to_string()])
-            .with_config(config)
+            .with_config(config).unwrap()
     }
 
     pub fn creative_task() -> Task {
@@ -48,16 +48,16 @@ impl TaskFixtures {
             muted: false,
         };
 
-        Task::new("Creative Work".to_string(), 2)
+        Task::new("Creative Work".to_string(), 2).unwrap()
             .with_tags(vec!["creative".to_string(), "art".to_string()])
-            .with_config(config)
-            .with_audio_config(audio_config)
+            .with_config(config).unwrap()
+            .with_audio_config(audio_config).unwrap()
     }
 
     pub fn completed_task() -> Task {
-        let mut task = Task::new("Completed Task".to_string(), 2);
-        task.increment_session();
-        task.increment_session();
+        let mut task = Task::new("Completed Task".to_string(), 2).unwrap();
+        task.increment_session().unwrap();
+        task.increment_session().unwrap();
         task
     }
 
@@ -70,9 +70,9 @@ impl TaskFixtures {
             enable_screen_blocking: false,
         };
 
-        Task::new("Exercise".to_string(), 1)
+        Task::new("Exercise".to_string(), 1).unwrap()
             .with_tags(vec!["health".to_string(), "fitness".to_string()])
-            .with_config(config)
+            .with_config(config).unwrap()
     }
 }
 

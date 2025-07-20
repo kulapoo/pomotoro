@@ -14,7 +14,7 @@ pub fn TimerDisplay(timer_state: ReadSignal<TimerState>) -> impl IntoView {
 
         <div class="timer-display">
             <CircularProgress
-                progress=Signal::derive(move || timer_state.get().get_progress_percentage())
+                progress=Signal::derive(move || timer_state.get().get_progress_percentage(None))
                 phase=Signal::derive(move || timer_state.get().phase.clone())
             />
             <div class="time-overlay">
