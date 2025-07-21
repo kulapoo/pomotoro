@@ -1,6 +1,5 @@
-use pomotoro_lib::config::models::*;
-use pomotoro_lib::config::repository::*;
-use pomotoro_domain::{TaskConfig, AudioConfig};
+use pomotoro_domain::{Config, TaskConfig, AudioConfig};
+use pomotoro_lib::config::{ConfigRepo, ConfigError};
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -27,7 +26,7 @@ impl TestConfigRepository {
     }
 }
 
-impl pomotoro_lib::config::repository::ConfigRepo for TestConfigRepository {
+impl ConfigRepo for TestConfigRepository {
     fn get_config(&self) -> Result<Config, ConfigError> {
         let config = self.config.read().map_err(|_| ConfigError::InvalidConfig)?;
         Ok(config.clone())
@@ -97,50 +96,6 @@ impl TestConfigBuilder {
         self
     }
 
-    pub fn with_task_cycling(mut self, behavior: TaskCyclingBehavior) -> Self {
-        self.config.general.task_cycling_behavior = behavior;
-        self
-    }
-
-    pub fn with_auto_start_work_after_break(mut self, enabled: bool) -> Self {
-        self.config.general.auto_start_work_after_break = enabled;
-        self
-    }
-
-    pub fn with_auto_start_breaks(mut self, enabled: bool) -> Self {
-        self.config.general.auto_start_breaks = enabled;
-        self
-    }
-
-    pub fn with_desktop_notifications(mut self, enabled: bool) -> Self {
-        self.config.notification.enable_desktop_notifications = enabled;
-        self
-    }
-
-    pub fn with_notification_sounds(mut self, enabled: bool) -> Self {
-        self.config.notification.enable_sound_notifications = enabled;
-        self
-    }
-
-    pub fn with_theme(mut self, theme: Theme) -> Self {
-        self.config.appearance.theme = theme;
-        self
-    }
-
-    pub fn with_always_on_top(mut self, enabled: bool) -> Self {
-        self.config.appearance.always_on_top = enabled;
-        self
-    }
-
-    pub fn with_show_seconds(mut self, enabled: bool) -> Self {
-        self.config.appearance.show_seconds_in_display = enabled;
-        self
-    }
-
-    pub fn with_compact_mode(mut self, enabled: bool) -> Self {
-        self.config.appearance.compact_mode = enabled;
-        self
-    }
 
     pub fn build(self) -> Config {
         self.config
@@ -178,24 +133,6 @@ impl ConfigTestUtils {
         TestConfigBuilder::new()
             .with_muted_audio(true)
             .with_background_audio(false)
-            .with_notification_sounds(false)
-            .with_desktop_notifications(false)
-            .build()
-    }
-
-    pub fn create_auto_advance_config() -> Config {
-        TestConfigBuilder::new()
-            .with_task_cycling(TaskCyclingBehavior::AutoAdvance)
-            .with_auto_start_work_after_break(true)
-            .with_auto_start_breaks(true)
-            .build()
-    }
-
-    pub fn create_minimal_ui_config() -> Config {
-        TestConfigBuilder::new()
-            .with_compact_mode(true)
-            .with_show_seconds(false)
-            .with_theme(Theme::Dark)
             .build()
     }
 
@@ -209,15 +146,6 @@ impl ConfigTestUtils {
         assert_eq!(actual.audio_config.volume, expected.audio_config.volume);
         assert_eq!(actual.audio_config.enable_background_audio, expected.audio_config.enable_background_audio);
         assert_eq!(actual.audio_config.muted, expected.audio_config.muted);
-
-        assert_eq!(actual.general.task_cycling_behavior, expected.general.task_cycling_behavior);
-        assert_eq!(actual.general.auto_start_work_after_break, expected.general.auto_start_work_after_break);
-        assert_eq!(actual.general.auto_start_breaks, expected.general.auto_start_breaks);
-
-        assert_eq!(actual.appearance.theme, expected.appearance.theme);
-        assert_eq!(actual.appearance.always_on_top, expected.appearance.always_on_top);
-        assert_eq!(actual.appearance.compact_mode, expected.appearance.compact_mode);
-        assert_eq!(actual.appearance.show_seconds_in_display, expected.appearance.show_seconds_in_display);
     }
 
     pub fn assert_task_config_equals(actual: &TaskConfig, expected: &TaskConfig) {

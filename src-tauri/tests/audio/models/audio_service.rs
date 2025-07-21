@@ -140,8 +140,6 @@ impl MockAudioManager {
     }
 
     pub fn stop_background_audio(&self) {
-        // In a real implementation, this would stop specifically background audio
-        // For testing, we'll just stop all looped audio
         let mut playbacks = self.active_playbacks.lock().unwrap();
         for playback in playbacks.values_mut() {
             if playback.is_looped {

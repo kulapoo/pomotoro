@@ -29,8 +29,18 @@ pub async fn create_task(
     request: CreateTaskRequest,
     repository: State<'_, TaskRepository>,
 ) -> Result<Task, String> {
-    let mut task = Task::new(request.name, request.max_sessions)
-        .map_err(|e| e.to_string())?;
+    println!("Creating task with name: {}", request.name);
+    
+    let mut task = match Task::new(request.name.clone(), request.max_sessions) {
+        Ok(task) => {
+            println!("Task created successfully with ID: {}", task.id);
+            task
+        }
+        Err(e) => {
+            println!("Failed to create task: {}", e);
+            return Err(e.to_string());
+        }
+    };
     
     if let Some(description) = request.description {
         task = task.with_description(description);
@@ -50,8 +60,17 @@ pub async fn create_task(
             .map_err(|e| e.to_string())?;
     }
 
-    repository.create(task.clone()).await.map_err(|e| e.to_string())?;
-    Ok(task)
+    println!("Storing task in repository...");
+    match repository.create(task.clone()).await {
+        Ok(()) => {
+            println!("Task stored successfully");
+            Ok(task)
+        }
+        Err(e) => {
+            println!("Failed to store task: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
 
 #[tauri::command]

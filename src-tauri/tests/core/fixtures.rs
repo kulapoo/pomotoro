@@ -1,5 +1,5 @@
-use pomotoro_lib::task::models::{Task, TaskConfig, AudioConfig};
-use pomotoro_lib::config::models::{GlobalConfig, AppPreferences, NotificationPreferences, UiPreferences, TaskCyclingBehavior};
+use pomotoro_lib::task::models::Task;
+use pomotoro_domain::{TaskConfig, AudioConfig};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -79,67 +79,27 @@ impl TaskFixtures {
 pub struct ConfigFixtures;
 
 impl ConfigFixtures {
-    pub fn default_global_config() -> GlobalConfig {
-        GlobalConfig::default()
+    pub fn default_task_config() -> TaskConfig {
+        TaskConfig::default()
     }
 
-    pub fn custom_global_config() -> GlobalConfig {
-        let task_config = TaskConfig {
+    pub fn custom_task_config() -> TaskConfig {
+        TaskConfig {
             work_duration: Duration::from_secs(30 * 60), // 30 minutes
             short_break_duration: Duration::from_secs(7 * 60), // 7 minutes
             long_break_duration: Duration::from_secs(20 * 60), // 20 minutes
             sessions_until_long_break: 3,
             enable_screen_blocking: false,
-        };
+        }
+    }
 
-        let audio_config = AudioConfig {
-            work_notification_sound: Some("work-bell".to_string()),
-            break_notification_sound: Some("break-chime".to_string()),
-            background_sound: Some("focus-sounds".to_string()),
-            volume: 0.8,
-            enable_background_audio: true,
-            muted: false,
-        };
-
-        let app_preferences = AppPreferences {
-            task_cycling_behavior: TaskCyclingBehavior::AutoAdvance,
-            auto_start_next_session: true,
-            auto_start_breaks: false,
-            minimize_on_start: false,
-            start_minimized: false,
-            close_to_tray: true,
-            show_desktop_notifications: true,
-            play_notification_sounds: true,
-        };
-
-        let notification_preferences = NotificationPreferences {
-            show_work_start_notification: true,
-            show_work_end_notification: true,
-            show_break_start_notification: true,
-            show_break_end_notification: true,
-            show_task_completion_notification: true,
-            notification_duration_seconds: 5,
-            enable_sound: true,
-            enable_system_integration: true,
-        };
-
-        let ui_preferences = UiPreferences {
-            theme: "dark".to_string(),
-            always_on_top: false,
-            show_seconds: true,
-            show_progress_ring: true,
-            show_session_count: true,
-            compact_mode: false,
-            sidebar_collapsed: false,
-            window_opacity: 1.0,
-        };
-
-        GlobalConfig {
-            default_task_config: task_config,
-            default_audio_config: audio_config,
-            app_preferences,
-            notification_preferences,
-            ui_preferences,
+    pub fn fast_task_config() -> TaskConfig {
+        TaskConfig {
+            work_duration: Duration::from_secs(5), // 5 seconds
+            short_break_duration: Duration::from_secs(2), // 2 seconds
+            long_break_duration: Duration::from_secs(3), // 3 seconds
+            sessions_until_long_break: 2,
+            enable_screen_blocking: false,
         }
     }
 }

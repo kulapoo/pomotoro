@@ -45,6 +45,12 @@ impl InMemoryTaskRepository {
         }
     }
 
+    pub fn empty() -> Self {
+        Self {
+            tasks: RwLock::new(HashMap::new()),
+        }
+    }
+
     pub fn with_default_task() -> Self {
         Self::new()
     }
