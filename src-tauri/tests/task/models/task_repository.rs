@@ -14,15 +14,16 @@ impl TaskTestRepository {
         }
     }
 
-    pub fn with_default_task() -> Self {
-        Self {
-            inner: Arc::new(InMemoryTaskRepository::with_default_task()),
-        }
-    }
 
     pub fn empty() -> Self {
         Self {
             inner: Arc::new(InMemoryTaskRepository::empty()),
+        }
+    }
+
+    pub fn with_default_task() -> Self {
+        Self {
+            inner: Arc::new(InMemoryTaskRepository::with_default_task()),
         }
     }
 
@@ -32,12 +33,16 @@ impl TaskTestRepository {
         let work_task = Task::new("Work Project".to_string(), 4)?
             .with_tags(vec!["work".to_string(), "project".to_string()])
             .with_description("Important work project".to_string());
+
         self.create(work_task.clone()).await?;
+
         task_ids.push(work_task.id);
 
         let study_task = Task::new("Study Session".to_string(), 3)?
             .with_tags(vec!["study".to_string(), "learning".to_string()]);
+
         self.create(study_task.clone()).await?;
+
         task_ids.push(study_task.id);
 
         let mut completed_task = Task::new("Completed Task".to_string(), 2)?;

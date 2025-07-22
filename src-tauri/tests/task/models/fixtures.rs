@@ -76,64 +76,6 @@ impl TaskFixtures {
     }
 }
 
-pub struct ConfigFixtures;
-
-impl ConfigFixtures {
-    pub fn default_task_config() -> TaskConfig {
-        TaskConfig::default()
-    }
-
-    pub fn custom_task_config() -> TaskConfig {
-        TaskConfig {
-            work_duration: Duration::from_secs(30 * 60), // 30 minutes
-            short_break_duration: Duration::from_secs(7 * 60), // 7 minutes
-            long_break_duration: Duration::from_secs(20 * 60), // 20 minutes
-            sessions_until_long_break: 3,
-            enable_screen_blocking: false,
-        }
-    }
-
-    pub fn fast_task_config() -> TaskConfig {
-        TaskConfig {
-            work_duration: Duration::from_secs(5), // 5 seconds
-            short_break_duration: Duration::from_secs(2), // 2 seconds
-            long_break_duration: Duration::from_secs(3), // 3 seconds
-            sessions_until_long_break: 2,
-            enable_screen_blocking: false,
-        }
-    }
-}
-
-pub struct AudioFixtures;
-
-impl AudioFixtures {
-    pub fn default_audio_config() -> AudioConfig {
-        AudioConfig::default()
-    }
-
-    pub fn custom_audio_config() -> AudioConfig {
-        AudioConfig {
-            work_notification_sound: Some("custom-work-sound".to_string()),
-            break_notification_sound: Some("custom-break-sound".to_string()),
-            background_sound: Some("custom-background".to_string()),
-            volume: 0.6,
-            enable_background_audio: true,
-            muted: false,
-        }
-    }
-
-    pub fn silent_audio_config() -> AudioConfig {
-        AudioConfig {
-            work_notification_sound: None,
-            break_notification_sound: None,
-            background_sound: None,
-            volume: 0.0,
-            enable_background_audio: false,
-            muted: true,
-        }
-    }
-}
-
 pub struct TestIds;
 
 impl TestIds {
