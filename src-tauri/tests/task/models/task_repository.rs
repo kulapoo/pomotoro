@@ -15,15 +15,15 @@ impl TaskTestRepository {
     }
 
 
-    pub fn empty() -> Self {
-        Self {
-            inner: Arc::new(InMemoryTaskRepository::empty()),
-        }
-    }
-
     pub fn with_default_task() -> Self {
         Self {
             inner: Arc::new(InMemoryTaskRepository::with_default_task()),
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            inner: Arc::new(InMemoryTaskRepository::empty()),
         }
     }
 

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use crate::{Error, Result};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TaskConfig {
     #[serde(with = "duration_serde")]
     pub work_duration: Duration,

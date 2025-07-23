@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Error, Result};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AudioConfig {
     pub work_notification_sound: Option<String>,
     pub break_notification_sound: Option<String>,
