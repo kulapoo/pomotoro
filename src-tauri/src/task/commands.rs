@@ -1,7 +1,9 @@
 use tauri::State;
 use super::models::Task;
-use super::repository::TaskRepository;
-use pomotoro_domain::{TaskId, TaskConfig, AudioConfig};
+use super::repository::TaskRepositoryArc;
+use pomotoro_domain::{TaskId, TaskConfig, AudioConfig, TaskSessionService, TaskSessionServiceInterface, EventPublisher};
+use crate::events::EventPublisherArc;
+use std::sync::Arc;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {
@@ -27,7 +29,7 @@ pub struct UpdateTaskRequest {
 #[tauri::command]
 pub async fn create_task(
     request: CreateTaskRequest,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Task, String> {
     println!("Creating task with name: {}", request.name);
     
@@ -76,21 +78,21 @@ pub async fn create_task(
 #[tauri::command]
 pub async fn get_task(
     id: TaskId,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Option<Task>, String> {
     repository.get_by_id(id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_all_tasks(
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
     repository.get_all().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_active_tasks(
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
     repository.get_active_tasks().await.map_err(|e| e.to_string())
 }
@@ -98,7 +100,7 @@ pub async fn get_active_tasks(
 #[tauri::command]
 pub async fn update_task(
     request: UpdateTaskRequest,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Task, String> {
     let mut task = repository
         .get_by_id(request.id)
@@ -137,7 +139,7 @@ pub async fn update_task(
 #[tauri::command]
 pub async fn delete_task(
     id: TaskId,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<bool, String> {
     repository.delete(id).await.map_err(|e| e.to_string())
 }
@@ -145,7 +147,7 @@ pub async fn delete_task(
 #[tauri::command]
 pub async fn get_tasks_by_tags(
     tags: Vec<String>,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
     repository.get_by_tags(&tags).await.map_err(|e| e.to_string())
 }
@@ -153,32 +155,49 @@ pub async fn get_tasks_by_tags(
 #[tauri::command]
 pub async fn complete_task_session(
     id: TaskId,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
-    let mut task = repository
+    // Use domain service for session completion
+    let task_session_service = TaskSessionService::new(
+        repository.inner().clone(),
+        event_publisher.inner().clone(),
+    );
+    
+    let _result = task_session_service
+        .complete_session(&id.to_string())
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Return the updated task
+    repository
         .get_by_id(id)
         .await
         .map_err(|e| e.to_string())?
-        .ok_or("Task not found")?;
-
-    task.increment_session()
-        .map_err(|e| e.to_string())?;
-    repository.update(task.clone()).await.map_err(|e| e.to_string())?;
-    Ok(task)
+        .ok_or_else(|| "Task not found after update".to_string())
 }
 
 #[tauri::command]
 pub async fn reset_task_sessions(
     id: TaskId,
-    repository: State<'_, TaskRepository>,
+    repository: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
-    let mut task = repository
+    // Use domain service for session reset
+    let task_session_service = TaskSessionService::new(
+        repository.inner().clone(),
+        event_publisher.inner().clone(),
+    );
+    
+    task_session_service
+        .reset_sessions(&id.to_string())
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Return the updated task
+    repository
         .get_by_id(id)
         .await
         .map_err(|e| e.to_string())?
-        .ok_or("Task not found")?;
-
-    task.reset_sessions();
-    repository.update(task.clone()).await.map_err(|e| e.to_string())?;
-    Ok(task)
+        .ok_or_else(|| "Task not found after reset".to_string())
 }

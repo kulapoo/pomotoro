@@ -35,6 +35,7 @@ priority - i.e `/timer - 2`
     │       │   ├── task_repo.rs
     │       │   ├── task_session_srv.rs
     │       │   ├── task_config.rs
+    │       │   ├── task_events.rs
     │       │   ├── task_id.rs
     │       │   ├── task.rs
     │       │   └── task_status.rs
@@ -48,7 +49,7 @@ priority - i.e `/timer - 2`
     │       │
     │       │
     │       │
-    │       ├── Config/                 # Config Domain (Bounded Context)
+    │       ├── config/                 # Config Domain (Bounded Context)
 ```
 
 ```
@@ -72,7 +73,7 @@ src/
 ```
 
 ```
-src-tauri/ # Application layer and Infra
+src-tauri/ # Pomotoro Application layer and Infra
     /services
         notification.rs
     /timer

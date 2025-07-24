@@ -1,13 +1,13 @@
 pub mod appearance;
-pub mod audio_config;
+pub mod audio;
 pub mod config;
 pub mod general;
 pub mod notification;
 pub mod repository;
 
 pub use appearance::*;
-pub use audio_config::*;
+pub use audio::*;
 pub use config::*;
 pub use general::*;
 pub use notification::*;
-pub use repository::{ConfigRepository, InMemoryConfigRepository};
+pub use repository::ConfigRepository;

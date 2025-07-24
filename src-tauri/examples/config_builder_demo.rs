@@ -19,8 +19,8 @@ fn main() {
         .build();
 
     println!("Built configuration:");
-    println!("Work duration: {:?}", config.task_config.work_duration);
-    println!("Audio volume: {}", config.audio_config.volume);
+    println!("Work duration: {:?}", config.task.work_duration);
+    println!("Audio volume: {}", config.audio.volume);
     println!("Theme: {:?}", config.appearance.theme);
     println!("Auto start breaks: {}", config.general.auto_start_breaks);
 

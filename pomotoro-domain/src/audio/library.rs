@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use super::audio_asset::AudioAsset;
+use super::asset::AudioAsset;
 use super::error::AudioError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

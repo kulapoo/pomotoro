@@ -1,4 +1,5 @@
-use super::{Config, ConfigRepository};
+use super::ConfigRepository;
+use pomotoro_domain::Config;
 use tauri::State;
 use pomotoro_domain::{TaskConfig, AudioConfig};
 
@@ -131,7 +132,7 @@ pub async fn update_audio_config(
         .get_config()
         .map_err(|e| e.to_string())?;
 
-    config.audio_config = audio_config;
+    config.audio = audio_config;
 
     config_repo
         .save_config(&config)
@@ -156,7 +157,7 @@ pub async fn get_effective_task_config(
         }
     }
 
-    Ok(global_config.task_config)
+    Ok(global_config.task)
 }
 
 #[tauri::command]
@@ -175,5 +176,5 @@ pub async fn get_effective_audio_config(
         }
     }
 
-    Ok(global_config.audio_config)
+    Ok(global_config.audio)
 }

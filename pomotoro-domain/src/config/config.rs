@@ -4,8 +4,8 @@ use crate::{TaskConfig, AudioConfig, Error, Result, General, Notification, Appea
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub task_config: TaskConfig,
-    pub audio_config: AudioConfig,
+    pub task: TaskConfig,
+    pub audio: AudioConfig,
     pub general: General,
     pub notification: Notification,
     pub appearance: Appearance,
@@ -14,8 +14,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            task_config: TaskConfig::default(),
-            audio_config: AudioConfig::default(),
+            task: TaskConfig::default(),
+            audio: AudioConfig::default(),
             general: General::default(),
             notification: Notification::default(),
             appearance: Appearance::default(),
@@ -25,8 +25,8 @@ impl Default for Config {
 
 impl Config {
     pub fn validate(&self) -> Result<()> {
-        self.task_config.validate()?;
-        self.audio_config.validate()?;
+        self.task.validate()?;
+        self.audio.validate()?;
 
         if self.general.max_sessions_default == 0 || self.general.max_sessions_default > 10 {
             return Err(Error::InvalidSessionCount {
@@ -44,12 +44,12 @@ impl Config {
     }
 
     pub fn update_default_timings(&mut self, work_minutes: u32, short_break_minutes: u32, long_break_minutes: u32) {
-        self.task_config.work_duration = Duration::from_secs((work_minutes * 60) as u64);
-        self.task_config.short_break_duration = Duration::from_secs((short_break_minutes * 60) as u64);
-        self.task_config.long_break_duration = Duration::from_secs((long_break_minutes * 60) as u64);
+        self.task.work_duration = Duration::from_secs((work_minutes * 60) as u64);
+        self.task.short_break_duration = Duration::from_secs((short_break_minutes * 60) as u64);
+        self.task.long_break_duration = Duration::from_secs((long_break_minutes * 60) as u64);
     }
 
     pub fn update_default_cycle_length(&mut self, sessions_until_long_break: u8) {
-        self.task_config.sessions_until_long_break = sessions_until_long_break;
+        self.task.sessions_until_long_break = sessions_until_long_break;
     }
 }

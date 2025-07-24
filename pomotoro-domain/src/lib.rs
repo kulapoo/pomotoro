@@ -1,14 +1,11 @@
-pub mod errors;
-pub mod commands;
-pub mod events;
+pub mod shared_kernel;
 pub mod task;
-pub mod config;
 pub mod timer;
+pub mod config;
 pub mod audio;
 
-pub use errors::*;
-pub use events::*;
+pub use shared_kernel::*;
 pub use task::*;
-pub use config::*;
 pub use timer::*;
+pub use config::*;
 pub use audio::*;

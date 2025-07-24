@@ -1,3 +1,6 @@
+// Tauri Command Constants
+// Moved from domain layer to maintain Clean Architecture separation
+
 pub mod timer {
     pub const GET_STATE: &str = "get_timer_state";
     pub const START: &str = "start_timer";

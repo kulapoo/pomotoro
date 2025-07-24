@@ -20,7 +20,7 @@ pub async fn get_timer_state(
 #[tauri::command]
 pub async fn start_timer(
     timer_service: State<'_, TimerService>,
-    task_repository: State<'_, TaskRepository>,
+    task_repository: State<'_, TaskRepositoryArc>,
     app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let current_state = timer_service.get_state().await;
@@ -36,12 +36,14 @@ pub async fn start_timer(
 
     match current_state.status {
         TimerStatus::Stopped | TimerStatus::Paused => {
-            timer_service.set_status(TimerStatus::Running).await;
+            timer_service.set_status(TimerStatus::Running).await
+                .map_err(|e| e.to_string())?;
         }
         TimerStatus::Running => return Ok(current_state),
     }
 
-    timer_service.start_timer(app_handle, task).await;
+    timer_service.start_timer(app_handle, task).await
+        .map_err(|e| e.to_string())?
 
     Ok(timer_service.get_state().await)
 }
@@ -55,7 +57,8 @@ pub async fn pause_timer(
 
     let current_state = timer_service.get_state().await;
     if current_state.status == TimerStatus::Running {
-        timer_service.set_status(TimerStatus::Paused).await;
+        timer_service.set_status(TimerStatus::Paused).await
+            .map_err(|e| e.to_string())?;
     }
 
     let _ = timer_service.save_state(&app_handle).await;
@@ -65,7 +68,7 @@ pub async fn pause_timer(
 #[tauri::command]
 pub async fn reset_timer(
     timer_service: State<'_, TimerService>,
-    task_repository: State<'_, TaskRepository>,
+    task_repository: State<'_, TaskRepositoryArc>,
     app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let current_state = timer_service.get_state().await;
@@ -80,7 +83,8 @@ pub async fn reset_timer(
     };
 
     timer_service.stop_timer().await;
-    timer_service.reset_current_phase(task.as_ref()).await;
+    timer_service.reset_current_phase(task.as_ref()).await
+        .map_err(|e| e.to_string())?
 
     let _ = timer_service.save_state(&app_handle).await;
     Ok(timer_service.get_state().await)
@@ -89,7 +93,7 @@ pub async fn reset_timer(
 #[tauri::command]
 pub async fn skip_phase(
     timer_service: State<'_, TimerService>,
-    task_repository: State<'_, TaskRepository>,
+    task_repository: State<'_, TaskRepositoryArc>,
     app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let current_state = timer_service.get_state().await;
@@ -105,7 +109,8 @@ pub async fn skip_phase(
 
     timer_service.stop_timer().await;
 
-    let (current_phase, new_phase) = timer_service.skip_to_next_phase(task.as_ref()).await;
+    let (current_phase, new_phase) = timer_service.skip_to_next_phase(task.as_ref()).await
+        .map_err(|e| e.to_string())?;
 
     send_phase_notification(&app_handle, &current_phase, &new_phase);
 
@@ -118,7 +123,7 @@ pub async fn skip_phase(
 #[tauri::command]
 pub async fn get_timer_state_with_task(
     timer_service: State<'_, TimerService>,
-    task_repository: State<'_, TaskRepository>,
+    task_repository: State<'_, TaskRepositoryArc>,
     app_handle: AppHandle,
 ) -> Result<TimerStateWithTask, String> {
     let _ = timer_service.load_state(&app_handle).await;
@@ -140,7 +145,7 @@ pub async fn get_timer_state_with_task(
 pub async fn switch_active_task(
     task_id: TaskId,
     timer_service: State<'_, TimerService>,
-    task_repository: State<'_, TaskRepository>,
+    task_repository: State<'_, TaskRepositoryArc>,
     app_handle: AppHandle,
 ) -> Result<TimerStateWithTask, String> {
     let task = task_repository

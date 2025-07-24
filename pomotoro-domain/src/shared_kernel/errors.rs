@@ -16,6 +16,21 @@ pub enum Error {
 
     #[error("Timer state transition not allowed: {from} -> {to}")]
     InvalidStateTransition { from: String, to: String },
+
+    #[error("Invalid tag format: {tag}")]
+    InvalidTagFormat { tag: String },
+
+    #[error("Tag too long: {tag} (max length: {max_length})")]
+    TagTooLong { tag: String, max_length: usize },
+
+    #[error("Repository error: {message}")]
+    RepositoryError { message: String },
+
+    #[error("Configuration error: {message}")]
+    ConfigurationError { message: String },
+
+    #[error("Audio error: {message}")]
+    AudioError { message: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

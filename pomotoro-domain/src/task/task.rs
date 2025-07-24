@@ -21,7 +21,7 @@ pub struct Task {
 impl Task {
     pub fn new_default() -> Self {
         Self {
-            id: uuid::Uuid::new_v4(),
+            id: TaskId::new(),
             name: "Focus Session".to_string(),
             description: Some("Default pomodoro task for focused work".to_string()),
             max_sessions: 4,
@@ -45,7 +45,7 @@ impl Task {
         }
 
         Ok(Self {
-            id: uuid::Uuid::new_v4(),
+            id: TaskId::new(),
             name: name.trim().to_string(),
             description: None,
             max_sessions,

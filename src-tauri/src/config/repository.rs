@@ -1,4 +1,4 @@
-use super::models::Config;
+use pomotoro_domain::Config;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use serde_json;
@@ -28,7 +28,7 @@ pub enum ConfigError {
     SerializationError(#[from] serde_json::Error),
     #[error("Configuration file not found")]
     ConfigNotFound,
-    #[error("Invalid configuration")]
+    #[error("Invalid Configuration")]
     InvalidConfig,
 }
 
@@ -41,7 +41,7 @@ impl FileConfigRepo {
 
         fs::create_dir_all(&config_dir)?;
 
-        let config_path = config_dir.join("config.json");
+        let config_path = config_dir.join("Config.json");
 
         Ok(Self {
             config_path,

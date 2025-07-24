@@ -1,9 +1,9 @@
-use crate::{Task, TaskRepository, DomainEventBus, TaskSessionCompleted, TaskCompleted, Result, Error};
+use crate::{TaskRepository, EventPublisher, TaskSessionCompleted, TaskCompleted, Result, Error, TaskId};
 use async_trait::async_trait;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait TaskSessionService: Send + Sync {
+pub trait TaskSessionServiceInterface: Send + Sync {
     async fn complete_session(&self, task_id: &str) -> Result<SessionCompletionResult>;
     async fn reset_sessions(&self, task_id: &str) -> Result<()>;
     async fn can_complete_session(&self, task_id: &str) -> Result<bool>;
@@ -16,75 +16,68 @@ pub struct SessionCompletionResult {
     pub total_sessions: u8,
 }
 
-pub struct DefaultTaskSessionService {
+pub struct TaskSessionService {
     task_repository: Arc<dyn TaskRepository>,
-    event_bus: Arc<DomainEventBus>,
+    event_publisher: Arc<dyn EventPublisher>,
 }
 
-impl DefaultTaskSessionService {
+impl TaskSessionService {
     pub fn new(
         task_repository: Arc<dyn TaskRepository>,
-        event_bus: Arc<DomainEventBus>,
+        event_publisher: Arc<dyn EventPublisher>,
     ) -> Self {
         Self {
             task_repository,
-            event_bus,
+            event_publisher,
         }
     }
 }
 
 #[async_trait]
-impl TaskSessionService for DefaultTaskSessionService {
-    async fn complete_session(&self, task_id: &str) -> Result<SessionCompletionResult> {
-        let uuid_id = uuid::Uuid::parse_str(task_id)
-            .map_err(|_| Error::TaskNotFound { 
-                id: task_id.to_string() 
+impl TaskSessionServiceInterface for TaskSessionService {
+    async fn complete_session(&self, task_id_str: &str) -> Result<SessionCompletionResult> {
+        let task_id = TaskId::from_string(task_id_str)
+            .map_err(|_| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         let mut task = self.task_repository
-            .get_by_id(uuid_id)
+            .get_by_id(task_id.clone())
             .await?
-            .ok_or_else(|| Error::TaskNotFound { 
-                id: task_id.to_string() 
+            .ok_or_else(|| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         if task.is_completed() {
             return Err(Error::TaskAlreadyCompleted);
         }
 
-        let old_sessions = task.current_sessions;
+        let _old_sessions = task.current_sessions;
         task.increment_session()?;
         let is_task_completed = task.is_completed();
 
         self.task_repository.update(task.clone()).await?;
 
         // Publish session completed event
-        let session_event = TaskSessionCompleted {
-            task_id: task.id,
-            session_number: task.current_sessions,
-            total_sessions: task.max_sessions,
+        let session_event = TaskSessionCompleted::new(
+            task.id.clone(),
+            task.current_sessions,
+            task.max_sessions,
             is_task_completed,
-        };
-
-        self.event_bus.publish_typed(
-            format!("task-{}", task.id),
-            session_event,
             task.current_sessions as u64,
         );
 
+        self.event_publisher.publish(Box::new(session_event));
+
         // If task is completed, publish task completed event
         if is_task_completed {
-            let completed_event = TaskCompleted {
-                task_id: task.id,
-                total_sessions: task.current_sessions,
-                completed_at: task.completed_at.unwrap(),
-            };
-
-            self.event_bus.publish_typed(
-                format!("task-{}", task.id),
-                completed_event,
+            let completed_event = TaskCompleted::new(
+                task.id.clone(),
+                task.current_sessions,
                 task.current_sessions as u64 + 1,
             );
+
+            self.event_publisher.publish(Box::new(completed_event));
         }
 
         Ok(SessionCompletionResult {
@@ -94,34 +87,34 @@ impl TaskSessionService for DefaultTaskSessionService {
         })
     }
 
-    async fn reset_sessions(&self, task_id: &str) -> Result<()> {
-        let uuid_id = uuid::Uuid::parse_str(task_id)
-            .map_err(|_| Error::TaskNotFound { 
-                id: task_id.to_string() 
+    async fn reset_sessions(&self, task_id_str: &str) -> Result<()> {
+        let task_id = TaskId::from_string(task_id_str)
+            .map_err(|_| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         let mut task = self.task_repository
-            .get_by_id(uuid_id)
+            .get_by_id(task_id.clone())
             .await?
-            .ok_or_else(|| Error::TaskNotFound { 
-                id: task_id.to_string() 
+            .ok_or_else(|| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         task.reset_sessions();
         self.task_repository.update(task).await
     }
 
-    async fn can_complete_session(&self, task_id: &str) -> Result<bool> {
-        let uuid_id = uuid::Uuid::parse_str(task_id)
-            .map_err(|_| Error::TaskNotFound { 
-                id: task_id.to_string() 
+    async fn can_complete_session(&self, task_id_str: &str) -> Result<bool> {
+        let task_id = TaskId::from_string(task_id_str)
+            .map_err(|_| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         let task = self.task_repository
-            .get_by_id(uuid_id)
+            .get_by_id(task_id.clone())
             .await?
-            .ok_or_else(|| Error::TaskNotFound { 
-                id: task_id.to_string() 
+            .ok_or_else(|| Error::TaskNotFound {
+                id: task_id_str.to_string()
             })?;
 
         Ok(!task.is_completed())
@@ -131,20 +124,20 @@ impl TaskSessionService for DefaultTaskSessionService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::InMemoryTaskRepository;
-    use uuid::Uuid;
+    use crate::task::repo::InMemoryTaskRepository;
+    use crate::{Task, TaskId};
 
-    async fn setup_service() -> (DefaultTaskSessionService, Arc<InMemoryTaskRepository>) {
+    async fn setup_service() -> (TaskSessionService, Arc<InMemoryTaskRepository>) {
         let task_repo = Arc::new(InMemoryTaskRepository::new());
-        let event_bus = Arc::new(DomainEventBus::new());
-        let service = DefaultTaskSessionService::new(task_repo.clone(), event_bus);
+        let event_publisher = Arc::new(crate::NoOpEventPublisher);
+        let service = TaskSessionService::new(task_repo.clone(), event_publisher);
         (service, task_repo)
     }
 
     #[tokio::test]
     async fn should_complete_session_successfully() {
         let (service, task_repo) = setup_service().await;
-        
+
         let task = Task::new("Test Task".to_string(), 3).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
@@ -155,7 +148,7 @@ mod tests {
         assert_eq!(result.sessions_completed, 1);
         assert_eq!(result.total_sessions, 3);
 
-        let updated_task = task_repo.get_by_id(Uuid::parse_str(&task_id).unwrap())
+        let updated_task = task_repo.get_by_id(TaskId::from_string(&task_id).unwrap())
             .await.unwrap().unwrap();
         assert_eq!(updated_task.current_sessions, 1);
     }
@@ -163,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn should_complete_task_when_max_sessions_reached() {
         let (service, task_repo) = setup_service().await;
-        
+
         let task = Task::new("Test Task".to_string(), 1).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
@@ -174,7 +167,7 @@ mod tests {
         assert_eq!(result.sessions_completed, 1);
         assert_eq!(result.total_sessions, 1);
 
-        let updated_task = task_repo.get_by_id(Uuid::parse_str(&task_id).unwrap())
+        let updated_task = task_repo.get_by_id(TaskId::from_string(&task_id).unwrap())
             .await.unwrap().unwrap();
         assert!(updated_task.is_completed());
     }
@@ -182,7 +175,7 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_complete_already_completed_task() {
         let (service, task_repo) = setup_service().await;
-        
+
         let mut task = Task::new("Test Task".to_string(), 1).unwrap();
         task.increment_session().unwrap(); // Complete the task
         let task_id = task.id.to_string();
@@ -195,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn should_reset_sessions() {
         let (service, task_repo) = setup_service().await;
-        
+
         let mut task = Task::new("Test Task".to_string(), 3).unwrap();
         task.increment_session().unwrap(); // Complete one session
         let task_id = task.id.to_string();
@@ -203,7 +196,7 @@ mod tests {
 
         service.reset_sessions(&task_id).await.unwrap();
 
-        let updated_task = task_repo.get_by_id(Uuid::parse_str(&task_id).unwrap())
+        let updated_task = task_repo.get_by_id(TaskId::from_string(&task_id).unwrap())
             .await.unwrap().unwrap();
         assert_eq!(updated_task.current_sessions, 0);
         assert!(!updated_task.is_completed());
@@ -212,7 +205,7 @@ mod tests {
     #[tokio::test]
     async fn should_check_if_can_complete_session() {
         let (service, task_repo) = setup_service().await;
-        
+
         let task = Task::new("Test Task".to_string(), 2).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();

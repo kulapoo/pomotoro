@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use crate::{Config, Result};
+use crate::Result;
+use super::config::Config;
 use std::sync::{Arc, RwLock};
 
 #[async_trait]

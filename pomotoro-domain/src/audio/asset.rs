@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use super::audio_category::AudioCategory;
+use super::category::AudioCategory;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioAsset {

@@ -30,7 +30,8 @@ impl InMemoryTaskRepository {
     pub fn with_tasks(tasks: Vec<Task>) -> Self {
         let mut task_map = HashMap::new();
         for task in tasks {
-            task_map.insert(task.id, task);
+            let task_id = task.id.clone();
+            task_map.insert(task_id, task);
         }
         Self {
             tasks: Arc::new(RwLock::new(task_map)),
@@ -47,7 +48,8 @@ impl TaskRepository for InMemoryTaskRepository {
                 id: task.id.to_string() 
             });
         }
-        tasks.insert(task.id, task);
+        let task_id = task.id.clone();
+        tasks.insert(task_id, task);
         Ok(())
     }
 
@@ -77,7 +79,8 @@ impl TaskRepository for InMemoryTaskRepository {
                 id: task.id.to_string() 
             });
         }
-        tasks.insert(task.id, task);
+        let task_id = task.id.clone();
+        tasks.insert(task_id, task);
         Ok(())
     }
 
@@ -113,13 +116,12 @@ impl TaskRepository for InMemoryTaskRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use uuid::Uuid;
 
     #[tokio::test]
     async fn should_create_and_retrieve_task() {
         let repo = InMemoryTaskRepository::new();
         let task = Task::new("Test Task".to_string(), 4).unwrap();
-        let task_id = task.id;
+        let task_id = task.id.clone();
 
         repo.create(task.clone()).await.unwrap();
         let retrieved = repo.get_by_id(task_id).await.unwrap();
@@ -132,7 +134,7 @@ mod tests {
     async fn should_update_existing_task() {
         let repo = InMemoryTaskRepository::new();
         let mut task = Task::new("Original".to_string(), 4).unwrap();
-        let task_id = task.id;
+        let task_id = task.id.clone();
 
         repo.create(task.clone()).await.unwrap();
         

@@ -1,14 +1,13 @@
-use crate::{Task, TaskRepository, TaskStatus, DomainEventBus, ActiveTaskSwitched, Result, Error};
+use crate::{Task, TaskRepository, EventPublisher, ActiveTaskSwitched, Result, Error, TaskId};
 use async_trait::async_trait;
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[async_trait]
 pub trait TaskCyclingService: Send + Sync {
-    async fn get_next_task(&self, current_task_id: Option<Uuid>) -> Result<Option<Task>>;
-    async fn switch_to_task(&self, task_id: Uuid) -> Result<Option<Task>>;
+    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>>;
+    async fn switch_to_task(&self, task_id: TaskId) -> Result<Option<Task>>;
     async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
-    async fn cycle_to_next_active_task(&self, current_task_id: Option<Uuid>) -> Result<Option<Task>>;
+    async fn cycle_to_next_active_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>>;
 }
 
 #[derive(Debug, Clone)]
@@ -20,35 +19,32 @@ pub enum TaskCyclingStrategy {
 
 pub struct DefaultTaskCyclingService {
     task_repository: Arc<dyn TaskRepository>,
-    event_bus: Arc<DomainEventBus>,
+    event_publisher: Arc<dyn EventPublisher>,
     cycling_strategy: TaskCyclingStrategy,
 }
 
 impl DefaultTaskCyclingService {
     pub fn new(
         task_repository: Arc<dyn TaskRepository>,
-        event_bus: Arc<DomainEventBus>,
+        event_publisher: Arc<dyn EventPublisher>,
         cycling_strategy: TaskCyclingStrategy,
     ) -> Self {
         Self {
             task_repository,
-            event_bus,
+            event_publisher,
             cycling_strategy,
         }
     }
 
-    fn publish_task_switched(&self, old_task_id: Option<Uuid>, new_task_id: Option<Uuid>) {
-        let event = ActiveTaskSwitched {
+    fn publish_task_switched(&self, old_task_id: Option<TaskId>, new_task_id: Option<TaskId>) {
+        let event = ActiveTaskSwitched::new(
             old_task_id,
             new_task_id,
-            phase: crate::Phase::Work, // Default to work phase when switching
-        };
+            crate::Phase::Work, // Default to work phase when switching
+            1,
+        );
 
-        let aggregate_id = new_task_id
-            .map(|id| format!("task-{}", id))
-            .unwrap_or_else(|| "timer".to_string());
-
-        self.event_bus.publish_typed(aggregate_id, event, 1);
+        self.event_publisher.publish(Box::new(event));
     }
 
     async fn get_available_tasks(&self) -> Result<Vec<Task>> {
@@ -59,7 +55,7 @@ impl DefaultTaskCyclingService {
             .collect())
     }
 
-    fn find_next_task_round_robin<'a>(&self, tasks: &'a [Task], current_task_id: Option<Uuid>) -> Option<&'a Task> {
+    fn find_next_task_round_robin<'a>(&self, tasks: &'a [Task], current_task_id: Option<TaskId>) -> Option<&'a Task> {
         if tasks.is_empty() {
             return None;
         }
@@ -79,7 +75,7 @@ impl DefaultTaskCyclingService {
 
 #[async_trait]
 impl TaskCyclingService for DefaultTaskCyclingService {
-    async fn get_next_task(&self, current_task_id: Option<Uuid>) -> Result<Option<Task>> {
+    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
         let available_tasks = self.get_available_tasks().await?;
 
         let next_task = match self.cycling_strategy {
@@ -104,8 +100,8 @@ impl TaskCyclingService for DefaultTaskCyclingService {
         Ok(next_task)
     }
 
-    async fn switch_to_task(&self, task_id: Uuid) -> Result<Option<Task>> {
-        let task = self.task_repository.get_by_id(task_id).await?;
+    async fn switch_to_task(&self, task_id: TaskId) -> Result<Option<Task>> {
+        let task = self.task_repository.get_by_id(task_id.clone()).await?;
         
         if let Some(ref task) = task {
             if task.is_completed() {
@@ -121,11 +117,11 @@ impl TaskCyclingService for DefaultTaskCyclingService {
         self.get_available_tasks().await
     }
 
-    async fn cycle_to_next_active_task(&self, current_task_id: Option<Uuid>) -> Result<Option<Task>> {
-        let next_task = self.get_next_task(current_task_id).await?;
+    async fn cycle_to_next_active_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
+        let next_task = self.get_next_task(current_task_id.clone()).await?;
         
         if let Some(ref task) = next_task {
-            self.publish_task_switched(current_task_id, Some(task.id));
+            self.publish_task_switched(current_task_id, Some(task.id.clone()));
         }
 
         Ok(next_task)
@@ -135,14 +131,14 @@ impl TaskCyclingService for DefaultTaskCyclingService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::InMemoryTaskRepository;
+    use crate::task::repo::InMemoryTaskRepository;
 
     async fn setup_service() -> (DefaultTaskCyclingService, Arc<InMemoryTaskRepository>) {
         let task_repo = Arc::new(InMemoryTaskRepository::new());
-        let event_bus = Arc::new(DomainEventBus::new());
+        let event_publisher = Arc::new(crate::NoOpEventPublisher);
         let service = DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_bus,
+            event_publisher,
             TaskCyclingStrategy::RoundRobin,
         );
         (service, task_repo)
@@ -163,14 +159,14 @@ mod tests {
     #[tokio::test]
     async fn should_get_next_task_in_round_robin() {
         let (service, repo) = setup_service().await;
-        let tasks = create_test_tasks(&repo).await;
+        let _tasks = create_test_tasks(&repo).await;
 
         // First call should return some task
         let first_task = service.get_next_task(None).await.unwrap().unwrap();
         let first_task_id = first_task.id;
 
         // Next call with current task should return a different task
-        let second_task = service.get_next_task(Some(first_task_id)).await.unwrap().unwrap();
+        let second_task = service.get_next_task(Some(first_task_id.clone())).await.unwrap().unwrap();
         assert_ne!(second_task.id, first_task_id);
 
         // After cycling through all tasks, should return to the first task again
@@ -186,7 +182,7 @@ mod tests {
         let (service, repo) = setup_service().await;
         let tasks = create_test_tasks(&repo).await;
 
-        let switched_task = service.switch_to_task(tasks[1].id).await.unwrap().unwrap();
+        let switched_task = service.switch_to_task(tasks[1].id.clone()).await.unwrap().unwrap();
         assert_eq!(switched_task.name, "Task 2");
         assert_eq!(switched_task.id, tasks[1].id);
     }
@@ -196,7 +192,7 @@ mod tests {
         let (service, repo) = setup_service().await;
         let mut task = Task::new("Completed Task".to_string(), 1).unwrap();
         task.increment_session().unwrap(); // Complete the task
-        let task_id = task.id;
+        let task_id = task.id.clone();
         repo.create(task).await.unwrap();
 
         let result = service.switch_to_task(task_id).await;
@@ -234,7 +230,7 @@ mod tests {
         let (service, repo) = setup_service().await;
         let tasks = create_test_tasks(&repo).await;
 
-        let next_task = service.cycle_to_next_active_task(Some(tasks[0].id)).await.unwrap().unwrap();
+        let next_task = service.cycle_to_next_active_task(Some(tasks[0].id.clone())).await.unwrap().unwrap();
         // Should return a different task than the current one
         assert_ne!(next_task.id, tasks[0].id);
         // Should be one of the available tasks
@@ -244,17 +240,17 @@ mod tests {
     #[tokio::test]
     async fn should_handle_manual_cycling_strategy() {
         let task_repo = Arc::new(InMemoryTaskRepository::new());
-        let event_bus = Arc::new(DomainEventBus::new());
+        let event_publisher = Arc::new(crate::NoOpEventPublisher);
         let service = DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_bus,
+            event_publisher,
             TaskCyclingStrategy::Manual,
         );
 
         let tasks = create_test_tasks(&task_repo).await;
 
         // In manual mode, should return current task, not cycle
-        let next_task = service.get_next_task(Some(tasks[0].id)).await.unwrap().unwrap();
+        let next_task = service.get_next_task(Some(tasks[0].id.clone())).await.unwrap().unwrap();
         assert_eq!(next_task.id, tasks[0].id);
         assert_eq!(next_task.name, "Task 1");
     }

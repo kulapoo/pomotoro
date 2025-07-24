@@ -16,7 +16,7 @@ pub async fn get_global_config() -> std::result::Result<Config, String> {
     let result = invoke(events::config::GET_GLOBAL, JsValue::NULL).await;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to deserialize config: {}", e))
+        .map_err(|e| format!("Failed to deserialize Config: {}", e))
 }
 
 pub async fn save_global_config(config: Config) -> std::result::Result<(), String> {
@@ -26,17 +26,17 @@ pub async fn save_global_config(config: Config) -> std::result::Result<(), Strin
     let result = invoke(events::config::SAVE_GLOBAL, args).await;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to save config: {}", e))
+        .map_err(|e| format!("Failed to save Config: {}", e))
 }
 
 pub async fn update_general(general: General) -> std::result::Result<Config, String> {
     let args = to_value(&general)
-        .map_err(|e| format!("Failed to serialize general config: {}", e))?;
+        .map_err(|e| format!("Failed to serialize general Config: {}", e))?;
 
     let result = invoke(events::config::UPDATE_GENERAL, args).await;
 
     serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update general config: {}", e))
+        .map_err(|e| format!("Failed to update general Config: {}", e))
 }
 
 pub async fn update_notification_preferences(preferences: Notification) -> std::result::Result<Config, String> {

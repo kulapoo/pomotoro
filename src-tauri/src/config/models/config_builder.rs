@@ -1,6 +1,6 @@
 use std::time::Duration;
 use pomotoro_domain::{TaskCyclingBehavior, NotificationPosition, Theme};
-use super::Config;
+use pomotoro_domain::Config;
 
 #[derive(Debug, Clone)]
 pub struct ConfigBuilder {
@@ -24,103 +24,103 @@ impl ConfigBuilder {
 
     // Task Config flat setters/getters
     pub fn task_work_duration(mut self, duration: Duration) -> Self {
-        self.config.task_config.work_duration = duration;
+        self.config.task.work_duration = duration;
         self
     }
 
     pub fn get_task_work_duration(&self) -> Duration {
-        self.config.task_config.work_duration
+        self.config.task.work_duration
     }
 
     pub fn task_short_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task_config.short_break_duration = duration;
+        self.config.task.short_break_duration = duration;
         self
     }
 
     pub fn get_task_short_break_duration(&self) -> Duration {
-        self.config.task_config.short_break_duration
+        self.config.task.short_break_duration
     }
 
     pub fn task_long_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task_config.long_break_duration = duration;
+        self.config.task.long_break_duration = duration;
         self
     }
 
     pub fn get_task_long_break_duration(&self) -> Duration {
-        self.config.task_config.long_break_duration
+        self.config.task.long_break_duration
     }
 
     pub fn task_sessions_until_long_break(mut self, sessions: u8) -> Self {
-        self.config.task_config.sessions_until_long_break = sessions;
+        self.config.task.sessions_until_long_break = sessions;
         self
     }
 
     pub fn get_task_sessions_until_long_break(&self) -> u8 {
-        self.config.task_config.sessions_until_long_break
+        self.config.task.sessions_until_long_break
     }
 
     pub fn task_enable_screen_blocking(mut self, enable: bool) -> Self {
-        self.config.task_config.enable_screen_blocking = enable;
+        self.config.task.enable_screen_blocking = enable;
         self
     }
 
     pub fn get_task_enable_screen_blocking(&self) -> bool {
-        self.config.task_config.enable_screen_blocking
+        self.config.task.enable_screen_blocking
     }
 
     // Audio Config flat setters/getters
     pub fn audio_work_notification_sound(mut self, sound: Option<String>) -> Self {
-        self.config.audio_config.work_notification_sound = sound;
+        self.config.audio.work_notification_sound = sound;
         self
     }
 
     pub fn get_audio_work_notification_sound(&self) -> &Option<String> {
-        &self.config.audio_config.work_notification_sound
+        &self.config.audio.work_notification_sound
     }
 
     pub fn audio_break_notification_sound(mut self, sound: Option<String>) -> Self {
-        self.config.audio_config.break_notification_sound = sound;
+        self.config.audio.break_notification_sound = sound;
         self
     }
 
     pub fn get_audio_break_notification_sound(&self) -> &Option<String> {
-        &self.config.audio_config.break_notification_sound
+        &self.config.audio.break_notification_sound
     }
 
     pub fn audio_background_sound(mut self, sound: Option<String>) -> Self {
-        self.config.audio_config.background_sound = sound;
+        self.config.audio.background_sound = sound;
         self
     }
 
     pub fn get_audio_background_sound(&self) -> &Option<String> {
-        &self.config.audio_config.background_sound
+        &self.config.audio.background_sound
     }
 
     pub fn audio_volume(mut self, volume: f32) -> Self {
-        self.config.audio_config.volume = volume;
+        self.config.audio.volume = volume;
         self
     }
 
     pub fn get_audio_volume(&self) -> f32 {
-        self.config.audio_config.volume
+        self.config.audio.volume
     }
 
     pub fn audio_enable_background_audio(mut self, enable: bool) -> Self {
-        self.config.audio_config.enable_background_audio = enable;
+        self.config.audio.enable_background_audio = enable;
         self
     }
 
     pub fn get_audio_enable_background_audio(&self) -> bool {
-        self.config.audio_config.enable_background_audio
+        self.config.audio.enable_background_audio
     }
 
     pub fn audio_muted(mut self, muted: bool) -> Self {
-        self.config.audio_config.muted = muted;
+        self.config.audio.muted = muted;
         self
     }
 
     pub fn get_audio_muted(&self) -> bool {
-        self.config.audio_config.muted
+        self.config.audio.muted
     }
 
     // General flat setters/getters
