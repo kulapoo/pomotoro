@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::Result;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Theme {
@@ -8,7 +9,7 @@ pub enum Theme {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Appearance {
+pub struct AppearanceConfig {
     pub theme: Theme,
     pub show_seconds_in_display: bool,
     pub always_on_top: bool,
@@ -17,7 +18,7 @@ pub struct Appearance {
     pub animate_progress: bool,
 }
 
-impl Default for Appearance {
+impl Default for AppearanceConfig {
     fn default() -> Self {
         Self {
             theme: Theme::System,
@@ -27,5 +28,12 @@ impl Default for Appearance {
             show_task_list_sidebar: true,
             animate_progress: true,
         }
+    }
+}
+
+impl AppearanceConfig {
+    pub fn validate(&self) -> Result<()> {
+        // All appearance settings are valid by enum/boolean constraints
+        Ok(())
     }
 }

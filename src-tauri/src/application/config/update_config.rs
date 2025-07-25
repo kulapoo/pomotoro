@@ -1,0 +1,263 @@
+use pomotoro_domain::{
+    Config, ConfigRepository, EventPublisher, GeneralConfig, AudioConfig, 
+    NotificationConfig, AppearanceConfig, Result
+};
+use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+pub struct UpdateConfigCmd {
+    pub general: Option<GeneralConfig>,
+    pub audio: Option<AudioConfig>,
+    pub notification: Option<NotificationConfig>,
+    pub appearance: Option<AppearanceConfig>,
+}
+
+pub async fn update_config(
+    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    cmd: UpdateConfigCmd,
+) -> Result<Config> {
+    // Get current config or create default
+    let mut config = match config_repo.config_exists().await? {
+        true => config_repo.get_config().await?,
+        false => Config::default(),
+    };
+    
+    // Update individual sections if provided
+    if let Some(general) = cmd.general {
+        general.validate()?;
+        config.general = general;
+    }
+    
+    if let Some(audio) = cmd.audio {
+        audio.validate()?;
+        config.audio = audio;
+    }
+    
+    if let Some(notification) = cmd.notification {
+        notification.validate()?;
+        config.notification = notification;
+    }
+    
+    if let Some(appearance) = cmd.appearance {
+        appearance.validate()?;
+        config.appearance = appearance;
+    }
+    
+    // Validate the entire config before saving
+    config.validate()?;
+    
+    // Save the updated config
+    config_repo.save_config(&config).await?;
+    
+    // TODO: Publish ConfigUpdated event when domain events are implemented
+    
+    Ok(config)
+}
+
+pub async fn update_full_config(
+    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    new_config: Config,
+) -> Result<Config> {
+    // Validate the new config
+    new_config.validate()?;
+    
+    // Save the config
+    config_repo.save_config(&new_config).await?;
+    
+    // TODO: Publish ConfigUpdated event when domain events are implemented
+    
+    Ok(new_config)
+}
+
+pub async fn update_general_config(
+    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    general_config: GeneralConfig,
+) -> Result<Config> {
+    let cmd = UpdateConfigCmd {
+        general: Some(general_config),
+        audio: None,
+        notification: None,
+        appearance: None,
+    };
+    
+    update_config(config_repo, event_publisher, cmd).await
+}
+
+pub async fn update_audio_config(
+    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    audio_config: AudioConfig,
+) -> Result<Config> {
+    let cmd = UpdateConfigCmd {
+        general: None,
+        audio: Some(audio_config),
+        notification: None,
+        appearance: None,
+    };
+    
+    update_config(config_repo, event_publisher, cmd).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pomotoro_domain::NoOpEventPublisher;
+    use crate::infrastructure::InMemoryConfigRepository;
+    use std::time::Duration;
+
+    async fn setup() -> (Arc<dyn ConfigRepository + Send + Sync>, Arc<dyn EventPublisher + Send + Sync>) {
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
+        
+        // Save initial config
+        config_repo.save_config(&Config::default()).await.unwrap();
+        
+        (config_repo, event_publisher)
+    }
+
+    #[tokio::test]
+    async fn should_update_general_config_only() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut new_general = GeneralConfig::default();
+        new_general.max_sessions_default = 8;
+        
+        let cmd = UpdateConfigCmd {
+            general: Some(new_general),
+            audio: None,
+            notification: None,
+            appearance: None,
+        };
+        
+        let updated_config = update_config(&config_repo, &event_publisher, cmd)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.general.max_sessions_default, 8);
+        // Other sections should remain unchanged
+        assert_eq!(updated_config.audio, AudioConfig::default());
+    }
+
+    #[tokio::test]
+    async fn should_update_multiple_config_sections() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut new_general = GeneralConfig::default();
+        new_general.max_sessions_default = 6;
+        
+        let mut new_audio = AudioConfig::default();
+        new_audio.volume = 0.8;
+        
+        let cmd = UpdateConfigCmd {
+            general: Some(new_general),
+            audio: Some(new_audio),
+            notification: None,
+            appearance: None,
+        };
+        
+        let updated_config = update_config(&config_repo, &event_publisher, cmd)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.general.max_sessions_default, 6);
+        assert_eq!(updated_config.audio.volume, 0.8);
+        // Unchanged sections should remain default
+        assert_eq!(updated_config.notification.enable_desktop_notifications, NotificationConfig::default().enable_desktop_notifications);
+    }
+
+    #[tokio::test]
+    async fn should_update_full_config() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut new_config = Config::default();
+        new_config.general.max_sessions_default = 10;
+        new_config.audio.volume = 0.5;
+        
+        let updated_config = update_full_config(&config_repo, &event_publisher, new_config.clone())
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.general.max_sessions_default, 10);
+        assert_eq!(updated_config.audio.volume, 0.5);
+    }
+
+    #[tokio::test]
+    async fn should_create_config_if_none_exists() {
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
+        
+        // Don't create initial config
+        assert!(!config_repo.config_exists().await.unwrap());
+        
+        let mut new_general = GeneralConfig::default();
+        new_general.max_sessions_default = 7;
+        
+        let cmd = UpdateConfigCmd {
+            general: Some(new_general),
+            audio: None,
+            notification: None,
+            appearance: None,
+        };
+        
+        let updated_config = update_config(&config_repo, &event_publisher, cmd)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.general.max_sessions_default, 7);
+        // Config should now exist
+        assert!(config_repo.config_exists().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn should_fail_with_invalid_config() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut invalid_general = GeneralConfig::default();
+        invalid_general.max_sessions_default = 0; // Invalid value
+        
+        let cmd = UpdateConfigCmd {
+            general: Some(invalid_general),
+            audio: None,
+            notification: None,
+            appearance: None,
+        };
+        
+        let result = update_config(&config_repo, &event_publisher, cmd).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn should_update_general_config_using_convenience_method() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut new_general = GeneralConfig::default();
+        new_general.max_sessions_default = 5;
+        
+        let updated_config = update_general_config(&config_repo, &event_publisher, new_general)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.general.max_sessions_default, 5);
+        // Other sections should remain unchanged
+        assert_eq!(updated_config.audio, AudioConfig::default());
+    }
+
+    #[tokio::test]
+    async fn should_update_audio_config_using_convenience_method() {
+        let (config_repo, event_publisher) = setup().await;
+        
+        let mut new_audio = AudioConfig::default();
+        new_audio.volume = 0.3;
+        
+        let updated_config = update_audio_config(&config_repo, &event_publisher, new_audio)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated_config.audio.volume, 0.3);
+        // Other sections should remain unchanged
+        assert_eq!(updated_config.general.max_sessions_default, GeneralConfig::default().max_sessions_default);
+    }
+}

@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use crate::{TaskConfig, AudioConfig, Error, Result, General, Notification, Appearance};
+use crate::{TaskConfig, AudioConfig, Error, Result, GeneralConfig, NotificationConfig, AppearanceConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub task: TaskConfig,
     pub audio: AudioConfig,
-    pub general: General,
-    pub notification: Notification,
-    pub appearance: Appearance,
+    pub general: GeneralConfig,
+    pub notification: NotificationConfig,
+    pub appearance: AppearanceConfig,
 }
 
 impl Default for Config {
@@ -16,9 +16,9 @@ impl Default for Config {
         Self {
             task: TaskConfig::default(),
             audio: AudioConfig::default(),
-            general: General::default(),
-            notification: Notification::default(),
-            appearance: Appearance::default(),
+            general: GeneralConfig::default(),
+            notification: NotificationConfig::default(),
+            appearance: AppearanceConfig::default(),
         }
     }
 }

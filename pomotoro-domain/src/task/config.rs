@@ -57,6 +57,30 @@ impl TaskConfig {
     }
 }
 
+// Conversion from TaskConfig to TimerConfiguration
+impl Into<crate::TimerConfiguration> for TaskConfig {
+    fn into(self) -> crate::TimerConfiguration {
+        crate::TimerConfiguration {
+            work_duration: self.work_duration,
+            short_break_duration: self.short_break_duration,
+            long_break_duration: self.long_break_duration,
+            sessions_until_long_break: self.sessions_until_long_break,
+        }
+    }
+}
+
+impl From<crate::TimerConfiguration> for TaskConfig {
+    fn from(timer_config: crate::TimerConfiguration) -> Self {
+        Self {
+            work_duration: timer_config.work_duration,
+            short_break_duration: timer_config.short_break_duration,
+            long_break_duration: timer_config.long_break_duration,
+            sessions_until_long_break: timer_config.sessions_until_long_break,
+            enable_screen_blocking: false, // Default value for new field
+        }
+    }
+}
+
 mod duration_serde {
     use serde::{Deserialize, Deserializer, Serializer};
     use std::time::Duration;

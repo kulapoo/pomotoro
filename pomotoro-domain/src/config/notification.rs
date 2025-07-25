@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum NotificationPosition {
@@ -10,7 +11,7 @@ pub enum NotificationPosition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Notification {
+pub struct NotificationConfig {
     pub enable_desktop_notifications: bool,
     pub enable_sound_notifications: bool,
     pub show_phase_transition_notifications: bool,
@@ -19,7 +20,7 @@ pub struct Notification {
     pub auto_dismiss_delay_seconds: u32,
 }
 
-impl Default for Notification {
+impl Default for NotificationConfig {
     fn default() -> Self {
         Self {
             enable_desktop_notifications: true,
@@ -29,5 +30,16 @@ impl Default for Notification {
             notification_position: NotificationPosition::TopRight,
             auto_dismiss_delay_seconds: 5,
         }
+    }
+}
+
+impl NotificationConfig {
+    pub fn validate(&self) -> Result<()> {
+        if self.auto_dismiss_delay_seconds > 300 {
+            return Err(Error::InvalidDuration {
+                duration: self.auto_dismiss_delay_seconds,
+            });
+        }
+        Ok(())
     }
 }

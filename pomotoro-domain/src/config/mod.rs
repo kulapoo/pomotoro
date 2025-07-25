@@ -3,11 +3,11 @@ pub mod audio;
 pub mod config;
 pub mod general;
 pub mod notification;
-pub mod repository;
+pub mod repo;
 
 pub use appearance::*;
 pub use audio::*;
 pub use config::*;
 pub use general::*;
 pub use notification::*;
-pub use repository::ConfigRepository;
+pub use repo::ConfigRepository;
