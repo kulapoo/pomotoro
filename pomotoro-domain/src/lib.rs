@@ -15,7 +15,6 @@ pub use shared_kernel::{
 // Re-export task domain
 pub use task::{
     Task, TaskId, TaskMarker, TaskConfig, TaskStatus, TaskRepository,
-    TaskSessionService, TaskSessionServiceInterface, SessionCompletionResult,
     DefaultTaskCyclingService, TaskCyclingService, TaskCyclingStrategy,
     TaskCreated, TaskSessionCompleted, TaskCompleted, TaskStatusChanged, TaskUpdated,
     SessionTransitionCompleted, TaskSwitchWorkflowCompleted, AutomaticTaskCyclingCompleted,

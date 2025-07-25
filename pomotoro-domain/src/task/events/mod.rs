@@ -23,6 +23,7 @@ pub use task_cycling_exhausted::TaskCyclingExhausted;
 mod tests {
     use super::*;
     use crate::{TaskId, TaskConfig, AudioConfig};
+    use crate::DomainEvent;
     use std::time::Duration;
 
     #[test]

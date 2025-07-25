@@ -9,7 +9,6 @@ pub trait Writable<T, ID> {
     async fn delete_all(&mut self) -> Result<usize>;
 }
 
-#[async_trait]
 pub trait WritableSync<T, ID> {
     fn save(&mut self, entity: &T) -> Result<()>;
     fn update(&mut self, id: &ID, entity: &T) -> Result<()>;

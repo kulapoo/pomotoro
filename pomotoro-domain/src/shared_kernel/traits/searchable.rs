@@ -59,7 +59,6 @@ pub trait Searchable<T> {
     async fn search_by_query(&self, query: &str) -> Result<Vec<T>>;
 }
 
-#[async_trait]
 pub trait SearchableSync<T> {
     fn search(&self, criteria: &SearchCriteria) -> Result<Vec<T>>;
     fn search_by_tags(&self, tags: &[String]) -> Result<Vec<T>>;

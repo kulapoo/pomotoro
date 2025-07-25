@@ -1,11 +1,9 @@
 use crate::{
-    TimerState, Phase, PhaseCompleted,
-    TimerStarted, TimerPaused, TimerReset, Result, Error, EventPublisher
+    TimerState, Phase, Result, Error
 };
 
 #[cfg(test)]
 use crate::Timer;
-use std::sync::Arc;
 
 pub trait PhaseTransitionService: Send + Sync {
     fn transition_to_next_phase(&self, timer_state: &mut TimerState) -> Result<PhaseTransitionResult>;
@@ -23,31 +21,13 @@ pub struct PhaseTransitionResult {
     pub cycle_completed: bool,
 }
 
-pub struct DefaultPhaseTransitionService {
-    event_publisher: Arc<dyn EventPublisher>,
-}
+pub struct DefaultPhaseTransitionService;
 
 impl DefaultPhaseTransitionService {
-    pub fn new(event_publisher: Arc<dyn EventPublisher>) -> Self {
-        Self { event_publisher }
+    pub fn new() -> Self {
+        Self
     }
 
-    fn publish_phase_completed(&self, timer_state: &TimerState, result: &PhaseTransitionResult) {
-        let event = PhaseCompleted::new(
-            timer_state.active_task_id.clone(),
-            result.old_phase.clone(),
-            result.new_phase.clone(),
-            timer_state.session_count(),
-            timer_state.task_session_count,
-            timer_state.session_count() as u64,
-        );
-
-        self.event_publisher.publish(Box::new(event));
-    }
-
-    fn publish_timer_event<T: crate::DomainEvent>(&self, event: T) {
-        self.event_publisher.publish(Box::new(event));
-    }
 }
 
 impl PhaseTransitionService for DefaultPhaseTransitionService {
@@ -75,49 +55,21 @@ impl PhaseTransitionService for DefaultPhaseTransitionService {
             cycle_completed,
         };
 
-        self.publish_phase_completed(timer_state, &result);
-
         Ok(result)
     }
 
     fn start_timer(&self, timer_state: &mut TimerState) -> Result<()> {
         timer_state.set_status(crate::TimerStatus::Running)?;
-
-        let event = TimerStarted::new(
-            timer_state.active_task_id.clone(),
-            timer_state.phase(),
-            timer_state.get_phase_duration(),
-            timer_state.session_count() as u64,
-        );
-
-        self.publish_timer_event(event);
         Ok(())
     }
 
     fn pause_timer(&self, timer_state: &mut TimerState) -> Result<()> {
         timer_state.set_status(crate::TimerStatus::Paused)?;
-
-        let event = TimerPaused::new(
-            timer_state.active_task_id.clone(),
-            timer_state.phase(),
-            timer_state.remaining_seconds(),
-            timer_state.session_count() as u64,
-        );
-
-        self.publish_timer_event(event);
         Ok(())
     }
 
     fn reset_timer(&self, timer_state: &mut TimerState) -> Result<()> {
         timer_state.reset_current_phase();
-
-        let event = TimerReset::new(
-            timer_state.active_task_id.clone(),
-            timer_state.phase(),
-            timer_state.session_count() as u64,
-        );
-
-        self.publish_timer_event(event);
         Ok(())
     }
 
@@ -133,8 +85,7 @@ mod tests {
     use std::time::Duration;
 
     fn setup_service() -> DefaultPhaseTransitionService {
-        let event_publisher = Arc::new(crate::NoOpEventPublisher);
-        DefaultPhaseTransitionService::new(event_publisher)
+        DefaultPhaseTransitionService::new()
     }
 
     fn create_test_configuration() -> TimerConfiguration {

@@ -31,6 +31,7 @@ pub use session_flow_reset::SessionFlowReset;
 mod tests {
     use super::*;
     use crate::{TaskId, Phase};
+    use crate::DomainEvent;
 
     #[test]
     fn should_have_correct_event_types() {

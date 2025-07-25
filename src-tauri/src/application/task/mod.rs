@@ -5,6 +5,8 @@ pub mod get_task;
 pub mod switch_task;
 pub mod cycle_task;
 pub mod get_task_queue;
+pub mod complete_session;
+pub mod reset_sessions;
 
 // Re-export main functions and types for easier imports
 pub use create_task::{create_task, CreateTaskCmd};
@@ -17,3 +19,5 @@ pub use get_task_queue::{
     get_task_queue, get_active_task_queue, get_task_queue_with_priorities, 
     get_task_queue_summary, TaskQueueQuery, TaskQueueInfo, TaskQueueSummary
 };
+pub use complete_session::{complete_session, can_complete_session, SessionCompletionResult};
+pub use reset_sessions::reset_sessions;

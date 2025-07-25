@@ -1,4 +1,4 @@
-use crate::{Task, TaskRepository, EventPublisher, ActiveTaskSwitched, Result, Error, TaskId};
+use crate::{Task, TaskRepository, Result, Error, TaskId};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -19,33 +19,20 @@ pub enum TaskCyclingStrategy {
 
 pub struct DefaultTaskCyclingService {
     task_repository: Arc<dyn TaskRepository>,
-    event_publisher: Arc<dyn EventPublisher>,
     cycling_strategy: TaskCyclingStrategy,
 }
 
 impl DefaultTaskCyclingService {
     pub fn new(
         task_repository: Arc<dyn TaskRepository>,
-        event_publisher: Arc<dyn EventPublisher>,
         cycling_strategy: TaskCyclingStrategy,
     ) -> Self {
         Self {
             task_repository,
-            event_publisher,
             cycling_strategy,
         }
     }
 
-    fn publish_task_switched(&self, old_task_id: Option<TaskId>, new_task_id: Option<TaskId>) {
-        let event = ActiveTaskSwitched::new(
-            old_task_id,
-            new_task_id,
-            crate::Phase::Work, // Default to work phase when switching
-            1,
-        );
-
-        self.event_publisher.publish(Box::new(event));
-    }
 
     async fn get_available_tasks(&self) -> Result<Vec<Task>> {
         let all_tasks = self.task_repository.get_active_tasks().await?;
@@ -109,7 +96,6 @@ impl TaskCyclingService for DefaultTaskCyclingService {
             }
         }
 
-        self.publish_task_switched(None, Some(task_id));
         Ok(task)
     }
 
@@ -119,11 +105,6 @@ impl TaskCyclingService for DefaultTaskCyclingService {
 
     async fn cycle_to_next_active_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
         let next_task = self.get_next_task(current_task_id.clone()).await?;
-        
-        if let Some(ref task) = next_task {
-            self.publish_task_switched(current_task_id, Some(task.id.clone()));
-        }
-
         Ok(next_task)
     }
 }
@@ -131,20 +112,79 @@ impl TaskCyclingService for DefaultTaskCyclingService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::task::repo::InMemoryTaskRepository;
+    use std::sync::Mutex;
+    use std::collections::HashMap;
+    
+    // Test implementation for domain layer - kept simple and isolated
+    struct TestTaskRepository {
+        tasks: Mutex<HashMap<TaskId, Task>>,
+    }
+    
+    impl TestTaskRepository {
+        fn new() -> Self {
+            Self {
+                tasks: Mutex::new(HashMap::new()),
+            }
+        }
+    }
+    
+    #[async_trait]
+    impl crate::TaskRepository for TestTaskRepository {
+        async fn create(&self, task: Task) -> Result<()> {
+            self.tasks.lock().unwrap().insert(task.id.clone(), task);
+            Ok(())
+        }
+        
+        async fn get_by_id(&self, id: TaskId) -> Result<Option<Task>> {
+            Ok(self.tasks.lock().unwrap().get(&id).cloned())
+        }
+        
+        async fn get_all(&self) -> Result<Vec<Task>> {
+            Ok(self.tasks.lock().unwrap().values().cloned().collect())
+        }
+        
+        async fn get_active_tasks(&self) -> Result<Vec<Task>> {
+            Ok(self.tasks.lock().unwrap().values()
+                .filter(|t| t.status == crate::TaskStatus::Active || t.status == crate::TaskStatus::Queued)
+                .cloned()
+                .collect())
+        }
+        
+        async fn update(&self, task: Task) -> Result<()> {
+            self.tasks.lock().unwrap().insert(task.id.clone(), task);
+            Ok(())
+        }
+        
+        async fn delete(&self, id: TaskId) -> Result<bool> {
+            Ok(self.tasks.lock().unwrap().remove(&id).is_some())
+        }
+        
+        async fn get_by_tags(&self, _tags: &[String]) -> Result<Vec<Task>> {
+            Ok(vec!()) // Simplified for tests
+        }
+        
+        async fn get_by_status(&self, status: crate::TaskStatus) -> Result<Vec<Task>> {
+            Ok(self.tasks.lock().unwrap().values()
+                .filter(|t| t.status == status)
+                .cloned()
+                .collect())
+        }
+        
+        async fn exists(&self, id: TaskId) -> Result<bool> {
+            Ok(self.tasks.lock().unwrap().contains_key(&id))
+        }
+    }
 
-    async fn setup_service() -> (DefaultTaskCyclingService, Arc<InMemoryTaskRepository>) {
-        let task_repo = Arc::new(InMemoryTaskRepository::new());
-        let event_publisher = Arc::new(crate::NoOpEventPublisher);
+    async fn setup_service() -> (DefaultTaskCyclingService, Arc<TestTaskRepository>) {
+        let task_repo = Arc::new(TestTaskRepository::new());
         let service = DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_publisher,
             TaskCyclingStrategy::RoundRobin,
         );
         (service, task_repo)
     }
 
-    async fn create_test_tasks(repo: &InMemoryTaskRepository) -> Vec<Task> {
+    async fn create_test_tasks(repo: &TestTaskRepository) -> Vec<Task> {
         let task1 = Task::new("Task 1".to_string(), 4).unwrap();
         let task2 = Task::new("Task 2".to_string(), 3).unwrap();
         let task3 = Task::new("Task 3".to_string(), 2).unwrap();
@@ -239,11 +279,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_handle_manual_cycling_strategy() {
-        let task_repo = Arc::new(InMemoryTaskRepository::new());
-        let event_publisher = Arc::new(crate::NoOpEventPublisher);
+        let task_repo = Arc::new(TestTaskRepository::new());
         let service = DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_publisher,
             TaskCyclingStrategy::Manual,
         );
 

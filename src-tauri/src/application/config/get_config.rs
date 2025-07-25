@@ -1,15 +1,7 @@
 use pomotoro_domain::{Config, ConfigRepository, Result};
 use std::sync::Arc;
 
-pub async fn get_config(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-) -> Result<Config> {
-    config_repo.get_config().await
-}
-
-pub async fn get_config_or_default(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-) -> Result<Config> {
+pub async fn get_config(config_repo: &Arc<dyn ConfigRepository + Send + Sync>) -> Result<Config> {
     match config_repo.config_exists().await? {
         true => config_repo.get_config().await,
         false => {
@@ -20,11 +12,6 @@ pub async fn get_config_or_default(
     }
 }
 
-pub async fn config_exists(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-) -> Result<bool> {
-    config_repo.config_exists().await
-}
 
 #[cfg(test)]
 mod tests {
@@ -33,7 +20,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_existing_config() {
-        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
+            Arc::new(InMemoryConfigRepository::new());
         let mut config = Config::default();
         config.general.max_sessions_default = 6;
 
@@ -46,7 +34,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_default_config_when_none_exists() {
-        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
+            Arc::new(InMemoryConfigRepository::new());
 
         let config = get_config(&config_repo).await.unwrap();
 
@@ -56,29 +45,31 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_config_or_create_default() {
-        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
+            Arc::new(InMemoryConfigRepository::new());
 
         // Initially no config exists
-        assert!(!config_exists(&config_repo).await.unwrap());
+        assert!(!config_repo.config_exists().await.unwrap());
 
-        let config = get_config_or_default(&config_repo).await.unwrap();
+        let config = get_config(&config_repo).await.unwrap();
 
         // Should return default config and save it
         assert_eq!(config.general.max_sessions_default, 4);
 
         // Config should now exist
-        assert!(config_exists(&config_repo).await.unwrap());
+        assert!(config_repo.config_exists().await.unwrap());
     }
 
     #[tokio::test]
     async fn should_return_existing_config_when_available() {
-        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
+            Arc::new(InMemoryConfigRepository::new());
         let mut custom_config = Config::default();
         custom_config.general.max_sessions_default = 8;
 
         config_repo.save_config(&custom_config).await.unwrap();
 
-        let config = get_config_or_default(&config_repo).await.unwrap();
+        let config = get_config(&config_repo).await.unwrap();
 
         // Should return existing custom config, not default
         assert_eq!(config.general.max_sessions_default, 8);
@@ -86,15 +77,16 @@ mod tests {
 
     #[tokio::test]
     async fn should_check_config_existence() {
-        let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
+        let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
+            Arc::new(InMemoryConfigRepository::new());
 
         // Initially no config
-        assert!(!config_exists(&config_repo).await.unwrap());
+        assert!(!config_repo.config_exists().await.unwrap());
 
         // Save a config
         config_repo.save_config(&Config::default()).await.unwrap();
 
         // Now config exists
-        assert!(config_exists(&config_repo).await.unwrap());
+        assert!(config_repo.config_exists().await.unwrap());
     }
 }

@@ -386,8 +386,8 @@ mod tests {
     use super::*;
 
     // Test entity markers
-    struct TestNoteMarker;
-    impl EntityMarker for TestNoteMarker {
+    struct TestTaskMarker;
+    impl EntityMarker for TestTaskMarker {
         const TYPE_NAME: &'static str = "TestNote";
     }
 
@@ -396,12 +396,12 @@ mod tests {
         const TYPE_NAME: &'static str = "TestLink";
     }
 
-    type TestNoteId = EntityId<TestNoteMarker>;
+    type TestTaskId = EntityId<TestTaskMarker>;
     type TestLinkId = EntityId<TestLinkMarker>;
 
     #[test]
     fn test_entity_id_creation() {
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let link_id = TestLinkId::new();
 
         // IDs should be different
@@ -411,26 +411,26 @@ mod tests {
     #[test]
     fn test_entity_id_from_uuid() {
         let uuid = Uuid::new_v4();
-        let note_id = TestNoteId::from_uuid(uuid);
+        let note_id = TestTaskId::from_uuid(uuid);
         assert_eq!(note_id.inner(), &uuid);
     }
 
     #[test]
     fn test_entity_id_from_string() {
         let uuid_str = "550e8400-e29b-41d4-a716-446655440000";
-        let note_id = TestNoteId::from_string(uuid_str).unwrap();
+        let note_id = TestTaskId::from_string(uuid_str).unwrap();
         assert_eq!(note_id.as_str(), uuid_str);
     }
 
     #[test]
     fn test_invalid_uuid_string() {
-        let result = TestNoteId::from_string("invalid-uuid");
+        let result = TestTaskId::from_string("invalid-uuid");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_type_safety() {
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let link_id = TestLinkId::new();
 
         // These are different types, even though they both wrap UUIDs
@@ -441,15 +441,15 @@ mod tests {
     #[test]
     fn test_equality() {
         let uuid = Uuid::new_v4();
-        let note_id1 = TestNoteId::from_uuid(uuid);
-        let note_id2 = TestNoteId::from_uuid(uuid);
+        let note_id1 = TestTaskId::from_uuid(uuid);
+        let note_id2 = TestTaskId::from_uuid(uuid);
 
         assert_eq!(note_id1, note_id2);
     }
 
     #[test]
     fn test_clone_and_copy() {
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let cloned = note_id.clone();
         let copied = note_id;
 
@@ -459,14 +459,14 @@ mod tests {
 
     #[test]
     fn test_debug_format() {
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let debug_str = format!("{:?}", note_id);
         assert!(debug_str.contains("EntityId<TestNote>"));
     }
 
     #[test]
     fn test_display_format() {
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let display_str = format!("{}", note_id);
         // Should display the UUID string
         assert_eq!(display_str, note_id.as_str());
@@ -478,8 +478,8 @@ mod tests {
     fn test_try_from_string() {
         let uuid_str = "550e8400-e29b-41d4-a716-446655440000";
 
-        let note_id1: TestNoteId = uuid_str.try_into().unwrap();
-        let note_id2: TestNoteId = uuid_str.to_string().try_into().unwrap();
+        let note_id1: TestTaskId = uuid_str.try_into().unwrap();
+        let note_id2: TestTaskId = uuid_str.to_string().try_into().unwrap();
 
         assert_eq!(note_id1, note_id2);
         assert_eq!(note_id1.as_str(), uuid_str);
@@ -489,7 +489,7 @@ mod tests {
     fn test_hash_consistency() {
         use std::collections::HashMap;
 
-        let note_id = TestNoteId::new();
+        let note_id = TestTaskId::new();
         let mut map = HashMap::new();
         map.insert(note_id, "test_value");
 

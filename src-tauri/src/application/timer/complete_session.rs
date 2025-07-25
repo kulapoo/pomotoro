@@ -1,7 +1,8 @@
 use pomotoro_domain::{
-    TimerState, TaskRepository, TaskSessionServiceInterface, PhaseTransitionService,
+    TimerState, TaskRepository, PhaseTransitionService,
     EventPublisher, Result, Error, Phase
 };
+use crate::application::task::{complete_session as complete_task_session, SessionCompletionResult};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -18,7 +19,6 @@ pub struct SessionCompleted {
 pub async fn complete_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    task_session_service: &Arc<dyn TaskSessionServiceInterface + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<SessionCompleted> {
@@ -42,9 +42,7 @@ pub async fn complete_session(
     
     // If completing a work session, increment task session count
     let task_session_result = if current_phase == Phase::Work {
-        Some(task_session_service
-            .complete_session(&active_task_id.to_string())
-            .await?)
+        Some(complete_task_session(task_repo, event_publisher, &active_task_id.to_string()).await?)
     } else {
         None
     };
@@ -73,7 +71,6 @@ pub async fn complete_session(
 pub async fn force_complete_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    task_session_service: &Arc<dyn TaskSessionServiceInterface + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<SessionCompleted> {
@@ -93,7 +90,6 @@ pub async fn force_complete_session(
     complete_session(
         timer_state,
         task_repo,
-        task_session_service,
         phase_service,
         event_publisher,
     ).await
@@ -104,7 +100,7 @@ mod tests {
     use super::*;
     use pomotoro_domain::{
         Task, TaskId, NoOpEventPublisher, 
-        DefaultPhaseTransitionService, TaskSessionService, TimerStatus, Phase
+        DefaultPhaseTransitionService, TimerStatus, Phase
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
@@ -112,26 +108,21 @@ mod tests {
         Arc<dyn TaskRepository + Send + Sync>,
         Arc<dyn EventPublisher + Send + Sync>,
         Arc<dyn PhaseTransitionService + Send + Sync>,
-        Arc<dyn TaskSessionServiceInterface + Send + Sync>,
         Task,
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new(event_publisher.clone()));
-        let task_session_service: Arc<dyn TaskSessionServiceInterface + Send + Sync> = Arc::new(TaskSessionService::new(
-            task_repo.clone(),
-            event_publisher.clone(),
-        ));
         
         let task = Task::new("Test Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
-        (task_repo, event_publisher, phase_service, task_session_service, task)
+        (task_repo, event_publisher, phase_service, task)
     }
 
     #[tokio::test]
     async fn should_complete_work_session() {
-        let (task_repo, event_publisher, phase_service, task_session_service, task) = setup().await;
+        let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.timer.remaining_seconds = 0; // Phase completed
@@ -140,7 +131,6 @@ mod tests {
         let result = complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await.unwrap();
@@ -159,7 +149,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_complete_break_session() {
-        let (task_repo, event_publisher, phase_service, task_session_service, task) = setup().await;
+        let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.timer.remaining_seconds = 0;
@@ -170,7 +160,6 @@ mod tests {
         let result = complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await.unwrap();
@@ -187,7 +176,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_complete_task_on_final_session() {
-        let (task_repo, event_publisher, phase_service, task_session_service, _) = setup().await;
+        let (task_repo, event_publisher, phase_service, _) = setup().await;
         
         // Create a task with only 1 session
         let single_session_task = Task::new("Single Session Task".to_string(), 1).unwrap();
@@ -201,7 +190,6 @@ mod tests {
         let result = complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await.unwrap();
@@ -214,14 +202,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_without_active_task() {
-        let (task_repo, event_publisher, phase_service, task_session_service, _) = setup().await;
+        let (task_repo, event_publisher, phase_service, _) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.timer.remaining_seconds = 0;
         
         let result = complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await;
@@ -231,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_time_remaining() {
-        let (task_repo, event_publisher, phase_service, task_session_service, task) = setup().await;
+        let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.timer.remaining_seconds = 500; // Time still remaining
@@ -239,7 +226,6 @@ mod tests {
         let result = complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await;
@@ -249,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_force_complete_session() {
-        let (task_repo, event_publisher, phase_service, task_session_service, task) = setup().await;
+        let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.timer.remaining_seconds = 500; // Time remaining
@@ -259,7 +245,6 @@ mod tests {
         let result = force_complete_session(
             &mut timer_state,
             &task_repo,
-            &task_session_service,
             &phase_service,
             &event_publisher,
         ).await.unwrap();

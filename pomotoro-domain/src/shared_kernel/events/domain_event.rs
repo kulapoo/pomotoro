@@ -37,7 +37,7 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug + std::any::Any {
     ///
     /// ```rust,ignore
     /// fn aggregate_id(&self) -> String {
-    ///     self.note_id.to_string()  // ID of the note that was created
+    ///     self.task.to_string()  // ID of the task that was created
     /// }
     /// ```
     fn aggregate_id(&self) -> String;

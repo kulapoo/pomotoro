@@ -9,7 +9,6 @@ pub trait Readable<T, ID> {
     async fn count(&self) -> Result<usize>;
 }
 
-#[async_trait]
 pub trait ReadableSync<T, ID> {
     fn find_by_id(&self, id: &ID) -> Result<Option<T>>;
     fn find_all(&self) -> Result<Vec<T>>;
