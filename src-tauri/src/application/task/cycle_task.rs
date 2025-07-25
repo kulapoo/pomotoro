@@ -130,7 +130,6 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_publisher.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
@@ -223,7 +222,6 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_publisher.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
@@ -252,7 +250,6 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
-            event_publisher.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         

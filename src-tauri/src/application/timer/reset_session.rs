@@ -80,7 +80,7 @@ mod tests {
         TaskId,
     ) {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new(event_publisher.clone()));
+        let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         let task_id = TaskId::new();
         
         (event_publisher, phase_service, task_id)
