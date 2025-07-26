@@ -82,8 +82,9 @@ impl TaskCyclingService for DefaultTaskCyclingService {
                 .find_next_task_round_robin(&available_tasks, current_task_id)
                 .cloned(),
             TaskCyclingStrategy::PriorityBased => {
-                // For now, treat priority-based as round-robin
-                // TODO: Implement priority logic when Task has priority field
+                // FUTURE: Priority-based cycling is not required for MVP 2.0
+                // This strategy will be implemented when task priority features are added
+                // For now, fallback to round-robin to maintain consistent behavior
                 self.find_next_task_round_robin(&available_tasks, current_task_id)
                     .cloned()
             }
@@ -202,9 +203,10 @@ mod tests {
     }
 
     async fn create_test_tasks(repo: &TestTaskRepository) -> Vec<Task> {
-        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
-        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+        let defaults = crate::TaskDefaults::default();
+        let task1 = Task::new_with_defaults("Task 1".to_string(), 4, &defaults).unwrap();
+        let task2 = Task::new_with_defaults("Task 2".to_string(), 3, &defaults).unwrap();
+        let task3 = Task::new_with_defaults("Task 3".to_string(), 2, &defaults).unwrap();
 
         repo.create(task1.clone()).await.unwrap();
         repo.create(task2.clone()).await.unwrap();
@@ -263,7 +265,8 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_switch_to_completed_task() {
         let (service, repo) = setup_service().await;
-        let mut task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let defaults = crate::TaskDefaults::default();
+        let mut task = Task::new_with_defaults("Completed Task".to_string(), 1, &defaults).unwrap();
         task.increment_session().unwrap(); // Complete the task
         let task_id = task.id.clone();
         repo.create(task).await.unwrap();

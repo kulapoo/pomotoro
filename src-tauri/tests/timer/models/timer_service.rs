@@ -1,6 +1,5 @@
-use pomotoro_lib::timer::TimerService;
-use pomotoro_lib::timer::models::{Phase, TimerStatus};
-use pomotoro_lib::task::models::Task;
+use pomotoro_lib::infrastructure::TimerService;
+use pomotoro_domain::{Phase, TimerStatus, Task};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -42,7 +41,7 @@ impl TimerTestService {
 
     pub async fn skip_to_next_phase(&self, task: Option<&Task>) -> Result<(Phase, Phase), Box<dyn std::error::Error>> {
         let result = self.service.skip_to_next_phase(task).await;
-        Ok(result)
+        Ok(result?)
     }
 
     pub async fn wait_for_seconds(&self, seconds: u64) {

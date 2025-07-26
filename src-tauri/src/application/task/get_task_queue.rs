@@ -1,6 +1,6 @@
 use pomotoro_domain::{
     Task, TaskId, TaskRepository, TaskCyclingService, TaskStatus,
-    EventPublisher, Result, Error
+    Result, Error
 };
 use std::sync::Arc;
 
@@ -62,14 +62,14 @@ pub async fn get_task_queue(
 }
 
 pub async fn get_active_task_queue(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
+    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
 ) -> Result<Vec<Task>> {
     cycling_service.get_active_task_queue().await
 }
 
 pub async fn get_task_queue_with_priorities(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
+    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
     active_task_id: Option<String>,
 ) -> Result<TaskQueueInfo> {
@@ -176,8 +176,8 @@ pub struct TaskQueueSummary {
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        NoOpEventPublisher, 
-        DefaultTaskCyclingService, TaskCyclingStrategy
+        NoOpEventPublisher, EventPublisher,
+        DefaultTaskCyclingService, TaskCyclingStrategy, TaskDefaults
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
@@ -187,16 +187,17 @@ mod tests {
         Arc<dyn TaskCyclingService + Send + Sync>,
         Vec<Task>,
     ) {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
-        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
-        let mut task3 = Task::new("Task 3".to_string(), 2).unwrap();
+        let defaults = TaskDefaults::default();
+        let task1 = Task::new("Task 1".to_string(), 4, &defaults).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3, &defaults).unwrap();
+        let mut task3 = Task::new("Task 3".to_string(), 2, &defaults).unwrap();
         task3.increment_session().unwrap();
         task3.increment_session().unwrap(); // Complete task3
         
@@ -292,7 +293,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_handle_empty_queue() {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),

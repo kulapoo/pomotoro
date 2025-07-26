@@ -1,7 +1,6 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
 use crate::timer::models::TimerTestContext;
-use pomotoro_lib::task::models::TaskStatus;
-use pomotoro_lib::task::TaskRepositoryTrait;
+use pomotoro_domain::{TaskStatus, TaskRepository};
 use std::time::Duration;
 
 pub struct E2ETaskConfig {
@@ -144,8 +143,8 @@ async fn test_e2e_task_switching_workflow() -> Result<(), Box<dyn std::error::Er
     assert_eq!(state2.active_task_id, Some(study_task.id));
 
     // Verify task switching preserves timer state structure
-    assert_eq!(state2.phase, state1.phase);
-    assert_eq!(state2.status, state1.status);
+    assert_eq!(state2.phase(), state1.phase());
+    assert_eq!(state2.status(), state1.status());
 
     Ok(())
 }

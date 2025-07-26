@@ -9,23 +9,23 @@ pub fn TimerConfigComponent() -> impl IntoView {
     let config = config_resource.config;
 
     let work_minutes = Memo::new(move |_| {
-        config.get().map(|c| c.task.work_duration.as_secs() / 60).unwrap_or(25)
+        config.get().map(|c| c.task_defaults.work_duration.as_secs() / 60).unwrap_or(25)
     });
 
     let short_break_minutes = Memo::new(move |_| {
-        config.get().map(|c| c.task.short_break_duration.as_secs() / 60).unwrap_or(5)
+        config.get().map(|c| c.task_defaults.short_break_duration.as_secs() / 60).unwrap_or(5)
     });
 
     let long_break_minutes = Memo::new(move |_| {
-        config.get().map(|c| c.task.long_break_duration.as_secs() / 60).unwrap_or(15)
+        config.get().map(|c| c.task_defaults.long_break_duration.as_secs() / 60).unwrap_or(15)
     });
 
     let sessions_until_long_break = Memo::new(move |_| {
-        config.get().map(|c| c.task.sessions_until_long_break).unwrap_or(4)
+        config.get().map(|c| c.task_defaults.sessions_until_long_break).unwrap_or(4)
     });
 
     let enable_screen_blocking = Memo::new(move |_| {
-        config.get().map(|c| c.task.enable_screen_blocking).unwrap_or(false)
+        config.get().map(|c| c.task_defaults.enable_screen_blocking).unwrap_or(false)
     });
 
     let update_timing = Rc::new({

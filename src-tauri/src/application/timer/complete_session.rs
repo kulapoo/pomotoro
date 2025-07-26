@@ -2,7 +2,9 @@ use pomotoro_domain::{
     TimerState, TaskRepository, PhaseTransitionService,
     EventPublisher, Result, Error, Phase
 };
-use crate::application::task::{complete_session as complete_task_session, SessionCompletionResult};
+#[cfg(test)]
+use pomotoro_domain::TaskDefaults;
+use crate::application::task::{complete_session as complete_task_session};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -16,7 +18,7 @@ pub struct SessionCompleted {
     pub total_sessions: u8,
 }
 
-pub async fn complete_session(
+pub async fn complete_timer_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
@@ -68,7 +70,7 @@ pub async fn complete_session(
     })
 }
 
-pub async fn force_complete_session(
+pub async fn force_complete_timer_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
@@ -87,7 +89,7 @@ pub async fn force_complete_session(
     timer_state.set_status(pomotoro_domain::TimerStatus::Stopped)?;
     
     // Complete the session normally
-    complete_session(
+    complete_timer_session(
         timer_state,
         task_repo,
         phase_service,
@@ -99,8 +101,8 @@ pub async fn force_complete_session(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        Task, TaskId, NoOpEventPublisher, 
-        DefaultPhaseTransitionService, TimerStatus, Phase
+        Task, NoOpEventPublisher, 
+        DefaultPhaseTransitionService, TimerStatus, Phase, TaskDefaults
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
@@ -114,7 +116,8 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         
-        let task = Task::new("Test Task".to_string(), 4).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
         (task_repo, event_publisher, phase_service, task)
@@ -128,7 +131,7 @@ mod tests {
         timer_state.timer.remaining_seconds = 0; // Phase completed
         timer_state.timer.phase = Phase::Work;
         
-        let result = complete_session(
+        let result = complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,
@@ -157,7 +160,7 @@ mod tests {
         timer_state.timer.is_break_cycle = true;
         timer_state.timer.session_count = 1;
         
-        let result = complete_session(
+        let result = complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,
@@ -179,7 +182,8 @@ mod tests {
         let (task_repo, event_publisher, phase_service, _) = setup().await;
         
         // Create a task with only 1 session
-        let single_session_task = Task::new("Single Session Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let single_session_task = Task::new("Single Session Task".to_string(), 1, &defaults).unwrap();
         task_repo.create(single_session_task.clone()).await.unwrap();
         
         let mut timer_state = TimerState::default();
@@ -187,7 +191,7 @@ mod tests {
         timer_state.timer.remaining_seconds = 0;
         timer_state.timer.phase = Phase::Work;
         
-        let result = complete_session(
+        let result = complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,
@@ -206,7 +210,7 @@ mod tests {
         let mut timer_state = TimerState::default();
         timer_state.timer.remaining_seconds = 0;
         
-        let result = complete_session(
+        let result = complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,
@@ -223,7 +227,7 @@ mod tests {
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.timer.remaining_seconds = 500; // Time still remaining
         
-        let result = complete_session(
+        let result = complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,
@@ -242,7 +246,7 @@ mod tests {
         timer_state.timer.phase = Phase::Work;
         timer_state.set_status(TimerStatus::Running).unwrap();
         
-        let result = force_complete_session(
+        let result = force_complete_timer_session(
             &mut timer_state,
             &task_repo,
             &phase_service,

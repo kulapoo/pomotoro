@@ -29,7 +29,7 @@ pub async fn save_global_config(config: Config) -> std::result::Result<(), Strin
         .map_err(|e| format!("Failed to save Config: {}", e))
 }
 
-pub async fn update_general(general: General) -> std::result::Result<Config, String> {
+pub async fn update_general(general: GeneralConfig) -> std::result::Result<Config, String> {
     let args = to_value(&general)
         .map_err(|e| format!("Failed to serialize general Config: {}", e))?;
 
@@ -39,7 +39,7 @@ pub async fn update_general(general: General) -> std::result::Result<Config, Str
         .map_err(|e| format!("Failed to update general Config: {}", e))
 }
 
-pub async fn update_notification_preferences(preferences: Notification) -> std::result::Result<Config, String> {
+pub async fn update_notification_preferences(preferences: NotificationConfig) -> std::result::Result<Config, String> {
     let args = to_value(&preferences)
         .map_err(|e| format!("Failed to serialize notification preferences: {}", e))?;
 
@@ -49,7 +49,7 @@ pub async fn update_notification_preferences(preferences: Notification) -> std::
         .map_err(|e| format!("Failed to update notification preferences: {}", e))
 }
 
-pub async fn update_appearance(appearance: Appearance) -> std::result::Result<Config, String> {
+pub async fn update_appearance(appearance: AppearanceConfig) -> std::result::Result<Config, String> {
     let args = to_value(&appearance)
         .map_err(|e| format!("Failed to serialize appearance: {}", e))?;
 

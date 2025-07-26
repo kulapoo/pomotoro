@@ -1,7 +1,8 @@
 use pomotoro_domain::{
     TimerState, TaskId, TaskRepository, TaskCyclingService,
-    EventPublisher, Result, Error, TimerStatus
+    EventPublisher, Result, Error, TimerStatus, TaskSwitchWorkflowCompleted
 };
+use crate::application::task::mappers::task_config_to_timer_config;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -40,17 +41,27 @@ pub async fn switch_task(
     // Use cycling service to perform the switch
     cycling_service.switch_to_task(task_id.clone()).await?;
 
-    // Update timer state with new task and its configuration
-    timer_state.switch_task_with_config(task_id, task.config.into())?;
+    // Update timer state with new task and its configuration using proper mapper
+    let timer_config = task_config_to_timer_config(&task.config)?;
+    timer_state.switch_task_with_config(task_id.clone(), timer_config)?;
+
+    // Publish task switch event
+    let switch_event = TaskSwitchWorkflowCompleted::new(
+        timer_state.active_task_id.clone(), // old_task_id
+        task_id,                            // new_task_id
+        format!("Switched to task: {}", task.name), // workflow_result
+        1, // version
+    );
+    event_publisher.publish(Box::new(switch_event));
 
     Ok(())
 }
 
 pub async fn switch_to_next_task(
     timer_state: &mut TimerState,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
+    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Option<String>> {
     // Cannot switch tasks while timer is running
     if timer_state.status() == TimerStatus::Running {
@@ -68,8 +79,9 @@ pub async fn switch_to_next_task(
         .await?;
 
     if let Some(task) = next_task {
-        // Update timer state with new task and its configuration
-        timer_state.switch_task_with_config(task.id.clone(), task.config.into())?;
+        // Update timer state with new task and its configuration using proper mapper
+        let timer_config = task_config_to_timer_config(&task.config)?;
+        timer_state.switch_task_with_config(task.id.clone(), timer_config)?;
         Ok(Some(task.id.to_string()))
     } else {
         Ok(None)
@@ -80,7 +92,7 @@ pub async fn switch_to_next_task(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        Task, NoOpEventPublisher,
+        Task, NoOpEventPublisher, TaskDefaults,
         DefaultTaskCyclingService, TaskCyclingStrategy, TimerStatus
     };
     use crate::infrastructure::InMemoryTaskRepository;
@@ -98,9 +110,10 @@ mod tests {
             TaskCyclingStrategy::RoundRobin,
         ));
 
-        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
-        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+        let defaults = TaskDefaults::default();
+        let task1 = Task::new("Task 1".to_string(), 4, &defaults).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3, &defaults).unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2, &defaults).unwrap();
 
         task_repo.create(task1.clone()).await.unwrap();
         task_repo.create(task2.clone()).await.unwrap();
@@ -181,7 +194,8 @@ mod tests {
         timer_state.active_task_id = Some(tasks[0].id.clone());
 
         // Create and complete a task
-        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
 

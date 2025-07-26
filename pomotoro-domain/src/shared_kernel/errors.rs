@@ -23,6 +23,12 @@ pub enum Error {
     #[error("Tag too long: {tag} (max length: {max_length})")]
     TagTooLong { tag: String, max_length: usize },
 
+    #[error("Invalid task name: cannot be empty")]
+    EmptyTaskName,
+
+    #[error("Invalid volume: {volume} (must be between 0.0 and 1.0)")]
+    InvalidVolume { volume: f32 },
+
     #[error("Repository error: {message}")]
     RepositoryError { message: String },
 

@@ -1,5 +1,6 @@
 use pomotoro_domain::{Config, TaskConfig, AudioConfig};
-use pomotoro_lib::config::{ConfigRepo, ConfigError};
+use pomotoro_lib::infrastructure::{FileConfigRepo};
+use pomotoro_domain::{ConfigRepository, Result};
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -26,22 +27,27 @@ impl TestConfigRepository {
     }
 }
 
-impl ConfigRepo for TestConfigRepository {
-    fn get_config(&self) -> Result<Config, ConfigError> {
-        let config = self.config.read().map_err(|_| ConfigError::InvalidConfig)?;
+#[async_trait::async_trait]
+impl ConfigRepository for TestConfigRepository {
+    async fn get_config(&self) -> Result<Config> {
+        let config = self.config.read().map_err(|_| pomotoro_domain::Error::ConfigurationError { message: "Failed to read config".to_string() })?;
         Ok(config.clone())
     }
 
-    fn save_config(&self, config: &Config) -> Result<(), ConfigError> {
-        let mut stored_config = self.config.write().map_err(|_| ConfigError::InvalidConfig)?;
+    async fn save_config(&self, config: &Config) -> Result<()> {
+        let mut stored_config = self.config.write().map_err(|_| pomotoro_domain::Error::ConfigurationError { message: "Failed to write config".to_string() })?;
         *stored_config = config.clone();
         Ok(())
     }
 
-    fn reset_to_defaults(&self) -> Result<Config, ConfigError> {
-        let mut config = self.config.write().map_err(|_| ConfigError::InvalidConfig)?;
+    async fn reset_to_defaults(&self) -> Result<Config> {
+        let mut config = self.config.write().map_err(|_| pomotoro_domain::Error::ConfigurationError { message: "Failed to write config".to_string() })?;
         *config = Config::default();
         Ok(config.clone())
+    }
+
+    async fn config_exists(&self) -> Result<bool> {
+        Ok(true)
     }
 }
 
@@ -57,27 +63,27 @@ impl TestConfigBuilder {
     }
 
     pub fn with_work_duration(mut self, duration: Duration) -> Self {
-        self.config.task.work_duration = duration;
+        self.config.task_defaults.work_duration = duration;
         self
     }
 
     pub fn with_short_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task.short_break_duration = duration;
+        self.config.task_defaults.short_break_duration = duration;
         self
     }
 
     pub fn with_long_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task.long_break_duration = duration;
+        self.config.task_defaults.long_break_duration = duration;
         self
     }
 
     pub fn with_sessions_until_long_break(mut self, sessions: u8) -> Self {
-        self.config.task.sessions_until_long_break = sessions;
+        self.config.task_defaults.sessions_until_long_break = sessions;
         self
     }
 
     pub fn with_screen_blocking(mut self, enabled: bool) -> Self {
-        self.config.task.enable_screen_blocking = enabled;
+        self.config.task_defaults.enable_screen_blocking = enabled;
         self
     }
 
@@ -137,11 +143,11 @@ impl ConfigTestUtils {
     }
 
     pub fn assert_Config_equals(actual: &Config, expected: &Config) {
-        assert_eq!(actual.task.work_duration, expected.task.work_duration);
-        assert_eq!(actual.task.short_break_duration, expected.task.short_break_duration);
-        assert_eq!(actual.task.long_break_duration, expected.task.long_break_duration);
-        assert_eq!(actual.task.sessions_until_long_break, expected.task.sessions_until_long_break);
-        assert_eq!(actual.task.enable_screen_blocking, expected.task.enable_screen_blocking);
+        assert_eq!(actual.task_defaults.work_duration, expected.task_defaults.work_duration);
+        assert_eq!(actual.task_defaults.short_break_duration, expected.task_defaults.short_break_duration);
+        assert_eq!(actual.task_defaults.long_break_duration, expected.task_defaults.long_break_duration);
+        assert_eq!(actual.task_defaults.sessions_until_long_break, expected.task_defaults.sessions_until_long_break);
+        assert_eq!(actual.task_defaults.enable_screen_blocking, expected.task_defaults.enable_screen_blocking);
 
         assert_eq!(actual.audio.volume, expected.audio.volume);
         assert_eq!(actual.audio.enable_background_audio, expected.audio.enable_background_audio);

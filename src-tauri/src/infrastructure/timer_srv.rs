@@ -8,9 +8,8 @@ use crate::infrastructure::notifications::send_phase_notification;
 use pomotoro_domain::TimerState;
 use pomotoro_domain::{
     Phase, TimerStatus, DefaultPhaseTransitionService, PhaseTransitionService,
-    TaskRepository
+    WorkSessionCompleted
 };
-use crate::application::task::complete_session as complete_task_session;
 use pomotoro_domain::Task;
 use crate::infrastructure::EventPublisherArc;
 use crate::commands::timer;
@@ -19,14 +18,12 @@ pub struct TimerService {
     state: Arc<RwLock<TimerState>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     phase_service: Arc<dyn PhaseTransitionService>,
-    task_repository: Arc<dyn TaskRepository + Send + Sync>,
     event_publisher: EventPublisherArc,
 }
 
 impl TimerService {
     pub fn new_with_services(
         event_publisher: EventPublisherArc,
-        task_repository: Arc<dyn TaskRepository + Send + Sync>,
     ) -> Self {
         let phase_service = Arc::new(DefaultPhaseTransitionService::new());
         
@@ -34,7 +31,6 @@ impl TimerService {
             state: Arc::new(RwLock::new(TimerState::default())),
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service,
-            task_repository,
             event_publisher,
         }
     }
@@ -47,7 +43,6 @@ impl TimerService {
             state: Arc::new(RwLock::new(TimerState::default())),
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service: Arc::new(DefaultPhaseTransitionService::new()),
-            task_repository: Arc::new(crate::infrastructure::InMemoryTaskRepository::new()),
             event_publisher,
         }
     }
@@ -119,7 +114,6 @@ impl TimerService {
         let state_clone = Arc::clone(&self.state);
         let cancel_handle_clone = Arc::clone(&self.cancel_handle);
         let phase_service = Arc::clone(&self.phase_service);
-        let task_repository = Arc::clone(&self.task_repository);
         let event_publisher = Arc::clone(&self.event_publisher);
         
         let handle = tokio::spawn(async move {
@@ -155,10 +149,18 @@ impl TimerService {
                     };
                     
                     if let Ok(result) = transition_result {
-                        // Handle task session completion if work phase was completed
+                        // Publish work session completed event if work phase was completed
                         if result.work_session_completed && task.is_some() {
                             let task_ref = task.as_ref().unwrap();
-                            let _ = complete_task_session(&task_repository, &event_publisher, &task_ref.id.to_string()).await;
+                            let state = state_clone.read().await;
+                            let work_session_event = WorkSessionCompleted::new(
+                                Some(task_ref.id.clone()),
+                                1500, // 25 minutes work session default duration
+                                state.session_count(),
+                                task_ref.current_sessions as u32 + 1, // increment since we just completed
+                                1, // version
+                            );
+                            event_publisher.publish(Box::new(work_session_event));
                         }
                         
                         let state = state_clone.read().await;
@@ -239,10 +241,17 @@ impl TimerService {
         let result = self.phase_service.transition_to_next_phase(&mut *state)
             .map_err(|e| e.to_string())?;
             
-        // Handle task session completion if work phase was completed
+        // Publish work session completed event if work phase was completed
         if result.work_session_completed && task.is_some() {
             let task_ref = task.unwrap();
-            let _ = complete_task_session(&self.task_repository, &self.event_publisher, &task_ref.id.to_string()).await;
+            let work_session_event = WorkSessionCompleted::new(
+                Some(task_ref.id.clone()),
+                1500, // 25 minutes work session default duration
+                state.session_count(),
+                task_ref.current_sessions as u32 + 1, // increment since we just completed
+                1, // version
+            );
+            self.event_publisher.publish(Box::new(work_session_event));
         }
         
         let _ = state.set_status(TimerStatus::Stopped);

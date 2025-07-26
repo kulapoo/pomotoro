@@ -1,4 +1,4 @@
-use pomotoro_domain::{Task, TaskId, TaskRepository, EventPublisher, TaskConfig, AudioConfig, Result, Error};
+use pomotoro_domain::{Task, TaskId, TaskRepository, EventPublisher, TaskConfig, AudioConfig, TaskUpdated, Result, Error};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -30,6 +30,12 @@ pub async fn update_task(
         return Err(Error::TaskAlreadyCompleted);
     }
     
+    // Capture update info for event before modifying task
+    let updated_name = cmd.name.clone();
+    let updated_description = cmd.description.clone();
+    let updated_max_sessions = cmd.max_sessions;
+    let updated_tags = cmd.tags.clone();
+    
     // Update task fields if provided
     if let Some(name) = cmd.name {
         if name.trim().is_empty() {
@@ -60,7 +66,7 @@ pub async fn update_task(
     }
     
     if let Some(config) = cmd.config {
-        config.validate()?;
+        // TaskConfig is already validated at construction, no need to validate again
         task.config = config;
     }
     
@@ -71,7 +77,16 @@ pub async fn update_task(
     
     task_repo.update(task.clone()).await?;
     
-    // TODO: Publish TaskUpdated event when domain events are implemented
+    // Publish TaskUpdated event  
+    let updated_event = TaskUpdated::new(
+        task.id.clone(),
+        updated_name,
+        updated_description,
+        updated_max_sessions,
+        updated_tags,
+        1, // version
+    );
+    event_publisher.publish(Box::new(updated_event));
     
     Ok(task)
 }
@@ -79,14 +94,15 @@ pub async fn update_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::NoOpEventPublisher;
+    use pomotoro_domain::{NoOpEventPublisher, TaskDefaults};
     use crate::infrastructure::InMemoryTaskRepository;
 
     async fn setup() -> (Arc<dyn TaskRepository + Send + Sync>, Arc<dyn EventPublisher + Send + Sync>, Task) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         
-        let task = Task::new("Original Task".to_string(), 4).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Original Task".to_string(), 4, &defaults).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
         (task_repo, event_publisher, task)
@@ -157,7 +173,8 @@ mod tests {
     async fn should_fail_to_update_completed_task() {
         let (task_repo, event_publisher, _) = setup().await;
         
-        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
         

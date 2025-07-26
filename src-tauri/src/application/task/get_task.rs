@@ -76,21 +76,22 @@ pub async fn get_tasks_by_status(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::TaskStatus;
+    use pomotoro_domain::{TaskStatus, TaskDefaults, TaskBuilder};
     use crate::infrastructure::InMemoryTaskRepository;
 
     async fn setup_with_tasks() -> (Arc<dyn TaskRepository + Send + Sync>, Vec<Task>) {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
         
-        let task1 = Task::new("Work Task".to_string(), 4)
-            .unwrap()
-            .with_tags(vec!["work".to_string(), "urgent".to_string()]);
+        let defaults = TaskDefaults::default();
+        let task1 = TaskBuilder::with_name_and_sessions("Work Task".to_string(), 4)
+            .with_tags(vec!["work".to_string(), "urgent".to_string()])
+            .build(&defaults).unwrap();
         
-        let task2 = Task::new("Personal Task".to_string(), 2)
-            .unwrap()
-            .with_tags(vec!["personal".to_string()]);
+        let task2 = TaskBuilder::with_name_and_sessions("Personal Task".to_string(), 2)
+            .with_tags(vec!["personal".to_string()])
+            .build(&defaults).unwrap();
             
-        let mut task3 = Task::new("Completed Task".to_string(), 1).unwrap();
+        let mut task3 = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
         task3.increment_session().unwrap(); // Mark as completed
         
         task_repo.create(task1.clone()).await.unwrap();

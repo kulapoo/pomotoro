@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub async fn pause_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Only allow pausing if currently running
     if timer_state.status() != TimerStatus::Running {
@@ -34,7 +34,7 @@ pub async fn pause_session(
 pub async fn resume_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Only allow resuming if currently paused
     if timer_state.status() != TimerStatus::Paused {
@@ -62,10 +62,9 @@ pub async fn resume_session(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        Task, TaskId, NoOpEventPublisher, 
+        TaskId, NoOpEventPublisher, 
         DefaultPhaseTransitionService, TimerStatus
     };
-    use crate::infrastructure::InMemoryTaskRepository;
 
     fn setup() -> (
         Arc<dyn EventPublisher + Send + Sync>,
@@ -131,7 +130,8 @@ mod tests {
         let (event_publisher, phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
-        timer_state.set_status(TimerStatus::Paused).unwrap();
+        timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
+        timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
         
         resume_session(
             &mut timer_state,
@@ -162,7 +162,8 @@ mod tests {
     async fn should_fail_to_resume_without_active_task() {
         let (event_publisher, phase_service, _) = setup();
         let mut timer_state = TimerState::default();
-        timer_state.set_status(TimerStatus::Paused).unwrap();
+        timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
+        timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
         
         let result = resume_session(
             &mut timer_state,

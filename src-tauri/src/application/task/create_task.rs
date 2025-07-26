@@ -1,4 +1,4 @@
-use pomotoro_domain::{Task, TaskRepository, EventPublisher, Result};
+use pomotoro_domain::{Task, TaskBuilder, TaskRepository, EventPublisher, TaskCreated, Result};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -14,19 +14,32 @@ pub async fn create_task(
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: CreateTaskCmd,
 ) -> Result<Task> {
-    let mut task = Task::new(cmd.name, cmd.max_sessions)?;
+    let mut builder = TaskBuilder::with_name_and_sessions(cmd.name, cmd.max_sessions);
     
     if let Some(description) = cmd.description {
-        task = task.with_description(description);
+        builder = builder.with_description(description);
     }
     
     if !cmd.tags.is_empty() {
-        task = task.with_tags(cmd.tags);
+        builder = builder.with_tags(cmd.tags);
     }
+    
+    let task = builder.build()?;
     
     task_repo.create(task.clone()).await?;
     
-    // TODO: Publish TaskCreated event when domain events are implemented
+    // Publish TaskCreated event
+    let created_event = TaskCreated::new(
+        task.id.clone(),
+        task.name.clone(),
+        task.description.clone(),
+        task.max_sessions,
+        task.tags.clone(),
+        task.config.clone(),
+        task.audio_config.clone(),
+        1, // version
+    );
+    event_publisher.publish(Box::new(created_event));
     
     Ok(task)
 }

@@ -1,6 +1,7 @@
-use pomotoro_lib::task::models::{Task, TaskStatus};
+use pomotoro_domain::{Task, TaskStatus};
+use pomotoro_domain::TaskDefaults;
 use std::time::Duration;
-use uuid::Uuid;
+use pomotoro_domain::TaskId;
 
 pub struct TaskBuilder {
     task: Task,
@@ -8,22 +9,25 @@ pub struct TaskBuilder {
 
 impl TaskBuilder {
     pub fn new(name: String, max_sessions: u8) -> Self {
-        let task = Task::new(name, max_sessions).expect("Failed to create task in test");
+        let defaults = TaskDefaults::default();
+        let task = Task::new(name, max_sessions, &defaults).expect("Failed to create task in test");
         Self { task }
     }
 
-    pub fn with_id(mut self, id: Uuid) -> Self {
+    pub fn with_id(mut self, id: TaskId) -> Self {
         self.task.id = id;
         self
     }
 
     pub fn with_description(mut self, description: String) -> Self {
-        self.task = self.task.with_description(description);
+        // Task doesn't have with_description, need to modify field directly
+        self.task.description = Some(description);
         self
     }
 
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
-        self.task = self.task.with_tags(tags);
+        // Task doesn't have with_tags, need to modify field directly
+        self.task.tags = tags;
         self
     }
 

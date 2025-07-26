@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub async fn reset_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
@@ -34,7 +34,7 @@ pub async fn reset_session(
 pub async fn reset_full_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
@@ -92,7 +92,8 @@ mod tests {
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
         timer_state.timer.remaining_seconds = 500; // Partially completed
-        timer_state.set_status(TimerStatus::Paused).unwrap();
+        timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
+        timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
         
         reset_session(
             &mut timer_state,

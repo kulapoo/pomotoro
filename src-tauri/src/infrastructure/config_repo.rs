@@ -1,4 +1,5 @@
 use pomotoro_domain::Config;
+use crate::infrastructure::persistence::ConfigDto;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use serde_json;
@@ -56,12 +57,15 @@ impl FileConfigRepo {
         }
 
         let content = fs::read_to_string(&self.config_path)?;
-        let config: Config = serde_json::from_str(&content)?;
+        let config_dto: ConfigDto = serde_json::from_str(&content)?;
+        let config = Config::try_from(config_dto)
+            .map_err(|_| ConfigError::InvalidConfig)?;
         Ok(config)
     }
 
     fn save_to_file(&self, config: &Config) -> Result<(), ConfigError> {
-        let content = serde_json::to_string_pretty(config)?;
+        let config_dto = ConfigDto::from(config.clone());
+        let content = serde_json::to_string_pretty(&config_dto)?;
         let mut file = fs::File::create(&self.config_path)?;
         file.write_all(content.as_bytes())?;
         file.sync_all()?;

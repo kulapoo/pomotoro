@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 pub async fn reset_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
     // Reset to defaults using repository method
     let default_config = config_repo.reset_to_defaults().await?;
@@ -15,7 +15,7 @@ pub async fn reset_config(
 
 pub async fn reset_config_to_factory_defaults(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
     // Create fresh default config
     let factory_config = Config::default();
@@ -64,13 +64,13 @@ mod tests {
         
         // Create and save a modified config
         let mut custom_config = Config::default();
-        custom_config.general.max_sessions_default = 8;
+        custom_config.general.auto_start_breaks = false;
         custom_config.audio.volume = 0.3;
         config_repo.save_config(&custom_config).await.unwrap();
         
         // Verify custom config was saved
         let saved_config = config_repo.get_config().await.unwrap();
-        assert_eq!(saved_config.general.max_sessions_default, 8);
+        assert!(!saved_config.general.auto_start_breaks);
         assert_eq!(saved_config.audio.volume, 0.3);
         
         // Reset to defaults
@@ -79,8 +79,8 @@ mod tests {
             .unwrap();
         
         // Should be back to default values
-        assert_eq!(reset_config.general.max_sessions_default, 4); // Default
-        assert_eq!(reset_config.audio.volume, 1.0); // Default
+        assert!(reset_config.general.auto_start_breaks); // Default
+        assert_eq!(reset_config.audio.volume, 0.7); // Default
     }
 
     #[tokio::test]
@@ -89,7 +89,7 @@ mod tests {
         
         // Create modified config
         let mut custom_config = Config::default();
-        custom_config.general.max_sessions_default = 10;
+        custom_config.general.auto_start_breaks = false;
         config_repo.save_config(&custom_config).await.unwrap();
         
         // Reset to factory defaults
@@ -99,14 +99,14 @@ mod tests {
         
         // Should match fresh default config
         let expected_config = Config::default();
-        assert_eq!(factory_config.general.max_sessions_default, 
-                   expected_config.general.max_sessions_default);
+        assert_eq!(factory_config.general.auto_start_breaks, 
+                   expected_config.general.auto_start_breaks);
         assert_eq!(factory_config.audio.volume, 
                    expected_config.audio.volume);
         
         // Verify it was actually saved
         let saved_config = config_repo.get_config().await.unwrap();
-        assert_eq!(saved_config.general.max_sessions_default, 4);
+        assert!(saved_config.general.auto_start_breaks);
     }
 
     #[tokio::test]
@@ -115,7 +115,7 @@ mod tests {
         
         // Create custom config
         let mut custom_config = Config::default();
-        custom_config.general.max_sessions_default = 6;
+        custom_config.general.auto_start_breaks = false;
         custom_config.audio.volume = 0.7;
         config_repo.save_config(&custom_config).await.unwrap();
         
@@ -125,12 +125,12 @@ mod tests {
             .unwrap();
         
         // Backup should contain the old custom values
-        assert_eq!(backup.general.max_sessions_default, 6);
+        assert!(!backup.general.auto_start_breaks);
         assert_eq!(backup.audio.volume, 0.7);
         
         // New config should be defaults
-        assert_eq!(new_config.general.max_sessions_default, 4);
-        assert_eq!(new_config.audio.volume, 1.0);
+        assert!(new_config.general.auto_start_breaks);
+        assert_eq!(new_config.audio.volume, 0.7);
     }
 
     #[tokio::test]
@@ -146,8 +146,8 @@ mod tests {
             .unwrap();
         
         // Should be default values
-        assert_eq!(reset_config.general.max_sessions_default, 4);
-        assert_eq!(reset_config.audio.volume, 1.0);
+        assert!(reset_config.general.auto_start_breaks);
+        assert_eq!(reset_config.audio.volume, 0.7);
         
         // Config should now exist
         assert!(config_repo.config_exists().await.unwrap());
@@ -166,10 +166,10 @@ mod tests {
             .unwrap();
         
         // Backup should be default (since no config existed)
-        assert_eq!(backup.general.max_sessions_default, 4);
+        assert!(backup.general.auto_start_breaks);
         
         // New config should also be default
-        assert_eq!(new_config.general.max_sessions_default, 4);
+        assert!(new_config.general.auto_start_breaks);
     }
 
     #[tokio::test]
@@ -178,7 +178,7 @@ mod tests {
         
         // Create custom config with changes in multiple sections
         let mut custom_config = Config::default();
-        custom_config.general.max_sessions_default = 12;
+        custom_config.general.auto_start_breaks = false;
         custom_config.audio.volume = 0.4;
         custom_config.notification.enable_desktop_notifications = false;
         config_repo.save_config(&custom_config).await.unwrap();
@@ -188,7 +188,7 @@ mod tests {
             .unwrap();
         
         // All custom values should be preserved in backup
-        assert_eq!(backup.general.max_sessions_default, 12);
+        assert!(!backup.general.auto_start_breaks);
         assert_eq!(backup.audio.volume, 0.4);
         assert!(!backup.notification.enable_desktop_notifications);
     }

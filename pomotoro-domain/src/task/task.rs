@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
-use crate::{TaskId, TaskStatus, TaskConfig, AudioConfig, Error, Result};
+use crate::{AudioConfig, Error, Result, TaskConfig, TaskId, TaskStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -19,66 +19,26 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new_default() -> Self {
-        Self {
-            id: TaskId::new(),
-            name: "Focus Session".to_string(),
-            description: Some("Default pomodoro task for focused work".to_string()),
-            max_sessions: 4,
-            current_sessions: 0,
-            tags: vec!["focus".to_string()],
-            config: TaskConfig::default(),
-            audio_config: AudioConfig::default(),
-            created_at: Utc::now(),
-            completed_at: None,
-            status: TaskStatus::Active,
-        }
+    pub fn new_default() -> Result<Self> {
+        use super::TaskBuilder;
+
+        TaskBuilder::default_task().build()
     }
 
     pub fn new(name: String, max_sessions: u8) -> Result<Self> {
-        if name.trim().is_empty() {
-            return Err(Error::InvalidSessionCount { count: 0 });
-        }
-        
-        if max_sessions == 0 {
-            return Err(Error::InvalidSessionCount { count: max_sessions });
-        }
+        use super::TaskBuilder;
 
-        Ok(Self {
-            id: TaskId::new(),
-            name: name.trim().to_string(),
-            description: None,
-            max_sessions,
-            current_sessions: 0,
-            tags: Vec::new(),
-            config: TaskConfig::default(),
-            audio_config: AudioConfig::default(),
-            created_at: Utc::now(),
-            completed_at: None,
-            status: TaskStatus::Queued,
-        })
+        TaskBuilder::with_name_and_sessions(name, max_sessions).build()
     }
 
-    pub fn with_description(mut self, description: String) -> Self {
-        self.description = Some(description);
-        self
-    }
+    pub fn new_with_defaults(
+        name: String,
+        max_sessions: u8,
+        defaults: &crate::TaskDefaults,
+    ) -> Result<Self> {
+        use super::TaskBuilder;
 
-    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
-        self.tags = tags;
-        self
-    }
-
-    pub fn with_config(mut self, config: TaskConfig) -> Result<Self> {
-        config.validate()?;
-        self.config = config;
-        Ok(self)
-    }
-
-    pub fn with_audio_config(mut self, audio_config: AudioConfig) -> Result<Self> {
-        audio_config.validate()?;
-        self.audio_config = audio_config;
-        Ok(self)
+        TaskBuilder::with_name_and_sessions(name, max_sessions).build_with_defaults(defaults)
     }
 
     pub fn is_completed(&self) -> bool {
@@ -95,7 +55,7 @@ impl Task {
             self.status = TaskStatus::Completed;
             self.completed_at = Some(Utc::now());
         }
-        
+
         Ok(())
     }
 

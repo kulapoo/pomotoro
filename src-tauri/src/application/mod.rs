@@ -9,6 +9,7 @@
 //! - `task/` - Task management use cases (CRUD, switching, cycling)
 //! - `timer/` - Timer session use cases (start, pause, reset, complete)
 //! - `config/` - Configuration management use cases (get, update, reset)
+//! - `audio/` - Audio management use cases (playback, library, notifications)
 //! 
 //! ## Design Principles
 //! 
@@ -21,8 +22,15 @@
 pub mod task;
 pub mod timer;
 pub mod config;
+pub mod audio;
 
 // Re-export commonly used types for convenience
 pub use task::*;
-pub use timer::*;
+pub use timer::{
+    start_session, StartSessionCmd, pause_session, resume_session,
+    reset_session, reset_full_session, complete_timer_session, 
+    force_complete_timer_session, SessionCompleted,
+    handle_work_session_completed
+};
 pub use config::*;
+pub use audio::*;

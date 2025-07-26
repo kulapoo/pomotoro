@@ -1,5 +1,5 @@
 use crate::infrastructure::{ConfigRepository, EventPublisherArc};
-use pomotoro_domain::{Config, TaskConfig, AudioConfig, TaskId, GeneralConfig, NotificationConfig, AppearanceConfig};
+use pomotoro_domain::{Config, TaskDefaults, AudioConfig, TaskId, GeneralConfig, NotificationConfig, AppearanceConfig};
 use tauri::State;
 
 #[tauri::command]
@@ -13,7 +13,7 @@ pub async fn get_global_config(
 pub async fn save_global_config(
     config: Config,
     config_repo: State<'_, ConfigRepository>,
-    event_publisher: State<'_, EventPublisherArc>,
+    _event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<(), String> {
     config_repo.save_config(&config).map_err(|e| e.to_string())
 }
@@ -21,7 +21,7 @@ pub async fn save_global_config(
 #[tauri::command]
 pub async fn reset_global_config_to_defaults(
     config_repo: State<'_, ConfigRepository>,
-    event_publisher: State<'_, EventPublisherArc>,
+    _event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Config, String> {
     config_repo.reset_to_defaults().map_err(|e| e.to_string())
 }
@@ -34,9 +34,9 @@ pub async fn update_default_timings(
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
-    config.task.work_duration = std::time::Duration::from_secs(work_duration_minutes as u64 * 60);
-    config.task.short_break_duration = std::time::Duration::from_secs(short_break_minutes as u64 * 60);
-    config.task.long_break_duration = std::time::Duration::from_secs(long_break_minutes as u64 * 60);
+    config.task_defaults.work_duration = std::time::Duration::from_secs(work_duration_minutes as u64 * 60);
+    config.task_defaults.short_break_duration = std::time::Duration::from_secs(short_break_minutes as u64 * 60);
+    config.task_defaults.long_break_duration = std::time::Duration::from_secs(long_break_minutes as u64 * 60);
     
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
@@ -48,7 +48,7 @@ pub async fn update_default_cycle_length(
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
-    config.task.sessions_until_long_break = sessions_until_long_break;
+    config.task_defaults.sessions_until_long_break = sessions_until_long_break;
     
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
@@ -92,8 +92,8 @@ pub async fn update_appearance(
 
 #[tauri::command]
 pub async fn update_audio_config(
-    task_id: TaskId,
-    audio_config: AudioConfig,
+    _task_id: TaskId,
+    _audio_config: AudioConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
     // For now, just return the current config since we don't have task-specific audio config persistence
@@ -102,16 +102,16 @@ pub async fn update_audio_config(
 
 #[tauri::command]
 pub async fn get_effective_task_config(
-    task_id: TaskId,
+    _task_id: TaskId,
     config_repo: State<'_, ConfigRepository>,
-) -> Result<TaskConfig, String> {
+) -> Result<TaskDefaults, String> {
     let config = config_repo.get_config().map_err(|e| e.to_string())?;
-    Ok(config.task)
+    Ok(config.task_defaults)
 }
 
 #[tauri::command]
 pub async fn get_effective_audio_config(
-    task_id: TaskId,
+    _task_id: TaskId,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<AudioConfig, String> {
     let config = config_repo.get_config().map_err(|e| e.to_string())?;

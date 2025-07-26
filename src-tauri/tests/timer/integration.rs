@@ -1,7 +1,6 @@
 use crate::task::models::TaskTestRepository;
 use crate::timer::models::{TimerStateBuilder, TimerTestService, TimerTestAssertions};
-use pomotoro_lib::timer::models::{Phase, TimerStatus};
-use pomotoro_lib::task::TaskRepositoryTrait;
+use pomotoro_domain::{Phase, TimerStatus, TaskRepository};
 
 #[tokio::test]
 async fn test_timer_initial_state() {
@@ -13,7 +12,7 @@ async fn test_timer_initial_state() {
     TimerTestAssertions::assert_is_stopped(&state);
     TimerTestAssertions::assert_session_count(&state, 0);
     assert_eq!(state.task_session_count, 0);
-    assert_eq!(state.remaining_seconds, 25 * 60);
+    assert_eq!(state.remaining_seconds(), 25 * 60);
 }
 
 #[tokio::test]
@@ -53,15 +52,15 @@ async fn test_timer_pause_resume() {
     timer_service.pause_timer().await.unwrap();
 
     let paused_state = timer_service.get_state().await;
-    assert_eq!(paused_state.status, TimerStatus::Paused);
-    assert_eq!(paused_state.phase, Phase::Work);
-    assert!(paused_state.remaining_seconds <= 25 * 60);
+    assert_eq!(paused_state.status(), TimerStatus::Paused);
+    assert_eq!(paused_state.phase(), Phase::Work);
+    assert!(paused_state.remaining_seconds() <= 25 * 60);
 
     timer_service.start_work_session().await.unwrap();
 
     let resumed_state = timer_service.get_state().await;
     TimerTestAssertions::assert_is_running(&resumed_state);
-    assert_eq!(resumed_state.remaining_seconds, paused_state.remaining_seconds);
+    assert_eq!(resumed_state.remaining_seconds(), paused_state.remaining_seconds());
 }
 
 #[tokio::test]
@@ -80,7 +79,7 @@ async fn test_timer_reset_phase() {
 
     let reset_state = timer_service.get_state().await;
     TimerTestAssertions::assert_is_work_phase(&reset_state);
-    assert_eq!(reset_state.remaining_seconds, 25 * 60);
+    assert_eq!(reset_state.remaining_seconds(), 25 * 60);
 }
 
 #[tokio::test]
@@ -102,7 +101,7 @@ async fn test_timer_phase_skipping() {
     assert_eq!(new_phase, Phase::ShortBreak);
 
     let state = timer_service.get_state().await;
-    assert_eq!(state.phase, Phase::ShortBreak);
+    assert_eq!(state.phase(), Phase::ShortBreak);
 }
 
 #[tokio::test]
@@ -165,12 +164,12 @@ fn test_timer_state_builder() {
     TimerTestAssertions::assert_is_work_phase(&state);
     TimerTestAssertions::assert_session_count(&state, 2);
     assert_eq!(state.task_session_count, 1);
-    assert_eq!(state.remaining_seconds, 25 * 60);
+    assert_eq!(state.remaining_seconds(), 25 * 60);
 }
 
 #[test]
 fn test_basic_timer_types() {
-    use pomotoro_lib::timer::models::{Phase, TimerStatus};
+    use pomotoro_domain::{Phase, TimerStatus};
 
     // Test Phase enum
     assert_eq!(Phase::Work, Phase::Work);

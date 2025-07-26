@@ -2,6 +2,7 @@ use pomotoro_domain::{
     TimerState, TaskId, TaskRepository, PhaseTransitionService, 
     EventPublisher, Result, Error, TimerStatus
 };
+use crate::application::task::mappers::task_config_to_timer_config;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -13,7 +14,7 @@ pub async fn start_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: StartSessionCmd,
 ) -> Result<()> {
     // If a task ID is provided, switch to that task first
@@ -31,8 +32,9 @@ pub async fn start_session(
             return Err(Error::TaskAlreadyCompleted);
         }
         
-        // Switch to the task with its configuration
-        timer_state.switch_task_with_config(task_id, task.config.into())?;
+        // Switch to the task with its configuration using proper mapper
+        let timer_config = task_config_to_timer_config(&task.config)?;
+        timer_state.switch_task_with_config(task_id, timer_config)?;
     }
     
     // Ensure we have an active task
@@ -62,7 +64,7 @@ mod tests {
     use super::*;
     use pomotoro_domain::{
         Task, NoOpEventPublisher, 
-        DefaultPhaseTransitionService, TimerStatus, TaskConfig
+        DefaultPhaseTransitionService, TimerStatus, TaskDefaults
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
@@ -76,7 +78,8 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         
-        let task = Task::new("Test Task".to_string(), 4).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
         (task_repo, event_publisher, phase_service, task)
@@ -170,7 +173,8 @@ mod tests {
         let (task_repo, event_publisher, phase_service, _) = setup().await;
         let mut timer_state = TimerState::default();
         
-        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
         

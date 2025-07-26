@@ -19,7 +19,7 @@ pub fn TimerControls(
     let start_pause_timer = move |_| {
         let current_state = timer_state.get_untracked();
         spawn_local(async move {
-            let command = match current_state.status {
+            let command = match current_state.status() {
                 TimerStatus::Running => events::timer::PAUSE,
                 _ => events::timer::START,
             };
@@ -54,7 +54,7 @@ pub fn TimerControls(
                 class="control-btn primary"
                 on:click=start_pause_timer
             >
-                {move || match timer_state.get().status {
+                {move || match timer_state.get().status() {
                     TimerStatus::Running => "Pause",
                     _ => "Start"
                 }}
@@ -76,12 +76,12 @@ pub fn TimerControls(
         </div>
 
         <div class="status-indicator">
-            <span class={move || format!("status-badge {}", match timer_state.get().status {
+            <span class={move || format!("status-badge {}", match timer_state.get().status() {
                 TimerStatus::Running => "running",
                 TimerStatus::Paused => "paused",
                 TimerStatus::Stopped => "stopped"
             })}>
-                {move || match timer_state.get().status {
+                {move || match timer_state.get().status() {
                     TimerStatus::Running => "Running",
                     TimerStatus::Paused => "Paused",
                     TimerStatus::Stopped => "Stopped"

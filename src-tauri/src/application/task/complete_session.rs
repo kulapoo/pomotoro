@@ -1,4 +1,6 @@
 use pomotoro_domain::{TaskRepository, EventPublisher, TaskSessionCompleted, TaskCompleted, Result, Error, TaskId};
+#[cfg(test)]
+use pomotoro_domain::TaskDefaults;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -98,7 +100,8 @@ mod tests {
     async fn should_complete_session_successfully() {
         let (task_repo, event_publisher) = setup().await;
 
-        let task = Task::new("Test Task".to_string(), 3).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 3, &defaults).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
@@ -117,7 +120,8 @@ mod tests {
     async fn should_complete_task_when_max_sessions_reached() {
         let (task_repo, event_publisher) = setup().await;
 
-        let task = Task::new("Test Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 1, &defaults).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
@@ -136,7 +140,8 @@ mod tests {
     async fn should_fail_to_complete_already_completed_task() {
         let (task_repo, event_publisher) = setup().await;
 
-        let mut task = Task::new("Test Task".to_string(), 1).unwrap();
+        let defaults = TaskDefaults::default();
+        let mut task = Task::new("Test Task".to_string(), 1, &defaults).unwrap();
         task.increment_session().unwrap(); // Complete the task
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
@@ -149,7 +154,8 @@ mod tests {
     async fn should_check_if_can_complete_session() {
         let (task_repo, event_publisher) = setup().await;
 
-        let task = Task::new("Test Task".to_string(), 2).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 2, &defaults).unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 

@@ -23,7 +23,7 @@ pub fn TimerDisplay(
         <div class="timer-display">
             <CircularProgress
                 progress=Signal::derive(move || timer_with_task.get().get_progress_percentage())
-                phase=Signal::derive(move || timer_state.get().phase.clone())
+                phase=Signal::derive(move || timer_state.get().phase())
             />
             <div class="time-overlay">
                 <span class="time-text">{move || timer_with_task.get().format_time()}</span>

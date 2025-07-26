@@ -1,6 +1,6 @@
-use pomotoro_lib::task::{InMemoryTaskRepository, TaskRepositoryTrait, TaskError};
-use pomotoro_lib::task::models::Task;
-use pomotoro_domain::TaskId;
+use pomotoro_lib::infrastructure::InMemoryTaskRepository;
+use pomotoro_domain::{Task, TaskBuilder, TaskRepository, TaskStatus, Error as TaskError};
+use pomotoro_domain::{TaskId, TaskDefaults};
 use std::sync::Arc;
 
 pub struct TaskTestRepository {
@@ -30,22 +30,25 @@ impl TaskTestRepository {
     pub async fn seed_with_test_data(&self) -> Result<Vec<TaskId>, Box<dyn std::error::Error>> {
         let mut task_ids = Vec::new();
 
-        let work_task = Task::new("Work Project".to_string(), 4)?
+        let defaults = TaskDefaults::default();
+        let work_task = TaskBuilder::with_name_and_sessions("Work Project".to_string(), 4)
             .with_tags(vec!["work".to_string(), "project".to_string()])
-            .with_description("Important work project".to_string());
+            .with_description("Important work project".to_string())
+            .build(&defaults)?;
 
         self.create(work_task.clone()).await?;
 
         task_ids.push(work_task.id);
 
-        let study_task = Task::new("Study Session".to_string(), 3)?
-            .with_tags(vec!["study".to_string(), "learning".to_string()]);
+        let study_task = TaskBuilder::with_name_and_sessions("Study Session".to_string(), 3)
+            .with_tags(vec!["study".to_string(), "learning".to_string()])
+            .build(&defaults)?;
 
         self.create(study_task.clone()).await?;
 
         task_ids.push(study_task.id);
 
-        let mut completed_task = Task::new("Completed Task".to_string(), 2)?;
+        let mut completed_task = Task::new("Completed Task".to_string(), 2, &defaults)?;
         completed_task.increment_session()?;
         completed_task.increment_session()?;
         self.create(completed_task.clone()).await?;
@@ -56,7 +59,7 @@ impl TaskTestRepository {
 }
 
 #[async_trait::async_trait]
-impl TaskRepositoryTrait for TaskTestRepository {
+impl TaskRepository for TaskTestRepository {
     async fn create(&self, task: Task) -> Result<(), TaskError> {
         self.inner.create(task).await
     }
@@ -83,5 +86,13 @@ impl TaskRepositoryTrait for TaskTestRepository {
 
     async fn get_active_tasks(&self) -> Result<Vec<Task>, TaskError> {
         self.inner.get_active_tasks().await
+    }
+
+    async fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>, TaskError> {
+        self.inner.get_by_status(status).await
+    }
+
+    async fn exists(&self, id: TaskId) -> Result<bool, TaskError> {
+        self.inner.exists(id).await
     }
 }

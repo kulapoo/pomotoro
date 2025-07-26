@@ -1,6 +1,5 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
-use pomotoro_lib::task::models::{TaskStatus};
-use pomotoro_lib::task::TaskRepositoryTrait;
+use pomotoro_domain::{TaskStatus, TaskRepository};
 
 #[tokio::test]
 async fn test_task_repository_default_task() {

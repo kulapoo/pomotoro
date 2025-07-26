@@ -8,8 +8,10 @@ use controllers::*;
 use infrastructure::{
     TimerService, InMemoryTaskRepository, TaskRepositoryArc, 
     FileConfigRepo, ConfigRepository, AudioService,
-    create_composite_event_publisher, EventPublisherArc
+    create_event_publisher_with_bus, EventPublisherArc, DomainEventBus
 };
+use application::handle_work_session_completed;
+use pomotoro_domain::WorkSessionCompleted;
 use std::sync::{Arc, Mutex};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,11 +34,28 @@ pub fn run() {
             app.manage(Mutex::new(audio_service));
 
             // Create composite event publisher for domain events
-            let event_publisher: EventPublisherArc = create_composite_event_publisher(app.handle().clone());
+            let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) = 
+                create_event_publisher_with_bus(app.handle().clone());
             app.manage(event_publisher.clone());
+            
+            // Register event handlers
+            let task_repo_for_handler = task_repository.clone();
+            let event_pub_for_handler = event_publisher.clone();
+            event_bus.subscribe::<WorkSessionCompleted>(Arc::new(move |event| {
+                let task_repo = task_repo_for_handler.clone();
+                let event_pub = event_pub_for_handler.clone();
+                let event_clone = event.clone();
+                
+                // Handle the event asynchronously
+                tokio::spawn(async move {
+                    if let Err(e) = handle_work_session_completed(&task_repo, &event_pub, &event_clone).await {
+                        eprintln!("Failed to handle WorkSessionCompleted event: {}", e);
+                    }
+                });
+            }));
 
             // Create timer service with domain services
-            let timer_service = TimerService::new_with_services(event_publisher.clone(), task_repository.clone());
+            let timer_service = TimerService::new_with_services(event_publisher.clone());
             app.manage(timer_service);
 
             // Manage the task repository for command handlers

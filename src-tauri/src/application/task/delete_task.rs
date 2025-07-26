@@ -1,4 +1,6 @@
 use pomotoro_domain::{TaskId, TaskRepository, EventPublisher, Result, Error};
+#[cfg(test)]
+use pomotoro_domain::TaskDefaults;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -8,7 +10,7 @@ pub struct DeleteTaskCmd {
 
 pub async fn delete_task(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: DeleteTaskCmd,
 ) -> Result<bool> {
     let task_id = TaskId::from_string(&cmd.id)
@@ -31,7 +33,9 @@ pub async fn delete_task(
     let deleted = task_repo.delete(task_id).await?;
     
     if deleted {
-        // TODO: Publish TaskDeleted event when domain events are implemented
+        // TODO: Publish TaskDeleted event - domain event not yet implemented
+        // let deleted_event = TaskDeleted::new(task.id, task.name);
+        // event_publisher.publish(Box::new(deleted_event));
     }
     
     Ok(deleted)
@@ -54,7 +58,8 @@ mod tests {
     async fn should_delete_task_successfully() {
         let (task_repo, event_publisher) = setup().await;
         
-        let task = Task::new("Test Task".to_string(), 4).unwrap();
+        let defaults = TaskDefaults::default();
+        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
         let task_id = task.id.clone();
         task_repo.create(task).await.unwrap();
         
@@ -87,7 +92,8 @@ mod tests {
     async fn should_prevent_deletion_of_default_task() {
         let (task_repo, event_publisher) = setup().await;
         
-        let default_task = Task::new_default();
+        let defaults = TaskDefaults::default();
+        let default_task = Task::new_default(&defaults).unwrap();
         let task_id = default_task.id.clone();
         task_repo.create(default_task).await.unwrap();
         

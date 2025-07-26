@@ -14,7 +14,7 @@ pub struct UpdateConfigCmd {
 
 pub async fn update_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: UpdateConfigCmd,
 ) -> Result<Config> {
     // Get current config or create default
@@ -57,7 +57,7 @@ pub async fn update_config(
 
 pub async fn update_full_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     new_config: Config,
 ) -> Result<Config> {
     // Validate the new config
@@ -106,7 +106,6 @@ mod tests {
     use super::*;
     use pomotoro_domain::NoOpEventPublisher;
     use crate::infrastructure::InMemoryConfigRepository;
-    use std::time::Duration;
 
     async fn setup() -> (Arc<dyn ConfigRepository + Send + Sync>, Arc<dyn EventPublisher + Send + Sync>) {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
@@ -123,7 +122,7 @@ mod tests {
         let (config_repo, event_publisher) = setup().await;
         
         let mut new_general = GeneralConfig::default();
-        new_general.max_sessions_default = 8;
+        new_general.auto_start_breaks = false;
         
         let cmd = UpdateConfigCmd {
             general: Some(new_general),
@@ -136,7 +135,7 @@ mod tests {
             .await
             .unwrap();
         
-        assert_eq!(updated_config.general.max_sessions_default, 8);
+        assert!(!updated_config.general.auto_start_breaks);
         // Other sections should remain unchanged
         assert_eq!(updated_config.audio, AudioConfig::default());
     }
@@ -146,7 +145,7 @@ mod tests {
         let (config_repo, event_publisher) = setup().await;
         
         let mut new_general = GeneralConfig::default();
-        new_general.max_sessions_default = 6;
+        new_general.minimize_to_tray = false;
         
         let mut new_audio = AudioConfig::default();
         new_audio.volume = 0.8;
@@ -162,7 +161,7 @@ mod tests {
             .await
             .unwrap();
         
-        assert_eq!(updated_config.general.max_sessions_default, 6);
+        assert!(!updated_config.general.minimize_to_tray);
         assert_eq!(updated_config.audio.volume, 0.8);
         // Unchanged sections should remain default
         assert_eq!(updated_config.notification.enable_desktop_notifications, NotificationConfig::default().enable_desktop_notifications);
@@ -173,14 +172,14 @@ mod tests {
         let (config_repo, event_publisher) = setup().await;
         
         let mut new_config = Config::default();
-        new_config.general.max_sessions_default = 10;
+        new_config.general.start_minimized = true;
         new_config.audio.volume = 0.5;
         
         let updated_config = update_full_config(&config_repo, &event_publisher, new_config.clone())
             .await
             .unwrap();
         
-        assert_eq!(updated_config.general.max_sessions_default, 10);
+        assert!(updated_config.general.start_minimized);
         assert_eq!(updated_config.audio.volume, 0.5);
     }
 
@@ -193,7 +192,7 @@ mod tests {
         assert!(!config_repo.config_exists().await.unwrap());
         
         let mut new_general = GeneralConfig::default();
-        new_general.max_sessions_default = 7;
+        new_general.start_minimized = true;
         
         let cmd = UpdateConfigCmd {
             general: Some(new_general),
@@ -206,27 +205,26 @@ mod tests {
             .await
             .unwrap();
         
-        assert_eq!(updated_config.general.max_sessions_default, 7);
+        assert!(updated_config.general.start_minimized);
         // Config should now exist
         assert!(config_repo.config_exists().await.unwrap());
     }
 
     #[tokio::test]
-    async fn should_fail_with_invalid_config() {
+    async fn should_succeed_with_valid_general_config() {
         let (config_repo, event_publisher) = setup().await;
         
-        let mut invalid_general = GeneralConfig::default();
-        invalid_general.max_sessions_default = 0; // Invalid value
+        let valid_general = GeneralConfig::default();
         
         let cmd = UpdateConfigCmd {
-            general: Some(invalid_general),
+            general: Some(valid_general),
             audio: None,
             notification: None,
             appearance: None,
         };
         
         let result = update_config(&config_repo, &event_publisher, cmd).await;
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -234,13 +232,13 @@ mod tests {
         let (config_repo, event_publisher) = setup().await;
         
         let mut new_general = GeneralConfig::default();
-        new_general.max_sessions_default = 5;
+        new_general.auto_start_work_after_break = true;
         
         let updated_config = update_general_config(&config_repo, &event_publisher, new_general)
             .await
             .unwrap();
         
-        assert_eq!(updated_config.general.max_sessions_default, 5);
+        assert!(updated_config.general.auto_start_work_after_break);
         // Other sections should remain unchanged
         assert_eq!(updated_config.audio, AudioConfig::default());
     }
@@ -258,6 +256,6 @@ mod tests {
         
         assert_eq!(updated_config.audio.volume, 0.3);
         // Other sections should remain unchanged
-        assert_eq!(updated_config.general.max_sessions_default, GeneralConfig::default().max_sessions_default);
+        assert_eq!(updated_config.general.auto_start_breaks, GeneralConfig::default().auto_start_breaks);
     }
 }

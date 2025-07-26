@@ -24,48 +24,48 @@ impl ConfigBuilder {
 
     // Task Config flat setters/getters
     pub fn task_work_duration(mut self, duration: Duration) -> Self {
-        self.config.task.work_duration = duration;
+        self.config.task_defaults.work_duration = duration;
         self
     }
 
     pub fn get_task_work_duration(&self) -> Duration {
-        self.config.task.work_duration
+        self.config.task_defaults.work_duration
     }
 
     pub fn task_short_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task.short_break_duration = duration;
+        self.config.task_defaults.short_break_duration = duration;
         self
     }
 
     pub fn get_task_short_break_duration(&self) -> Duration {
-        self.config.task.short_break_duration
+        self.config.task_defaults.short_break_duration
     }
 
     pub fn task_long_break_duration(mut self, duration: Duration) -> Self {
-        self.config.task.long_break_duration = duration;
+        self.config.task_defaults.long_break_duration = duration;
         self
     }
 
     pub fn get_task_long_break_duration(&self) -> Duration {
-        self.config.task.long_break_duration
+        self.config.task_defaults.long_break_duration
     }
 
     pub fn task_sessions_until_long_break(mut self, sessions: u8) -> Self {
-        self.config.task.sessions_until_long_break = sessions;
+        self.config.task_defaults.sessions_until_long_break = sessions;
         self
     }
 
     pub fn get_task_sessions_until_long_break(&self) -> u8 {
-        self.config.task.sessions_until_long_break
+        self.config.task_defaults.sessions_until_long_break
     }
 
     pub fn task_enable_screen_blocking(mut self, enable: bool) -> Self {
-        self.config.task.enable_screen_blocking = enable;
+        self.config.task_defaults.enable_screen_blocking = enable;
         self
     }
 
     pub fn get_task_enable_screen_blocking(&self) -> bool {
-        self.config.task.enable_screen_blocking
+        self.config.task_defaults.enable_screen_blocking
     }
 
     // Audio Config flat setters/getters
@@ -134,12 +134,12 @@ impl ConfigBuilder {
     }
 
     pub fn general_max_sessions_default(mut self, max_sessions: u8) -> Self {
-        self.config.general.max_sessions_default = max_sessions;
+        self.config.task_defaults.max_sessions_default = max_sessions;
         self
     }
 
     pub fn get_general_max_sessions_default(&self) -> u8 {
-        self.config.general.max_sessions_default
+        self.config.task_defaults.max_sessions_default
     }
 
     pub fn general_auto_start_breaks(mut self, auto_start: bool) -> Self {

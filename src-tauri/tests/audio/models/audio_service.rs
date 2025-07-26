@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
-use pomotoro_lib::audio::DefaultAudioAssetProvider;
+use pomotoro_lib::infrastructure::DefaultAudioAssetProvider;
 
 pub struct MockAudioManager {
     library: AudioLibrary,

@@ -1,5 +1,5 @@
 use std::time::Duration;
-use pomotoro_lib::config::ConfigBuilder;
+use pomotoro_lib::infrastructure::ConfigBuilder;
 use pomotoro_domain::{NotificationPosition, TaskCyclingBehavior, Theme};
 
 fn main() {
@@ -19,7 +19,7 @@ fn main() {
         .build();
 
     println!("Built configuration:");
-    println!("Work duration: {:?}", config.task.work_duration);
+    println!("Work duration: {:?}", config.task_defaults.work_duration);
     println!("Audio volume: {}", config.audio.volume);
     println!("Theme: {:?}", config.appearance.theme);
     println!("Auto start breaks: {}", config.general.auto_start_breaks);

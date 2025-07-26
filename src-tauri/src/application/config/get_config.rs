@@ -23,13 +23,13 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
             Arc::new(InMemoryConfigRepository::new());
         let mut config = Config::default();
-        config.general.max_sessions_default = 6;
+        config.general.auto_start_breaks = false;
 
         config_repo.save_config(&config).await.unwrap();
 
         let retrieved_config = get_config(&config_repo).await.unwrap();
 
-        assert_eq!(retrieved_config.general.max_sessions_default, 6);
+        assert!(!retrieved_config.general.auto_start_breaks);
     }
 
     #[tokio::test]
@@ -40,7 +40,7 @@ mod tests {
         let config = get_config(&config_repo).await.unwrap();
 
         // Should return default config
-        assert_eq!(config.general.max_sessions_default, 4); // Default value
+        assert!(config.general.auto_start_breaks); // Default value
     }
 
     #[tokio::test]
@@ -54,7 +54,7 @@ mod tests {
         let config = get_config(&config_repo).await.unwrap();
 
         // Should return default config and save it
-        assert_eq!(config.general.max_sessions_default, 4);
+        assert!(config.general.auto_start_breaks);
 
         // Config should now exist
         assert!(config_repo.config_exists().await.unwrap());
@@ -65,14 +65,14 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
             Arc::new(InMemoryConfigRepository::new());
         let mut custom_config = Config::default();
-        custom_config.general.max_sessions_default = 8;
+        custom_config.general.start_minimized = true;
 
         config_repo.save_config(&custom_config).await.unwrap();
 
         let config = get_config(&config_repo).await.unwrap();
 
         // Should return existing custom config, not default
-        assert_eq!(config.general.max_sessions_default, 8);
+        assert!(config.general.start_minimized);
     }
 
     #[tokio::test]
