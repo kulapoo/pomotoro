@@ -1,4 +1,4 @@
-use pomotoro_domain::{PlaybackRequest, PlaybackHandle, Result, Error};
+use pomotoro_domain::{PlaybackRequest, PlaybackHandle, Result, Error, AudioService};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -12,18 +12,6 @@ pub struct PlayAudioCmd {
 #[derive(Debug, Clone)]
 pub struct StopAudioCmd {
     pub playback_id: String,
-}
-
-/// Audio service trait for dependency injection
-pub trait AudioService: Send + Sync {
-    fn play_audio(&mut self, request: PlaybackRequest) -> Result<PlaybackHandle>;
-    fn stop_audio(&mut self, playback_id: &str) -> Result<()>;
-    fn stop_all_audio(&mut self) -> Result<()>;
-    fn pause_audio(&mut self, playback_id: &str) -> Result<()>;
-    fn resume_audio(&mut self, playback_id: &str) -> Result<()>;
-    fn set_volume(&mut self, playback_id: &str, volume: f32) -> Result<()>;
-    fn get_active_playbacks(&self) -> Result<Vec<PlaybackHandle>>;
-    fn cleanup_finished(&mut self) -> Result<()>;
 }
 
 pub async fn play_audio(

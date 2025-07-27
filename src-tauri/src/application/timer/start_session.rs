@@ -1,6 +1,6 @@
 use pomotoro_domain::{
     TimerState, TaskId, TaskRepository, PhaseTransitionService, 
-    EventPublisher, Result, Error, TimerStatus
+    Result, Error, TimerStatus
 };
 use crate::application::task::mappers::task_config_to_timer_config;
 use std::sync::Arc;
@@ -14,7 +14,6 @@ pub async fn start_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: StartSessionCmd,
 ) -> Result<()> {
     // If a task ID is provided, switch to that task first
@@ -63,31 +62,27 @@ pub async fn start_session(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        Task, NoOpEventPublisher, 
-        DefaultPhaseTransitionService, TimerStatus, TaskDefaults
+        Task, DefaultPhaseTransitionService, TimerStatus
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
     async fn setup() -> (
         Arc<dyn TaskRepository + Send + Sync>,
-        Arc<dyn EventPublisher + Send + Sync>,
         Arc<dyn PhaseTransitionService + Send + Sync>,
         Task,
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Test Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
-        (task_repo, event_publisher, phase_service, task)
+        (task_repo, phase_service, task)
     }
 
     #[tokio::test]
     async fn should_start_session_with_task_id() {
-        let (task_repo, event_publisher, phase_service, task) = setup().await;
+        let (task_repo, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         
         let cmd = StartSessionCmd {
@@ -98,7 +93,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await.unwrap();
         
@@ -108,7 +102,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_start_session_with_existing_active_task() {
-        let (task_repo, event_publisher, phase_service, task) = setup().await;
+        let (task_repo, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         
@@ -120,7 +114,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await.unwrap();
         
@@ -130,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_without_active_task() {
-        let (task_repo, event_publisher, phase_service, _) = setup().await;
+        let (task_repo, phase_service, _) = setup().await;
         let mut timer_state = TimerState::default();
         
         let cmd = StartSessionCmd {
@@ -141,7 +134,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await;
         
@@ -150,7 +142,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_nonexistent_task() {
-        let (task_repo, event_publisher, phase_service, _) = setup().await;
+        let (task_repo, phase_service, _) = setup().await;
         let mut timer_state = TimerState::default();
         
         let cmd = StartSessionCmd {
@@ -161,7 +153,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await;
         
@@ -170,11 +161,10 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_completed_task() {
-        let (task_repo, event_publisher, phase_service, _) = setup().await;
+        let (task_repo, phase_service, _) = setup().await;
         let mut timer_state = TimerState::default();
         
-        let defaults = TaskDefaults::default();
-        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
         
@@ -186,7 +176,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await;
         
@@ -195,7 +184,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_if_already_running() {
-        let (task_repo, event_publisher, phase_service, task) = setup().await;
+        let (task_repo, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
         timer_state.set_status(TimerStatus::Running).unwrap();
@@ -208,7 +197,6 @@ mod tests {
             &mut timer_state,
             &task_repo,
             &phase_service,
-            &event_publisher,
             cmd,
         ).await;
         

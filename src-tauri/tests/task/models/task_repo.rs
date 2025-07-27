@@ -1,6 +1,6 @@
 use pomotoro_lib::infrastructure::InMemoryTaskRepository;
 use pomotoro_domain::{Task, TaskBuilder, TaskRepository, TaskStatus, Error as TaskError};
-use pomotoro_domain::{TaskId, TaskDefaults};
+use pomotoro_domain::TaskId;
 use std::sync::Arc;
 
 pub struct TaskTestRepository {
@@ -30,11 +30,10 @@ impl TaskTestRepository {
     pub async fn seed_with_test_data(&self) -> Result<Vec<TaskId>, Box<dyn std::error::Error>> {
         let mut task_ids = Vec::new();
 
-        let defaults = TaskDefaults::default();
         let work_task = TaskBuilder::with_name_and_sessions("Work Project".to_string(), 4)
             .with_tags(vec!["work".to_string(), "project".to_string()])
             .with_description("Important work project".to_string())
-            .build(&defaults)?;
+            .build()?;
 
         self.create(work_task.clone()).await?;
 
@@ -42,13 +41,13 @@ impl TaskTestRepository {
 
         let study_task = TaskBuilder::with_name_and_sessions("Study Session".to_string(), 3)
             .with_tags(vec!["study".to_string(), "learning".to_string()])
-            .build(&defaults)?;
+            .build()?;
 
         self.create(study_task.clone()).await?;
 
         task_ids.push(study_task.id);
 
-        let mut completed_task = Task::new("Completed Task".to_string(), 2, &defaults)?;
+        let mut completed_task = Task::new("Completed Task".to_string(), 2)?;
         completed_task.increment_session()?;
         completed_task.increment_session()?;
         self.create(completed_task.clone()).await?;

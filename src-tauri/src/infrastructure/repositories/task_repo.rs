@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use pomotoro_domain::{Task, TaskBuilder, TaskId, TaskStatus, TaskRepository, Result, Error, Readable, Writable, TaskDefaults};
+use pomotoro_domain::{Task, TaskId, TaskStatus, TaskRepository, Result, Error, Readable, Writable};
 use async_trait::async_trait;
 
 pub type TaskRepositoryArc = Arc<dyn TaskRepository + Send + Sync>;
@@ -194,12 +194,12 @@ impl Writable<Task, TaskId> for InMemoryTaskRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pomotoro_domain::TaskBuilder;
 
     #[tokio::test]
     async fn should_create_and_retrieve_task() {
         let repo = InMemoryTaskRepository::new();
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Test Task".to_string(), 4).unwrap();
         let task_id = task.id.clone();
 
         repo.create(task.clone()).await.unwrap();
@@ -212,8 +212,7 @@ mod tests {
     #[tokio::test]
     async fn should_update_existing_task() {
         let repo = InMemoryTaskRepository::new();
-        let defaults = TaskDefaults::default();
-        let mut task = Task::new("Original".to_string(), 4, &defaults).unwrap();
+        let mut task = Task::new("Original".to_string(), 4).unwrap();
         let task_id = task.id.clone();
 
         repo.create(task.clone()).await.unwrap();
@@ -227,9 +226,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_filter_tasks_by_status() {
-        let defaults = TaskDefaults::default();
-        let active_task = Task::new("Active".to_string(), 4, &defaults).unwrap();
-        let mut completed_task = Task::new("Completed".to_string(), 1, &defaults).unwrap();
+        let active_task = Task::new("Active".to_string(), 4).unwrap();
+        let mut completed_task = Task::new("Completed".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap(); // Makes it completed
 
         let repo = InMemoryTaskRepository::with_tasks(vec![
@@ -244,14 +242,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_filter_tasks_by_tags() {
-        let defaults = TaskDefaults::default();
         let work_task = TaskBuilder::with_name_and_sessions("Work Task".to_string(), 4)
             .with_tags(vec!["work".to_string(), "urgent".to_string()])
-            .build(&defaults).unwrap();
+            .build().unwrap();
         
         let personal_task = TaskBuilder::with_name_and_sessions("Personal Task".to_string(), 2)
             .with_tags(vec!["personal".to_string()])
-            .build(&defaults).unwrap();
+            .build().unwrap();
 
         let repo = InMemoryTaskRepository::with_tasks(vec![
             work_task,

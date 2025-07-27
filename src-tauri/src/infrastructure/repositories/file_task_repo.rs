@@ -165,7 +165,6 @@ impl TaskRepository for FileTaskRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::TaskDefaults;
     use tempfile::tempdir;
 
     #[tokio::test]
@@ -174,8 +173,7 @@ mod tests {
         let tasks_file = temp_dir.path().join("tasks.json");
         let repo = FileTaskRepository::new(tasks_file);
 
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Test Task".to_string(), 4).unwrap();
         let task_id = task.id;
 
         // Create and save task

@@ -59,9 +59,7 @@ pub async fn switch_task(
 
 pub async fn switch_to_next_task(
     timer_state: &mut TimerState,
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Option<String>> {
     // Cannot switch tasks while timer is running
     if timer_state.status() == TimerStatus::Running {
@@ -92,7 +90,7 @@ pub async fn switch_to_next_task(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        Task, NoOpEventPublisher, TaskDefaults,
+        Task, NoOpEventPublisher,
         DefaultTaskCyclingService, TaskCyclingStrategy, TimerStatus
     };
     use crate::infrastructure::InMemoryTaskRepository;
@@ -110,10 +108,9 @@ mod tests {
             TaskCyclingStrategy::RoundRobin,
         ));
 
-        let defaults = TaskDefaults::default();
-        let task1 = Task::new("Task 1".to_string(), 4, &defaults).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3, &defaults).unwrap();
-        let task3 = Task::new("Task 3".to_string(), 2, &defaults).unwrap();
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
 
         task_repo.create(task1.clone()).await.unwrap();
         task_repo.create(task2.clone()).await.unwrap();
@@ -194,8 +191,7 @@ mod tests {
         timer_state.active_task_id = Some(tasks[0].id.clone());
 
         // Create and complete a task
-        let defaults = TaskDefaults::default();
-        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
 
@@ -222,9 +218,7 @@ mod tests {
 
         let next_task_id = switch_to_next_task(
             &mut timer_state,
-            &task_repo,
             &cycling_service,
-            &event_publisher,
         ).await.unwrap();
 
         assert!(next_task_id.is_some());
@@ -241,9 +235,7 @@ mod tests {
 
         let result = switch_to_next_task(
             &mut timer_state,
-            &task_repo,
             &cycling_service,
-            &event_publisher,
         ).await;
 
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
@@ -252,7 +244,6 @@ mod tests {
     #[tokio::test]
     async fn should_handle_no_next_task() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
             TaskCyclingStrategy::Manual, // Manual strategy may return None
@@ -262,9 +253,7 @@ mod tests {
 
         let next_task_id = switch_to_next_task(
             &mut timer_state,
-            &task_repo,
             &cycling_service,
-            &event_publisher,
         ).await.unwrap();
 
         assert!(next_task_id.is_none() || next_task_id.is_some());

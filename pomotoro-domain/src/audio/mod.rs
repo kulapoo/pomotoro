@@ -1,9 +1,11 @@
+mod asset;
+mod audio_srv;
+mod category;
 mod error;
 mod library;
-mod asset;
-mod category;
 
-pub use error::AudioError;
-pub use library::{AudioLibrary, PlaybackRequest, PlaybackHandle};
 pub use asset::AudioAsset;
+pub use audio_srv::AudioService;
 pub use category::AudioCategory;
+pub use error::AudioError;
+pub use library::{AudioLibrary, PlaybackHandle, PlaybackRequest};

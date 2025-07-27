@@ -1,23 +1,20 @@
-use pomotoro_domain::{Task, TaskBuilder, TaskConfig, AudioConfig, TaskDefaults};
+use pomotoro_domain::{Task, TaskBuilder, TaskConfig, AudioConfig};
 use std::time::Duration;
 use pomotoro_domain::TaskId;
 
 pub struct TaskFixtures;
 
 impl TaskFixtures {
-    fn defaults() -> TaskDefaults {
-        TaskDefaults::default()
-    }
 
     pub fn default_task() -> Task {
-        Task::new_default(&Self::defaults()).unwrap()
+        Task::new_default().unwrap()
     }
 
     pub fn work_task() -> Task {
         TaskBuilder::with_name_and_sessions("Work Project".to_string(), 4)
             .with_tags(vec!["work".to_string(), "project".to_string()])
             .with_description("Important work project".to_string())
-            .build(&Self::defaults()).unwrap()
+            .build().unwrap()
     }
 
     pub fn study_task() -> Task {
@@ -32,7 +29,7 @@ impl TaskFixtures {
         TaskBuilder::with_name_and_sessions("Study Session".to_string(), 3)
             .with_tags(vec!["study".to_string(), "learning".to_string()])
             .with_config(config)
-            .build(&Self::defaults()).unwrap()
+            .build().unwrap()
     }
 
     pub fn creative_task() -> Task {
@@ -57,11 +54,11 @@ impl TaskFixtures {
             .with_tags(vec!["creative".to_string(), "art".to_string()])
             .with_config(config)
             .with_audio_config(audio_config)
-            .build(&Self::defaults()).unwrap()
+            .build().unwrap()
     }
 
     pub fn completed_task() -> Task {
-        let mut task = Task::new("Completed Task".to_string(), 2, &Self::defaults()).unwrap();
+        let mut task = Task::new("Completed Task".to_string(), 2).unwrap();
         task.increment_session().unwrap();
         task.increment_session().unwrap();
         task
@@ -79,7 +76,7 @@ impl TaskFixtures {
         TaskBuilder::with_name_and_sessions("Exercise".to_string(), 1)
             .with_tags(vec!["health".to_string(), "fitness".to_string()])
             .with_config(config)
-            .build(&Self::defaults()).unwrap()
+            .build().unwrap()
     }
 }
 

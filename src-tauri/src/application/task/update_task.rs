@@ -94,15 +94,14 @@ pub async fn update_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::{NoOpEventPublisher, TaskDefaults};
+    use pomotoro_domain::NoOpEventPublisher;
     use crate::infrastructure::InMemoryTaskRepository;
 
     async fn setup() -> (Arc<dyn TaskRepository + Send + Sync>, Arc<dyn EventPublisher + Send + Sync>, Task) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Original Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Original Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
         (task_repo, event_publisher, task)
@@ -173,8 +172,7 @@ mod tests {
     async fn should_fail_to_update_completed_task() {
         let (task_repo, event_publisher, _) = setup().await;
         
-        let defaults = TaskDefaults::default();
-        let mut completed_task = Task::new("Completed Task".to_string(), 1, &defaults).unwrap();
+        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
         

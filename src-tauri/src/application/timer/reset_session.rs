@@ -1,5 +1,5 @@
 use pomotoro_domain::{
-    TimerState, PhaseTransitionService, EventPublisher, 
+    TimerState, PhaseTransitionService, 
     Result, Error, TimerStatus
 };
 use std::sync::Arc;
@@ -7,7 +7,6 @@ use std::sync::Arc;
 pub async fn reset_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
@@ -34,7 +33,6 @@ pub async fn reset_session(
 pub async fn reset_full_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
@@ -70,25 +68,23 @@ pub async fn reset_full_session(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        TaskId, NoOpEventPublisher, DefaultPhaseTransitionService, 
+        TaskId, DefaultPhaseTransitionService, 
         TimerStatus, Phase
     };
 
     fn setup() -> (
-        Arc<dyn EventPublisher + Send + Sync>,
         Arc<dyn PhaseTransitionService + Send + Sync>,
         TaskId,
     ) {
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         let task_id = TaskId::new();
         
-        (event_publisher, phase_service, task_id)
+        (phase_service, task_id)
     }
 
     #[tokio::test]
     async fn should_reset_current_session() {
-        let (event_publisher, phase_service, task_id) = setup();
+        let (phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
         timer_state.timer.remaining_seconds = 500; // Partially completed
@@ -98,7 +94,6 @@ mod tests {
         reset_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Stopped);
@@ -108,7 +103,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_reset_running_session() {
-        let (event_publisher, phase_service, task_id) = setup();
+        let (phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
         timer_state.set_status(TimerStatus::Running).unwrap();
@@ -116,7 +111,6 @@ mod tests {
         let result = reset_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await;
         
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
@@ -124,14 +118,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_reset_without_active_task() {
-        let (event_publisher, phase_service, _) = setup();
+        let (phase_service, _) = setup();
         let mut timer_state = TimerState::default();
         timer_state.set_status(TimerStatus::Stopped).unwrap();
         
         let result = reset_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await;
         
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
@@ -139,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_reset_full_session() {
-        let (event_publisher, phase_service, task_id) = setup();
+        let (phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
         timer_state.task_session_count = 3;
@@ -151,7 +144,6 @@ mod tests {
         reset_full_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Stopped);
@@ -164,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_full_reset_running_session() {
-        let (event_publisher, phase_service, task_id) = setup();
+        let (phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
         timer_state.set_status(TimerStatus::Running).unwrap();
@@ -172,7 +164,6 @@ mod tests {
         let result = reset_full_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await;
         
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
@@ -180,14 +171,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_full_reset_without_active_task() {
-        let (event_publisher, phase_service, _) = setup();
+        let (phase_service, _) = setup();
         let mut timer_state = TimerState::default();
         timer_state.set_status(TimerStatus::Stopped).unwrap();
         
         let result = reset_full_session(
             &mut timer_state,
             &phase_service,
-            &event_publisher,
         ).await;
         
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));

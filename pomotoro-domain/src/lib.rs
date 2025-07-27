@@ -35,4 +35,4 @@ pub use timer::{
 pub use config::*;
 
 // Re-export audio domain
-pub use audio::*;
+pub use audio::{AudioError, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioAsset, AudioCategory, AudioService};

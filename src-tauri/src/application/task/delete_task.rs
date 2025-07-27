@@ -1,6 +1,4 @@
 use pomotoro_domain::{TaskId, TaskRepository, EventPublisher, Result, Error};
-#[cfg(test)]
-use pomotoro_domain::TaskDefaults;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -58,8 +56,7 @@ mod tests {
     async fn should_delete_task_successfully() {
         let (task_repo, event_publisher) = setup().await;
         
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Test Task".to_string(), 4).unwrap();
         let task_id = task.id.clone();
         task_repo.create(task).await.unwrap();
         
@@ -92,8 +89,7 @@ mod tests {
     async fn should_prevent_deletion_of_default_task() {
         let (task_repo, event_publisher) = setup().await;
         
-        let defaults = TaskDefaults::default();
-        let default_task = Task::new_default(&defaults).unwrap();
+        let default_task = Task::new_default().unwrap();
         let task_id = default_task.id.clone();
         task_repo.create(default_task).await.unwrap();
         

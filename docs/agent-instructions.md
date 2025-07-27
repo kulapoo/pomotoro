@@ -35,6 +35,13 @@ Always follow this hybrid architecture pattern:
 - Application Layer (Use Cases) - (dependency injection)
 - Infrastructure Layer (Implementations)
 
+```mermaid
+graph LR
+    A[Infrastructure Layer] -->|Implements| B[Domain Traits]
+    C[Application Layer] -->|Depends on| B[Domain Traits]
+    D[Domain Layer] -->|Defines| B[Domain Traits]
+```
+
 #### Domain Layer Rules
 ```rust
 // ✅ CORRECT: Pure domain logic

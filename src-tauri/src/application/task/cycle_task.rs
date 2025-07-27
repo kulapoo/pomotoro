@@ -1,5 +1,5 @@
 use pomotoro_domain::{
-    Task, TaskId, TaskRepository, TaskCyclingService,
+    Task, TaskId, TaskCyclingService,
     Result, Error
 };
 use std::sync::Arc;
@@ -18,7 +18,6 @@ pub struct TaskCycleResult {
 }
 
 pub async fn get_next_task(
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
     query: GetNextTaskQuery,
 ) -> Result<Option<Task>> {
@@ -33,7 +32,6 @@ pub async fn get_next_task(
 }
 
 pub async fn cycle_to_next_task(
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
     current_task_id: Option<String>,
 ) -> Result<TaskCycleResult> {
@@ -72,7 +70,6 @@ pub async fn cycle_to_next_task(
 }
 
 pub async fn get_task_cycle_info(
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
     current_task_id: Option<String>,
 ) -> Result<TaskCycleResult> {
@@ -115,45 +112,40 @@ pub async fn get_task_cycle_info(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        NoOpEventPublisher, EventPublisher,
-        DefaultTaskCyclingService, TaskCyclingStrategy, TaskDefaults
+        TaskRepository, DefaultTaskCyclingService, TaskCyclingStrategy
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
     async fn setup() -> (
-        Arc<dyn TaskRepository + Send + Sync>,
-        Arc<dyn EventPublisher + Send + Sync>,
         Arc<dyn TaskCyclingService + Send + Sync>,
         Vec<Task>,
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
-        let defaults = TaskDefaults::default();
-        let task1 = Task::new("Task 1".to_string(), 4, &defaults).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3, &defaults).unwrap();
-        let task3 = Task::new("Task 3".to_string(), 2, &defaults).unwrap();
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
         
         task_repo.create(task1.clone()).await.unwrap();
         task_repo.create(task2.clone()).await.unwrap();
         task_repo.create(task3.clone()).await.unwrap();
         
-        (task_repo, event_publisher, cycling_service, vec![task1, task2, task3])
+        (cycling_service, vec![task1, task2, task3])
     }
 
     #[tokio::test]
     async fn should_get_next_task_with_current_id() {
-        let (task_repo, _, cycling_service, tasks) = setup().await;
+        let (cycling_service, tasks) = setup().await;
         
         let query = GetNextTaskQuery {
             current_task_id: Some(tasks[0].id.to_string()),
         };
         
-        let next_task = get_next_task(&task_repo, &cycling_service, query)
+        let next_task = get_next_task(&cycling_service, query)
             .await
             .unwrap()
             .unwrap();
@@ -165,13 +157,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_first_task_without_current_id() {
-        let (task_repo, _, cycling_service, tasks) = setup().await;
+        let (cycling_service, tasks) = setup().await;
         
         let query = GetNextTaskQuery {
             current_task_id: None,
         };
         
-        let next_task = get_next_task(&task_repo, &cycling_service, query)
+        let next_task = get_next_task(&cycling_service, query)
             .await
             .unwrap()
             .unwrap();
@@ -182,10 +174,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_cycle_to_next_task() {
-        let (task_repo, _, cycling_service, tasks) = setup().await;
+        let (cycling_service, tasks) = setup().await;
         
         let result = cycle_to_next_task(
-            &task_repo,
             &cycling_service,
             Some(tasks[0].id.to_string()),
         ).await.unwrap();
@@ -201,10 +192,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_task_cycle_info() {
-        let (task_repo, _, cycling_service, tasks) = setup().await;
+        let (cycling_service, tasks) = setup().await;
         
         let result = get_task_cycle_info(
-            &task_repo,
             &cycling_service,
             Some(tasks[1].id.to_string()),
         ).await.unwrap();
@@ -220,18 +210,15 @@ mod tests {
     #[tokio::test]
     async fn should_handle_single_task() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
-        let defaults = TaskDefaults::default();
-        let single_task = Task::new("Single Task".to_string(), 4, &defaults).unwrap();
+        let single_task = Task::new("Single Task".to_string(), 4).unwrap();
         task_repo.create(single_task.clone()).await.unwrap();
         
         let result = cycle_to_next_task(
-            &task_repo,
             &cycling_service,
             Some(single_task.id.to_string()),
         ).await.unwrap();
@@ -249,14 +236,12 @@ mod tests {
     #[tokio::test]
     async fn should_handle_no_tasks() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
         
         let result = cycle_to_next_task(
-            &task_repo,
             &cycling_service,
             None,
         ).await.unwrap();
@@ -269,7 +254,21 @@ mod tests {
 
     #[tokio::test]
     async fn should_exclude_completed_tasks_from_cycling() {
-        let (task_repo, _, cycling_service, tasks) = setup().await;
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
+        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        ));
+        
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+        
+        task_repo.create(task1.clone()).await.unwrap();
+        task_repo.create(task2.clone()).await.unwrap();
+        task_repo.create(task3.clone()).await.unwrap();
+        
+        let tasks = vec![task1, task2, task3];
         
         // Complete one task
         let mut completed_task = tasks[1].clone();
@@ -279,7 +278,6 @@ mod tests {
         task_repo.update(completed_task).await.unwrap();
         
         let result = cycle_to_next_task(
-            &task_repo,
             &cycling_service,
             Some(tasks[0].id.to_string()),
         ).await.unwrap();
@@ -293,10 +291,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_invalid_task_id() {
-        let (task_repo, _, cycling_service, _) = setup().await;
+        let (cycling_service, _) = setup().await;
         
         let result = cycle_to_next_task(
-            &task_repo,
             &cycling_service,
             Some("invalid-task-id".to_string()),
         ).await;

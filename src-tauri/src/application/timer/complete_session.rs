@@ -2,8 +2,6 @@ use pomotoro_domain::{
     TimerState, TaskRepository, PhaseTransitionService,
     EventPublisher, Result, Error, Phase
 };
-#[cfg(test)]
-use pomotoro_domain::TaskDefaults;
 use crate::application::task::{complete_session as complete_task_session};
 use std::sync::Arc;
 
@@ -102,7 +100,7 @@ mod tests {
     use super::*;
     use pomotoro_domain::{
         Task, NoOpEventPublisher, 
-        DefaultPhaseTransitionService, TimerStatus, Phase, TaskDefaults
+        DefaultPhaseTransitionService, TimerStatus, Phase
     };
     use crate::infrastructure::InMemoryTaskRepository;
 
@@ -116,8 +114,7 @@ mod tests {
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         
-        let defaults = TaskDefaults::default();
-        let task = Task::new("Test Task".to_string(), 4, &defaults).unwrap();
+        let task = Task::new("Test Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
         (task_repo, event_publisher, phase_service, task)
@@ -182,8 +179,7 @@ mod tests {
         let (task_repo, event_publisher, phase_service, _) = setup().await;
         
         // Create a task with only 1 session
-        let defaults = TaskDefaults::default();
-        let single_session_task = Task::new("Single Session Task".to_string(), 1, &defaults).unwrap();
+        let single_session_task = Task::new("Single Session Task".to_string(), 1).unwrap();
         task_repo.create(single_session_task.clone()).await.unwrap();
         
         let mut timer_state = TimerState::default();

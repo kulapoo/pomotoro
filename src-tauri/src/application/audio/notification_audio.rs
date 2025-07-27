@@ -1,5 +1,6 @@
 use pomotoro_domain::{AudioCategory, PlaybackHandle, Result, Error};
-use super::play_audio::{AudioService, PlayAudioCmd, play_audio};
+use super::play_audio::{PlayAudioCmd, play_audio};
+use pomotoro_domain::AudioService;
 use super::manage_library::{AudioLibraryService, get_assets_by_category};
 use std::sync::{Arc, Mutex};
 
@@ -167,7 +168,7 @@ pub async fn stop_background_audio(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::play_audio::AudioService;
+    use pomotoro_domain::AudioService;
     use super::super::manage_library::AudioLibraryService;
     use pomotoro_domain::{AudioLibrary, AudioAsset, PlaybackHandle, PlaybackRequest};
     use std::collections::HashMap;

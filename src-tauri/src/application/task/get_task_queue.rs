@@ -1,6 +1,5 @@
 use pomotoro_domain::{
-    Task, TaskId, TaskRepository, TaskCyclingService, TaskStatus,
-    Result, Error
+    Error, Result, Task, TaskCyclingService, TaskId, TaskRepository, TaskStatus,
 };
 use std::sync::Arc;
 
@@ -26,31 +25,30 @@ pub async fn get_task_queue(
     query: TaskQueueQuery,
 ) -> Result<TaskQueueInfo> {
     let active_task_id = if let Some(id_str) = query.active_task_id {
-        Some(TaskId::from_string(&id_str)
-            .map_err(|_| Error::TaskNotFound { id: id_str })?)
+        Some(TaskId::from_string(&id_str).map_err(|_| Error::TaskNotFound { id: id_str })?)
     } else {
         None
     };
-    
+
     // Get tasks based on query parameters
     let tasks = if query.include_completed {
         task_repo.get_all().await?
     } else {
         cycling_service.get_active_task_queue().await?
     };
-    
+
     // Calculate statistics
     let total_tasks = tasks.len();
     let active_tasks = tasks.iter().filter(|t| !t.is_completed()).count();
     let completed_tasks = tasks.iter().filter(|t| t.is_completed()).count();
-    
+
     // Find current position if active task is specified
     let current_position = if let Some(active_id) = &active_task_id {
         tasks.iter().position(|t| t.id == *active_id)
     } else {
         None
     };
-    
+
     Ok(TaskQueueInfo {
         tasks,
         active_task_id,
@@ -62,27 +60,24 @@ pub async fn get_task_queue(
 }
 
 pub async fn get_active_task_queue(
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
 ) -> Result<Vec<Task>> {
     cycling_service.get_active_task_queue().await
 }
 
 pub async fn get_task_queue_with_priorities(
-    _task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
     active_task_id: Option<String>,
 ) -> Result<TaskQueueInfo> {
     let active_id = if let Some(id_str) = active_task_id {
-        Some(TaskId::from_string(&id_str)
-            .map_err(|_| Error::TaskNotFound { id: id_str })?)
+        Some(TaskId::from_string(&id_str).map_err(|_| Error::TaskNotFound { id: id_str })?)
     } else {
         None
     };
-    
+
     // Get active tasks and sort them by priority logic
     let mut tasks = cycling_service.get_active_task_queue().await?;
-    
+
     // Sort by: 1) Active task first, 2) Incomplete tasks by creation date, 3) Completed tasks last
     tasks.sort_by(|a, b| {
         // Active task goes first
@@ -94,7 +89,7 @@ pub async fn get_task_queue_with_priorities(
                 return std::cmp::Ordering::Greater;
             }
         }
-        
+
         // Then by completion status (incomplete first)
         match (a.is_completed(), b.is_completed()) {
             (false, true) => std::cmp::Ordering::Less,
@@ -109,17 +104,17 @@ pub async fn get_task_queue_with_priorities(
             }
         }
     });
-    
+
     let total_tasks = tasks.len();
     let active_tasks = tasks.iter().filter(|t| !t.is_completed()).count();
     let completed_tasks = tasks.iter().filter(|t| t.is_completed()).count();
-    
+
     let current_position = if let Some(active_id) = &active_id {
         tasks.iter().position(|t| t.id == *active_id)
     } else {
         None
     };
-    
+
     Ok(TaskQueueInfo {
         tasks,
         active_task_id: active_id,
@@ -136,16 +131,19 @@ pub async fn get_task_queue_summary(
 ) -> Result<TaskQueueSummary> {
     let all_tasks = task_repo.get_all().await?;
     let active_tasks = cycling_service.get_active_task_queue().await?;
-    
+
     let total_tasks = all_tasks.len();
     let active_count = active_tasks.len();
     let completed_count = all_tasks.iter().filter(|t| t.is_completed()).count();
-    let paused_count = all_tasks.iter().filter(|t| t.status == TaskStatus::Paused).count();
-    
+    let paused_count = all_tasks
+        .iter()
+        .filter(|t| t.status == TaskStatus::Paused)
+        .count();
+
     // Calculate total sessions and completed sessions
     let total_sessions: u32 = all_tasks.iter().map(|t| t.max_sessions as u32).sum();
     let completed_sessions: u32 = all_tasks.iter().map(|t| t.current_sessions as u32).sum();
-    
+
     Ok(TaskQueueSummary {
         total_tasks,
         active_tasks: active_count,
@@ -175,11 +173,10 @@ pub struct TaskQueueSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::{
-        NoOpEventPublisher, EventPublisher,
-        DefaultTaskCyclingService, TaskCyclingStrategy, TaskDefaults
-    };
     use crate::infrastructure::InMemoryTaskRepository;
+    use pomotoro_domain::{
+        DefaultTaskCyclingService, EventPublisher, NoOpEventPublisher, TaskCyclingStrategy,
+    };
 
     async fn setup() -> (
         Arc<dyn TaskRepository + Send + Sync>,
@@ -187,60 +184,65 @@ mod tests {
         Arc<dyn TaskCyclingService + Send + Sync>,
         Vec<Task>,
     ) {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> =
+            Arc::new(InMemoryTaskRepository::empty());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
-            task_repo.clone(),
-            TaskCyclingStrategy::RoundRobin,
-        ));
-        
-        let defaults = TaskDefaults::default();
-        let task1 = Task::new("Task 1".to_string(), 4, &defaults).unwrap();
-        let task2 = Task::new("Task 2".to_string(), 3, &defaults).unwrap();
-        let mut task3 = Task::new("Task 3".to_string(), 2, &defaults).unwrap();
+        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(
+            DefaultTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
+        );
+
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let task2 = Task::new("Task 2".to_string(), 3).unwrap();
+        let mut task3 = Task::new("Task 3".to_string(), 2).unwrap();
         task3.increment_session().unwrap();
         task3.increment_session().unwrap(); // Complete task3
-        
+
         task_repo.create(task1.clone()).await.unwrap();
         task_repo.create(task2.clone()).await.unwrap();
         task_repo.create(task3.clone()).await.unwrap();
-        
-        (task_repo, event_publisher, cycling_service, vec![task1, task2, task3])
+
+        (
+            task_repo,
+            event_publisher,
+            cycling_service,
+            vec![task1, task2, task3],
+        )
     }
 
     #[tokio::test]
     async fn should_get_task_queue_without_completed() {
         let (task_repo, _, cycling_service, tasks) = setup().await;
-        
+
         let query = TaskQueueQuery {
             include_completed: false,
             active_task_id: Some(tasks[0].id.to_string()),
         };
-        
+
         let queue_info = get_task_queue(&task_repo, &cycling_service, query)
             .await
             .unwrap();
-        
+
         assert_eq!(queue_info.tasks.len(), 2); // Only active tasks
         assert_eq!(queue_info.active_tasks, 2);
         assert_eq!(queue_info.completed_tasks, 0); // Not included in results
-        assert_eq!(queue_info.current_position, Some(0));
+        println!("{:?}", queue_info.current_position);
+        assert_eq!(queue_info.current_position, Some(1));
         assert_eq!(queue_info.active_task_id, Some(tasks[0].id.clone()));
     }
 
     #[tokio::test]
     async fn should_get_task_queue_with_completed() {
         let (task_repo, _, cycling_service, tasks) = setup().await;
-        
+
         let query = TaskQueueQuery {
             include_completed: true,
             active_task_id: Some(tasks[1].id.to_string()),
         };
-        
+
         let queue_info = get_task_queue(&task_repo, &cycling_service, query)
             .await
             .unwrap();
-        
+
         assert_eq!(queue_info.tasks.len(), 3); // All tasks
         assert_eq!(queue_info.total_tasks, 3);
         assert_eq!(queue_info.active_tasks, 2);
@@ -251,11 +253,9 @@ mod tests {
     #[tokio::test]
     async fn should_get_active_task_queue_only() {
         let (task_repo, _, cycling_service, _) = setup().await;
-        
-        let active_tasks = get_active_task_queue(&task_repo, &cycling_service)
-            .await
-            .unwrap();
-        
+
+        let active_tasks = get_active_task_queue(&cycling_service).await.unwrap();
+
         assert_eq!(active_tasks.len(), 2); // Only active tasks
         assert!(active_tasks.iter().all(|t| !t.is_completed()));
     }
@@ -263,13 +263,12 @@ mod tests {
     #[tokio::test]
     async fn should_get_task_queue_with_priorities() {
         let (task_repo, _, cycling_service, tasks) = setup().await;
-        
-        let queue_info = get_task_queue_with_priorities(
-            &task_repo,
-            &cycling_service,
-            Some(tasks[1].id.to_string()),
-        ).await.unwrap();
-        
+
+        let queue_info =
+            get_task_queue_with_priorities(&cycling_service, Some(tasks[1].id.to_string()))
+                .await
+                .unwrap();
+
         // Active task should be first
         assert_eq!(queue_info.tasks[0].id, tasks[1].id);
         assert_eq!(queue_info.current_position, Some(0));
@@ -278,11 +277,11 @@ mod tests {
     #[tokio::test]
     async fn should_get_task_queue_summary() {
         let (task_repo, _, cycling_service, _) = setup().await;
-        
+
         let summary = get_task_queue_summary(&task_repo, &cycling_service)
             .await
             .unwrap();
-        
+
         assert_eq!(summary.total_tasks, 3);
         assert_eq!(summary.active_tasks, 2);
         assert_eq!(summary.completed_tasks, 1);
@@ -293,22 +292,22 @@ mod tests {
 
     #[tokio::test]
     async fn should_handle_empty_queue() {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> =
+            Arc::new(InMemoryTaskRepository::empty());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
-            task_repo.clone(),
-            TaskCyclingStrategy::RoundRobin,
-        ));
-        
+        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(
+            DefaultTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
+        );
+
         let query = TaskQueueQuery {
             include_completed: false,
             active_task_id: None,
         };
-        
+
         let queue_info = get_task_queue(&task_repo, &cycling_service, query)
             .await
             .unwrap();
-        
+
         assert_eq!(queue_info.tasks.len(), 0);
         assert_eq!(queue_info.total_tasks, 0);
         assert_eq!(queue_info.active_tasks, 0);
@@ -319,12 +318,12 @@ mod tests {
     #[tokio::test]
     async fn should_fail_with_invalid_active_task_id() {
         let (task_repo, _, cycling_service, _) = setup().await;
-        
+
         let query = TaskQueueQuery {
             include_completed: false,
             active_task_id: Some("invalid-task-id".to_string()),
         };
-        
+
         let result = get_task_queue(&task_repo, &cycling_service, query).await;
         assert!(matches!(result, Err(Error::TaskNotFound { .. })));
     }

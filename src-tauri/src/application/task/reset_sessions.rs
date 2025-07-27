@@ -24,15 +24,14 @@ pub async fn reset_sessions(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pomotoro_domain::{Task, TaskId, TaskDefaults};
+    use pomotoro_domain::{Task, TaskId};
     use crate::infrastructure::InMemoryTaskRepository;
 
     #[tokio::test]
     async fn should_reset_sessions() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
 
-        let defaults = TaskDefaults::default();
-        let mut task = Task::new("Test Task".to_string(), 3, &defaults).unwrap();
+        let mut task = Task::new("Test Task".to_string(), 3).unwrap();
         task.increment_session().unwrap(); // Complete one session
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
