@@ -8,7 +8,7 @@ const DEFAULT_SHORT_BREAK_DURATION: Duration = Duration::from_secs(5 * 60);
 const DEFAULT_LONG_BREAK_DURATION: Duration = Duration::from_secs(15 * 60);
 const DEFAULT_SESSIONS_UNTIL_LONG_BREAK: u8 = 4;
 const DEFAULT_ENABLE_SCREEN_BLOCKING: bool = false;
-const DEFAULT_MAX_SESSIONS: u8 = 1;
+const DEFAULT_MAX_SESSIONS: u8 = 4;
 
 /// Builder for constructing Task instances with fluent interface and centralized validation
 #[derive(Debug, Clone)]

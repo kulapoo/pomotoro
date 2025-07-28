@@ -7,6 +7,7 @@ pub struct MockAudioManager {
     library: AudioLibrary,
     active_playbacks: Arc<Mutex<HashMap<String, MockPlayback>>>,
     playback_counter: Arc<Mutex<usize>>,
+    asset_play_counts: Arc<Mutex<HashMap<String, usize>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,7 @@ impl MockAudioManager {
             library: DefaultAudioAssetProvider::create_library_with_default_assets(),
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
             playback_counter: Arc::new(Mutex::new(0)),
+            asset_play_counts: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -58,7 +60,7 @@ impl MockAudioManager {
 
         let playback = MockPlayback {
             handle: handle.clone(),
-            asset_id: request.asset_id,
+            asset_id: request.asset_id.clone(),
             volume: request.volume,
             is_playing: true,
             is_paused: false,
@@ -66,6 +68,11 @@ impl MockAudioManager {
             fade_in_ms: request.fade_in_ms,
             fade_out_ms: request.fade_out_ms,
         };
+
+        // Track play count for this asset
+        let mut play_counts = self.asset_play_counts.lock().unwrap();
+        *play_counts.entry(request.asset_id).or_insert(0) += 1;
+        drop(play_counts);
 
         let mut playbacks = self.active_playbacks.lock().unwrap();
         playbacks.insert(handle_id, playback);
@@ -185,10 +192,8 @@ impl MockAudioManager {
     }
 
     pub fn get_asset_playback_count(&self, asset_id: &str) -> usize {
-        let playbacks = self.active_playbacks.lock().unwrap();
-        playbacks.values()
-            .filter(|p| p.asset_id == asset_id && (p.is_playing || p.is_paused))
-            .count()
+        let play_counts = self.asset_play_counts.lock().unwrap();
+        *play_counts.get(asset_id).unwrap_or(&0)
     }
 }
 

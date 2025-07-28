@@ -12,7 +12,7 @@ async fn test_task_repository_default_task() {
     let default_task = &tasks[0];
     assert_eq!(default_task.name, "Focus Session");
     assert_eq!(default_task.status, TaskStatus::Active);
-    assert_eq!(default_task.max_sessions, 4);
+    assert_eq!(default_task.max_sessions, 4); // Traditional pomodoro cycle
     assert_eq!(default_task.current_sessions, 0);
     assert!(default_task.tags.contains(&"focus".to_string()));
 }

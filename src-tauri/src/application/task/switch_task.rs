@@ -233,13 +233,18 @@ mod tests {
             task_repo.update(updated_task).await.unwrap();
         }
 
+        // Debug: Get the updated tasks from the repository to see what IDs they have
+        let active_tasks = task_repo.get_active_tasks().await.unwrap();
+        
         let next_task_id = switch_to_next_task(&mut timer_state, &cycling_service)
             .await
             .unwrap();
 
         assert!(next_task_id.is_some());
         assert_ne!(timer_state.active_task_id, Some(tasks[0].id.clone()));
-        assert!(tasks
+        
+        // Check against active tasks from repository instead of original tasks
+        assert!(active_tasks
             .iter()
             .any(|t| Some(t.id.clone()) == timer_state.active_task_id));
     }

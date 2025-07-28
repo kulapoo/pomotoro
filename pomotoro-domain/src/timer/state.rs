@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{TaskId, Timer, Error, Result, Phase, TimerStatus, TimerConfiguration};
+use crate::{TaskId, Timer, Result, Phase, TimerStatus, TimerConfiguration};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimerState {
@@ -44,17 +44,12 @@ impl TimerState {
     }
 
     pub fn switch_task(&mut self, new_task_id: TaskId) -> Result<()> {
-        if self.timer.status == TimerStatus::Running {
-            return Err(Error::InvalidStateTransition {
-                from: "Running".to_string(),
-                to: "Task Switch".to_string(),
-            });
-        }
-
+        // Allow task switching during running sessions (preserves timer state)
         self.active_task_id = Some(new_task_id);
         self.task_session_count = 0;
 
-        if !self.timer.is_break_cycle {
+        // Only reset timer if not running or in break cycle
+        if self.timer.status != TimerStatus::Running && !self.timer.is_break_cycle {
             let duration = self.get_phase_duration();
             self.timer.remaining_seconds = duration;
         }
@@ -122,18 +117,13 @@ impl TimerState {
 
     /// Switch task with new configuration.
     pub fn switch_task_with_config(&mut self, new_task_id: TaskId, configuration: TimerConfiguration) -> Result<()> {
-        if self.timer.status == TimerStatus::Running {
-            return Err(Error::InvalidStateTransition {
-                from: "Running".to_string(),
-                to: "Task Switch".to_string(),
-            });
-        }
-
+        // Allow task switching during running sessions (preserves timer state)
         self.active_task_id = Some(new_task_id);
         self.task_session_count = 0;
         self.configuration = configuration;
 
-        if !self.timer.is_break_cycle {
+        // Only reset timer if not running or in break cycle
+        if self.timer.status != TimerStatus::Running && !self.timer.is_break_cycle {
             let duration = self.get_phase_duration();
             self.timer.remaining_seconds = duration;
         }

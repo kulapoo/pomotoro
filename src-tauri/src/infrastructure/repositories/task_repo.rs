@@ -83,11 +83,14 @@ impl TaskRepository for InMemoryTaskRepository {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
             message: format!("Lock error: {}", e) 
         })?;
-        Ok(tasks
+        let mut active_tasks: Vec<Task> = tasks
             .values()
             .filter(|task| matches!(task.status, TaskStatus::Active | TaskStatus::Queued))
             .cloned()
-            .collect())
+            .collect();
+        // Sort by creation time for consistent ordering
+        active_tasks.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(active_tasks)
     }
 
     async fn update(&self, task: Task) -> Result<()> {
@@ -110,6 +113,15 @@ impl TaskRepository for InMemoryTaskRepository {
         let mut tasks = self.tasks.write().map_err(|e| Error::RepositoryError { 
             message: format!("Lock error: {}", e) 
         })?;
+        
+        // Check if this is the default task and prevent deletion
+        if let Some(task) = tasks.get(&id) {
+            if task.name == "Focus Session" && 
+               task.description == Some("Default pomodoro task for focused work".to_string()) {
+                return Ok(false); // Prevent deletion of default task
+            }
+        }
+        
         Ok(tasks.remove(&id).is_some())
     }
 

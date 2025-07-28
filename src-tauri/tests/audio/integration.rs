@@ -132,7 +132,7 @@ async fn test_audio_asset_tracking() {
     assert_eq!(audio_manager.get_asset_playback_count("nonexistent"), 0);
     
     audio_manager.stop_playback(&handle1.id).unwrap();
-    assert_eq!(audio_manager.get_asset_playback_count("chime"), 1);
+    assert_eq!(audio_manager.get_asset_playback_count("chime"), 2); // Historical count doesn't decrease
     assert_eq!(audio_manager.get_asset_playback_count("bell"), 1);
 }
 

@@ -106,6 +106,6 @@ mod tests {
         assert_eq!(task1.max_sessions, 3);
         
         assert_eq!(task2.name, "Focus Session");
-        assert_eq!(task2.max_sessions, 1); // Built-in default
+        assert_eq!(task2.max_sessions, 4); // Built-in default
     }
 }

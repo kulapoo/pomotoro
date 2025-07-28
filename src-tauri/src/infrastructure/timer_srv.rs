@@ -258,9 +258,23 @@ impl TimerService {
         Ok((result.old_phase, result.new_phase))
     }
 
-    pub async fn switch_task(&self, task_id: pomotoro_domain::TaskId, _task: Option<&Task>) {
+    pub async fn switch_task(&self, task_id: pomotoro_domain::TaskId, task: Option<&Task>) {
         let mut state = self.state.write().await;
-        let _ = state.switch_task(task_id);
+        
+        if let Some(task) = task {
+            // Convert TaskConfig to TimerConfiguration
+            use pomotoro_domain::TimerConfiguration;
+            let timer_config = TimerConfiguration::new(
+                task.config.work_duration(),
+                task.config.short_break_duration(),
+                task.config.long_break_duration(),
+                task.config.sessions_until_long_break(),
+            ).unwrap(); // TaskConfig validation ensures this won't fail
+            
+            let _ = state.switch_task_with_config(task_id, timer_config);
+        } else {
+            let _ = state.switch_task(task_id);
+        }
     }
 
 }

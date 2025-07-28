@@ -49,8 +49,8 @@ impl TimerTestService {
     }
 
     pub async fn force_complete_session(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Force complete the current session by setting remaining time to 0
-        // This is a simplified implementation for testing
+        // Force complete the current session by transitioning to next phase
+        self.service.skip_to_next_phase(None).await?;
         Ok(())
     }
 
