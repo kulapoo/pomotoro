@@ -39,4 +39,12 @@ pub enum Error {
     AudioError { message: String },
 }
 
+impl From<crate::AudioError> for Error {
+    fn from(audio_error: crate::AudioError) -> Self {
+        Error::AudioError {
+            message: audio_error.to_string(),
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;

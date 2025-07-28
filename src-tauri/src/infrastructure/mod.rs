@@ -31,10 +31,11 @@ pub mod config_builder;
 pub mod timer_models;
 pub mod repositories;
 pub mod persistence;
+pub mod task_cycling_srv;
 
 pub use config_repo::*;
 pub use timer_srv::*;
-pub use audio_srv::*;
+pub use audio_srv::RodioAudioService;
 pub use audio_asset_provider::*;
 pub use events::{EventPublisherArc, create_composite_event_publisher, create_event_publisher_with_bus, DomainEventBus};
 pub use notifications::*;
@@ -42,3 +43,4 @@ pub use config_builder::*;
 pub use timer_models::*;
 pub use repositories::*;
 pub use persistence::*;
+pub use task_cycling_srv::StandardTaskCyclerService;

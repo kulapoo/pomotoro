@@ -1,11 +1,12 @@
-use crate::{Error, Result, Task, TaskId, TaskRepository};
+use crate::{Error, Result, Task, TaskId};
 use async_trait::async_trait;
-use std::sync::Arc;
 
+/// Domain contract for task cycling operations
+/// Concrete implementations belong in infrastructure layer
 #[async_trait]
-pub trait TaskCyclingService: Send + Sync {
+pub trait TaskCyclerService: Send + Sync {
     async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>>;
-    async fn switch_to_task(&self, task_id: TaskId) -> Result<Option<Task>>;
+    async fn validate_task_switch(&self, task_id: TaskId) -> Result<Option<Task>>;
     async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
     async fn cycle_to_next_active_task(
         &self,
@@ -13,6 +14,7 @@ pub trait TaskCyclingService: Send + Sync {
     ) -> Result<Option<Task>>;
 }
 
+/// Domain value object for task cycling strategies
 #[derive(Debug, Clone)]
 pub enum TaskCyclingStrategy {
     Manual,
@@ -20,31 +22,18 @@ pub enum TaskCyclingStrategy {
     PriorityBased,
 }
 
-pub struct DefaultTaskCyclingService {
-    task_repository: Arc<dyn TaskRepository>,
-    cycling_strategy: TaskCyclingStrategy,
-}
+/// Pure domain service for task cycling logic
+/// Contains only business rules, no I/O operations
+pub struct DefaultTaskCyclingService;
 
 impl DefaultTaskCyclingService {
-    pub fn new(
-        task_repository: Arc<dyn TaskRepository>,
-        cycling_strategy: TaskCyclingStrategy,
-    ) -> Self {
-        Self {
-            task_repository,
-            cycling_strategy,
-        }
+    pub fn new() -> Self {
+        Self
     }
 
-    async fn get_available_tasks(&self) -> Result<Vec<Task>> {
-        let all_tasks = self.task_repository.get_active_tasks().await?;
-        Ok(all_tasks
-            .into_iter()
-            .filter(|task| !task.is_completed())
-            .collect())
-    }
-
-    fn find_next_task_round_robin<'a>(
+    /// Pure domain logic: Find next task using round-robin strategy
+    /// No I/O operations - works with in-memory task slice
+    pub fn find_next_task_round_robin<'a>(
         &self,
         tasks: &'a [Task],
         current_task_id: Option<TaskId>,
@@ -64,274 +53,177 @@ impl DefaultTaskCyclingService {
         // Return first task if no current task or current task not found
         tasks.first()
     }
-}
 
-#[async_trait]
-impl TaskCyclingService for DefaultTaskCyclingService {
-    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
-        let available_tasks = self.get_available_tasks().await?;
+    /// Pure domain logic: Filter available tasks
+    /// Business rule: only active, non-completed tasks are available
+    pub fn filter_available_tasks(&self, tasks: &[Task]) -> Vec<Task> {
+        tasks
+            .iter()
+            .filter(|task| !task.is_completed())
+            .cloned()
+            .collect()
+    }
 
-        let next_task = match self.cycling_strategy {
+    /// Pure domain logic: Apply cycling strategy
+    pub fn apply_cycling_strategy<'a>(
+        &self,
+        strategy: &TaskCyclingStrategy,
+        tasks: &'a [Task],
+        current_task_id: Option<TaskId>,
+    ) -> Option<&'a Task> {
+        match strategy {
             TaskCyclingStrategy::Manual => {
                 // In manual mode, don't automatically cycle
-                current_task_id
-                    .and_then(|id| available_tasks.iter().find(|t| t.id == id))
-                    .cloned()
+                current_task_id.and_then(|id| tasks.iter().find(|t| t.id == id))
             }
-            TaskCyclingStrategy::RoundRobin => self
-                .find_next_task_round_robin(&available_tasks, current_task_id)
-                .cloned(),
+            TaskCyclingStrategy::RoundRobin => {
+                self.find_next_task_round_robin(tasks, current_task_id)
+            }
             TaskCyclingStrategy::PriorityBased => {
-                // FUTURE: Priority-based cycling is not required for MVP 2.0
-                // This strategy will be implemented when task priority features are added
-                // For now, fallback to round-robin to maintain consistent behavior
-                self.find_next_task_round_robin(&available_tasks, current_task_id)
-                    .cloned()
-            }
-        };
-
-        Ok(next_task)
-    }
-
-    async fn switch_to_task(&self, task_id: TaskId) -> Result<Option<Task>> {
-        let task = self.task_repository.get_by_id(task_id.clone()).await?;
-
-        if let Some(ref task) = task {
-            if task.is_completed() {
-                return Err(Error::TaskAlreadyCompleted);
+                // TODO: Priority-based cycling - future enhancement
+                // For now, fallback to round-robin
+                self.find_next_task_round_robin(tasks, current_task_id)
             }
         }
-
-        Ok(task)
     }
 
-    async fn get_active_task_queue(&self) -> Result<Vec<Task>> {
-        self.get_available_tasks().await
-    }
-
-    async fn cycle_to_next_active_task(
-        &self,
-        current_task_id: Option<TaskId>,
-    ) -> Result<Option<Task>> {
-        let next_task = self.get_next_task(current_task_id.clone()).await?;
-        Ok(next_task)
+    /// Pure domain logic: Validate task can be switched to
+    pub fn can_switch_to_task(&self, task: &Task) -> Result<()> {
+        if task.is_completed() {
+            return Err(Error::TaskAlreadyCompleted);
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
-    use std::sync::Mutex;
+    use crate::TaskDefaults;
 
-    // Test implementation for domain layer - kept simple and isolated
-    struct TestTaskRepository {
-        tasks: Mutex<HashMap<TaskId, Task>>,
+    fn create_test_tasks() -> Vec<Task> {
+        let defaults = TaskDefaults::default();
+        vec![
+            Task::new_with_defaults("Task 1".to_string(), 4, &defaults).unwrap(),
+            Task::new_with_defaults("Task 2".to_string(), 3, &defaults).unwrap(),
+            Task::new_with_defaults("Task 3".to_string(), 2, &defaults).unwrap(),
+        ]
     }
 
-    impl TestTaskRepository {
-        fn new() -> Self {
-            Self {
-                tasks: Mutex::new(HashMap::new()),
-            }
-        }
-    }
+    #[test]
+    fn should_find_next_task_round_robin() {
+        let service = DefaultTaskCyclingService::new();
+        let tasks = create_test_tasks();
 
-    #[async_trait]
-    impl crate::TaskRepository for TestTaskRepository {
-        async fn create(&self, task: Task) -> Result<()> {
-            self.tasks.lock().unwrap().insert(task.id.clone(), task);
+        // First call with no current task should return first task
+        let first_task = service.find_next_task_round_robin(&tasks, None).unwrap();
+        assert_eq!(first_task.name, "Task 1");
 
-            Ok(())
-        }
-
-        async fn get_by_id(&self, id: TaskId) -> Result<Option<Task>> {
-            Ok(self.tasks.lock().unwrap().get(&id).cloned())
-        }
-
-        async fn get_all(&self) -> Result<Vec<Task>> {
-            Ok(self.tasks.lock().unwrap().values().cloned().collect())
-        }
-
-        async fn get_active_tasks(&self) -> Result<Vec<Task>> {
-            Ok(self
-                .tasks
-                .lock()
-                .unwrap()
-                .values()
-                .filter(|t| {
-                    t.status == crate::TaskStatus::Active || t.status == crate::TaskStatus::Queued
-                })
-                .cloned()
-                .collect())
-        }
-
-        async fn update(&self, task: Task) -> Result<()> {
-            self.tasks.lock().unwrap().insert(task.id.clone(), task);
-            Ok(())
-        }
-
-        async fn delete(&self, id: TaskId) -> Result<bool> {
-            Ok(self.tasks.lock().unwrap().remove(&id).is_some())
-        }
-
-        async fn get_by_tags(&self, _tags: &[String]) -> Result<Vec<Task>> {
-            Ok(vec![]) // Simplified for tests
-        }
-
-        async fn get_by_status(&self, status: crate::TaskStatus) -> Result<Vec<Task>> {
-            Ok(self
-                .tasks
-                .lock()
-                .unwrap()
-                .values()
-                .filter(|t| t.status == status)
-                .cloned()
-                .collect())
-        }
-
-        async fn exists(&self, id: TaskId) -> Result<bool> {
-            Ok(self.tasks.lock().unwrap().contains_key(&id))
-        }
-    }
-
-    async fn setup_service() -> (DefaultTaskCyclingService, Arc<TestTaskRepository>) {
-        let task_repo = Arc::new(TestTaskRepository::new());
-        let service =
-            DefaultTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin);
-        (service, task_repo)
-    }
-
-    async fn create_test_tasks(repo: &TestTaskRepository) -> Vec<Task> {
-        let defaults = crate::TaskDefaults::default();
-        let task1 = Task::new_with_defaults("Task 1".to_string(), 4, &defaults).unwrap();
-        let task2 = Task::new_with_defaults("Task 2".to_string(), 3, &defaults).unwrap();
-        let task3 = Task::new_with_defaults("Task 3".to_string(), 2, &defaults).unwrap();
-
-        repo.create(task1.clone()).await.unwrap();
-        repo.create(task2.clone()).await.unwrap();
-        repo.create(task3.clone()).await.unwrap();
-
-        vec![task1, task2, task3]
-    }
-
-    #[tokio::test]
-    async fn should_get_next_task_in_round_robin() {
-        let (service, repo) = setup_service().await;
-        let _tasks = create_test_tasks(&repo).await;
-
-        // First call should return some task
-        let first_task = service.get_next_task(None).await.unwrap().unwrap();
-        let first_task_id = first_task.id;
-
-        // Next call with current task should return a different task
+        // Next call should return second task
         let second_task = service
-            .get_next_task(Some(first_task_id.clone()))
-            .await
-            .unwrap()
+            .find_next_task_round_robin(&tasks, Some(first_task.id.clone()))
             .unwrap();
-        assert_ne!(second_task.id, first_task_id);
+        assert_eq!(second_task.name, "Task 2");
 
-        // After cycling through all tasks, should return to the first task again
+        // Third call should return third task
         let third_task = service
-            .get_next_task(Some(second_task.id))
-            .await
-            .unwrap()
+            .find_next_task_round_robin(&tasks, Some(second_task.id.clone()))
             .unwrap();
+        assert_eq!(third_task.name, "Task 3");
+
+        // Fourth call should wrap around to first task
         let fourth_task = service
-            .get_next_task(Some(third_task.id))
-            .await
-            .unwrap()
+            .find_next_task_round_robin(&tasks, Some(third_task.id.clone()))
             .unwrap();
-
-        // After cycling through all 3 tasks, should get back to first task
-        assert_eq!(fourth_task.id, first_task_id);
+        assert_eq!(fourth_task.name, "Task 1");
     }
 
-    #[tokio::test]
-    async fn should_switch_to_specific_task() {
-        let (service, repo) = setup_service().await;
-        let tasks = create_test_tasks(&repo).await;
+    #[test]
+    fn should_return_none_for_empty_task_list() {
+        let service = DefaultTaskCyclingService::new();
+        let empty_tasks: Vec<Task> = vec![];
 
-        let switched_task = service
-            .switch_to_task(tasks[1].id.clone())
-            .await
-            .unwrap()
+        let result = service.find_next_task_round_robin(&empty_tasks, None);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn should_return_first_task_when_current_not_found() {
+        let service = DefaultTaskCyclingService::new();
+        let tasks = create_test_tasks();
+        let non_existent_id = TaskId::new();
+
+        let result = service
+            .find_next_task_round_robin(&tasks, Some(non_existent_id))
             .unwrap();
-        assert_eq!(switched_task.name, "Task 2");
-        assert_eq!(switched_task.id, tasks[1].id);
+        assert_eq!(result.name, "Task 1");
     }
 
-    #[tokio::test]
-    async fn should_fail_to_switch_to_completed_task() {
-        let (service, repo) = setup_service().await;
-        let defaults = crate::TaskDefaults::default();
-        let mut task = Task::new_with_defaults("Completed Task".to_string(), 1, &defaults).unwrap();
-        task.increment_session().unwrap(); // Complete the task
-        let task_id = task.id.clone();
-        repo.create(task).await.unwrap();
-
-        let result = service.switch_to_task(task_id).await;
-        assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
-    }
-
-    #[tokio::test]
-    async fn should_get_active_task_queue() {
-        let (service, repo) = setup_service().await;
-        let _tasks = create_test_tasks(&repo).await;
-
-        let queue = service.get_active_task_queue().await.unwrap();
-        assert_eq!(queue.len(), 3);
-        assert!(queue.iter().all(|t| !t.is_completed()));
-    }
-
-    #[tokio::test]
-    async fn should_exclude_completed_tasks_from_queue() {
-        let (service, repo) = setup_service().await;
-        let mut tasks = create_test_tasks(&repo).await;
+    #[test]
+    fn should_filter_available_tasks() {
+        let service = DefaultTaskCyclingService::new();
+        let mut tasks = create_test_tasks();
 
         // Complete one task
         tasks[1].increment_session().unwrap(); // Complete first session
         tasks[1].increment_session().unwrap(); // Complete second session
         tasks[1].increment_session().unwrap(); // Complete all sessions
-        repo.update(tasks[1].clone()).await.unwrap();
 
-        let queue = service.get_active_task_queue().await.unwrap();
-        assert_eq!(queue.len(), 2);
-        assert!(!queue.iter().any(|t| t.name == "Task 2"));
+        let available = service.filter_available_tasks(&tasks);
+        assert_eq!(available.len(), 2);
+        assert!(!available.iter().any(|t| t.name == "Task 2"));
     }
 
-    #[tokio::test]
-    async fn should_cycle_to_next_active_task() {
-        let (service, repo) = setup_service().await;
-        let tasks = create_test_tasks(&repo).await;
+    #[test]
+    fn should_apply_round_robin_strategy() {
+        let service = DefaultTaskCyclingService::new();
+        let tasks = create_test_tasks();
+        let strategy = TaskCyclingStrategy::RoundRobin;
 
-        let next_task = service
-            .cycle_to_next_active_task(Some(tasks[0].id.clone()))
-            .await
-            .unwrap()
+        let first_task = service
+            .apply_cycling_strategy(&strategy, &tasks, None)
             .unwrap();
-        // Should return a different task than the current one
-        assert_ne!(next_task.id, tasks[0].id);
-        // Should be one of the available tasks
-        assert!(tasks.iter().any(|t| t.id == next_task.id));
+        assert_eq!(first_task.name, "Task 1");
+
+        let second_task = service
+            .apply_cycling_strategy(&strategy, &tasks, Some(first_task.id.clone()))
+            .unwrap();
+        assert_eq!(second_task.name, "Task 2");
     }
 
-    #[tokio::test]
-    async fn should_handle_manual_cycling_strategy() {
-        let task_repo = Arc::new(TestTaskRepository::new());
-        let service =
-            DefaultTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::Manual);
+    #[test]
+    fn should_apply_manual_strategy() {
+        let service = DefaultTaskCyclingService::new();
+        let tasks = create_test_tasks();
+        let strategy = TaskCyclingStrategy::Manual;
 
-        let tasks = create_test_tasks(&task_repo).await;
-
-        // In manual mode, should return current task, not cycle
-        let next_task = service
-            .get_next_task(Some(tasks[0].id.clone()))
-            .await
-            .unwrap()
+        // In manual mode, should return current task
+        let result = service
+            .apply_cycling_strategy(&strategy, &tasks, Some(tasks[1].id.clone()))
             .unwrap();
-        assert_eq!(next_task.id, tasks[0].id);
-        assert_eq!(next_task.name, "Task 1");
+        assert_eq!(result.name, "Task 2");
+
+        // With no current task, should return None
+        let result = service.apply_cycling_strategy(&strategy, &tasks, None);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn should_validate_task_can_be_switched_to() {
+        let service = DefaultTaskCyclingService::new();
+        let tasks = create_test_tasks();
+
+        // Active task should be valid
+        let result = service.can_switch_to_task(&tasks[0]);
+        assert!(result.is_ok());
+
+        // Completed task should be invalid
+        let mut completed_task = tasks[1].clone();
+        completed_task.increment_session().unwrap(); // Complete first session
+        completed_task.increment_session().unwrap(); // Complete second session
+        completed_task.increment_session().unwrap(); // Complete all sessions
+
+        let result = service.can_switch_to_task(&completed_task);
+        assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
     }
 }

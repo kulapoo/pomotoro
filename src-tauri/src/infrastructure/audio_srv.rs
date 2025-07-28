@@ -1,4 +1,4 @@
-use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
+use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError, AudioService, Result};
 use crate::infrastructure::audio_asset_provider::DefaultAudioAssetProvider;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 use std::collections::HashMap;
@@ -8,22 +8,26 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use uuid::Uuid;
 
-pub struct AudioService {
+/// Concrete implementation of AudioService using the Rodio audio library
+/// 
+/// This infrastructure implementation provides audio playback capabilities
+/// while implementing the domain AudioService interface.
+pub struct RodioAudioService {
     stream_handle: OutputStream,
     library: AudioLibrary,
     active_playbacks: Arc<Mutex<HashMap<String, AudioPlayback>>>,
 }
 
-unsafe impl Send for AudioService {}
-unsafe impl Sync for AudioService {}
+unsafe impl Send for RodioAudioService {}
+unsafe impl Sync for RodioAudioService {}
 
 struct AudioPlayback {
     sink: Sink,
     handle: PlaybackHandle,
 }
 
-impl AudioService {
-    pub fn new() -> Result<Self, AudioError> {
+impl RodioAudioService {
+    pub fn new() -> std::result::Result<Self, AudioError> {
         let stream_handle = OutputStreamBuilder::open_default_stream()
             .map_err(|e| AudioError::PlaybackFailed(format!("Failed to create audio stream: {}", e)))?;
 
@@ -47,7 +51,7 @@ impl AudioService {
         self.library.remove_asset(asset_id)
     }
 
-    pub fn play(&self, request: PlaybackRequest) -> Result<PlaybackHandle, AudioError> {
+    pub fn play(&self, request: PlaybackRequest) -> std::result::Result<PlaybackHandle, AudioError> {
         let asset = self.library
             .get_asset(&request.asset_id)
             .ok_or_else(|| AudioError::AssetNotFound(request.asset_id.clone()))?;
@@ -98,7 +102,7 @@ impl AudioService {
         Ok(handle)
     }
 
-    pub fn stop_playback(&self, handle_id: &str) -> Result<(), AudioError> {
+    pub fn stop_playback(&self, handle_id: &str) -> std::result::Result<(), AudioError> {
         if let Ok(mut active_playbacks) = self.active_playbacks.lock() {
             if let Some(playback) = active_playbacks.remove(handle_id) {
                 playback.sink.stop();
@@ -108,7 +112,7 @@ impl AudioService {
         Err(AudioError::AssetNotFound(handle_id.to_string()))
     }
 
-    pub fn pause_playback(&self, handle_id: &str) -> Result<(), AudioError> {
+    pub fn pause_playback(&self, handle_id: &str) -> std::result::Result<(), AudioError> {
         if let Ok(active_playbacks) = self.active_playbacks.lock() {
             if let Some(playback) = active_playbacks.get(handle_id) {
                 playback.sink.pause();
@@ -118,7 +122,7 @@ impl AudioService {
         Err(AudioError::AssetNotFound(handle_id.to_string()))
     }
 
-    pub fn resume_playback(&self, handle_id: &str) -> Result<(), AudioError> {
+    pub fn resume_playback(&self, handle_id: &str) -> std::result::Result<(), AudioError> {
         if let Ok(active_playbacks) = self.active_playbacks.lock() {
             if let Some(playback) = active_playbacks.get(handle_id) {
                 playback.sink.play();
@@ -128,7 +132,7 @@ impl AudioService {
         Err(AudioError::AssetNotFound(handle_id.to_string()))
     }
 
-    pub fn set_volume(&self, handle_id: &str, volume: f32) -> Result<(), AudioError> {
+    pub fn set_audio_volume(&self, handle_id: &str, volume: f32) -> std::result::Result<(), AudioError> {
         if !(0.0..=1.0).contains(&volume) {
             return Err(AudioError::VolumeOutOfRange(volume));
         }
@@ -160,12 +164,12 @@ impl AudioService {
         }
     }
 
-    pub fn play_notification(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle, AudioError> {
+    pub fn play_notification(&self, asset_id: &str, volume: f32) -> std::result::Result<PlaybackHandle, AudioError> {
         let request = PlaybackRequest::new(asset_id.to_string(), volume)?;
         self.play(request)
     }
 
-    pub fn play_background_audio(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle, AudioError> {
+    pub fn play_background_audio(&self, asset_id: &str, volume: f32) -> std::result::Result<PlaybackHandle, AudioError> {
         let request = PlaybackRequest::new(asset_id.to_string(), volume)?
             .with_loop()
             .with_fade_in(2000);
@@ -200,5 +204,45 @@ impl AudioService {
                 active_playbacks.remove(&handle_id);
             }
         }
+    }
+}
+
+/// Implementation of the domain AudioService trait
+/// 
+/// This allows the infrastructure RodioAudioService to be used as a dependency
+/// in the application layer through the domain interface.
+impl AudioService for RodioAudioService {
+    fn play_audio(&mut self, request: PlaybackRequest) -> Result<PlaybackHandle> {
+        self.play(request).map_err(|e| e.into())
+    }
+    
+    fn stop_audio(&mut self, playback_id: &str) -> Result<()> {
+        self.stop_playback(playback_id).map_err(|e| e.into())
+    }
+    
+    fn stop_all_audio(&mut self) -> Result<()> {
+        self.stop_all_playbacks();
+        Ok(())
+    }
+    
+    fn pause_audio(&mut self, playback_id: &str) -> Result<()> {
+        self.pause_playback(playback_id).map_err(|e| e.into())
+    }
+    
+    fn resume_audio(&mut self, playback_id: &str) -> Result<()> {
+        self.resume_playback(playback_id).map_err(|e| e.into())
+    }
+    
+    fn set_volume(&mut self, playback_id: &str, volume: f32) -> Result<()> {
+        self.set_audio_volume(playback_id, volume).map_err(|e| e.into())
+    }
+    
+    fn get_active_playbacks(&self) -> Result<Vec<PlaybackHandle>> {
+        Ok(RodioAudioService::get_active_playbacks(self))
+    }
+    
+    fn cleanup_finished(&mut self) -> Result<()> {
+        self.cleanup_finished_playbacks();
+        Ok(())
     }
 }

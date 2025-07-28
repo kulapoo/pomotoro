@@ -7,7 +7,7 @@ use tauri::Manager;
 use controllers::*;
 use infrastructure::{
     TimerService, InMemoryTaskRepository, TaskRepositoryArc, 
-    FileConfigRepo, ConfigRepository, AudioService,
+    FileConfigRepo, ConfigRepository, RodioAudioService,
     create_event_publisher_with_bus, EventPublisherArc, DomainEventBus
 };
 use application::handle_work_session_completed;
@@ -29,7 +29,7 @@ pub fn run() {
             );
             app.manage(config_repository);
 
-            let audio_service = AudioService::new()
+            let audio_service = RodioAudioService::new()
                 .expect("Failed to initialize audio service");
             app.manage(Mutex::new(audio_service));
 

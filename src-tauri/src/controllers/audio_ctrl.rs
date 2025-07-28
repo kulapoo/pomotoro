@@ -1,15 +1,15 @@
-use crate::infrastructure::AudioService;
-use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle};
+use crate::infrastructure::RodioAudioService;
+use pomotoro_domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioService};
 use tauri::State;
 use std::sync::Mutex;
 
-type AudioServiceState<'a> = State<'a, Mutex<AudioService>>;
+type AudioServiceState<'a> = State<'a, Mutex<RodioAudioService>>;
 
 #[tauri::command]
 pub async fn get_audio_library(
     audio_service: AudioServiceState<'_>,
 ) -> Result<AudioLibrary, String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     Ok(service.get_library().clone())
 }
 
@@ -18,7 +18,7 @@ pub async fn play_audio(
     request: PlaybackRequest,
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.play(request).map_err(|e| e.to_string())
 }
 
@@ -27,7 +27,7 @@ pub async fn stop_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.stop_playback(&handle_id).map_err(|e| e.to_string())
 }
 
@@ -36,7 +36,7 @@ pub async fn pause_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.pause_playback(&handle_id).map_err(|e| e.to_string())
 }
 
@@ -45,7 +45,7 @@ pub async fn resume_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.resume_playback(&handle_id).map_err(|e| e.to_string())
 }
 
@@ -55,7 +55,7 @@ pub async fn set_audio_volume(
     volume: f32,
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.set_volume(&handle_id, volume).map_err(|e| e.to_string())
 }
 
@@ -64,14 +64,14 @@ pub async fn get_active_playbacks(
     audio_service: AudioServiceState<'_>,
 ) -> Result<Vec<PlaybackHandle>, String> {
     let service = audio_service.lock().map_err(|e| e.to_string())?;
-    Ok(service.get_active_playbacks())
+    AudioService::get_active_playbacks(&*service).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn stop_all_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.stop_all_playbacks();
     Ok(())
 }
@@ -82,7 +82,7 @@ pub async fn play_notification_sound(
     volume: f32,
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.play_notification(&asset_id, volume).map_err(|e| e.to_string())
 }
 
@@ -92,7 +92,7 @@ pub async fn play_background_audio(
     volume: f32,
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.play_background_audio(&asset_id, volume).map_err(|e| e.to_string())
 }
 
@@ -100,7 +100,7 @@ pub async fn play_background_audio(
 pub async fn stop_background_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.stop_background_audio();
     Ok(())
 }
@@ -128,7 +128,7 @@ pub async fn remove_audio_asset(
 pub async fn cleanup_finished_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
     service.cleanup_finished_playbacks();
     Ok(())
 }
@@ -139,7 +139,7 @@ pub async fn test_audio_preview(
     volume: f32,
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
-    let service = audio_service.lock().map_err(|e| e.to_string())?;
+    let mut service = audio_service.lock().map_err(|e| e.to_string())?;
 
     let request = PlaybackRequest::new(asset_id, volume)
         .map_err(|e| e.to_string())?

@@ -15,15 +15,15 @@ impl TestConfigRepository {
         }
     }
 
-    pub fn with_Config(Config: Config) -> Self {
+    pub fn with_config(config: Config) -> Self {
         Self {
-            config: RwLock::new(Config),
+            config: RwLock::new(config),
         }
     }
 
     pub fn reset_to_defaults(&self) {
-        let mut Config = self.config.write().unwrap();
-        *Config = Config::default();
+        let mut config = self.config.write().unwrap();
+        *config = Config::default();
     }
 }
 
@@ -117,7 +117,7 @@ impl Default for TestConfigBuilder {
 pub struct ConfigTestUtils;
 
 impl ConfigTestUtils {
-    pub fn create_fast_Config() -> Config {
+    pub fn create_fast_config() -> Config {
         TestConfigBuilder::new()
             .with_work_duration(Duration::from_secs(5))
             .with_short_break_duration(Duration::from_secs(2))
@@ -126,7 +126,7 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_slow_Config() -> Config {
+    pub fn create_slow_config() -> Config {
         TestConfigBuilder::new()
             .with_work_duration(Duration::from_secs(60 * 60)) // 1 hour
             .with_short_break_duration(Duration::from_secs(30 * 60)) // 30 minutes
@@ -135,14 +135,14 @@ impl ConfigTestUtils {
             .build()
     }
 
-    pub fn create_silent_Config() -> Config {
+    pub fn create_silent_config() -> Config {
         TestConfigBuilder::new()
             .with_muted_audio(true)
             .with_background_audio(false)
             .build()
     }
 
-    pub fn assert_Config_equals(actual: &Config, expected: &Config) {
+    pub fn assert_config_equals(actual: &Config, expected: &Config) {
         assert_eq!(actual.task_defaults.work_duration, expected.task_defaults.work_duration);
         assert_eq!(actual.task_defaults.short_break_duration, expected.task_defaults.short_break_duration);
         assert_eq!(actual.task_defaults.long_break_duration, expected.task_defaults.long_break_duration);

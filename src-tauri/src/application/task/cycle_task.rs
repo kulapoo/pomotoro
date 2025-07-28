@@ -1,5 +1,5 @@
 use pomotoro_domain::{
-    Task, TaskId, TaskCyclingService,
+    Task, TaskId, TaskCyclerService,
     Result, Error
 };
 use std::sync::Arc;
@@ -18,7 +18,7 @@ pub struct TaskCycleResult {
 }
 
 pub async fn get_next_task(
-    cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
+    cycling_service: &Arc<dyn TaskCyclerService + Send + Sync>,
     query: GetNextTaskQuery,
 ) -> Result<Option<Task>> {
     let current_task_id = if let Some(id_str) = query.current_task_id {
@@ -32,7 +32,7 @@ pub async fn get_next_task(
 }
 
 pub async fn cycle_to_next_task(
-    cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
+    cycling_service: &Arc<dyn TaskCyclerService + Send + Sync>,
     current_task_id: Option<String>,
 ) -> Result<TaskCycleResult> {
     let current_id = if let Some(id_str) = current_task_id {
@@ -70,7 +70,7 @@ pub async fn cycle_to_next_task(
 }
 
 pub async fn get_task_cycle_info(
-    cycling_service: &Arc<dyn TaskCyclingService + Send + Sync>,
+    cycling_service: &Arc<dyn TaskCyclerService + Send + Sync>,
     current_task_id: Option<String>,
 ) -> Result<TaskCycleResult> {
     let current_id = if let Some(id_str) = current_task_id {
@@ -112,16 +112,16 @@ pub async fn get_task_cycle_info(
 mod tests {
     use super::*;
     use pomotoro_domain::{
-        TaskRepository, DefaultTaskCyclingService, TaskCyclingStrategy
+        TaskRepository, TaskCyclingStrategy
     };
-    use crate::infrastructure::InMemoryTaskRepository;
+    use crate::infrastructure::{InMemoryTaskRepository, StandardTaskCyclerService};
 
     async fn setup() -> (
-        Arc<dyn TaskCyclingService + Send + Sync>,
+        Arc<dyn TaskCyclerService + Send + Sync>,
         Vec<Task>,
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(StandardTaskCyclerService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
@@ -210,7 +210,7 @@ mod tests {
     #[tokio::test]
     async fn should_handle_single_task() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(StandardTaskCyclerService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
@@ -236,7 +236,7 @@ mod tests {
     #[tokio::test]
     async fn should_handle_no_tasks() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(StandardTaskCyclerService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
@@ -255,7 +255,7 @@ mod tests {
     #[tokio::test]
     async fn should_exclude_completed_tasks_from_cycling() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::empty());
-        let cycling_service: Arc<dyn TaskCyclingService + Send + Sync> = Arc::new(DefaultTaskCyclingService::new(
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(StandardTaskCyclerService::new(
             task_repo.clone(),
             TaskCyclingStrategy::RoundRobin,
         ));
