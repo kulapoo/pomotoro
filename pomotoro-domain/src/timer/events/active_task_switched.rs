@@ -34,8 +34,8 @@ impl DomainEvent for ActiveTaskSwitched {
     }
 
     fn aggregate_id(&self) -> String {
-        self.new_task_id.clone()
-            .or(self.old_task_id.clone())
+        self.new_task_id
+            .or(self.old_task_id)
             .map(|id| id.to_string())
             .unwrap_or_else(|| "timer".to_string())
     }

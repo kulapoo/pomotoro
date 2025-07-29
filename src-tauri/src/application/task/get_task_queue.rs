@@ -294,7 +294,7 @@ mod tests {
     async fn should_handle_empty_queue() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> =
             Arc::new(InMemoryTaskRepository::empty());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
+        let _event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(
             StandardTaskCyclerService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
         );

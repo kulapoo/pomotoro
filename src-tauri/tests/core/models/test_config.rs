@@ -1,5 +1,4 @@
 use pomotoro_domain::{Config, TaskConfig, AudioConfig};
-use pomotoro_lib::infrastructure::{FileConfigRepo};
 use pomotoro_domain::{ConfigRepository, Result};
 use std::sync::RwLock;
 use std::time::Duration;

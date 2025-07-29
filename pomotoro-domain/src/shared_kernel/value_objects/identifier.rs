@@ -320,10 +320,7 @@ impl<T: EntityMarker> EntityId<T> {
 
 impl<T: EntityMarker> Clone for EntityId<T> {
     fn clone(&self) -> Self {
-        Self {
-            uuid: self.uuid,
-            _marker: PhantomData,
-        }
+        *self
     }
 }
 

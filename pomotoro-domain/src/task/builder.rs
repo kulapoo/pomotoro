@@ -197,7 +197,7 @@ impl TaskBuilder {
         audio_config.validate()?;
 
         // Determine status based on completion state
-        let status = self.status.unwrap_or_else(|| {
+        let status = self.status.unwrap_or({
             if current_sessions >= max_sessions {
                 TaskStatus::Completed
             } else {
@@ -213,7 +213,7 @@ impl TaskBuilder {
         };
 
         Ok(super::Task {
-            id: self.id.unwrap_or_else(TaskId::new),
+            id: self.id.unwrap_or_default(),
             name: name.trim().to_string(),
             description: self.description,
             max_sessions,
@@ -262,7 +262,7 @@ impl TaskBuilder {
         audio_config.validate()?;
 
         // Determine status based on completion state
-        let status = self.status.unwrap_or_else(|| {
+        let status = self.status.unwrap_or({
             if current_sessions >= max_sessions {
                 TaskStatus::Completed
             } else {
@@ -278,7 +278,7 @@ impl TaskBuilder {
         };
 
         Ok(super::Task {
-            id: self.id.unwrap_or_else(TaskId::new),
+            id: self.id.unwrap_or_default(),
             name: name.trim().to_string(),
             description: self.description,
             max_sessions,

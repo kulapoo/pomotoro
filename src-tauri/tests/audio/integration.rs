@@ -284,7 +284,7 @@ async fn test_per_task_volume_independence() {
     use pomotoro_domain::AudioConfig;
     
     // Create two different audio configurations
-    let loud_task_audio = AudioConfig {
+    let _loud_task_audio = AudioConfig {
         volume: 0.9,
         enable_background_audio: true,
         background_sound: Some("energetic-beats".to_string()),
@@ -293,7 +293,7 @@ async fn test_per_task_volume_independence() {
         muted: false,
     };
     
-    let quiet_task_audio = AudioConfig {
+    let _quiet_task_audio = AudioConfig {
         volume: 0.2,
         enable_background_audio: true,
         background_sound: Some("gentle-ambient".to_string()),

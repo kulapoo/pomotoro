@@ -99,7 +99,6 @@ impl EventPublisher for DomainEventBus {
 mod tests {
     use super::*;
     use pomotoro_domain::{TaskCreated, TaskConfig, AudioConfig, TaskId};
-    use uuid::Uuid;
     use std::time::Duration;
     use std::sync::atomic::{AtomicUsize, Ordering};
 

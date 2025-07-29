@@ -319,7 +319,7 @@ async fn test_task_specific_timer_configuration() {
     let task_repo = TaskTestRepository::empty();
     
     // Create task with custom timing configuration (MVP2 feature)
-    use pomotoro_domain::{TaskConfig, AudioConfig, TaskBuilder as DomainTaskBuilder};
+    use pomotoro_domain::{TaskConfig, TaskBuilder as DomainTaskBuilder};
     use std::time::Duration;
     
     let custom_task = DomainTaskBuilder::with_name_and_sessions("Custom Timer Task".to_string(), 3)
@@ -368,9 +368,9 @@ async fn test_skip_completed_tasks_in_cycle() {
     let task_repo = TaskTestRepository::new();
     
     // Create tasks with different completion states
-    let mut task1 = crate::task::models::TaskBuilder::new("Active Task".to_string(), 3).build();
+    let task1 = crate::task::models::TaskBuilder::new("Active Task".to_string(), 3).build();
     let mut task2 = crate::task::models::TaskBuilder::new("Completed Task".to_string(), 1).build();
-    let mut task3 = crate::task::models::TaskBuilder::new("Another Active".to_string(), 2).build();
+    let task3 = crate::task::models::TaskBuilder::new("Another Active".to_string(), 2).build();
     
     // Complete task2
     task2.increment_session().unwrap();
@@ -379,7 +379,7 @@ async fn test_skip_completed_tasks_in_cycle() {
     task_repo.create(task2.clone()).await.unwrap();
     task_repo.create(task3.clone()).await.unwrap();
     
-    let tasks = vec![task1.clone(), task2.clone(), task3.clone()];
+    let _tasks = vec![task1.clone(), task2.clone(), task3.clone()];
     // Setup with first non-completed task
     
     // Start with first task

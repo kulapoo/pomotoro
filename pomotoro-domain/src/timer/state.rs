@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{TaskId, Timer, Result, Phase, TimerStatus, TimerConfiguration};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct TimerState {
     pub timer: Timer,
     pub active_task_id: Option<TaskId>,
@@ -10,16 +11,6 @@ pub struct TimerState {
     pub task_session_count: u32,
 }
 
-impl Default for TimerState {
-    fn default() -> Self {
-        Self {
-            timer: Timer::default(),
-            active_task_id: None,
-            task_session_count: 0,
-            configuration: TimerConfiguration::default(),
-        }
-    }
-}
 
 impl TimerState {
     pub fn get_phase_duration(&self) -> u32 {
@@ -88,7 +79,7 @@ impl TimerState {
     }
 
     pub fn phase(&self) -> Phase {
-        self.timer.phase.clone()
+        self.timer.phase
     }
 
     pub fn remaining_seconds(&self) -> u32 {

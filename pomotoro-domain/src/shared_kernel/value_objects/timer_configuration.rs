@@ -73,7 +73,7 @@ impl TimerConfiguration {
     pub fn validate(&self) -> Result<()> {
         // Work duration: 1-60 minutes
         let work_secs = self.work_duration.as_secs();
-        if work_secs < 60 || work_secs > 3600 {
+        if !(60..=3600).contains(&work_secs) {
             return Err(Error::InvalidDuration {
                 duration: work_secs as u32,
             });
@@ -81,7 +81,7 @@ impl TimerConfiguration {
         
         // Short break duration: 30 seconds - 30 minutes
         let short_break_secs = self.short_break_duration.as_secs();
-        if short_break_secs < 30 || short_break_secs > 1800 {
+        if !(30..=1800).contains(&short_break_secs) {
             return Err(Error::InvalidDuration {
                 duration: short_break_secs as u32,
             });
@@ -89,7 +89,7 @@ impl TimerConfiguration {
         
         // Long break duration: 5-60 minutes
         let long_break_secs = self.long_break_duration.as_secs();
-        if long_break_secs < 300 || long_break_secs > 3600 {
+        if !(300..=3600).contains(&long_break_secs) {
             return Err(Error::InvalidDuration {
                 duration: long_break_secs as u32,
             });

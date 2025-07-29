@@ -141,7 +141,7 @@ mod tests {
         }
 
         fn stop_audio(&mut self, playback_id: &str) -> Result<()> {
-            if let Some(mut handle) = self.playbacks.get_mut(playback_id) {
+            if let Some(handle) = self.playbacks.get_mut(playback_id) {
                 handle.is_playing = false;
             }
             Ok(())
@@ -155,21 +155,21 @@ mod tests {
         }
 
         fn pause_audio(&mut self, playback_id: &str) -> Result<()> {
-            if let Some(mut handle) = self.playbacks.get_mut(playback_id) {
+            if let Some(handle) = self.playbacks.get_mut(playback_id) {
                 handle.is_playing = false;
             }
             Ok(())
         }
 
         fn resume_audio(&mut self, playback_id: &str) -> Result<()> {
-            if let Some(mut handle) = self.playbacks.get_mut(playback_id) {
+            if let Some(handle) = self.playbacks.get_mut(playback_id) {
                 handle.is_playing = true;
             }
             Ok(())
         }
 
         fn set_volume(&mut self, playback_id: &str, volume: f32) -> Result<()> {
-            if let Some(mut handle) = self.playbacks.get_mut(playback_id) {
+            if let Some(handle) = self.playbacks.get_mut(playback_id) {
                 handle.volume = volume;
             }
             Ok(())

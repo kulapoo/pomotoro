@@ -23,6 +23,12 @@ pub struct PhaseTransitionResult {
 
 pub struct DefaultPhaseTransitionService;
 
+impl Default for DefaultPhaseTransitionService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultPhaseTransitionService {
     pub fn new() -> Self {
         Self
@@ -46,7 +52,7 @@ impl PhaseTransitionService for DefaultPhaseTransitionService {
         let sessions_until_long_break = timer_state.configuration.sessions_until_long_break as u32;
 
         let cycle_completed = work_session_completed &&
-            timer_state.session_count() % sessions_until_long_break as u32 == 0;
+            timer_state.session_count() % sessions_until_long_break == 0;
 
         let result = PhaseTransitionResult {
             old_phase: old_phase_returned,

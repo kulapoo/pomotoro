@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crate::Result;
 
+#[derive(Default)]
 pub struct SearchCriteria {
     pub query: Option<String>,
     pub tags: Option<Vec<String>>,
@@ -9,17 +10,6 @@ pub struct SearchCriteria {
     pub offset: Option<usize>,
 }
 
-impl Default for SearchCriteria {
-    fn default() -> Self {
-        Self {
-            query: None,
-            tags: None,
-            status: None,
-            limit: None,
-            offset: None,
-        }
-    }
-}
 
 impl SearchCriteria {
     pub fn new() -> Self {

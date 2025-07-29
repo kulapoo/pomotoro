@@ -26,6 +26,12 @@ pub enum TaskCyclingStrategy {
 /// Contains only business rules, no I/O operations
 pub struct DefaultTaskCyclingService;
 
+impl Default for DefaultTaskCyclingService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultTaskCyclingService {
     pub fn new() -> Self {
         Self

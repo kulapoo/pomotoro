@@ -34,7 +34,7 @@ impl DomainEvent for PhaseSkipped {
     }
 
     fn aggregate_id(&self) -> String {
-        self.active_task_id.clone()
+        self.active_task_id
             .map(|id| id.to_string())
             .unwrap_or_else(|| "timer".to_string())
     }

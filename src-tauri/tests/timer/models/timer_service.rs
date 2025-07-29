@@ -19,23 +19,23 @@ impl TimerTestService {
     }
 
     pub async fn start_work_session(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.service.set_status(TimerStatus::Running).await;
+        let _ = self.service.set_status(TimerStatus::Running).await;
         Ok(())
     }
 
     pub async fn pause_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.service.set_status(TimerStatus::Paused).await;
+        let _ = self.service.set_status(TimerStatus::Paused).await;
         Ok(())
     }
 
     pub async fn stop_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.service.stop_timer().await;
-        self.service.set_status(TimerStatus::Stopped).await;
+        let _ = self.service.set_status(TimerStatus::Stopped).await;
         Ok(())
     }
 
     pub async fn reset_current_phase(&self, task: Option<&Task>) -> Result<(), Box<dyn std::error::Error>> {
-        self.service.reset_current_phase(task).await;
+        let _ = self.service.reset_current_phase(task).await;
         Ok(())
     }
 

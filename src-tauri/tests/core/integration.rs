@@ -230,7 +230,6 @@ async fn test_session_cycle_configuration() {
 #[test]
 fn test_task_config_validation() {
     // Test that TaskConfig validates MVP2 timing constraints
-    use pomotoro_domain::TaskConfig;
     
     // Valid configurations
     let valid_short = TaskConfig::new(
@@ -274,7 +273,6 @@ fn test_task_config_validation() {
 #[test]
 fn test_audio_config_validation() {
     // Test that AudioConfig validates MVP2 audio constraints
-    use pomotoro_domain::AudioConfig;
     
     // Valid configuration
     let valid_audio = AudioConfig {

@@ -26,6 +26,12 @@ pub struct PlaybackHandle {
     pub volume: f32,
 }
 
+impl Default for AudioLibrary {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AudioLibrary {
     pub fn new() -> Self {
         Self {

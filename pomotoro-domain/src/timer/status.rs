@@ -13,12 +13,6 @@ impl TimerStatus {
     }
 
     pub fn can_transition_to(&self, new_status: &TimerStatus) -> bool {
-        match (self, new_status) {
-            (TimerStatus::Stopped, TimerStatus::Running) => true,
-            (TimerStatus::Running, TimerStatus::Paused) => true,
-            (TimerStatus::Paused, TimerStatus::Running) => true,
-            (_, TimerStatus::Stopped) => true,
-            _ => false,
-        }
+        matches!((self, new_status), (TimerStatus::Stopped, TimerStatus::Running) | (TimerStatus::Running, TimerStatus::Paused) | (TimerStatus::Paused, TimerStatus::Running) | (_, TimerStatus::Stopped))
     }
 }

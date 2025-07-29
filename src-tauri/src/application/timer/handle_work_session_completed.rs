@@ -22,7 +22,7 @@ pub async fn handle_work_session_completed(
 mod tests {
     use super::*;
     use crate::infrastructure::InMemoryTaskRepository;
-    use pomotoro_domain::{Task, TaskDefaults, NoOpEventPublisher, TaskId};
+    use pomotoro_domain::{Task, NoOpEventPublisher};
 
     #[tokio::test]
     async fn should_complete_task_session_when_event_has_task_id() {

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::{TaskDefaults, AudioConfig, Error, Result, GeneralConfig, NotificationConfig, AppearanceConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Config {
     pub task_defaults: TaskDefaults,
     pub audio: AudioConfig,
@@ -10,17 +11,6 @@ pub struct Config {
     pub appearance: AppearanceConfig,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            task_defaults: TaskDefaults::default(),
-            audio: AudioConfig::default(),
-            general: GeneralConfig::default(),
-            notification: NotificationConfig::default(),
-            appearance: AppearanceConfig::default(),
-        }
-    }
-}
 
 impl Config {
     pub fn validate(&self) -> Result<()> {
