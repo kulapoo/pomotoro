@@ -5,6 +5,7 @@ pub mod state;
 pub mod state_with_task;
 pub mod status;
 pub mod phase_transition_srv;
+pub mod timer_srv;
 pub mod events;
 
 pub use phase::*;
@@ -14,4 +15,5 @@ pub use state::*;
 pub use state_with_task::*;
 pub use status::*;
 pub use phase_transition_srv::*;
+pub use timer_srv::*;
 pub use events::*;

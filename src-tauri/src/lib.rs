@@ -54,8 +54,11 @@ pub fn run() {
                 });
             }));
 
-            // Create timer service with domain services
-            let timer_service = TimerService::new_with_services(event_publisher.clone());
+            // Create timer service with domain services and app handle
+            let timer_service = TimerService::new_with_services(
+                event_publisher.clone(),
+                Some(app.handle().clone())
+            );
             app.manage(timer_service);
 
             // Manage the task repository for command handlers

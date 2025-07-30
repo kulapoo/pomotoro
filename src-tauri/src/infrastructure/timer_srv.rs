@@ -3,12 +3,14 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
+use async_trait::async_trait;
 
 use crate::infrastructure::notifications::send_phase_notification;
-use pomotoro_domain::TimerState;
+use pomotoro_domain::{TimerState, Result as DomainResult};
+use pomotoro_domain::timer::TimerService as DomainTimerService;
 use pomotoro_domain::{
     Phase, TimerStatus, DefaultPhaseTransitionService, PhaseTransitionService,
-    WorkSessionCompleted
+    WorkSessionCompleted, TaskId
 };
 use pomotoro_domain::Task;
 use crate::infrastructure::EventPublisherArc;
@@ -19,11 +21,25 @@ pub struct TimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     phase_service: Arc<dyn PhaseTransitionService>,
     event_publisher: EventPublisherArc,
+    app_handle: Option<AppHandle>,
+}
+
+impl Clone for TimerService {
+    fn clone(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+            cancel_handle: Arc::clone(&self.cancel_handle),
+            phase_service: Arc::clone(&self.phase_service),
+            event_publisher: Arc::clone(&self.event_publisher),
+            app_handle: self.app_handle.clone(),
+        }
+    }
 }
 
 impl TimerService {
     pub fn new_with_services(
         event_publisher: EventPublisherArc,
+        app_handle: Option<AppHandle>,
     ) -> Self {
         let phase_service = Arc::new(DefaultPhaseTransitionService::new());
         
@@ -32,6 +48,7 @@ impl TimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service,
             event_publisher,
+            app_handle,
         }
     }
     
@@ -44,6 +61,7 @@ impl TimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service: Arc::new(DefaultPhaseTransitionService::new()),
             event_publisher,
+            app_handle: None,
         }
     }
     
@@ -277,4 +295,89 @@ impl TimerService {
         }
     }
 
+}
+
+/// Implementation of domain TimerService trait
+/// 
+/// This allows the infrastructure TimerService to be used through
+/// the domain abstraction in the application layer.
+#[async_trait]
+impl DomainTimerService for TimerService {
+    async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
+        if let Some(app_handle) = &self.app_handle {
+            // Call the existing infrastructure method (different signature)
+            TimerService::start_timer(self, app_handle.clone(), task.cloned()).await
+                .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })
+        } else {
+            // Without app handle, we can still start timer but without persistence
+            let mut state = self.state.write().await;
+            self.phase_service.start_timer(&mut *state)
+                .map_err(|e| e)
+        }
+    }
+    
+    async fn stop_timer(&self) -> DomainResult<()> {
+        TimerService::stop_timer(self).await;
+        Ok(())
+    }
+    
+    async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
+        let current_status = {
+            let state = self.state.read().await;
+            state.status()
+        };
+        
+        let new_status = match current_status {
+            TimerStatus::Running => {
+                TimerService::set_status(self, TimerStatus::Paused).await
+                    .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })?;
+                TimerStatus::Paused
+            },
+            TimerStatus::Paused => {
+                TimerService::set_status(self, TimerStatus::Running).await
+                    .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })?;
+                TimerStatus::Running
+            },
+            TimerStatus::Stopped => TimerStatus::Stopped,
+        };
+        
+        Ok(new_status)
+    }
+    
+    async fn reset_current_phase(&self, task: Option<&Task>) -> DomainResult<()> {
+        TimerService::reset_current_phase(self, task).await
+            .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })
+    }
+    
+    async fn skip_to_next_phase(&self, task: Option<&Task>) -> DomainResult<(Phase, Phase)> {
+        TimerService::skip_to_next_phase(self, task).await
+            .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })
+    }
+    
+    async fn get_state(&self) -> DomainResult<TimerState> {
+        Ok(TimerService::get_state(self).await)
+    }
+    
+    async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
+        TimerService::switch_task(self, task_id, task).await;
+        Ok(())
+    }
+    
+    async fn load_state(&self) -> DomainResult<()> {
+        if let Some(app_handle) = &self.app_handle {
+            TimerService::load_state(self, app_handle).await
+                .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })
+        } else {
+            Ok(())
+        }
+    }
+    
+    async fn save_state(&self) -> DomainResult<()> {
+        if let Some(app_handle) = &self.app_handle {
+            TimerService::save_state(self, app_handle).await
+                .map_err(|e| pomotoro_domain::Error::RepositoryError { message: e })
+        } else {
+            Ok(())
+        }
+    }
 }
