@@ -61,7 +61,7 @@ impl TaskResource {
 
     pub async fn switch_task(&self, task_id: TaskId) -> Result<(), String> {
         let args = to_value(&task_id).map_err(|e| e.to_string())?;
-        let result = invoke(events::timer::SWITCH_TASK, args).await;
+        let result = invoke(events::timer::SWITCH_ACTIVE_TASK, args).await;
         
         match from_value::<TimerStateWithTask>(result) {
             Ok(timer_state_with_task) => {
@@ -200,6 +200,70 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                                 <span class="task-sessions">
                                                     {task.current_sessions}"/"{task.max_sessions}
                                                 </span>
+                                            </div>
+                                            
+                                            <div class="task-actions">
+                                                {if !task.is_completed() {
+                                                    let task_id_for_complete = task_id;
+                                                    let task_id_for_reset = task_id;
+                                                    let task_resource_for_complete = task_resource_for_click.clone();
+                                                    let task_resource_for_reset = task_resource_for_click.clone();
+                                                    
+                                                    view! {
+                                                        <button 
+                                                            class="task-action-btn complete-session-btn"
+                                                            title="Complete Session"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                let task_resource = task_resource_for_complete.clone();
+                                                                spawn_local(async move {
+                                                                    let args = to_value(&task_id_for_complete.to_string()).unwrap();
+                                                                    let result = invoke(events::task::COMPLETE_SESSION, args).await;
+                                                                    match from_value::<Task>(result) {
+                                                                        Ok(_) => {
+                                                                            task_resource.refetch();
+                                                                            web_sys::console::log_1(&"Session completed".into());
+                                                                        }
+                                                                        Err(e) => {
+                                                                            web_sys::console::error_1(&format!("Failed to complete session: {}", e).into());
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }
+                                                        >
+                                                            "✓"
+                                                        </button>
+                                                        <button 
+                                                            class="task-action-btn reset-sessions-btn"
+                                                            title="Reset Sessions"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                let task_resource = task_resource_for_reset.clone();
+                                                                spawn_local(async move {
+                                                                    let args = to_value(&task_id_for_reset.to_string()).unwrap();
+                                                                    let result = invoke(events::task::RESET_SESSIONS, args).await;
+                                                                    match from_value::<Task>(result) {
+                                                                        Ok(_) => {
+                                                                            task_resource.refetch();
+                                                                            web_sys::console::log_1(&"Sessions reset".into());
+                                                                        }
+                                                                        Err(e) => {
+                                                                            web_sys::console::error_1(&format!("Failed to reset sessions: {}", e).into());
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }
+                                                        >
+                                                            "↻"
+                                                        </button>
+                                                    }.into_any()
+                                                } else {
+                                                    view! {
+                                                        <span class="task-completed-indicator" title="Task completed">
+                                                            "🎉"
+                                                        </span>
+                                                    }.into_any()
+                                                }}
                                             </div>
                                             
                                             {task.description.clone().map(|desc| {

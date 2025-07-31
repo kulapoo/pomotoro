@@ -1,7 +1,6 @@
 pub mod controllers;
 pub mod application;
 pub mod infrastructure;
-pub mod commands;
 
 use tauri::Manager;
 use controllers::*;
@@ -87,12 +86,12 @@ pub fn run() {
             reset_task_sessions,
             get_global_config,
             save_global_config,
-            reset_global_config_to_defaults,
-            update_default_timings,
+            reset_config_to_defaults,
+            update_timing_config,
             update_default_cycle_length,
-            update_general,
-            update_notification_preferences,
-            update_appearance,
+            update_general_config,
+            update_notification_config,
+            update_appearance_config,
             update_audio_config,
             get_effective_task_config,
             get_effective_audio_config,

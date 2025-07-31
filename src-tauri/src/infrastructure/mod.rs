@@ -40,7 +40,7 @@ pub use audio_asset_provider::*;
 pub use events::{EventPublisherArc, create_composite_event_publisher, create_event_publisher_with_bus, DomainEventBus};
 pub use notifications::*;
 pub use config_builder::*;
-pub use timer_models::*;
+// timer_models is now handled by domain layer
 pub use repositories::*;
 pub use persistence::*;
 pub use task_cycling_srv::StandardTaskCyclerService;

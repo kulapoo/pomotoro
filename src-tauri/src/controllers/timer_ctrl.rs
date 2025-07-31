@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::infrastructure::{TaskRepositoryArc, TimerService};
 use pomotoro_domain::{TaskId, TimerState, Phase};
 use pomotoro_domain::timer::TimerService as DomainTimerService;
-use crate::infrastructure::TimerStateWithTask;
+use pomotoro_domain::TimerStateWithTask;
 use crate::application::timer::{
     get_timer_state as app_get_timer_state, 
     get_timer_state_with_task as app_get_timer_state_with_task,
@@ -108,7 +108,7 @@ pub async fn get_timer_state_with_task(
         &task_repo
     ).await.map_err(|e| e.to_string())?;
     
-    Ok(TimerStateWithTask { timer_state, active_task })
+    Ok(TimerStateWithTask::new(timer_state, active_task))
 }
 
 #[tauri::command]
@@ -117,7 +117,7 @@ pub async fn switch_active_task(
     timer_service: State<'_, TimerService>,
     task_repo: State<'_, TaskRepositoryArc>,
     _app_handle: AppHandle,
-) -> Result<TimerState, String> {
+) -> Result<TimerStateWithTask, String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> = 
         Arc::new(timer_service.inner().clone());
     
@@ -128,6 +128,10 @@ pub async fn switch_active_task(
     switch_timer_task(&timer_service_arc, &task_repo, cmd).await
         .map_err(|e| e.to_string())?;
     
-    app_get_timer_state(&timer_service_arc).await
-        .map_err(|e| e.to_string())
+    let (timer_state, active_task) = app_get_timer_state_with_task(
+        &timer_service_arc, 
+        &task_repo
+    ).await.map_err(|e| e.to_string())?;
+    
+    Ok(TimerStateWithTask::new(timer_state, active_task))
 }

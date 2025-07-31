@@ -14,7 +14,7 @@ use pomotoro_domain::{
 };
 use pomotoro_domain::Task;
 use crate::infrastructure::EventPublisherArc;
-use crate::commands::timer;
+use pomotoro_domain::events::timer;
 
 pub struct TimerService {
     state: Arc<RwLock<TimerState>>,

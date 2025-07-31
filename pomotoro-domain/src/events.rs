@@ -8,7 +8,7 @@ pub mod timer {
     pub const UPDATE_STATE: &str = "timer_state_updated";
     pub const PHASE_COMPLETE: &str = "phase_completed";
     pub const GET_STATE_WITH_TASK: &str = "get_timer_state_with_task";
-    pub const SWITCH_TASK: &str = "switch_task";
+    pub const SWITCH_ACTIVE_TASK: &str = "switch_active_task";
 }
 
 pub mod task {
@@ -17,6 +17,8 @@ pub mod task {
     pub const DELETE: &str = "delete_task";
     pub const GET: &str = "get_task";
     pub const GET_ALL: &str = "get_all_tasks";
+    pub const COMPLETE_SESSION: &str = "complete_task_session";
+    pub const RESET_SESSIONS: &str = "reset_task_sessions";
 }
 
 pub mod config {

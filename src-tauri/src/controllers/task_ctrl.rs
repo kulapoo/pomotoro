@@ -122,7 +122,13 @@ pub async fn get_tasks_by_tags(
 pub async fn complete_task_session(
     task_id: String,
     task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
+    let _result = crate::application::task::complete_session(&*task_repo, &*event_publisher, &task_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Return the updated task
     let task_id = pomotoro_domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
     
@@ -137,6 +143,11 @@ pub async fn reset_task_sessions(
     task_id: String,
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Task, String> {
+    crate::application::task::reset_sessions(&*task_repo, &task_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Return the updated task
     let task_id = pomotoro_domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
     

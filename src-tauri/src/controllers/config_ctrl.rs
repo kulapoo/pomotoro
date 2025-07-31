@@ -19,7 +19,7 @@ pub async fn save_global_config(
 }
 
 #[tauri::command]
-pub async fn reset_global_config_to_defaults(
+pub async fn reset_config_to_defaults(
     config_repo: State<'_, ConfigRepository>,
     _event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Config, String> {
@@ -27,7 +27,7 @@ pub async fn reset_global_config_to_defaults(
 }
 
 #[tauri::command]
-pub async fn update_default_timings(
+pub async fn update_timing_config(
     work_duration_minutes: u32,
     short_break_minutes: u32,
     long_break_minutes: u32,
@@ -55,7 +55,7 @@ pub async fn update_default_cycle_length(
 }
 
 #[tauri::command]
-pub async fn update_general(
+pub async fn update_general_config(
     preferences: GeneralConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
@@ -67,7 +67,7 @@ pub async fn update_general(
 }
 
 #[tauri::command]
-pub async fn update_notification_preferences(
+pub async fn update_notification_config(
     preferences: NotificationConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
@@ -79,7 +79,7 @@ pub async fn update_notification_preferences(
 }
 
 #[tauri::command]
-pub async fn update_appearance(
+pub async fn update_appearance_config(
     preferences: AppearanceConfig,
     config_repo: State<'_, ConfigRepository>,
 ) -> Result<Config, String> {
