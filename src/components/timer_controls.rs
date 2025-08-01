@@ -3,7 +3,6 @@ use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use crate::store::{TimerState, TimerStatus};
 use pomotoro_domain::events;
-use web_sys::console;
 
 #[wasm_bindgen]
 extern "C" {

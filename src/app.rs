@@ -24,7 +24,7 @@ pub fn App() -> impl IntoView {
     // Connect task resource updates to timer state updates
     Effect::new(move |_| {
         // When active task changes, refetch timer state with task
-        let active_task = task_resource.active_task.get();
+        let _active_task = task_resource.active_task.get();
         spawn_local(async move {
             let result = invoke(events::timer::GET_STATE_WITH_TASK, JsValue::NULL).await;
             if let Ok(state_with_task) = serde_wasm_bindgen::from_value::<TimerStateWithTask>(result) {
