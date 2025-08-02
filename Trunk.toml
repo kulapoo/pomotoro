@@ -1,8 +1,8 @@
 [build]
-target = "./index.html"
+target = "./ui/index.html"
 
 [watch]
-ignore = ["./src-tauri"]
+ignore = ["./infra"]
 
 [serve]
 port = 1420

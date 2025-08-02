@@ -1,0 +1,22 @@
+[package]
+name = "usecases"
+version = "0.1.0"
+edition = "2021"
+description = "Application layer use cases for Pomotoro"
+
+[dependencies]
+domain = { path = "../domain" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+domain = { path = "../domain", features = ["test-utils"] }
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
+assert_matches = { workspace = true }
+serial_test = { workspace = true }
