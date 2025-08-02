@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
-use super::timer_state::{TimerState, TimerStatus};
+use pomotoro_domain::{TimerState, TimerStatus};
 use pomotoro_domain::events;
 
 #[wasm_bindgen]

@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use super::timer_state::TimerState;
+use pomotoro_domain::TimerState;
 use pomotoro_domain::TimerStateWithTask;
 use crate::components::circular_progress::CircularProgress;
 

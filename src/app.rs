@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos::context::Provider;
-use leptos_router::*;
+use leptos_router::components::{Router, Routes, Route};
+use leptos_router::StaticSegment;
 
 use crate::pages::settings::ConfigResource;
 use crate::pages::task::TaskResource;
@@ -19,9 +20,9 @@ pub fn App() -> impl IntoView {
                     <main class="min-h-screen pb-20 bg-gray-50">
                         <div class="container mx-auto px-4 py-6 max-w-lg">
                             <Routes fallback=|| "Page not found.">
-                                <Route path="/" view=TimerPage/>
-                                <Route path="/tasks" view=TaskPage/>
-                                <Route path="/settings" view=SettingsPage/>
+                                <Route path=StaticSegment("") view=TimerPage/>
+                                <Route path=StaticSegment("tasks") view=TaskPage/>
+                                <Route path=StaticSegment("settings") view=SettingsPage/>
                             </Routes>
                         </div>
                         <Navigation />

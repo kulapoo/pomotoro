@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use crate::pages::timer::Phase;
+use pomotoro_domain::Phase;
 
 #[component]
 pub fn CircularProgress(

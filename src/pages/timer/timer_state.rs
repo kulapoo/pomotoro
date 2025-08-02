@@ -2,10 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use crate::store::{setup_timer_events, setup_phase_complete_events};
-use pomotoro_domain::{TimerStateWithTask, TimerState, Phase, TimerStatus, events};
-
-// Re-export domain types for timer components
-pub use pomotoro_domain::{Phase, TimerStatus, TimerState};
+use pomotoro_domain::{TimerStateWithTask, TimerState, events};
 
 #[wasm_bindgen]
 extern "C" {

@@ -13,7 +13,7 @@ pub fn PageHeader(
                     class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
                     on:click=move |_| {
                         if let Some(callback) = on_settings_click {
-                            callback.call(());
+                            callback.run(());
                         }
                     }
                 >
