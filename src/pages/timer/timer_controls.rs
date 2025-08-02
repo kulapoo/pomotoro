@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
-use crate::store::{TimerState, TimerStatus};
+use super::timer_state::{TimerState, TimerStatus};
 use pomotoro_domain::events;
 
 #[wasm_bindgen]
@@ -48,9 +48,9 @@ pub fn TimerControls(
     };
 
     view! {
-        <div class="timer-controls">
+        <div class="flex gap-4 justify-center my-8 flex-wrap">
             <button
-                class="control-btn primary"
+                class="px-6 py-3 md:px-6 md:py-3 px-5 py-2.5 border-none rounded-xl text-base md:text-base text-sm font-semibold cursor-pointer transition-all duration-200 shadow-lg min-w-20 md:min-w-20 min-w-18 bg-gradient-to-br from-green-500 to-green-600 text-white hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)] active:translate-y-0"
                 on:click=start_pause_timer
             >
                 {move || match timer_state.get().status() {
@@ -60,25 +60,25 @@ pub fn TimerControls(
             </button>
 
             <button
-                class="control-btn secondary"
+                class="px-6 py-3 md:px-6 md:py-3 px-5 py-2.5 border-none rounded-xl text-base md:text-base text-sm font-semibold cursor-pointer transition-all duration-200 shadow-lg min-w-20 md:min-w-20 min-w-18 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 hover:-translate-y-0.5 active:translate-y-0"
                 on:click=reset_timer
             >
                 "Reset"
             </button>
 
             <button
-                class="control-btn secondary"
+                class="px-6 py-3 md:px-6 md:py-3 px-5 py-2.5 border-none rounded-xl text-base md:text-base text-sm font-semibold cursor-pointer transition-all duration-200 shadow-lg min-w-20 md:min-w-20 min-w-18 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 hover:-translate-y-0.5 active:translate-y-0"
                 on:click=skip_phase
             >
                 "Skip"
             </button>
         </div>
 
-        <div class="status-indicator">
-            <span class={move || format!("status-badge {}", match timer_state.get().status() {
-                TimerStatus::Running => "running",
-                TimerStatus::Paused => "paused",
-                TimerStatus::Stopped => "stopped"
+        <div class="mt-5">
+            <span class={move || format!("inline-block px-4 py-1.5 rounded-2xl text-sm font-semibold uppercase tracking-wider {}", match timer_state.get().status() {
+                TimerStatus::Running => "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700",
+                TimerStatus::Paused => "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700",
+                TimerStatus::Stopped => "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
             })}>
                 {move || match timer_state.get().status() {
                     TimerStatus::Running => "Running",

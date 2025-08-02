@@ -4,7 +4,7 @@ use leptos::task::spawn_local;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 use pomotoro_domain::events;
-use crate::components::TaskResource;
+use super::TaskResource;
 
 #[wasm_bindgen]
 extern "C" {
@@ -128,22 +128,23 @@ pub fn TaskCreationForm(
     };
 
     view! {
-        <div class="task-creation-form">
-            <h4>"Create New Task"</h4>
+        <div class="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl p-4 mb-4">
+            <h4 class="m-0 mb-4 text-base font-semibold text-gray-900 dark:text-white">"Create New Task"</h4>
             
-            <div class="form-actions" style="margin-bottom: 20px;">
+            <div class="flex justify-end mb-5">
                 <button
-                    class="create-btn"
+                    class="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5"
                     on:click=test_backend
                 >
                     "Test Backend"
                 </button>
             </div>
             
-            <div class="form-group">
-                <label>"Task Name"</label>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Task Name"</label>
                 <input
                     type="text"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
                     placeholder="Enter task name..."
                     prop:value=move || task_name.get()
                     on:input=move |ev| {
@@ -152,9 +153,10 @@ pub fn TaskCreationForm(
                 />
             </div>
             
-            <div class="form-group">
-                <label>"Description (Optional)"</label>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Description (Optional)"</label>
                 <textarea
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors resize-y min-h-15 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
                     placeholder="Enter task description..."
                     prop:value=move || task_description.get()
                     on:input=move |ev| {
@@ -163,12 +165,13 @@ pub fn TaskCreationForm(
                 ></textarea>
             </div>
             
-            <div class="form-group">
-                <label>"Max Sessions"</label>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Max Sessions"</label>
                 <input
                     type="number"
                     min="1"
                     max="20"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
                     prop:value=move || max_sessions.get().to_string()
                     on:input=move |ev| {
                         if let Ok(value) = event_target_value(&ev).parse::<u8>() {
@@ -180,10 +183,11 @@ pub fn TaskCreationForm(
                 />
             </div>
             
-            <div class="form-group">
-                <label>"Tags (comma-separated)"</label>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Tags (comma-separated)"</label>
                 <input
                     type="text"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
                     placeholder="work, personal, urgent..."
                     prop:value=move || tags_input.get()
                     on:input=move |ev| {
@@ -192,9 +196,9 @@ pub fn TaskCreationForm(
                 />
             </div>
             
-            <div class="form-actions">
+            <div class="flex gap-2 justify-end mt-4">
                 <button
-                    class="create-btn"
+                    class="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                     prop:disabled=move || is_creating.get() || task_name.get().trim().is_empty()
                     on:click=create_task
                 >
@@ -202,7 +206,7 @@ pub fn TaskCreationForm(
                 </button>
                 
                 <button
-                    class="cancel-btn"
+                    class="bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-500 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-gray-200 dark:hover:bg-slate-500 disabled:opacity-60 disabled:cursor-not-allowed"
                     prop:disabled=move || is_creating.get()
                     on:click=move |_| on_close.run(())
                 >

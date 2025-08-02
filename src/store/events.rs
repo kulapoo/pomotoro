@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::closure::Closure;
 use pomotoro_domain::events;
 
-use super::timer_state::TimerState;
+use pomotoro_domain::TimerState;
 
 #[wasm_bindgen]
 extern "C" {
@@ -23,9 +23,9 @@ pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
                     }
                 }
             }) as Box<dyn Fn(JsValue)>);
-            
+
             let _ = listen(events::timer::UPDATE_STATE, timer_update_callback.as_ref().unchecked_ref()).await;
-            
+
             timer_update_callback.forget();
         });
     });
@@ -40,9 +40,9 @@ pub fn setup_phase_complete_events() {
                     web_sys::console::log_2(&JsValue::from_str("Phase transition:"), &payload);
                 }
             }) as Box<dyn Fn(JsValue)>);
-            
+
             let _ = listen(events::timer::PHASE_COMPLETE, phase_complete_callback.as_ref().unchecked_ref()).await;
-            
+
             phase_complete_callback.forget();
         });
     });

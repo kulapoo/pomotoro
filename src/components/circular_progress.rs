@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use crate::store::Phase;
+use crate::pages::timer::Phase;
 
 #[component]
 pub fn CircularProgress(
@@ -9,11 +9,10 @@ pub fn CircularProgress(
     let stroke_dasharray = 2.0 * std::f64::consts::PI * 90.0;
 
     view! {
-        <div class="circular-progress">
+        <div class="relative">
             <svg class="progress-ring" width="200" height="200">
                 <circle
-                    class="progress-ring-circle-bg"
-                    stroke="#e5e7eb"
+                    class="stroke-gray-200 dark:stroke-gray-600"
                     stroke-width="8"
                     fill="transparent"
                     r="90"
