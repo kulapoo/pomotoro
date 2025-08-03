@@ -1,34 +1,46 @@
 use leptos::prelude::*;
 use leptos::context::Provider;
-use leptos_router::components::{Router, Routes, Route};
-use leptos_router::StaticSegment;
 
 use crate::pages::settings::ConfigResource;
 use crate::pages::task::TaskResource;
 use crate::pages::{TimerPage, TaskPage, SettingsPage};
-use crate::components::Navigation;
+use crate::components::{Sidebar, NavigationSection};
 
 #[component]
 pub fn App() -> impl IntoView {
     let config_resource = ConfigResource::new();
     let task_resource = TaskResource::new();
+    
+    // Navigation state management
+    let (current_section, set_current_section) = signal(NavigationSection::Timer);
+
+    // Render content based on current section
+    let render_content = move || {
+        match current_section.get() {
+            NavigationSection::Timer => view! { <TimerPage /> }.into_any(),
+            NavigationSection::Tasks => view! { <TaskPage /> }.into_any(),
+            NavigationSection::Settings => view! { <SettingsPage /> }.into_any(),
+        }
+    };
 
     view! {
-        <Router>
-            <Provider value=config_resource>
-                <Provider value=task_resource>
-                    <main class="min-h-screen pb-20 bg-gray-50">
-                        <div class="container mx-auto px-4 py-6 max-w-lg">
-                            <Routes fallback=|| "Page not found.">
-                                <Route path=StaticSegment("") view=TimerPage/>
-                                <Route path=StaticSegment("tasks") view=TaskPage/>
-                                <Route path=StaticSegment("settings") view=SettingsPage/>
-                            </Routes>
+        <Provider value=config_resource>
+            <Provider value=task_resource>
+                <div class="min-h-screen" style="display: flex;">
+                    // Sidebar navigation
+                    <Sidebar 
+                        current_section=current_section
+                        set_current_section=set_current_section
+                    />
+                    
+                    // Main content area
+                    <main class="main-content">
+                        <div class="content-area">
+                            {render_content}
                         </div>
-                        <Navigation />
                     </main>
-                </Provider>
+                </div>
             </Provider>
-        </Router>
+        </Provider>
     }
 }

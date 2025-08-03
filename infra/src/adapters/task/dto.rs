@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use domain::{Task, TaskId, TaskStatus, Result};
-use crate::infrastructure::persistence::task_config_dto::TaskConfigDto;
+use super::config_dto::TaskConfigDto;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskAudioConfigDto {

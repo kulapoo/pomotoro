@@ -1,4 +1,4 @@
-use crate::infrastructure::RodioAudioService;
+use crate::adapters::RodioAudioService;
 use domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioService};
 use tauri::State;
 use std::sync::Mutex;

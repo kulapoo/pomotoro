@@ -1,7 +1,7 @@
 use tauri::State;
 use domain::{Task, TaskId, TaskConfig, AudioConfig};
 use usecases::task::*;
-use crate::infrastructure::{TaskRepositoryArc, EventPublisherArc};
+use crate::adapters::{TaskRepositoryArc, EventPublisherArc};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {

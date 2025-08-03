@@ -38,16 +38,21 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn get_all(&self) -> Result<Vec<Task>> {
         let tasks = self.tasks.lock().unwrap();
-        Ok(tasks.values().cloned().collect())
+        let mut task_list: Vec<Task> = tasks.values().cloned().collect();
+        task_list.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(task_list)
     }
 
     async fn get_active_tasks(&self) -> Result<Vec<Task>> {
         let tasks = self.tasks.lock().unwrap();
-        Ok(tasks
+        let mut active_tasks: Vec<Task> = tasks
             .values()
             .filter(|task| task.status != TaskStatus::Completed)
             .cloned()
-            .collect())
+            .collect();
+        // Sort by creation time for consistent ordering
+        active_tasks.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(active_tasks)
     }
 
     async fn update(&self, task: Task) -> Result<()> {

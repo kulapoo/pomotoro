@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use infra::infrastructure::{TimerService, InMemoryTaskRepository};
+use infra::adapters::{TimerService, InMemoryTaskRepository};
 use domain::TaskRepository;
 
 /// Timer domain test context

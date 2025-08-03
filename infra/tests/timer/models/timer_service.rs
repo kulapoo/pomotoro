@@ -1,4 +1,4 @@
-use infra::infrastructure::TimerService;
+use infra::adapters::TimerService;
 use domain::{Phase, TimerStatus, Task};
 use std::sync::Arc;
 use std::time::Duration;

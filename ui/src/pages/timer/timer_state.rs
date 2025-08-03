@@ -20,7 +20,7 @@ impl TimerPageState {
     pub fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
         let (timer_with_task, set_timer_with_task) = signal(TimerStateWithTask::new(TimerState::default(), None));
-        
+
         // Initial load of timer state
         Effect::new(move |_| {
             spawn_local(async move {
@@ -35,7 +35,7 @@ impl TimerPageState {
         // Setup event listeners
         setup_timer_events(set_timer_state);
         setup_phase_complete_events();
-        
+
         Self {
             timer_state,
             timer_with_task,

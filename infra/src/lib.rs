@@ -1,10 +1,10 @@
 pub mod controllers;
-pub mod infrastructure;
+pub mod adapters;
 
 use tauri::Manager;
 use controllers::*;
-use infrastructure::{
-    TimerService, InMemoryTaskRepository, TaskRepositoryArc, 
+use adapters::{
+    TimerService, InMemoryTaskRepository, TaskRepositoryArc,
     FileConfigRepo, ConfigRepository, RodioAudioService,
     create_event_publisher_with_bus, EventPublisherArc, DomainEventBus
 };
@@ -32,10 +32,10 @@ pub fn run() {
             app.manage(Mutex::new(audio_service));
 
             // Create composite event publisher for domain events
-            let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) = 
+            let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
                 create_event_publisher_with_bus(app.handle().clone());
             app.manage(event_publisher.clone());
-            
+
             // Register event handlers
             let task_repo_for_handler = task_repository.clone();
             let event_pub_for_handler = event_publisher.clone();
@@ -43,7 +43,7 @@ pub fn run() {
                 let task_repo = task_repo_for_handler.clone();
                 let event_pub = event_pub_for_handler.clone();
                 let event_clone = event.clone();
-                
+
                 // Handle the event asynchronously
                 tokio::spawn(async move {
                     if let Err(e) = handle_work_session_completed(&task_repo, &event_pub, &event_clone).await {
@@ -57,12 +57,28 @@ pub fn run() {
                 event_publisher.clone(),
                 Some(app.handle().clone())
             );
-            app.manage(timer_service);
 
-            // Manage the task repository for command handlers
+            let task_repo_bootstrap_clone = task_repository.clone();
+            let timer_service_bootstrap_clone = timer_service.clone();
+
+            tauri::async_runtime::spawn(async move {
+                match task_repo_bootstrap_clone.get_active_tasks().await {
+                    Ok(tasks) => {
+
+                        if let Some(initial_task) = tasks.first().clone() {
+                            let _ = timer_service_bootstrap_clone.switch_task(initial_task.id, Some(initial_task));
+                        }
+                    },
+                    Err(e) => eprintln!("Failed to get active tasks: {}", e),
+                }
+            });
+
+            app.manage(timer_service.clone());
+
             app.manage(task_repository.clone());
 
-            // Dependencies are managed and injected into controllers as needed
+
+
 
             Ok(())
         })

@@ -1,5 +1,5 @@
 use std::time::Duration;
-use infra::infrastructure::ConfigBuilder;
+use infra::adapters::ConfigBuilder;
 use domain::{NotificationPosition, TaskCyclingBehavior, Theme};
 
 fn main() {

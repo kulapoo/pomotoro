@@ -5,7 +5,7 @@ use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 use async_trait::async_trait;
 
-use crate::infrastructure::notifications::send_phase_notification;
+use crate::adapters::notifications::send_phase_notification;
 use domain::{TimerState, Result as DomainResult};
 use domain::timer::TimerService as DomainTimerService;
 use domain::{
@@ -13,7 +13,7 @@ use domain::{
     WorkSessionCompleted, TaskId
 };
 use domain::Task;
-use crate::infrastructure::EventPublisherArc;
+use crate::adapters::EventPublisherArc;
 use domain::events::timer;
 
 pub struct TimerService {

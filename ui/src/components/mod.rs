@@ -2,7 +2,9 @@ pub mod circular_progress;
 pub mod screen_blocker;
 pub mod navigation;
 pub mod page_header;
+pub mod sidebar;
 
 // Re-export only when needed
 pub use navigation::Navigation;
 pub use page_header::PageHeader;
+pub use sidebar::{Sidebar, NavigationSection};

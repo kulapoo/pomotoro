@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use domain::{Config, Result};
-use crate::infrastructure::persistence::task_config_dto::TaskConfigDto;
+use crate::adapters::task::config_dto::TaskConfigDto;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfigDto {

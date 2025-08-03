@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
-use infra::infrastructure::DefaultAudioAssetProvider;
+use infra::adapters::DefaultAudioAssetProvider;
 
 pub struct MockAudioManager {
     library: AudioLibrary,

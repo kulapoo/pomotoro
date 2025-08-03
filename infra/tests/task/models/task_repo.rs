@@ -1,4 +1,4 @@
-use infra::infrastructure::InMemoryTaskRepository;
+use infra::adapters::InMemoryTaskRepository;
 use domain::{Task, TaskBuilder, TaskRepository, TaskStatus, Error as TaskError};
 use domain::TaskId;
 use std::sync::Arc;

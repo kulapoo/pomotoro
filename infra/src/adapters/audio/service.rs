@@ -1,5 +1,5 @@
 use domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError, AudioService, Result};
-use crate::infrastructure::audio_asset_provider::DefaultAudioAssetProvider;
+use super::asset_provider::DefaultAudioAssetProvider;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 use std::collections::HashMap;
 use std::fs::File;

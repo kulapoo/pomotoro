@@ -16,6 +16,8 @@ wasm-bindgen-futures = { workspace = true }
 js-sys = { workspace = true }
 web-sys = { workspace = true }
 
+# UI components - using standard HTML with CSS styling
+
 # Serialization for communication with backend
 serde = { workspace = true }
 serde_json = { workspace = true }
