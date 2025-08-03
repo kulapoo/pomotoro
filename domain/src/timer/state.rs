@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{TaskId, Timer, Result, Phase, TimerStatus, TimerConfiguration};
+use crate::{Phase, Result, TaskId, Timer, TimerConfiguration, TimerStatus};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TimerState {
     pub timer: Timer,
     pub active_task_id: Option<TaskId>,
@@ -11,10 +10,10 @@ pub struct TimerState {
     pub task_session_count: u32,
 }
 
-
 impl TimerState {
     pub fn get_phase_duration(&self) -> u32 {
-        self.configuration.get_phase_duration_seconds(self.timer.phase)
+        self.configuration
+            .get_phase_duration_seconds(self.timer.phase)
     }
 
     pub fn next_phase(&mut self) -> Result<(Phase, Phase)> {
@@ -22,7 +21,9 @@ impl TimerState {
             self.task_session_count += 1;
         }
 
-        let (old_phase, new_phase) = self.timer.next_phase(self.configuration.sessions_until_long_break)?;
+        let (old_phase, new_phase) = self
+            .timer
+            .next_phase(self.configuration.sessions_until_long_break)?;
         let duration = self.get_phase_duration();
         self.timer.remaining_seconds = duration;
 
@@ -99,7 +100,7 @@ impl TimerState {
         let old_duration = self.get_phase_duration();
         self.configuration = configuration;
         let new_duration = self.get_phase_duration();
-        
+
         // Only update remaining time if timer is stopped and duration changed
         if self.timer.status == TimerStatus::Stopped && old_duration != new_duration {
             self.timer.remaining_seconds = new_duration;
@@ -107,12 +108,15 @@ impl TimerState {
     }
 
     /// Switch task with new configuration.
-    pub fn switch_task_with_config(&mut self, new_task_id: TaskId, configuration: TimerConfiguration) -> Result<()> {
+    pub fn switch_task_with_config(
+        &mut self,
+        new_task_id: TaskId,
+        configuration: TimerConfiguration,
+    ) -> Result<()> {
         // Allow task switching during running sessions (preserves timer state)
         self.active_task_id = Some(new_task_id);
         self.task_session_count = 0;
         self.configuration = configuration;
-
         // Only reset timer if not running or in break cycle
         if self.timer.status != TimerStatus::Running && !self.timer.is_break_cycle {
             let duration = self.get_phase_duration();
@@ -120,5 +124,32 @@ impl TimerState {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_serialize_and_deserialize_timer_state() {
+        let state = TimerState::default();
+        
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(&state).unwrap();
+        println!("Serialized TimerState:\n{}", json);
+        
+        // Deserialize back
+        let deserialized: TimerState = serde_json::from_str(&json).unwrap();
+        
+        // Verify structure matches
+        assert_eq!(state.timer.status, deserialized.timer.status);
+        assert_eq!(state.timer.phase, deserialized.timer.phase);
+        assert_eq!(state.timer.remaining_seconds, deserialized.timer.remaining_seconds);
+        assert_eq!(state.timer.session_count, deserialized.timer.session_count);
+        assert_eq!(state.timer.is_break_cycle, deserialized.timer.is_break_cycle);
+        assert_eq!(state.active_task_id, deserialized.active_task_id);
+        assert_eq!(state.task_session_count, deserialized.task_session_count);
+        assert_eq!(state.configuration.work_duration, deserialized.configuration.work_duration);
     }
 }

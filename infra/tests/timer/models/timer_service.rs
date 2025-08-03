@@ -1,5 +1,5 @@
+use domain::{Phase, Task, TimerStatus};
 use infra::adapters::TimerService;
-use domain::{Phase, TimerStatus, Task};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -34,12 +34,18 @@ impl TimerTestService {
         Ok(())
     }
 
-    pub async fn reset_current_phase(&self, task: Option<&Task>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn reset_current_phase(
+        &self,
+        task: Option<&Task>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let _ = self.service.reset_current_phase(task).await;
         Ok(())
     }
 
-    pub async fn skip_to_next_phase(&self, task: Option<&Task>) -> Result<(Phase, Phase), Box<dyn std::error::Error>> {
+    pub async fn skip_to_next_phase(
+        &self,
+        task: Option<&Task>,
+    ) -> Result<(Phase, Phase), Box<dyn std::error::Error>> {
         let result = self.service.skip_to_next_phase(task).await;
         Ok(result?)
     }

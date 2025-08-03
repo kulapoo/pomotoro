@@ -19,6 +19,7 @@ tauri-plugin-opener = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-fs = { workspace = true }
 tauri-plugin-shell = { workspace = true }
+tauri-plugin-devtools = { workspace = true }
 rodio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
