@@ -67,7 +67,7 @@ impl Task {
 #### Application Layer Rules
 ```rust
 // ✅ CORRECT: Use case with dependency injection
-// In application/task/complete_task.rs
+// In usecases/task/complete_task.rs
 pub async fn complete_task(
     task_repo: &impl TaskRepository,  // trait from domain
     event_bus: &impl EventBus,        // trait from domain
@@ -193,7 +193,7 @@ impl Entity {
 
 #### Use Case Template
 ```rust
-// application/[context]/[use_case].rs
+// usecases/[context]/[use_case].rs
 use domain::prelude::*;
 
 /// Use case orchestrating domain logic
@@ -391,6 +391,25 @@ When errors are encountered:
    }
    ```
 
+### 11. Import Guidelines: Avoid Glob Imports (`use module::*`)
+
+**Rule**: Don't use `use module::*;` in production code.
+
+**Why**:
+
+- Unclear item origins
+- Namespace pollution
+- Naming conflicts
+- Hard to refactor
+
+**Exceptions**:
+
+- Test modules: `use super::*;`
+- Library preludes (e.g., `tokio::prelude::*`)
+- Team-designed prelude modules
+
+**Enforcement**: Enable `clippy::wildcard_imports`
+
 ## Response Priority Matrix
 
 When generating code, prioritize:
@@ -400,6 +419,40 @@ When generating code, prioritize:
 3. **Evolution Readiness** - Design for future changes
 4. **Idiomatic Rust** - Follow community patterns
 5. **Performance** - Optimize when measured
+
+## Infrastructure Controllers: Client Layer
+
+Controllers in `@infra/src/controllers/` are **clients** in Clean Architecture - they orchestrate use cases, never contain business logic.
+
+```rust
+// ✅ CORRECT: Pure orchestration
+pub struct TimerController {
+    timer_service: Arc<dyn TimerService>,
+    task_repo: Arc<dyn TaskRepository>,
+    event_publisher: Arc<dyn EventPublisher>,
+}
+
+impl TimerController {
+    pub async fn start(&self, cmd: StartCmd) -> Result<Response, Error> {
+        let domain_cmd = cmd.validate_and_transform()?;
+        let result = start_timer_session(
+            &self.timer_service,
+            &self.task_repo, 
+            &self.event_publisher,
+            domain_cmd
+        ).await?;
+        Ok(Response::from(result))
+    }
+}
+
+// ❌ WRONG: Business logic in controller
+impl TimerController {
+    pub async fn start(&self, cmd: StartCmd) -> Result<Response, Error> {
+        let timer = Timer::new(cmd.duration); // NO! Domain logic
+        self.repo.save(&timer).await?; // NO! Direct persistence
+    }
+}
+```
 
 ## Final Directive
 

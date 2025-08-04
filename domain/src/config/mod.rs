@@ -8,10 +8,10 @@ pub mod task_defaults;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_repository;
 
-pub use appearance::*;
-pub use audio::*;
-pub use config::*;
-pub use general::*;
-pub use notification::*;
+pub use appearance::{Theme, AppearanceConfig};
+pub use audio::AudioConfig;
+pub use config::Config;
+pub use general::{TaskCyclingBehavior, GeneralConfig};
+pub use notification::{NotificationPosition, NotificationConfig};
 pub use repo::ConfigRepository;
-pub use task_defaults::*;
+pub use task_defaults::TaskDefaults;

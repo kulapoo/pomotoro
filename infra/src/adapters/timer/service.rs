@@ -12,7 +12,6 @@ use domain::timer::TimerService as DomainTimerService;
 use domain::Task;
 use domain::{
     DefaultPhaseTransitionService, Phase, PhaseTransitionService, TaskId, TimerStatus,
-    WorkSessionCompleted,
 };
 use domain::{Result as DomainResult, TimerState};
 
@@ -173,19 +172,8 @@ impl TimerService {
                     };
 
                     if let Ok(result) = transition_result {
-                        // Publish work session completed event if work phase was completed
-                        if result.work_session_completed && task.is_some() {
-                            let task_ref = task.as_ref().unwrap();
-                            let state = state_clone.read().await;
-                            let work_session_event = WorkSessionCompleted::new(
-                                Some(task_ref.id.clone()),
-                                1500, // 25 minutes work session default duration
-                                state.session_count(),
-                                task_ref.current_sessions as u32 + 1, // increment since we just completed
-                                1,                                    // version
-                            );
-                            event_publisher.publish(Box::new(work_session_event));
-                        }
+                        // Note: Business event publishing moved to use cases layer
+                        // Infrastructure only handles technical concerns
 
                         let state = state_clone.read().await;
                         send_phase_notification(&app_handle, &result.old_phase, &result.new_phase);
@@ -273,18 +261,8 @@ impl TimerService {
             .transition_to_next_phase(&mut *state)
             .map_err(|e| e.to_string())?;
 
-        // Publish work session completed event if work phase was completed
-        if result.work_session_completed && task.is_some() {
-            let task_ref = task.unwrap();
-            let work_session_event = WorkSessionCompleted::new(
-                Some(task_ref.id.clone()),
-                1500, // 25 minutes work session default duration
-                state.session_count(),
-                task_ref.current_sessions as u32 + 1, // increment since we just completed
-                1,                                    // version
-            );
-            self.event_publisher.publish(Box::new(work_session_event));
-        }
+        // Note: Business event publishing moved to use cases layer
+        // Infrastructure only handles technical timer operations
 
         let _ = state.set_status(TimerStatus::Stopped);
         Ok((result.old_phase, result.new_phase))

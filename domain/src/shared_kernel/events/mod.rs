@@ -1,9 +1,11 @@
 mod domain_event;
 mod event_publisher;
 
-pub use event_publisher::*;
+pub use event_publisher::{EventPublisher, NoOpEventPublisher};
 
-pub use domain_event::*;
+#[cfg(any(test, feature = "test-utils"))]
+pub use event_publisher::MockEventPublisher;
+pub use domain_event::DomainEvent;
 /// # EventSourced Trait
 ///
 /// This trait defines the contract for domain aggregates that generate and track

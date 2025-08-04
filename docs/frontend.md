@@ -7,7 +7,7 @@ Pomotoro's frontend is built with **Leptos 0.8.3** using Client-Side Rendering (
 ## Technology Stack
 
 - **UI Framework**: Leptos (Rust-based reactive UI)
-- **Runtime**: WebAssembly (WASM) 
+- **Runtime**: WebAssembly (WASM)
 - **Native Integration**: Tauri (Rust-based desktop app framework)
 - **State Management**: Leptos Signals + Resources
 - **Domain Layer**: `pomotoro-domain` crate for business logic
@@ -15,7 +15,7 @@ Pomotoro's frontend is built with **Leptos 0.8.3** using Client-Side Rendering (
 ## Architecture Principles
 
 1. **Domain-First Design**: UI components depend on domain types and contracts
-2. **Reactive State Management**: Leptos signals for fine-grained reactivity  
+2. **Reactive State Management**: Leptos signals for fine-grained reactivity
 3. **Component Composition**: Reusable components with clear boundaries
 4. **Async-First**: All domain interactions are async via Tauri commands
 5. **Type Safety**: Full type safety from domain to UI layer
@@ -27,20 +27,20 @@ src/
 ├── app.rs                  # Root application component
 ├── main.rs                 # WASM entry point and setup
 ├── pages/                  # Page-level components and routing
-│   ├── timer/         
+│   ├── timer/
 │   │   ├── timer_page.rs       # Main timer page component
 │   │   ├── timer_state.rs      # Page-specific state management
 │   │   ├── timer_display.rs    # Timer display component
 │   │   ├── timer_controls.rs   # Timer control buttons
 │   │   ├── session_counter.rs  # Session progress display
 │   │   └── phase_indicator.rs  # Work/break phase indicator
-│   └── task/          
+│   └── task/
 │       ├── task_page.rs        # Main task management page
 │       ├── task_list.rs        # Task list component
 │       ├── task_item.rs        # Individual task item
 │       ├── task_form.rs        # Task creation/edit form
 │       └── task_filters.rs     # Task filtering and search
-├── components/             # Reusable UI components (domain-agnostic)
+├── components/
 │   ├── circular_progress.rs   # Generic progress indicator
 │   ├── modal.rs               # Generic modal component
 │   ├── button.rs              # Styled button variants
@@ -50,13 +50,6 @@ src/
 │       ├── input.rs
 │       ├── select.rs
 │       └── checkbox.rs
-├── domain-components/      # Shared domain-aware components
-│   └── settings/           # Settings components (shared across pages)
-│       ├── mod.rs
-│       ├── timer_config.rs     # Timer configuration UI
-│       ├── audio_config.rs     # Audio settings UI
-│       ├── global_settings_panel.rs  # Global app settings
-│       └── task_settings_modal.rs    # Task-specific settings
 └── store/                  # State management and events
     ├── mod.rs
     ├── timer_state.rs      # Timer state management
@@ -105,7 +98,7 @@ pub fn TimerDisplay(
 #### Task Page (`pages/task/`)
 ```rust
 // task_page.rs - Main task management page
-#[component] 
+#[component]
 pub fn TaskPage() -> impl IntoView {
     view! {
         <div class="task-page">
@@ -154,9 +147,9 @@ pub fn Button(
 ) -> impl IntoView {
     let variant = variant.unwrap_or(ButtonVariant::Primary);
     let disabled = disabled.unwrap_or(false);
-    
+
     view! {
-        <button 
+        <button
             class=format!("btn btn-{:?}", variant).to_lowercase()
             disabled=disabled
             on:click=move |_| {
@@ -181,39 +174,6 @@ Shared domain-aware components that understand business logic and can be reused 
 - Reusable across multiple pages
 - Encapsulate domain-specific UI logic
 - Handle domain validation and business rules
-
-**Current Structure:**
-
-#### Settings (`domain-components/settings/`)
-Settings components are shared across pages since timer settings, task settings, and global settings can be accessed from different parts of the application.
-
-```rust
-// settings/timer_config.rs
-#[component]
-pub fn TimerConfig(
-    #[prop(optional)] task_id: Option<TaskId>,
-) -> impl IntoView {
-    // Timer configuration component that can be used in:
-    // - Global settings page
-    // - Task-specific settings modal
-    // - Timer page settings panel
-}
-
-// settings/global_settings_panel.rs  
-#[component]
-pub fn GlobalSettingsPanel() -> impl IntoView {
-    // Global settings that can be opened from any page
-}
-```
-
-**Component Promotion:**
-Components start in their respective page directories. When a component proves useful across multiple pages, it can be promoted to `domain-components/`:
-
-```rust
-// Before: pages/timer/session_counter.rs
-// After promotion: domain-components/timer/session_counter.rs
-// Can now be used in timer page, task page, and dashboard
-```
 
 ## State Management
 
@@ -255,11 +215,11 @@ impl ConfigResource {
         let timer_config = Resource::new(|| (), |_| async {
             invoke_command(events::config::GET_TIMER_CONFIG, JsValue::NULL).await
         });
-        
+
         let audio_config = Resource::new(|| (), |_| async {
-            invoke_command(events::config::GET_AUDIO_CONFIG, JsValue::NULL).await  
+            invoke_command(events::config::GET_AUDIO_CONFIG, JsValue::NULL).await
         });
-        
+
         Self { timer_config, audio_config }
     }
 }
@@ -282,10 +242,10 @@ impl TimerPageState {
         let (timer_state, set_timer_state) = signal(TimerState::default());
         let (timer_with_task, set_timer_with_task) = signal(TimerStateWithTask::new());
         let (is_settings_open, set_is_settings_open) = signal(false);
-        
+
         // Setup event listeners
         setup_timer_events(set_timer_state);
-        
+
         Self {
             timer_state,
             timer_with_task,
@@ -309,9 +269,9 @@ extern "C" {
 }
 
 // Standardized command invocation
-pub async fn invoke_command<T>(command: &str, args: JsValue) -> Result<T, String> 
-where 
-    T: serde::de::DeserializeOwned 
+pub async fn invoke_command<T>(command: &str, args: JsValue) -> Result<T, String>
+where
+    T: serde::de::DeserializeOwned
 {
     let result = invoke(command, args).await;
     serde_wasm_bindgen::from_value(result)
@@ -330,7 +290,7 @@ Frontend components work directly with domain types:
 
 ```rust
 use pomotoro_domain::{
-    TimerState, TimerStateWithTask, Task, TaskId, 
+    TimerState, TimerStateWithTask, Task, TaskId,
     TaskStatus, Phase, TimerStatus
 };
 
@@ -372,10 +332,10 @@ pub fn TimerDisplay(
 pub fn ComponentName(
     // Required props first
     #[prop(into)] required_prop: String,
-    
+
     // Optional props with defaults
     #[prop(optional)] optional_prop: Option<bool>,
-    
+
     // Callbacks for events
     #[prop(optional)] on_event: Option<Callback<EventData>>,
 ) -> impl IntoView {
@@ -406,7 +366,7 @@ pub use page_state::NewPageState;
 #[component]
 pub fn NewPage() -> impl IntoView {
     let page_state = NewPageState::new();
-    
+
     view! {
         <div class="new-page">
             // Page content
@@ -445,7 +405,7 @@ mv src/pages/timer/session_counter.rs src/domain-components/timer/
 // Before
 use crate::pages::timer::SessionCounter;
 
-// After  
+// After
 use crate::domain_components::timer::SessionCounter;
 ```
 
@@ -523,12 +483,12 @@ pub async fn handle_command_error<T>(
 mod tests {
     use super::*;
     use leptos::*;
-    
+
     #[test]
     fn test_timer_display_renders() {
         let timer_state = create_signal(TimerState::default()).0;
         let timer_with_task = create_signal(TimerStateWithTask::new()).0;
-        
+
         let view = TimerDisplay { timer_state, timer_with_task };
         // Test rendering logic
     }
@@ -559,7 +519,7 @@ Test component interaction with domain layer through Tauri commands.
 The current codebase has most components in `src/components/`. The migration path:
 
 1. **Phase 1**: Move page-specific components to appropriate page directories
-2. **Phase 2**: Keep truly reusable components in `components/`  
+2. **Phase 2**: Keep truly reusable components in `components/`
 3. **Phase 3**: Move settings components to `domain-components/settings/`
 4. **Phase 4**: Create new pages and promote components as they become reusable
 

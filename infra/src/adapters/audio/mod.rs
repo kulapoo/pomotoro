@@ -7,5 +7,5 @@
 pub mod service;
 pub mod asset_provider;
 
-pub use service::*;
-pub use asset_provider::*;
+pub use service::RodioAudioService;
+pub use asset_provider::{DefaultAudioAssetProvider, BG_SOUNDS};

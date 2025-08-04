@@ -13,6 +13,10 @@ pub use shared_kernel::{
     Result, Error, duration_serde
 };
 
+// Re-export test utilities for events
+#[cfg(any(test, feature = "test-utils"))]
+pub use shared_kernel::MockEventPublisher;
+
 // Re-export task domain
 pub use task::{
     Task, TaskBuilder, TaskId, TaskMarker, TaskConfig, TaskStatus, TaskRepository,
@@ -40,7 +44,10 @@ pub use timer::{
 };
 
 // Re-export config domain
-pub use config::*;
+pub use config::{
+    Config, TaskDefaults, AudioConfig, GeneralConfig, NotificationConfig, AppearanceConfig,
+    Theme, TaskCyclingBehavior, NotificationPosition, ConfigRepository
+};
 
 // Re-export audio domain
 pub use audio::{AudioError, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioAsset, AudioCategory, AudioService};

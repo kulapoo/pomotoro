@@ -1,4 +1,4 @@
-use domain::{TaskRepository, TaskId, Result, Error};
+use domain::{TaskRepository, TaskId, Result, Error, EventPublisher};
 use domain::timer::TimerService;
 use std::sync::Arc;
 
@@ -23,9 +23,11 @@ pub struct SwitchTimerTaskCmd {
 /// 
 /// - TimerService: For timer operations (domain abstraction)
 /// - TaskRepository: For task validation and retrieval
+/// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn switch_timer_task(
     timer_service: &Arc<dyn TimerService + Send + Sync>,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTimerTaskCmd,
 ) -> Result<()> {
     let task_id = TaskId::from_string(&cmd.task_id)
@@ -123,25 +125,31 @@ mod tests {
         }
     }
     
-    async fn setup() -> (Arc<dyn TimerService + Send + Sync>, Arc<dyn TaskRepository + Send + Sync>, Task) {
+    async fn setup() -> (
+        Arc<dyn TimerService + Send + Sync>, 
+        Arc<dyn TaskRepository + Send + Sync>,
+        Arc<dyn EventPublisher + Send + Sync>,
+        Task
+    ) {
         let timer_service: Arc<dyn TimerService + Send + Sync> = Arc::new(MockTimerService::new());
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(domain::NoOpEventPublisher);
         
         let task = Task::new("Test Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
-        (timer_service, task_repo, task)
+        (timer_service, task_repo, event_publisher, task)
     }
     
     #[tokio::test]
     async fn should_switch_timer_task_successfully() {
-        let (timer_service, task_repo, task) = setup().await;
+        let (timer_service, task_repo, event_publisher, task) = setup().await;
         
         let cmd = SwitchTimerTaskCmd {
             task_id: task.id.to_string(),
         };
         
-        switch_timer_task(&timer_service, &task_repo, cmd).await.unwrap();
+        switch_timer_task(&timer_service, &task_repo, &event_publisher, cmd).await.unwrap();
         
         let state = timer_service.get_state().await.unwrap();
         assert_eq!(state.active_task_id, Some(task.id));
@@ -149,19 +157,19 @@ mod tests {
     
     #[tokio::test]
     async fn should_fail_with_nonexistent_task() {
-        let (timer_service, task_repo, _) = setup().await;
+        let (timer_service, task_repo, event_publisher, _) = setup().await;
         
         let cmd = SwitchTimerTaskCmd {
             task_id: "nonexistent-id".to_string(),
         };
         
-        let result = switch_timer_task(&timer_service, &task_repo, cmd).await;
+        let result = switch_timer_task(&timer_service, &task_repo, &event_publisher, cmd).await;
         assert!(matches!(result, Err(Error::TaskNotFound { .. })));
     }
     
     #[tokio::test]
     async fn should_fail_with_completed_task() {
-        let (timer_service, task_repo, _) = setup().await;
+        let (timer_service, task_repo, event_publisher, _) = setup().await;
         
         let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
@@ -171,19 +179,19 @@ mod tests {
             task_id: completed_task.id.to_string(),
         };
         
-        let result = switch_timer_task(&timer_service, &task_repo, cmd).await;
+        let result = switch_timer_task(&timer_service, &task_repo, &event_publisher, cmd).await;
         assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
     }
     
     #[tokio::test]
     async fn should_fail_with_invalid_task_id() {
-        let (timer_service, task_repo, _) = setup().await;
+        let (timer_service, task_repo, event_publisher, _) = setup().await;
         
         let cmd = SwitchTimerTaskCmd {
             task_id: "".to_string(), // Empty string should be invalid
         };
         
-        let result = switch_timer_task(&timer_service, &task_repo, cmd).await;
+        let result = switch_timer_task(&timer_service, &task_repo, &event_publisher, cmd).await;
         assert!(matches!(result, Err(Error::TaskNotFound { .. })));
     }
 }

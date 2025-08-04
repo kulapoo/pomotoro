@@ -13,11 +13,15 @@ pub mod test_repository;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_cycling_service;
 
-pub use task::*;
-pub use builder::*;
-pub use config::*;
-pub use id::*;
-pub use status::*;
+pub use task::Task;
+pub use builder::TaskBuilder;
+pub use config::TaskConfig;
+pub use id::{TaskId, TaskMarker};
+pub use status::TaskStatus;
 pub use repo::TaskRepository;
-pub use cycling_srv::*;
-pub use events::*;
+pub use cycling_srv::{TaskCyclerService, TaskCyclingStrategy, DefaultTaskCyclingService};
+pub use events::{
+    TaskCreated, TaskSessionCompleted, TaskCompleted, TaskStatusChanged, TaskUpdated,
+    SessionTransitionCompleted, TaskSwitchWorkflowCompleted, AutomaticTaskCyclingCompleted,
+    TaskCyclingExhausted
+};

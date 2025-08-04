@@ -12,8 +12,8 @@ pub mod file_repo;
 pub mod memory_repo;
 pub mod cycling_service;
 
-pub use dto::*;
-pub use config_dto::*;
-pub use file_repo::*;
-pub use memory_repo::*;
-pub use cycling_service::*;
+pub use dto::{TaskDto, TaskAudioConfigDto};
+pub use config_dto::TaskConfigDto;
+pub use file_repo::FileTaskRepository;
+pub use memory_repo::{InMemoryTaskRepository, TaskRepositoryArc};
+pub use cycling_service::StandardTaskCyclerService;

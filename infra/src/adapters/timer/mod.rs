@@ -7,4 +7,4 @@
 pub mod service;
 pub mod models;
 
-pub use service::*;
+pub use service::TimerService;

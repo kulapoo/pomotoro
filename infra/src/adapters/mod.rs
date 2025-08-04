@@ -27,9 +27,31 @@ pub mod audio;
 pub mod events;
 pub mod notifications;
 
-pub use config::*;
-pub use task::*;
-pub use timer::*;
-pub use audio::*;
-pub use events::*;
-pub use notifications::*;
+// Config infrastructure
+pub use config::{
+    ConfigRepository, ConfigRepo, FileConfigRepo, ConfigError,
+    InMemoryConfigRepository, ConfigBuilder,
+    AudioConfigDto, GeneralConfigDto, NotificationConfigDto, AppearanceConfigDto, ConfigDto
+};
+
+// Task infrastructure  
+pub use task::{
+    TaskDto, TaskAudioConfigDto, TaskConfigDto,
+    FileTaskRepository, InMemoryTaskRepository, TaskRepositoryArc,
+    StandardTaskCyclerService
+};
+
+// Timer infrastructure
+pub use timer::TimerService;
+
+// Audio infrastructure
+pub use audio::{RodioAudioService, DefaultAudioAssetProvider, BG_SOUNDS};
+
+// Events infrastructure
+pub use events::{
+    DomainEventBus, EventHandler, TauriEventPublisher, 
+    CompositeEventPublisher, create_composite_event_publisher, create_event_publisher_with_bus, EventPublisherArc
+};
+
+// Notifications infrastructure
+pub use notifications::send_phase_notification;

@@ -1,7 +1,7 @@
 use tauri::{AppHandle, State};
 use std::sync::Arc;
 
-use crate::adapters::{TaskRepositoryArc, TimerService};
+use crate::adapters::{TaskRepositoryArc, TimerService, EventPublisherArc};
 use domain::{TaskId, TimerState, Phase};
 use domain::timer::TimerService as DomainTimerService;
 use domain::TimerStateWithTask;
@@ -31,6 +31,7 @@ pub async fn get_timer_state(
 pub async fn start_timer(
     timer_service: State<'_, TimerService>,
     task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
@@ -38,7 +39,7 @@ pub async fn start_timer(
 
     let cmd = StartTimerSessionCmd { task_id: None };
 
-    start_timer_session(&timer_service_arc, &task_repo, cmd).await
+    start_timer_session(&timer_service_arc, &task_repo, &event_publisher, cmd).await
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc).await
@@ -48,12 +49,13 @@ pub async fn start_timer(
 #[tauri::command]
 pub async fn pause_timer(
     timer_service: State<'_, TimerService>,
+    event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    pause_timer_session(&timer_service_arc).await
+    pause_timer_session(&timer_service_arc, &event_publisher).await
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc).await
@@ -64,12 +66,13 @@ pub async fn pause_timer(
 pub async fn reset_timer(
     timer_service: State<'_, TimerService>,
     task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    reset_timer_session(&timer_service_arc, &task_repo).await
+    reset_timer_session(&timer_service_arc, &task_repo, &event_publisher).await
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc).await
@@ -80,12 +83,13 @@ pub async fn reset_timer(
 pub async fn skip_phase(
     timer_service: State<'_, TimerService>,
     task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<(Phase, Phase, TimerState), String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    let (old_phase, new_phase) = skip_timer_phase(&timer_service_arc, &task_repo).await
+    let (old_phase, new_phase) = skip_timer_phase(&timer_service_arc, &task_repo, &event_publisher).await
         .map_err(|e| e.to_string())?;
 
     let state = usecases::timer::get_timer_state(&timer_service_arc).await
@@ -116,16 +120,17 @@ pub async fn switch_active_task(
     task_id: TaskId,
     timer_service: State<'_, TimerService>,
     task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerStateWithTask, String> {
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
     let cmd = SwitchTimerTaskCmd {
-        task_id: task_id.to_string()
+        task_id,
     };
 
-    switch_timer_task(&timer_service_arc, &task_repo, cmd).await
+    switch_timer_task(&timer_service_arc, &task_repo, &event_publisher, cmd).await
         .map_err(|e| e.to_string())?;
 
     let (timer_state, active_task) = app_get_timer_state_with_task(

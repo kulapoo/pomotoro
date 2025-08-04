@@ -1,4 +1,4 @@
-use domain::{TimerStatus, Result};
+use domain::{TimerStatus, Result, EventPublisher, TimerPaused};
 use domain::timer::TimerService;
 use std::sync::Arc;
 
@@ -16,10 +16,26 @@ use std::sync::Arc;
 /// ## Dependencies
 /// 
 /// - TimerService: For timer state management (domain abstraction)
+/// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn pause_timer_session(
     timer_service: &Arc<dyn TimerService + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
-    timer_service.toggle_pause().await
+    let new_status = timer_service.toggle_pause().await?;
+    
+    // Business logic: Publish TimerPaused event when timer becomes paused
+    if new_status == TimerStatus::Paused {
+        let state = timer_service.get_state().await?;
+        let timer_paused_event = TimerPaused::new(
+            state.active_task_id,
+            state.timer.phase,
+            state.timer.remaining_seconds,
+            1, // version
+        );
+        event_publisher.publish(Box::new(timer_paused_event));
+    }
+    
+    Ok(new_status)
 }
 
 /// Resume a paused timer session
@@ -28,6 +44,7 @@ pub async fn pause_timer_session(
 /// when the intent is specifically to resume a paused timer.
 pub async fn resume_timer_session(
     timer_service: &Arc<dyn TimerService + Send + Sync>,
+    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
     timer_service.toggle_pause().await
 }
@@ -114,8 +131,9 @@ mod tests {
     async fn should_pause_running_timer() {
         let timer_service: Arc<dyn TimerService + Send + Sync> = 
             Arc::new(MockTimerService::new_with_status(TimerStatus::Running));
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(domain::NoOpEventPublisher);
         
-        let result = pause_timer_session(&timer_service).await.unwrap();
+        let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
         assert_eq!(result, TimerStatus::Paused);
         
         let state = timer_service.get_state().await.unwrap();
@@ -126,8 +144,9 @@ mod tests {
     async fn should_resume_paused_timer() {
         let timer_service: Arc<dyn TimerService + Send + Sync> = 
             Arc::new(MockTimerService::new_with_status(TimerStatus::Paused));
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(domain::NoOpEventPublisher);
         
-        let result = resume_timer_session(&timer_service).await.unwrap();
+        let result = resume_timer_session(&timer_service, &event_publisher).await.unwrap();
         assert_eq!(result, TimerStatus::Running);
         
         let state = timer_service.get_state().await.unwrap();
@@ -138,11 +157,89 @@ mod tests {
     async fn should_handle_stopped_timer() {
         let timer_service: Arc<dyn TimerService + Send + Sync> = 
             Arc::new(MockTimerService::new_with_status(TimerStatus::Stopped));
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(domain::NoOpEventPublisher);
         
-        let result = pause_timer_session(&timer_service).await.unwrap();
+        let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
         assert_eq!(result, TimerStatus::Stopped);
         
         let state = timer_service.get_state().await.unwrap();
         assert_eq!(state.status(), TimerStatus::Stopped);
+    }
+    
+    // Enhanced event testing for Phase 4
+    mod event_tests {
+        use super::*;
+        use domain::MockEventPublisher;
+        
+        fn create_event_publisher(mock: Arc<MockEventPublisher>) -> Arc<dyn EventPublisher + Send + Sync> {
+            mock
+        }
+        
+        #[tokio::test]
+        async fn should_publish_timer_paused_event_when_pausing() {
+            let timer_service: Arc<dyn TimerService + Send + Sync> = 
+                Arc::new(MockTimerService::new_with_status(TimerStatus::Running));
+            let mock_publisher = Arc::new(MockEventPublisher::new());
+            let event_publisher = create_event_publisher(mock_publisher.clone());
+            
+            let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(result, TimerStatus::Paused);
+            
+            // Verify TimerPaused event was published
+            assert_eq!(mock_publisher.event_count(), 1);
+            assert!(mock_publisher.has_event_type("TimerPaused"));
+            assert_eq!(mock_publisher.last_event_type().unwrap(), "TimerPaused");
+        }
+        
+        #[tokio::test]
+        async fn should_not_publish_event_when_resuming() {
+            let timer_service: Arc<dyn TimerService + Send + Sync> = 
+                Arc::new(MockTimerService::new_with_status(TimerStatus::Paused));
+            let mock_publisher = Arc::new(MockEventPublisher::new());
+            let event_publisher = create_event_publisher(mock_publisher.clone());
+            
+            let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(result, TimerStatus::Running);
+            
+            // Verify no events were published when resuming (only when pausing)
+            assert_eq!(mock_publisher.event_count(), 0);
+        }
+        
+        #[tokio::test]
+        async fn should_not_publish_event_when_timer_stopped() {
+            let timer_service: Arc<dyn TimerService + Send + Sync> = 
+                Arc::new(MockTimerService::new_with_status(TimerStatus::Stopped));
+            let mock_publisher = Arc::new(MockEventPublisher::new());
+            let event_publisher = create_event_publisher(mock_publisher.clone());
+            
+            let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(result, TimerStatus::Stopped);
+            
+            // Verify no events were published for stopped timer
+            assert_eq!(mock_publisher.event_count(), 0);
+        }
+        
+        #[tokio::test]
+        async fn should_publish_events_for_multiple_pause_operations() {
+            let timer_service: Arc<dyn TimerService + Send + Sync> = 
+                Arc::new(MockTimerService::new_with_status(TimerStatus::Running));
+            let mock_publisher = Arc::new(MockEventPublisher::new());
+            let event_publisher = create_event_publisher(mock_publisher.clone());
+            
+            // First pause (Running -> Paused)
+            pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(mock_publisher.event_count(), 1);
+            
+            // Resume (Paused -> Running) - no event
+            pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(mock_publisher.event_count(), 1); // Still 1
+            
+            // Pause again (Running -> Paused) - another event
+            pause_timer_session(&timer_service, &event_publisher).await.unwrap();
+            assert_eq!(mock_publisher.event_count(), 2);
+            
+            // Verify sequence
+            assert!(mock_publisher.verify_event_sequence(&["TimerPaused", "TimerPaused"]));
+        }
     }
 }
