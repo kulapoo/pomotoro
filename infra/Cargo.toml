@@ -9,24 +9,25 @@ name = "infra"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { workspace = true }
+tauri-build = { version = "2.3.1", features = [] }
 
 [dependencies]
 domain = { path = "../domain" }
 usecases = { path = "../usecases" }
-tauri = { workspace = true }
-tauri-plugin-opener = { workspace = true }
-tauri-plugin-notification = { workspace = true }
-tauri-plugin-fs = { workspace = true }
-tauri-plugin-shell = { workspace = true }
-tauri-plugin-devtools = { workspace = true }
-rodio = { workspace = true }
+tauri = { version = "2.7.0", features = ["tray-icon"] }
+tauri-plugin-opener = "2.0"
+tauri-plugin-notification = "2.0"
+tauri-plugin-fs = "2.4.1"
+tauri-plugin-shell = "2.3.0"
+tauri-plugin-devtools = "2.0.0"
+rodio = "0.21.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }
+dirs = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
