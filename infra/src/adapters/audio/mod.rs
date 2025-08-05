@@ -4,8 +4,8 @@
 //! - Audio service implementation
 //! - Audio asset provider for loading sound files
 
-pub mod service;
+pub mod audio_srv;
 pub mod asset_provider;
 
-pub use service::RodioAudioService;
+pub use audio_srv::RodioAudioService;
 pub use asset_provider::{DefaultAudioAssetProvider, BG_SOUNDS};

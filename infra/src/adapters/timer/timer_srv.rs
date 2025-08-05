@@ -1,14 +1,15 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::AppHandle;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 
-use crate::adapters::notifications::send_phase_notification;
+use crate::adapters::timer::phase_completion_handler::PhaseCompletionHandler;
+use crate::adapters::timer::timer_repo::FileTimerStateRepository;
 use crate::adapters::EventPublisherArc;
-use domain::events::timer;
 use domain::timer::TimerService as DomainTimerService;
+use domain::timer::events::PhaseCompleted;
 use domain::Task;
 use domain::{
     DefaultPhaseTransitionService, Phase, PhaseTransitionService, TaskId, TimerStatus,
@@ -20,7 +21,8 @@ pub struct TimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     phase_service: Arc<dyn PhaseTransitionService>,
     event_publisher: EventPublisherArc,
-    app_handle: Option<AppHandle>,
+    phase_handler: Option<PhaseCompletionHandler>,
+    state_repository: Option<FileTimerStateRepository>,
 }
 
 impl Clone for TimerService {
@@ -30,7 +32,8 @@ impl Clone for TimerService {
             cancel_handle: Arc::clone(&self.cancel_handle),
             phase_service: Arc::clone(&self.phase_service),
             event_publisher: Arc::clone(&self.event_publisher),
-            app_handle: self.app_handle.clone(),
+            phase_handler: self.phase_handler.clone(),
+            state_repository: None, // TODO: Fix cloning of repository
         }
     }
 }
@@ -41,13 +44,20 @@ impl TimerService {
         app_handle: Option<AppHandle>,
     ) -> Self {
         let phase_service = Arc::new(DefaultPhaseTransitionService::new());
+        let phase_handler = app_handle.as_ref().map(|handle|
+            PhaseCompletionHandler::new(handle.clone())
+        );
+        let state_repository = app_handle.as_ref().map(|_handle|
+            FileTimerStateRepository::new()
+        );
 
         Self {
             state: Arc::new(RwLock::new(TimerState::default())),
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service,
             event_publisher,
-            app_handle,
+            phase_handler,
+            state_repository,
         }
     }
 
@@ -60,63 +70,14 @@ impl TimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service: Arc::new(DefaultPhaseTransitionService::new()),
             event_publisher,
-            app_handle: None,
+            phase_handler: None,
+            state_repository: None,
         }
     }
 
-    async fn get_state_file_path(app_handle: &AppHandle) -> Result<std::path::PathBuf, String> {
-        let app_data_dir = app_handle
-            .path()
-            .app_data_dir()
-            .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    // Persistence operations moved to FileTimerStateRepository
 
-        tokio::fs::create_dir_all(&app_data_dir)
-            .await
-            .map_err(|e| format!("Failed to create app data dir: {}", e))?;
-
-        Ok(app_data_dir.join("timer_state.json"))
-    }
-
-    pub async fn save_state(&self, app_handle: &AppHandle) -> Result<(), String> {
-        let state_path = Self::get_state_file_path(app_handle).await?;
-        let state = self.state.read().await;
-
-        let json = serde_json::to_string_pretty(&*state)
-            .map_err(|e| format!("Failed to serialize state: {}", e))?;
-
-        tokio::fs::write(state_path, json)
-            .await
-            .map_err(|e| format!("Failed to write state file: {}", e))?;
-
-        Ok(())
-    }
-
-    pub async fn load_state(&self, app_handle: &AppHandle) -> Result<(), String> {
-        let state_path = Self::get_state_file_path(app_handle).await?;
-
-        if !state_path.exists() {
-            return Ok(());
-        }
-
-        let json = tokio::fs::read_to_string(state_path)
-            .await
-            .map_err(|e| format!("Failed to read state file: {}", e))?;
-
-        let saved_state: TimerState = serde_json::from_str(&json)
-            .map_err(|e| format!("Failed to deserialize state: {}", e))?;
-
-        let mut state = self.state.write().await;
-        *state = saved_state;
-        let _ = state.set_status(TimerStatus::Stopped);
-
-        Ok(())
-    }
-
-    pub async fn start_timer(
-        &self,
-        app_handle: AppHandle,
-        task: Option<Task>,
-    ) -> Result<(), String> {
+    pub async fn start_timer_internal(&self, _task: Option<Task>) -> Result<(), String> {
         // Start the timer using domain service
         {
             let mut state = self.state.write().await;
@@ -136,7 +97,7 @@ impl TimerService {
         let state_clone = Arc::clone(&self.state);
         let cancel_handle_clone = Arc::clone(&self.cancel_handle);
         let phase_service = Arc::clone(&self.phase_service);
-        let event_publisher = Arc::clone(&self.event_publisher);
+        let phase_handler = self.phase_handler.clone();
 
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -154,7 +115,11 @@ impl TimerService {
                     if state.remaining_seconds() > 0 {
                         state.timer.remaining_seconds =
                             state.timer.remaining_seconds.saturating_sub(1);
-                        let _ = app_handle.emit(timer::UPDATE_STATE, state.clone());
+
+                        // Handle timer tick for UI updates
+                        if let Some(ref handler) = phase_handler {
+                            handler.handle_timer_tick(state.remaining_seconds());
+                        }
                         false
                     } else {
                         true
@@ -172,26 +137,21 @@ impl TimerService {
                     };
 
                     if let Ok(result) = transition_result {
-                        // Note: Business event publishing moved to use cases layer
-                        // Infrastructure only handles technical concerns
-
                         let state = state_clone.read().await;
-                        send_phase_notification(&app_handle, &result.old_phase, &result.new_phase);
 
-                        let _ = app_handle.emit(
-                            timer::PHASE_COMPLETE,
-                            (&result.old_phase, &result.new_phase),
+                        // Create domain event for phase completion
+                        let phase_event = PhaseCompleted::new(
+                            state.active_task_id.clone(),
+                            result.old_phase,
+                            result.new_phase,
+                            state.session_count(),
+                            state.task_session_count,
+                            1, // version
                         );
-                        let _ = app_handle.emit(timer::UPDATE_STATE, state.clone());
 
-                        // Save state
-                        let state_path = match Self::get_state_file_path(&app_handle).await {
-                            Ok(path) => path,
-                            Err(_) => break,
-                        };
-
-                        if let Ok(json) = serde_json::to_string_pretty(&*state) {
-                            let _ = tokio::fs::write(state_path, json).await;
+                        // Handle phase completion (notifications, UI events)
+                        if let Some(ref handler) = phase_handler {
+                            handler.handle_phase_completion(&result.old_phase, &result.new_phase, &phase_event);
                         }
 
                         // Stop the timer after phase transition
@@ -250,7 +210,7 @@ impl TimerService {
             .map_err(|e| e.to_string())
     }
 
-    pub async fn skip_to_next_phase(&self, task: Option<&Task>) -> Result<(Phase, Phase), String> {
+    pub async fn skip_to_next_phase(&self, _task: Option<&Task>) -> Result<(Phase, Phase), String> {
         let mut state = self.state.write().await;
 
         // Force transition by setting remaining time to 0
@@ -295,16 +255,10 @@ impl TimerService {
 #[async_trait]
 impl DomainTimerService for TimerService {
     async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
-        if let Some(app_handle) = &self.app_handle {
-            // Call the existing infrastructure method (different signature)
-            TimerService::start_timer(self, app_handle.clone(), task.cloned())
-                .await
-                .map_err(|e| domain::Error::RepositoryError { message: e })
-        } else {
-            // Without app handle, we can still start timer but without persistence
-            let mut state = self.state.write().await;
-            self.phase_service.start_timer(&mut *state).map_err(|e| e)
-        }
+        // Use the internal method that focuses on timer logic
+        TimerService::start_timer_internal(self, task.cloned())
+            .await
+            .map_err(|e| domain::Error::RepositoryError { message: e })
     }
 
     async fn stop_timer(&self) -> DomainResult<()> {
@@ -359,22 +313,22 @@ impl DomainTimerService for TimerService {
     }
 
     async fn load_state(&self) -> DomainResult<()> {
-        if let Some(app_handle) = &self.app_handle {
-            TimerService::load_state(self, app_handle)
-                .await
-                .map_err(|e| domain::Error::RepositoryError { message: e })
-        } else {
-            Ok(())
+        if let Some(ref repository) = self.state_repository {
+            if let Some(saved_state) = repository.load_state().await? {
+                let mut state = self.state.write().await;
+                *state = saved_state;
+                // Ensure timer is stopped on load (safety)
+                let _ = state.set_status(TimerStatus::Stopped);
+            }
         }
+        Ok(())
     }
 
     async fn save_state(&self) -> DomainResult<()> {
-        if let Some(app_handle) = &self.app_handle {
-            TimerService::save_state(self, app_handle)
-                .await
-                .map_err(|e| domain::Error::RepositoryError { message: e })
-        } else {
-            Ok(())
+        if let Some(ref repository) = self.state_repository {
+            let state = self.state.read().await;
+            repository.save_state(&*state).await?
         }
+        Ok(())
     }
 }

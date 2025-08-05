@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use crate::pages::timer::TimerControls;
 use crate::pages::timer::timer_state::TimerPageState;
+use crate::components::CircularProgress;
 
 #[component]
 pub fn TimerPage() -> impl IntoView {
@@ -19,9 +20,10 @@ pub fn TimerPage() -> impl IntoView {
             <div class="timer-label">{move || page_state.timer_state.get().get_phase_name()}</div>
             
             // Progress ring
-            <div class="progress-ring">
-                <div class="progress-circle"></div>
-            </div>
+            <CircularProgress
+                progress=Signal::derive(move || page_state.timer_state.get().get_progress_percentage())
+                phase=Signal::derive(move || page_state.timer_state.get().phase())
+            />
             
             // Timer display
             <div class="timer-display">{move || page_state.timer_with_task.get().format_time()}</div>

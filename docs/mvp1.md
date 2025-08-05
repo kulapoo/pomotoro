@@ -84,6 +84,58 @@ This document defines the Minimum Viable Product (MVP) for Pomotoro, a desktop P
 - **State Management**: Tauri state management
 - **Notifications**: Native system notifications
 
+### Domain Architecture (Clean Architecture + DDD)
+
+**Bounded Contexts**
+- **Timer Context** (Core Domain): Timer logic, phase transitions, timing accuracy
+- **Session Context** (Supporting Domain): Session counting, cycle management
+- **Notification Context** (Generic Subdomain): Desktop alerts, phase transition messaging
+
+**Domain Model**
+```rust
+// Core Aggregates
+Timer {
+    id: TimerId,
+    current_phase: Phase,
+    remaining_seconds: u32,
+    status: TimerStatus,
+    session_count: SessionCount,
+}
+
+// Value Objects
+Phase: Work | ShortBreak | LongBreak
+TimerStatus: Stopped | Running | Paused
+Duration { work: 1500s, short_break: 300s, long_break: 900s }
+SessionCount { current: u8, cycle_position: u8 }
+```
+
+**Feature-to-Layer Mapping**
+
+*Timer Functionality →*
+- **Domain**: `Timer` aggregate, `Phase` transitions, timing business rules
+- **Use Cases**: `start_timer_session`, `pause_timer_session`, `reset_timer_session`, `skip_timer_phase`
+- **Infrastructure**: Tokio timer implementation, UI countdown display
+
+*Session Management →*
+- **Domain**: `SessionCount` value object, cycle completion rules (4→long break)
+- **Use Cases**: `complete_session`, `reset_session_cycle`
+- **Infrastructure**: Session persistence, progress indicators
+
+*User Interface →*
+- **Domain**: Timer state projection for UI
+- **Use Cases**: `get_timer_state` (read-only)
+- **Infrastructure**: Leptos components, circular progress, controls
+
+*Notifications →*
+- **Domain**: Phase transition events
+- **Use Cases**: `handle_phase_completed` (event handler)
+- **Infrastructure**: Desktop notification service, alert formatting
+
+*Persistence →*
+- **Domain**: Repository traits (`TimerRepository`)
+- **Use Cases**: State loading/saving through repository
+- **Infrastructure**: JSON file adapter, automatic state persistence
+
 ### Performance
 - Timer accuracy: ±1 second over 25 minutes
 - UI updates: 60 FPS smooth animations

@@ -10,10 +10,10 @@ pub mod dto;
 pub mod config_dto;
 pub mod file_repo;
 pub mod memory_repo;
-pub mod cycling_service;
+pub mod cycling_srv;
 
 pub use dto::{TaskDto, TaskAudioConfigDto};
 pub use config_dto::TaskConfigDto;
 pub use file_repo::FileTaskRepository;
 pub use memory_repo::{InMemoryTaskRepository, TaskRepositoryArc};
-pub use cycling_service::StandardTaskCyclerService;
+pub use cycling_srv::StandardTaskCyclerService;

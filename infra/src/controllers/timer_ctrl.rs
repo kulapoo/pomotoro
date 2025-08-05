@@ -127,7 +127,7 @@ pub async fn switch_active_task(
         Arc::new(timer_service.inner().clone());
 
     let cmd = SwitchTimerTaskCmd {
-        task_id,
+        task_id: task_id.to_string(),
     };
 
     switch_timer_task(&timer_service_arc, &task_repo, &event_publisher, cmd).await

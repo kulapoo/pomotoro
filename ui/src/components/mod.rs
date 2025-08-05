@@ -5,6 +5,7 @@ pub mod page_header;
 pub mod sidebar;
 
 // Re-export only when needed
+pub use circular_progress::CircularProgress;
 pub use navigation::Navigation;
 pub use page_header::PageHeader;
 pub use sidebar::{Sidebar, NavigationSection};

@@ -4,7 +4,11 @@
 //! - Timer service implementation
 //! - Timer models and state management
 
-pub mod service;
+pub mod timer_srv;
 pub mod models;
+pub mod timer_repo;
+pub mod phase_completion_handler;
 
-pub use service::TimerService;
+pub use timer_srv::TimerService;
+pub use timer_repo::FileTimerStateRepository;
+pub use phase_completion_handler::PhaseCompletionHandler;
