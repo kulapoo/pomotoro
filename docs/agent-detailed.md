@@ -127,15 +127,19 @@ Example transformation:
 // task.rs (300 lines)
 
 // After: organized directory
-task/
-├── mod.rs           // Public API
-├── entity.rs        // Task struct and core logic
-├── cycling_srv.rs   // Task struct and service logic
-├── repo.rs    // TaskRepository trait
-├── events/
-│   ├── mod.rs
-│   ├── completed.rs // TaskCompleted event
-│   └── updated.rs   // TaskUpdated event
+layer
+│  timer/
+│  ├── mod.rs
+│  ├── ...
+│  task/
+│  ├── mod.rs           // Public API
+│  ├── entity.rs        // Task struct and core logic
+│  ├── cycling_srv.rs   // Task struct and service logic
+│  ├── repo.rs    // TaskRepository trait
+│  ├── events/
+│  │  ├── mod.rs
+│  │  ├── completed.rs // TaskCompleted event
+│  │  └── updated.rs   // TaskUpdated event
 └── value_objects/
     ├── task_id.rs
     └── duration.rs
@@ -437,7 +441,7 @@ impl TimerController {
         let domain_cmd = cmd.validate_and_transform()?;
         let result = start_timer_session(
             &self.timer_service,
-            &self.task_repo, 
+            &self.task_repo,
             &self.event_publisher,
             domain_cmd
         ).await?;

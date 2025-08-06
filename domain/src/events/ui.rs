@@ -1,8 +1,3 @@
-// UI Event constants for frontend communication
-//
-// These constants define events emitted from the backend to the frontend
-// for real-time UI updates. They represent technical communication 
-// between the Tauri backend and Leptos frontend.
 
 pub mod timer {
     pub const TICK: &str = "timer:tick";

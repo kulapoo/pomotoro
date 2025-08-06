@@ -12,7 +12,6 @@ pub mod work_session_completed;
 pub mod session_started;
 pub mod session_flow_reset;
 
-// Re-export all timer events
 pub use timer_started::TimerStarted;
 pub use timer_paused::TimerPaused;
 pub use timer_reset::TimerReset;

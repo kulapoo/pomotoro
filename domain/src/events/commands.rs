@@ -1,9 +1,3 @@
-// Command constants for frontend-backend communication
-//
-// These constants define all business communication between frontend and backend:
-// - User actions via Tauri commands (start_timer, create_task, etc.)
-// - Business events for state changes (timer_started, task_completed, etc.)
-// - Domain events for business workflows (phase_completed, session_completed, etc.)
 
 pub mod timer {
     // User Commands

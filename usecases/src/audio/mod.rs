@@ -24,7 +24,6 @@ pub mod play_audio;
 pub mod manage_library;
 pub mod notification_audio;
 
-// Re-export main types and functions for easier imports
 pub use play_audio::{
     PlayAudioCmd, StopAudioCmd, 
     play_audio, stop_audio, stop_all_audio, 

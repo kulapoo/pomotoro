@@ -24,7 +24,6 @@ pub mod timer;
 pub mod config;
 pub mod audio;
 
-// Re-export commonly used types for convenience
 pub use task::*;
 pub use timer::{
     start_session, StartSessionCmd, pause_session, resume_session,

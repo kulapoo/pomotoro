@@ -9,7 +9,6 @@ pub mod complete_session;
 pub mod reset_sessions;
 pub mod mappers;
 
-// Re-export main functions and types for easier imports
 pub use create_task::{create_task, CreateTaskCmd};
 pub use update_task::{update_task, UpdateTaskCmd};
 pub use delete_task::{delete_task, DeleteTaskCmd};

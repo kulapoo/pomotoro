@@ -8,7 +8,6 @@ pub mod task_switch_workflow_completed;
 pub mod automatic_task_cycling_completed;
 pub mod task_cycling_exhausted;
 
-// Re-export all task events
 pub use task_created::TaskCreated;
 pub use task_session_completed::TaskSessionCompleted;
 pub use task_completed::TaskCompleted;

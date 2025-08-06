@@ -5,7 +5,6 @@ pub mod config;
 pub mod audio;
 pub mod events;
 
-// Re-export core shared types and traits
 pub use shared_kernel::{
     DomainEvent, EventPublisher, EventSourced, NoOpEventPublisher,
     Readable, Searchable, Writable,
@@ -13,11 +12,9 @@ pub use shared_kernel::{
     Result, Error, duration_serde
 };
 
-// Re-export test utilities for events
 #[cfg(any(test, feature = "test-utils"))]
 pub use shared_kernel::MockEventPublisher;
 
-// Re-export task domain
 pub use task::{
     Task, TaskBuilder, TaskId, TaskMarker, TaskConfig, TaskStatus, TaskRepository,
     TaskCyclerService, TaskCyclingStrategy, DefaultTaskCyclingService,
@@ -26,7 +23,6 @@ pub use task::{
     TaskCyclingExhausted
 };
 
-// Re-export test utilities (available in tests and dev builds)
 #[cfg(any(test, feature = "test-utils"))]
 pub use task::test_repository::InMemoryTaskRepository;
 #[cfg(any(test, feature = "test-utils"))]
@@ -34,7 +30,6 @@ pub use task::test_cycling_service::TestTaskCyclingService;
 #[cfg(any(test, feature = "test-utils"))]
 pub use config::test_repository::InMemoryConfigRepository;
 
-// Re-export timer domain
 pub use timer::{
     Timer, TimerId, TimerMarker, Phase, TimerState, TimerStateWithTask, TimerStatus,
     PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult,
@@ -43,11 +38,9 @@ pub use timer::{
     BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset
 };
 
-// Re-export config domain
 pub use config::{
     Config, TaskDefaults, AudioConfig, GeneralConfig, NotificationConfig, AppearanceConfig,
     Theme, TaskCyclingBehavior, NotificationPosition, ConfigRepository
 };
 
-// Re-export audio domain
 pub use audio::{AudioError, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioAsset, AudioCategory, AudioService};
