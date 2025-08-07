@@ -77,4 +77,23 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug + std::any::Any {
     /// }
     /// ```
     fn occurred_at(&self) -> DateTime<Utc>;
+
+    /// Clone this domain event into a boxed trait object.
+    ///
+    /// This method enables cloning of domain events when they are in trait object form.
+    /// It's required for scenarios where the same event needs to be published to multiple
+    /// publishers or handlers.
+    ///
+    /// # Returns
+    ///
+    /// A new boxed instance of this event with identical data
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// fn clone_box(&self) -> Box<dyn DomainEvent> {
+    ///     Box::new(self.clone())
+    /// }
+    /// ```
+    fn clone_box(&self) -> Box<dyn DomainEvent>;
 }

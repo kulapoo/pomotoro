@@ -1,15 +1,17 @@
 pub mod adapters;
-pub mod controllers;
+pub mod commands;
+mod bootstrap;
 
 use adapters::{
     create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc,
     FileConfigRepo, InMemoryTaskRepository, RodioAudioService, TaskRepositoryArc, TimerService,
 };
-use controllers::*;
+use commands::*;
 use domain::WorkSessionCompleted;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
-use usecases::handle_work_session_completed;
+
+use bootstrap::boostrap;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -29,14 +31,11 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
-            let config_repository: ConfigRepository = Arc::new(
-                FileConfigRepo::new(app.handle()).expect("Failed to initialize config repository"),
-            );
-            app.manage(config_repository);
 
-            let audio_service =
-                RodioAudioService::new().expect("Failed to initialize audio service");
-            app.manage(Mutex::new(audio_service));
+            let appRegistry = boostrap(app.handle().clone());
+
+            app.manage(appRegistry.config_repository);
+            app.manage(Mutex::new(appRegistry.audio_service));
 
             // Create composite event publisher for domain events
             let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
@@ -46,20 +45,6 @@ pub fn run() {
             // Register event handlers
             let task_repo_for_handler = task_repository.clone();
             let event_pub_for_handler = event_publisher.clone();
-            event_bus.subscribe::<WorkSessionCompleted>(Arc::new(move |event| {
-                let task_repo = task_repo_for_handler.clone();
-                let event_pub = event_pub_for_handler.clone();
-                let event_clone = event.clone();
-
-                // Handle the event asynchronously
-                tokio::spawn(async move {
-                    if let Err(e) =
-                        handle_work_session_completed(&task_repo, &event_pub, &event_clone).await
-                    {
-                        eprintln!("Failed to handle WorkSessionCompleted event: {}", e);
-                    }
-                });
-            }));
 
             // Create timer service with domain services and app handle
             let timer_service = TimerService::new_with_services(
@@ -70,18 +55,18 @@ pub fn run() {
             let task_repo_bootstrap_clone = task_repository.clone();
             let timer_service_bootstrap_clone = timer_service.clone();
 
-            tauri::async_runtime::spawn(async move {
-                match task_repo_bootstrap_clone.get_active_tasks().await {
-                    Ok(tasks) => {
-                        if let Some(initial_task) = tasks.first().clone() {
-                            timer_service_bootstrap_clone
-                                .switch_task(initial_task.id, Some(initial_task))
-                                .await;
-                        }
-                    }
-                    Err(e) => eprintln!("Failed to get active tasks: {}", e),
-                }
-            });
+            // tauri::async_runtime::spawn(async move {
+            //     match task_repo_bootstrap_clone.get_active_tasks().await {
+            //         Ok(tasks) => {
+            //             if let Some(initial_task) = tasks.first().clone() {
+            //                 timer_service_bootstrap_clone
+            //                     .switch_task(initial_task.id, Some(initial_task))
+            //                     .await;
+            //             }
+            //         }
+            //         Err(e) => eprintln!("Failed to get active tasks: {}", e),
+            //     }
+            // });
 
             app.manage(timer_service.clone());
 

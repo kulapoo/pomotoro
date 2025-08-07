@@ -46,4 +46,8 @@ impl DomainEvent for BreakSessionCompleted {
     fn occurred_at(&self) -> DateTime<Utc> {
         self.occurred_at
     }
+
+    fn clone_box(&self) -> Box<dyn DomainEvent> {
+        Box::new(self.clone())
+    }
 }

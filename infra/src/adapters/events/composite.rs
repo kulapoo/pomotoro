@@ -2,7 +2,7 @@ use domain::{DomainEvent, EventPublisher};
 use std::sync::Arc;
 
 /// # CompositeEventPublisher - Combines Multiple Publishers
-/// 
+///
 /// This publisher allows combining multiple event publishers,
 /// useful for publishing to both internal handlers and the frontend.
 pub struct CompositeEventPublisher {
@@ -23,19 +23,39 @@ impl CompositeEventPublisher {
 
 impl EventPublisher for CompositeEventPublisher {
     fn publish(&self, event: Box<dyn DomainEvent>) {
-        for _publisher in &self.publishers {
-            // For now, we'll just publish to the first one due to clone limitations
-            // In a real implementation, you'd need proper event cloning
-            if let Some(first_publisher) = self.publishers.first() {
-                first_publisher.publish(event);
-                break;
-            }
+        let publisher_count = self.publishers.len();
+
+        if publisher_count == 0 {
+            return;
+        }
+
+        for publisher in self.publishers.iter().take(publisher_count - 1) {
+            let cloned_event = event.clone_box();
+            publisher.publish(cloned_event);
+        }
+
+        if let Some(last_publisher) = self.publishers.last() {
+            last_publisher.publish(event);
         }
     }
 
-    fn publish_batch(&self, _events: Vec<Box<dyn DomainEvent>>) {
-        for _publisher in &self.publishers {
-            _publisher.publish_batch(vec![]); // Empty for now due to clone limitations
+    fn publish_batch(&self, events: Vec<Box<dyn DomainEvent>>) {
+        let publisher_count = self.publishers.len();
+
+        if publisher_count == 0 {
+            return;
+        }
+
+        for publisher in self.publishers.iter().take(publisher_count - 1) {
+            let cloned_events: Vec<Box<dyn DomainEvent>> = events
+                .iter()
+                .map(|event| event.clone_box())
+                .collect();
+            publisher.publish_batch(cloned_events);
+        }
+
+        if let Some(last_publisher) = self.publishers.last() {
+            last_publisher.publish_batch(events);
         }
     }
 }
