@@ -1,6 +1,6 @@
 pub mod adapters;
-pub mod commands;
 mod bootstrap;
+pub mod commands;
 
 use adapters::{
     create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc,
@@ -31,29 +31,22 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
+            let app_registry = boostrap(app.handle().clone()).map_err(|e| {
+                eprintln!("Failed to bootstrap app: {}", e.to_string());
+                e
+            })?;
 
-            let appRegistry = boostrap(app.handle().clone());
+            //  repositories
+            app.manage(app_registry.config_repository);
+            app.manage(task_repository.clone());
 
-            app.manage(appRegistry.config_repository);
-            app.manage(Mutex::new(appRegistry.audio_service));
+            // services
+            app.manage(Mutex::new(app_registry.audio_service));
+            app.manage(app_registry.timer_service.clone());
 
-            // Create composite event publisher for domain events
-            let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
-                create_event_publisher_with_bus(app.handle().clone());
-            app.manage(event_publisher.clone());
-
-            // Register event handlers
-            let task_repo_for_handler = task_repository.clone();
-            let event_pub_for_handler = event_publisher.clone();
-
-            // Create timer service with domain services and app handle
-            let timer_service = TimerService::new_with_services(
-                event_publisher.clone(),
-                Some(app.handle().clone()),
-            );
-
-            let task_repo_bootstrap_clone = task_repository.clone();
-            let timer_service_bootstrap_clone = timer_service.clone();
+            // events
+            app.manage(app_registry.event_publisher.clone());
+            app.manage(app_registry.event_bus.clone());
 
             // tauri::async_runtime::spawn(async move {
             //     match task_repo_bootstrap_clone.get_active_tasks().await {
@@ -67,10 +60,6 @@ pub fn run() {
             //         Err(e) => eprintln!("Failed to get active tasks: {}", e),
             //     }
             // });
-
-            app.manage(timer_service.clone());
-
-            app.manage(task_repository.clone());
 
             Ok(())
         })

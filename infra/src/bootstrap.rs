@@ -1,11 +1,15 @@
 use std::sync::Arc;
+use thiserror::Error;
 
 use domain::InMemoryTaskRepository;
 use tauri::AppHandle;
 
-use crate::adapters::{create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc, FileConfigRepo, RodioAudioService, TaskRepositoryArc, TimerService};
+use crate::adapters::{
+    create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc,
+    FileConfigRepo, RodioAudioService, TaskRepositoryArc, TimerService,
+};
 
-struct AppRegistry {
+pub struct AppRegistry {
     pub task_repository: TaskRepositoryArc,
     pub config_repository: ConfigRepository,
 
@@ -13,30 +17,42 @@ struct AppRegistry {
     pub event_publisher: EventPublisherArc,
 
     pub timer_service: TimerService,
-    pub audio_service:  RodioAudioService
+    pub audio_service: RodioAudioService,
 }
 
-pub fn boostrap(app_handle: AppHandle) -> AppRegistry {
+#[derive(Debug, thiserror::Error)]
+pub enum BootstrapError {
+    #[error("Failed to initialize config repository: {0}")]
+    ConfigInit(String),
+    #[error("Failed to initialize audio service: {0}")]
+    AudioInit(String),
+    #[error("Failed to create event system: {0}")]
+    EventSystem(String),
+}
+
+impl From<BootstrapError> for String {
+    fn from(err: BootstrapError) -> Self {
+        err.to_string()
+    }
+}
+
+pub fn boostrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
     // repositories
     let task_repository: TaskRepositoryArc = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: ConfigRepository = Arc::new(
-        FileConfigRepo::new(&app_handle).expect("Failed to initialize config repository"),
+        FileConfigRepo::new(&app_handle).map_err(|e| BootstrapError::ConfigInit(e.to_string()))?,
     );
-
 
     // events
     let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
         create_event_publisher_with_bus(app_handle.clone());
 
-
     // services
     let audio_service =
-        RodioAudioService::new().expect("Failed to initialize audio service");
+        RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?;
 
-    let timer_service = TimerService::new_with_services(
-        event_publisher.clone(),
-        Some(app_handle.clone()),
-    );
+    let timer_service =
+        TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone()));
 
     let ctx = AppRegistry {
         task_repository,
@@ -44,8 +60,8 @@ pub fn boostrap(app_handle: AppHandle) -> AppRegistry {
         event_bus,
         event_publisher,
         timer_service,
-        audio_service
+        audio_service,
     };
 
-    ctx
+    Ok(ctx)
 }

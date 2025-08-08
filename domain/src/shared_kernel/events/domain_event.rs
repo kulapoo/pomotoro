@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 
-
 /// # Implementation Notes
 ///
 /// This trait belongs in the shared kernel as it's a cross-cutting concern used
