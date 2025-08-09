@@ -46,7 +46,6 @@ pub async fn cycle_to_next_task(
         .cycle_to_next_active_task(current_id.clone())
         .await?;
     
-    // Get task queue information for context
     let active_tasks = cycling_service.get_active_task_queue().await?;
     let total_tasks = active_tasks.len();
     
@@ -150,7 +149,6 @@ mod tests {
             .unwrap()
             .unwrap();
         
-        // Should get a different task from the current one
         assert_ne!(next_task.id, tasks[0].id);
         assert!(tasks.iter().any(|t| t.id == next_task.id));
     }
@@ -168,7 +166,6 @@ mod tests {
             .unwrap()
             .unwrap();
         
-        // Should get some task from available tasks
         assert!(tasks.iter().any(|t| t.id == next_task.id));
     }
 
@@ -224,11 +221,10 @@ mod tests {
         ).await.unwrap();
         
         assert!(result.next_task.is_some());
-        assert!(!result.has_more_tasks); // Only one task
+        assert!(!result.has_more_tasks);
         assert_eq!(result.total_tasks, 1);
         assert_eq!(result.cycle_position, 0);
         
-        // Should return the same task in round-robin with single task
         let next_task = result.next_task.unwrap();
         assert_eq!(next_task.id, single_task.id);
     }
@@ -270,11 +266,10 @@ mod tests {
         
         let tasks = vec![task1, task2, task3];
         
-        // Complete one task
         let mut completed_task = tasks[1].clone();
         completed_task.increment_session().unwrap();
         completed_task.increment_session().unwrap();
-        completed_task.increment_session().unwrap(); // Complete all sessions
+        completed_task.increment_session().unwrap();
         task_repo.update(completed_task).await.unwrap();
         
         let result = cycle_to_next_task(
@@ -283,10 +278,10 @@ mod tests {
         ).await.unwrap();
         
         assert!(result.next_task.is_some());
-        assert_eq!(result.total_tasks, 2); // Should exclude completed task
+        assert_eq!(result.total_tasks, 2);
         
         let next_task = result.next_task.unwrap();
-        assert_ne!(next_task.id, tasks[1].id); // Should not be the completed task
+        assert_ne!(next_task.id, tasks[1].id);
     }
 
     #[tokio::test]

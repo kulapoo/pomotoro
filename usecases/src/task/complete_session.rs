@@ -34,7 +34,6 @@ pub async fn complete_session(
 
     task_repo.update(task.clone()).await?;
 
-    // Publish session completed event
     let session_event = TaskSessionCompleted::new(
         task.id.clone(),
         task.current_sessions,
@@ -45,7 +44,6 @@ pub async fn complete_session(
 
     event_publisher.publish(Box::new(session_event));
 
-    // If task is completed, publish task completed event
     if is_task_completed {
         let completed_event = TaskCompleted::new(
             task.id.clone(),
@@ -137,7 +135,7 @@ mod tests {
         let (task_repo, event_publisher) = setup().await;
 
         let mut task = Task::new("Test Task".to_string(), 1).unwrap();
-        task.increment_session().unwrap(); // Complete the task
+        task.increment_session().unwrap();
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
@@ -155,7 +153,6 @@ mod tests {
 
         assert!(can_complete_session(&task_repo, &task_id).await.unwrap());
 
-        // Complete both sessions
         complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
         complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
 

@@ -38,7 +38,6 @@ pub async fn get_tasks(
     
     let mut filtered_tasks = tasks;
     
-    // Filter by status if provided
     if let Some(status) = query.status {
         filtered_tasks = filtered_tasks
             .into_iter()
@@ -46,7 +45,6 @@ pub async fn get_tasks(
             .collect();
     }
     
-    // Filter by tags if provided
     if let Some(tags) = query.tags {
         filtered_tasks = filtered_tasks
             .into_iter()
@@ -153,7 +151,7 @@ mod tests {
         
         let tasks = get_tasks(&task_repo, query).await.unwrap();
         
-        assert_eq!(tasks.len(), 2); // Should exclude completed task
+        assert_eq!(tasks.len(), 2);
         assert!(tasks.iter().all(|t| matches!(t.status, TaskStatus::Active | TaskStatus::Queued)));
     }
 

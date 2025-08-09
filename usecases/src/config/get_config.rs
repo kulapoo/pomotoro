@@ -39,8 +39,7 @@ mod tests {
 
         let config = get_config(&config_repo).await.unwrap();
 
-        // Should return default config
-        assert!(config.general.auto_start_breaks); // Default value
+        assert!(config.general.auto_start_breaks);
     }
 
     #[tokio::test]
@@ -48,15 +47,12 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
             Arc::new(InMemoryConfigRepository::new());
 
-        // Initially no config exists
         assert!(!config_repo.config_exists().await.unwrap());
 
         let config = get_config(&config_repo).await.unwrap();
 
-        // Should return default config and save it
         assert!(config.general.auto_start_breaks);
 
-        // Config should now exist
         assert!(config_repo.config_exists().await.unwrap());
     }
 
@@ -71,7 +67,6 @@ mod tests {
 
         let config = get_config(&config_repo).await.unwrap();
 
-        // Should return existing custom config, not default
         assert!(config.general.start_minimized);
     }
 
@@ -80,13 +75,10 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> =
             Arc::new(InMemoryConfigRepository::new());
 
-        // Initially no config
         assert!(!config_repo.config_exists().await.unwrap());
 
-        // Save a config
         config_repo.save_config(&Config::default()).await.unwrap();
 
-        // Now config exists
         assert!(config_repo.config_exists().await.unwrap());
     }
 }

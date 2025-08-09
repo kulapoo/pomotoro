@@ -18,14 +18,12 @@ pub async fn play_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
     cmd: PlayAudioCmd,
 ) -> Result<PlaybackHandle> {
-    // Validate volume range
     if !(0.0..=1.0).contains(&cmd.volume) {
         return Err(Error::ConfigurationError { 
             message: format!("Volume must be between 0.0 and 1.0, got {}", cmd.volume)
         });
     }
 
-    // Create playback request
     let mut request = PlaybackRequest::new(cmd.asset_id, cmd.volume)
         .map_err(|e| Error::ConfigurationError {
             message: format!("Failed to create playback request: {:?}", e),
@@ -39,7 +37,6 @@ pub async fn play_audio(
         request = request.with_fade_in(fade_in);
     }
 
-    // Play audio through service
     let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
         message: format!("Failed to acquire audio service lock: {}", e),
     })?;
@@ -95,7 +92,6 @@ pub async fn set_audio_volume(
     playback_id: String,
     volume: f32,
 ) -> Result<()> {
-    // Validate volume range
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError { 
             message: format!("Volume must be between 0.0 and 1.0, got {}", volume)
@@ -213,7 +209,7 @@ mod tests {
         
         let cmd = PlayAudioCmd {
             asset_id: "test-asset".to_string(),
-            volume: 1.5, // Invalid volume
+            volume: 1.5,
             looped: false,
             fade_in_ms: None,
         };
@@ -226,7 +222,6 @@ mod tests {
     async fn should_stop_audio_successfully() {
         let service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
         
-        // Play audio first
         let play_cmd = PlayAudioCmd {
             asset_id: "test-asset".to_string(),
             volume: 0.5,
@@ -235,7 +230,6 @@ mod tests {
         };
         let handle = play_audio(&service, play_cmd).await.unwrap();
         
-        // Stop audio
         let stop_cmd = StopAudioCmd {
             playback_id: handle.id,
         };

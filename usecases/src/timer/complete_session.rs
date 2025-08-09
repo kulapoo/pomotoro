@@ -22,7 +22,6 @@ pub async fn complete_timer_session(
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<SessionCompleted> {
-    // Ensure we have an active task
     let active_task_id = timer_state.active_task_id
         .as_ref()
         .ok_or_else(|| Error::InvalidStateTransition {
@@ -30,7 +29,6 @@ pub async fn complete_timer_session(
             to: "complete_session".to_string(),
         })?;
     
-    // Ensure timer is ready for phase transition (time should be 0)
     if !phase_service.can_transition(timer_state) {
         return Err(Error::InvalidStateTransition {
             from: "time_remaining".to_string(),
@@ -40,17 +38,14 @@ pub async fn complete_timer_session(
     
     let current_phase = timer_state.phase();
     
-    // If completing a work session, increment task session count
     let task_session_result = if current_phase == Phase::Work {
         Some(complete_task_session(task_repo, event_publisher, &active_task_id.to_string()).await?)
     } else {
         None
     };
     
-    // Transition to next phase
     let phase_result = phase_service.transition_to_next_phase(timer_state)?;
     
-    // Extract task session information
     let (task_completed, sessions_completed, total_sessions) = if let Some(result) = task_session_result {
         (result.task_completed, result.sessions_completed, result.total_sessions)
     } else {
@@ -74,7 +69,6 @@ pub async fn force_complete_timer_session(
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<SessionCompleted> {
-    // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
@@ -82,11 +76,9 @@ pub async fn force_complete_timer_session(
         });
     }
     
-    // Force timer to completion state
     timer_state.timer.remaining_seconds = 0;
     timer_state.set_status(domain::TimerStatus::Stopped)?;
     
-    // Complete the session normally
     complete_timer_session(
         timer_state,
         task_repo,
@@ -125,7 +117,7 @@ mod tests {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
-        timer_state.timer.remaining_seconds = 0; // Phase completed
+        timer_state.timer.remaining_seconds = 0;
         timer_state.timer.phase = Phase::Work;
         
         let result = complete_timer_session(
@@ -143,7 +135,6 @@ mod tests {
         assert_eq!(result.sessions_completed, 1);
         assert_eq!(result.total_sessions, 4);
         
-        // Verify timer transitioned to break
         assert_eq!(timer_state.phase(), Phase::ShortBreak);
     }
 
@@ -169,7 +160,6 @@ mod tests {
         assert!(!result.work_session_completed);
         assert!(!result.task_completed);
         
-        // Verify timer transitioned back to work
         assert_eq!(timer_state.phase(), Phase::Work);
         assert!(!timer_state.is_break_cycle());
     }
@@ -221,7 +211,7 @@ mod tests {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
-        timer_state.timer.remaining_seconds = 500; // Time still remaining
+        timer_state.timer.remaining_seconds = 500;
         
         let result = complete_timer_session(
             &mut timer_state,
@@ -238,7 +228,7 @@ mod tests {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task.id.clone());
-        timer_state.timer.remaining_seconds = 500; // Time remaining
+        timer_state.timer.remaining_seconds = 500;
         timer_state.timer.phase = Phase::Work;
         timer_state.set_status(TimerStatus::Running).unwrap();
         

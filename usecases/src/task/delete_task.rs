@@ -14,13 +14,11 @@ pub async fn delete_task(
     let task_id = TaskId::from_string(&cmd.id)
         .map_err(|_| Error::TaskNotFound { id: cmd.id.clone() })?;
     
-    // Check if task exists before attempting deletion
     let task = task_repo
         .get_by_id(task_id.clone())
         .await?
         .ok_or_else(|| Error::TaskNotFound { id: cmd.id.clone() })?;
     
-    // Prevent deletion of the default task
     if task.name == "Focus Session" && task.description == Some("Default pomodoro task for focused work".to_string()) {
         return Err(Error::InvalidStateTransition {
             from: "default_task".to_string(),
@@ -68,7 +66,6 @@ mod tests {
         
         assert!(deleted);
         
-        // Verify task was deleted from repository
         let result = task_repo.get_by_id(task_id).await.unwrap();
         assert!(result.is_none());
     }
@@ -100,7 +97,6 @@ mod tests {
         let result = delete_task(&task_repo, &event_publisher, cmd).await;
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
         
-        // Verify default task still exists
         let task = task_repo.get_by_id(task_id).await.unwrap();
         assert!(task.is_some());
     }

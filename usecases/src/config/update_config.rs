@@ -17,13 +17,11 @@ pub async fn update_config(
     _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: UpdateConfigCmd,
 ) -> Result<Config> {
-    // Get current config or create default
     let mut config = match config_repo.config_exists().await? {
         true => config_repo.get_config().await?,
         false => Config::default(),
     };
     
-    // Update individual sections if provided
     if let Some(general) = cmd.general {
         general.validate()?;
         config.general = general;
@@ -44,10 +42,8 @@ pub async fn update_config(
         config.appearance = appearance;
     }
     
-    // Validate the entire config before saving
     config.validate()?;
     
-    // Save the updated config
     config_repo.save_config(&config).await?;
     
     // TODO: Publish ConfigUpdated event when domain events are implemented
@@ -60,10 +56,8 @@ pub async fn update_full_config(
     _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     new_config: Config,
 ) -> Result<Config> {
-    // Validate the new config
     new_config.validate()?;
     
-    // Save the config
     config_repo.save_config(&new_config).await?;
     
     // TODO: Publish ConfigUpdated event when domain events are implemented
@@ -111,7 +105,6 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         
-        // Save initial config
         config_repo.save_config(&Config::default()).await.unwrap();
         
         (config_repo, event_publisher)
@@ -136,7 +129,6 @@ mod tests {
             .unwrap();
         
         assert!(!updated_config.general.auto_start_breaks);
-        // Other sections should remain unchanged
         assert_eq!(updated_config.audio, AudioConfig::default());
     }
 
@@ -163,7 +155,6 @@ mod tests {
         
         assert!(!updated_config.general.minimize_to_tray);
         assert_eq!(updated_config.audio.volume, 0.8);
-        // Unchanged sections should remain default
         assert_eq!(updated_config.notification.enable_desktop_notifications, NotificationConfig::default().enable_desktop_notifications);
     }
 
@@ -188,7 +179,6 @@ mod tests {
         let config_repo: Arc<dyn ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
         
-        // Don't create initial config
         assert!(!config_repo.config_exists().await.unwrap());
         
         let mut new_general = GeneralConfig::default();
@@ -206,7 +196,6 @@ mod tests {
             .unwrap();
         
         assert!(updated_config.general.start_minimized);
-        // Config should now exist
         assert!(config_repo.config_exists().await.unwrap());
     }
 
@@ -239,7 +228,6 @@ mod tests {
             .unwrap();
         
         assert!(updated_config.general.auto_start_work_after_break);
-        // Other sections should remain unchanged
         assert_eq!(updated_config.audio, AudioConfig::default());
     }
 
@@ -255,7 +243,6 @@ mod tests {
             .unwrap();
         
         assert_eq!(updated_config.audio.volume, 0.3);
-        // Other sections should remain unchanged
         assert_eq!(updated_config.general.auto_start_breaks, GeneralConfig::default().auto_start_breaks);
     }
 }

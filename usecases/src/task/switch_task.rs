@@ -17,7 +17,6 @@ pub async fn switch_task(
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTaskCmd,
 ) -> Result<()> {
-    // Cannot switch tasks while timer is running
     if timer_state.status() == TimerStatus::Running {
         return Err(Error::InvalidStateTransition {
             from: "Running".to_string(),
@@ -29,7 +28,6 @@ pub async fn switch_task(
         id: cmd.task_id.clone(),
     })?;
 
-    // Verify the task exists and is available for switching
     let task = task_repo
         .get_by_id(task_id.clone())
         .await?
@@ -41,19 +39,16 @@ pub async fn switch_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Use cycling service to validate the switch
     cycling_service.validate_task_switch(task_id.clone()).await?;
 
-    // Update timer state with new task and its configuration using proper mapper
     let timer_config = task_config_to_timer_config(&task.config)?;
     timer_state.switch_task_with_config(task_id.clone(), timer_config)?;
 
-    // Publish task switch event
     let switch_event = TaskSwitchWorkflowCompleted::new(
-        timer_state.active_task_id.clone(),         // old_task_id
-        task_id,                                    // new_task_id
-        format!("Switched to task: {}", task.name), // workflow_result
-        1,                                          // version
+        timer_state.active_task_id.clone(),
+        task_id,
+        format!("Switched to task: {}", task.name),
+        1
     );
     event_publisher.publish(Box::new(switch_event));
 
@@ -64,7 +59,6 @@ pub async fn switch_to_next_task(
     timer_state: &mut TimerState,
     cycling_service: &Arc<dyn TaskCyclerService + Send + Sync>,
 ) -> Result<Option<String>> {
-    // Cannot switch tasks while timer is running
     if timer_state.status() == TimerStatus::Running {
         return Err(Error::InvalidStateTransition {
             from: "Running".to_string(),
@@ -74,13 +68,11 @@ pub async fn switch_to_next_task(
 
     let current_task_id = timer_state.active_task_id.clone();
 
-    // Use cycling service to get next task
     let next_task = cycling_service
         .cycle_to_next_active_task(current_task_id)
         .await?;
 
     if let Some(task) = next_task {
-        // Update timer state with new task and its configuration using proper mapper
         let timer_config = task_config_to_timer_config(&task.config)?;
         timer_state.switch_task_with_config(task.id.clone(), timer_config)?;
         Ok(Some(task.id.to_string()))
@@ -145,7 +137,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(timer_state.active_task_id, Some(tasks[1].id.clone()));
-        assert_eq!(timer_state.task_session_count, 0); // Reset session count for new task
+        assert_eq!(timer_state.task_session_count, 0);
     }
 
     #[tokio::test]

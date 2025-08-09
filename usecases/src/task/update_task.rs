@@ -25,18 +25,15 @@ pub async fn update_task(
         .await?
         .ok_or_else(|| Error::TaskNotFound { id: cmd.id.clone() })?;
     
-    // Prevent updating completed tasks
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
     }
     
-    // Capture update info for event before modifying task
     let updated_name = cmd.name.clone();
     let updated_description = cmd.description.clone();
     let updated_max_sessions = cmd.max_sessions;
     let updated_tags = cmd.tags.clone();
     
-    // Update task fields if provided
     if let Some(name) = cmd.name {
         if name.trim().is_empty() {
             return Err(Error::InvalidSessionCount { count: 0 });
@@ -54,7 +51,6 @@ pub async fn update_task(
         }
         task.max_sessions = max_sessions;
         
-        // If current sessions exceed new max, mark as completed
         if task.current_sessions >= max_sessions {
             task.status = domain::TaskStatus::Completed;
             task.completed_at = Some(chrono::Utc::now());
@@ -66,7 +62,6 @@ pub async fn update_task(
     }
     
     if let Some(config) = cmd.config {
-        // TaskConfig is already validated at construction, no need to validate again
         task.config = config;
     }
     
@@ -77,14 +72,13 @@ pub async fn update_task(
     
     task_repo.update(task.clone()).await?;
     
-    // Publish TaskUpdated event  
     let updated_event = TaskUpdated::new(
         task.id.clone(),
         updated_name,
         updated_description,
         updated_max_sessions,
         updated_tags,
-        1, // version
+        1
     );
     event_publisher.publish(Box::new(updated_event));
     
@@ -194,7 +188,6 @@ mod tests {
     async fn should_complete_task_when_current_sessions_exceed_new_max() {
         let (task_repo, event_publisher, original_task) = setup().await;
         
-        // Complete 2 sessions first
         let mut task_with_sessions = original_task.clone();
         task_with_sessions.increment_session().unwrap();
         task_with_sessions.increment_session().unwrap();
@@ -204,7 +197,7 @@ mod tests {
             id: original_task.id.to_string(),
             name: None,
             description: None,
-            max_sessions: Some(1), // Less than current sessions (2)
+            max_sessions: Some(1),
             tags: None,
             config: None,
             audio_config: None,

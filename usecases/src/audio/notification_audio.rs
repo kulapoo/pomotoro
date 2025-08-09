@@ -58,34 +58,29 @@ pub async fn play_notification_sound(
 ) -> Result<PlaybackHandle> {
     let volume = cmd.volume.unwrap_or(0.7);
     
-    // Validate volume
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError { 
             message: format!("Volume must be between 0.0 and 1.0, got {}", volume)
         });
     }
 
-    // Get notification assets for this type
     let category = cmd.notification_type.to_asset_category();
     let assets = get_assets_by_category(library_service, category).await?;
     
-    // Find the specific asset or use default
     let asset_id = if assets.is_empty() {
-        // No assets found, use default asset ID (might be built-in)
         cmd.notification_type.default_asset_id().to_string()
     } else {
-        // Try to find specific asset for notification type
         assets.iter()
             .find(|asset| asset.id == cmd.notification_type.default_asset_id())
             .map(|asset| asset.id.clone())
-            .unwrap_or_else(|| assets[0].id.clone()) // Use first available
+            .unwrap_or_else(|| assets[0].id.clone())
     };
 
     let play_cmd = PlayAudioCmd {
         asset_id,
         volume,
-        looped: false, // Notifications should not loop
-        fade_in_ms: Some(100), // Quick fade in for smoother sound
+        looped: false,
+        fade_in_ms: Some(100),
     };
 
     play_audio(audio_service, play_cmd).await
@@ -96,16 +91,14 @@ pub async fn play_background_audio(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     cmd: PlayBackgroundAudioCmd,
 ) -> Result<PlaybackHandle> {
-    let volume = cmd.volume.unwrap_or(0.3); // Lower default volume for background
+    let volume = cmd.volume.unwrap_or(0.3);
     
-    // Validate volume
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError { 
             message: format!("Volume must be between 0.0 and 1.0, got {}", volume)
         });
     }
 
-    // Get assets for the specified category
     let assets = get_assets_by_category(library_service, cmd.category).await?;
     
     if assets.is_empty() {
@@ -114,9 +107,7 @@ pub async fn play_background_audio(
         });
     }
 
-    // Select asset
     let asset_id = if let Some(specific_id) = cmd.asset_id {
-        // Use specific asset if provided
         if assets.iter().any(|asset| asset.id == specific_id) {
             specific_id
         } else {
@@ -125,15 +116,14 @@ pub async fn play_background_audio(
             });
         }
     } else {
-        // Use first available asset for category
         assets[0].id.clone()
     };
 
     let play_cmd = PlayAudioCmd {
         asset_id,
         volume,
-        looped: true, // Background audio should loop
-        fade_in_ms: Some(1000), // Longer fade in for background audio
+        looped: true,
+        fade_in_ms: Some(1000),
     };
 
     play_audio(audio_service, play_cmd).await
@@ -147,11 +137,9 @@ pub async fn stop_background_audio(
         message: format!("Failed to acquire audio service lock: {}", e),
     })?;
 
-    // Get all active playbacks
     let active_playbacks = service.get_active_playbacks()?;
     
-    // Stop all looped playbacks (background audio)
-    drop(service); // Release lock before calling stop_audio
+    drop(service);
     
     for playback in active_playbacks {
         if playback.is_looped {
@@ -312,7 +300,7 @@ mod tests {
         
         assert_eq!(handle.asset_id, "session-complete-bell");
         assert_eq!(handle.volume, 0.8);
-        assert!(!handle.is_looped); // Notifications should not loop
+        assert!(!handle.is_looped);
         assert!(handle.is_playing);
     }
 
@@ -323,7 +311,7 @@ mod tests {
         
         let cmd = PlayNotificationSoundCmd {
             notification_type: NotificationType::SessionCompleted,
-            volume: Some(1.5), // Invalid volume
+            volume: Some(1.5),
         };
 
         let result = play_notification_sound(&audio_service, &library_service, cmd).await;

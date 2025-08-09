@@ -41,7 +41,6 @@ pub async fn get_audio_library(
 
     let mut library = service.get_library()?;
 
-    // Filter by category if specified
     if let Some(category) = query.category_filter {
         let filtered_assets = service.get_assets_by_category(category)?;
         library.assets.clear();
@@ -57,28 +56,24 @@ pub async fn add_audio_asset(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     cmd: AddAudioAssetCmd,
 ) -> Result<AudioAsset> {
-    // Validate volume range
     if !(0.0..=1.0).contains(&cmd.default_volume) {
         return Err(Error::ConfigurationError { 
             message: format!("Default volume must be between 0.0 and 1.0, got {}", cmd.default_volume)
         });
     }
 
-    // Validate asset ID is not empty
     if cmd.id.trim().is_empty() {
         return Err(Error::ConfigurationError {
             message: "Asset ID cannot be empty".to_string(),
         });
     }
 
-    // Validate file path
     if cmd.file_path.trim().is_empty() {
         return Err(Error::ConfigurationError {
             message: "File path cannot be empty".to_string(),
         });
     }
 
-    // Check if file exists (basic validation)
     if !std::path::Path::new(&cmd.file_path).exists() {
         return Err(Error::ConfigurationError {
             message: format!("Audio file does not exist: {}", cmd.file_path),
@@ -88,9 +83,9 @@ pub async fn add_audio_asset(
     let asset = AudioAsset {
         id: cmd.id,
         name: cmd.name,
-        file_path: cmd.file_path.into(), // Convert String to PathBuf
+        file_path: cmd.file_path.into(),
         category: cmd.category,
-        duration_ms: None, // Could be calculated from file
+        duration_ms: None,
     };
 
     let mut service = library_service.lock().map_err(|e| Error::ConfigurationError {
@@ -206,7 +201,6 @@ mod tests {
         assert_eq!(asset.id, "test-asset");
         assert_eq!(asset.name, "Test Asset");
         assert_eq!(asset.category, AudioCategory::BackgroundAmbient);
-        // Note: AudioAsset doesn't have default_volume field
     }
 
     #[tokio::test]
@@ -223,7 +217,7 @@ mod tests {
             file_path: file_path.to_string_lossy().to_string(),
             category: AudioCategory::BackgroundAmbient,
             description: None,
-            default_volume: 1.5, // Invalid volume
+            default_volume: 1.5,
         };
 
         let result = add_audio_asset(&service, cmd).await;
@@ -267,7 +261,6 @@ mod tests {
 
         let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
         
-        // Add asset first
         let add_cmd = AddAudioAssetCmd {
             id: "test-asset".to_string(),
             name: "Test Asset".to_string(),
@@ -278,7 +271,6 @@ mod tests {
         };
         add_audio_asset(&service, add_cmd).await.unwrap();
 
-        // Remove asset
         let remove_cmd = RemoveAudioAssetCmd {
             asset_id: "test-asset".to_string(),
         };

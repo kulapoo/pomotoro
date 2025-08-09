@@ -5,7 +5,6 @@ pub async fn reset_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
     _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
-    // Reset to defaults using repository method
     let default_config = config_repo.reset_to_defaults().await?;
     
     // TODO: Publish ConfigReset event when domain events are implemented
@@ -17,10 +16,8 @@ pub async fn reset_config_to_factory_defaults(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
     _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
-    // Create fresh default config
     let factory_config = Config::default();
     
-    // Save it to repository
     config_repo.save_config(&factory_config).await?;
     
     // TODO: Publish ConfigFactoryReset event when domain events are implemented
@@ -32,14 +29,12 @@ pub async fn backup_and_reset_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<(Config, Config)> {
-    // Get current config as backup
     let backup_config = if config_repo.config_exists().await? {
         config_repo.get_config().await?
     } else {
         Config::default()
     };
     
-    // Reset to defaults
     let new_config = reset_config(config_repo, event_publisher).await?;
     
     Ok((backup_config, new_config))

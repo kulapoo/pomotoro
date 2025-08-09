@@ -30,19 +30,16 @@ pub async fn get_task_queue(
         None
     };
 
-    // Get tasks based on query parameters
     let tasks = if query.include_completed {
         task_repo.get_all().await?
     } else {
         cycling_service.get_active_task_queue().await?
     };
 
-    // Calculate statistics
     let total_tasks = tasks.len();
     let active_tasks = tasks.iter().filter(|t| !t.is_completed()).count();
     let completed_tasks = tasks.iter().filter(|t| t.is_completed()).count();
 
-    // Find current position if active task is specified
     let current_position = if let Some(active_id) = &active_task_id {
         tasks.iter().position(|t| t.id == *active_id)
     } else {
@@ -75,12 +72,9 @@ pub async fn get_task_queue_with_priorities(
         None
     };
 
-    // Get active tasks and sort them by priority logic
     let mut tasks = cycling_service.get_active_task_queue().await?;
 
-    // Sort by: 1) Active task first, 2) Incomplete tasks by creation date, 3) Completed tasks last
     tasks.sort_by(|a, b| {
-        // Active task goes first
         if let Some(active_id) = &active_id {
             if a.id == *active_id {
                 return std::cmp::Ordering::Less;
@@ -90,12 +84,10 @@ pub async fn get_task_queue_with_priorities(
             }
         }
 
-        // Then by completion status (incomplete first)
         match (a.is_completed(), b.is_completed()) {
             (false, true) => std::cmp::Ordering::Less,
             (true, false) => std::cmp::Ordering::Greater,
             _ => {
-                // Finally by creation date (newer first for incomplete, older first for completed)
                 if !a.is_completed() && !b.is_completed() {
                     b.created_at.cmp(&a.created_at)
                 } else {
@@ -140,7 +132,6 @@ pub async fn get_task_queue_summary(
         .filter(|t| t.status == TaskStatus::Paused)
         .count();
 
-    // Calculate total sessions and completed sessions
     let total_sessions: u32 = all_tasks.iter().map(|t| t.max_sessions as u32).sum();
     let completed_sessions: u32 = all_tasks.iter().map(|t| t.current_sessions as u32).sum();
 
@@ -222,9 +213,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(queue_info.tasks.len(), 2); // Only active tasks
+        assert_eq!(queue_info.tasks.len(), 2);
         assert_eq!(queue_info.active_tasks, 2);
-        assert_eq!(queue_info.completed_tasks, 0); // Not included in results
+        assert_eq!(queue_info.completed_tasks, 0);
         assert_eq!(queue_info.current_position, Some(0));
         assert_eq!(queue_info.active_task_id, Some(tasks[0].id.clone()));
     }
@@ -242,7 +233,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(queue_info.tasks.len(), 3); // All tasks
+        assert_eq!(queue_info.tasks.len(), 3);
         assert_eq!(queue_info.total_tasks, 3);
         assert_eq!(queue_info.active_tasks, 2);
         assert_eq!(queue_info.completed_tasks, 1);
@@ -255,7 +246,7 @@ mod tests {
 
         let active_tasks = get_active_task_queue(&cycling_service).await.unwrap();
 
-        assert_eq!(active_tasks.len(), 2); // Only active tasks
+        assert_eq!(active_tasks.len(), 2);
         assert!(active_tasks.iter().all(|t| !t.is_completed()));
     }
 
@@ -268,7 +259,6 @@ mod tests {
                 .await
                 .unwrap();
 
-        // Active task should be first
         assert_eq!(queue_info.tasks[0].id, tasks[1].id);
         assert_eq!(queue_info.current_position, Some(0));
     }
@@ -284,9 +274,9 @@ mod tests {
         assert_eq!(summary.total_tasks, 3);
         assert_eq!(summary.active_tasks, 2);
         assert_eq!(summary.completed_tasks, 1);
-        assert_eq!(summary.total_sessions, 9); // 4 + 3 + 2
-        assert_eq!(summary.completed_sessions, 2); // Only task3 completed 2 sessions
-        assert!((summary.progress_percentage - 22.22).abs() < 0.01); // ~22.22%
+        assert_eq!(summary.total_sessions, 9);
+        assert_eq!(summary.completed_sessions, 2);
+        assert!((summary.progress_percentage - 22.22).abs() < 0.01);
     }
 
     #[tokio::test]

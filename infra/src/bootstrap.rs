@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use thiserror::Error;
 
-use domain::InMemoryTaskRepository;
+use domain::{InMemoryTaskRepository, WorkSessionCompleted};
 use tauri::AppHandle;
 
 use crate::adapters::{
@@ -20,6 +20,14 @@ pub struct AppRegistry {
     pub audio_service: RodioAudioService,
 }
 
+fn init_events(app_handle: AppHandle, event_bus: Arc<DomainEventBus>) -> Result<(), BootstrapError> {
+    tokio::spawn(async move {
+        
+    });
+
+    Ok(())
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
     #[error("Failed to initialize config repository: {0}")]
@@ -36,18 +44,15 @@ impl From<BootstrapError> for String {
     }
 }
 
-pub fn boostrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
-    // repositories
+pub fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
     let task_repository: TaskRepositoryArc = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: ConfigRepository = Arc::new(
         FileConfigRepo::new(&app_handle).map_err(|e| BootstrapError::ConfigInit(e.to_string()))?,
     );
 
-    // events
     let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
         create_event_publisher_with_bus(app_handle.clone());
 
-    // services
     let audio_service =
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?;
 

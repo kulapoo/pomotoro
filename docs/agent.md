@@ -134,6 +134,7 @@ pub async fn create_task(
 - Real-world analogies at end
 - Code only when needed (ask first)
 - Rust as default language
+- Always recommend best approach, ask first to see alternatives
 
 ## Response Template
 
