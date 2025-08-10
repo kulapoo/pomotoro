@@ -26,6 +26,7 @@ pub struct TaskDto {
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: String, // TaskStatus serialized as string
+    pub default: bool,
 }
 
 impl From<Task> for TaskDto {
@@ -54,6 +55,7 @@ impl From<Task> for TaskDto {
                 TaskStatus::Paused => "Paused".to_string(),
                 TaskStatus::Completed => "Completed".to_string(),
             },
+            default: task.default,
         }
     }
 }
@@ -102,6 +104,7 @@ impl TryFrom<TaskDto> for Task {
             created_at: dto.created_at,
             completed_at: dto.completed_at,
             status,
+            default: dto.default,
         })
     }
 }

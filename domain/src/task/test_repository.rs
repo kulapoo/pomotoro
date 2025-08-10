@@ -88,4 +88,97 @@ impl TaskRepository for InMemoryTaskRepository {
         let tasks = self.tasks.lock().unwrap();
         Ok(tasks.contains_key(&id))
     }
+
+    async fn get_default_task(&self) -> Result<Option<Task>> {
+        let tasks = self.tasks.lock().unwrap();
+        Ok(tasks.values().find(|task| task.default).cloned())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{TaskBuilder, TaskStatus};
+
+    #[tokio::test]
+    async fn should_return_none_when_no_default_task() {
+        let repo = InMemoryTaskRepository::new();
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_none());
+    }
+
+    #[tokio::test]
+    async fn should_return_default_task() {
+        let repo = InMemoryTaskRepository::new();
+        let mut task = crate::Task::new("Test Task".to_string(), 4).unwrap();
+        task.set_as_default();
+        
+        repo.create(task.clone()).await.unwrap();
+        
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_some());
+        assert_eq!(default_task.unwrap().id, task.id);
+    }
+
+    #[tokio::test]
+    async fn should_return_first_default_task_when_multiple_exist() {
+        let repo = InMemoryTaskRepository::new();
+        
+        // This scenario shouldn't happen in practice due to business logic,
+        // but tests the repository behavior
+        let mut task1 = crate::Task::new("Default 1".to_string(), 4).unwrap();
+        task1.set_as_default();
+        let mut task2 = crate::Task::new("Default 2".to_string(), 4).unwrap();
+        task2.set_as_default();
+        
+        repo.create(task1.clone()).await.unwrap();
+        repo.create(task2.clone()).await.unwrap();
+        
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_some());
+        // Should return one of them (implementation detail)
+        assert!(default_task.unwrap().is_default());
+    }
+
+    #[tokio::test]
+    async fn should_return_none_after_default_task_deleted() {
+        let repo = InMemoryTaskRepository::new();
+        let mut task = crate::Task::new("Default Task".to_string(), 4).unwrap();
+        task.set_as_default();
+        let task_id = task.id.clone();
+        
+        repo.create(task).await.unwrap();
+        
+        // Verify it exists
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_some());
+        
+        // Delete it
+        repo.delete(task_id).await.unwrap();
+        
+        // Should no longer exist
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_none());
+    }
+
+    #[tokio::test]
+    async fn should_find_updated_default_task() {
+        let repo = InMemoryTaskRepository::new();
+        let mut task = crate::Task::new("Non-default Task".to_string(), 4).unwrap();
+        
+        repo.create(task.clone()).await.unwrap();
+        
+        // Initially no default
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_none());
+        
+        // Set as default and update
+        task.set_as_default();
+        repo.update(task.clone()).await.unwrap();
+        
+        // Should now find it
+        let default_task = repo.get_default_task().await.unwrap();
+        assert!(default_task.is_some());
+        assert_eq!(default_task.unwrap().id, task.id);
+    }
 }

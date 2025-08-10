@@ -16,3 +16,8 @@ pub mod config {
     pub const SETTINGS_UPDATED: &str = "config:settings_updated";
     pub const THEME_CHANGED: &str = "config:theme_changed";
 }
+
+pub mod app {
+    pub const APP_STARTED: &str = "app:started";
+    pub const APP_EXITED: &str = "app:exited";
+}

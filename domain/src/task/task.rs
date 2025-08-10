@@ -16,6 +16,7 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: TaskStatus,
+    pub default: bool,
 }
 
 impl Task {
@@ -98,5 +99,17 @@ impl Task {
         }
         self.status = TaskStatus::Queued;
         Ok(())
+    }
+
+    pub fn is_default(&self) -> bool {
+        self.default
+    }
+
+    pub fn set_as_default(&mut self) {
+        self.default = true;
+    }
+
+    pub fn unset_as_default(&mut self) {
+        self.default = false;
     }
 }

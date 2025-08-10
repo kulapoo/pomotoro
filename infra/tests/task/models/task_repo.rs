@@ -94,4 +94,8 @@ impl TaskRepository for TaskTestRepository {
     async fn exists(&self, id: TaskId) -> Result<bool, TaskError> {
         self.inner.exists(id).await
     }
+
+    async fn get_default_task(&self) -> Result<Option<Task>, TaskError> {
+        self.inner.get_default_task().await
+    }
 }

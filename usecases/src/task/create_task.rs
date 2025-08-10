@@ -28,7 +28,6 @@ pub async fn create_task(
     
     task_repo.create(task.clone()).await?;
     
-    // Publish TaskCreated event
     let created_event = TaskCreated::new(
         task.id.clone(),
         task.name.clone(),
@@ -37,7 +36,7 @@ pub async fn create_task(
         task.tags.clone(),
         task.config.clone(),
         task.audio_config.clone(),
-        1, // version
+        1,
     );
     event_publisher.publish(Box::new(created_event));
     
@@ -68,7 +67,6 @@ mod tests {
         assert_eq!(task.max_sessions, 4);
         assert_eq!(task.tags, vec!["work".to_string(), "urgent".to_string()]);
         
-        // Verify task was saved to repository
         let saved_task = task_repo.get_by_id(task.id).await.unwrap().unwrap();
         assert_eq!(saved_task.name, "Test Task");
     }

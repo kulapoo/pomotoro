@@ -8,7 +8,6 @@ pub async fn pause_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
 ) -> Result<()> {
-    // Only allow pausing if currently running
     if timer_state.status() != TimerStatus::Running {
         return Err(Error::InvalidStateTransition {
             from: format!("{:?}", timer_state.status()),
@@ -16,7 +15,6 @@ pub async fn pause_session(
         });
     }
     
-    // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
@@ -24,7 +22,6 @@ pub async fn pause_session(
         });
     }
     
-    // Pause the timer using the phase transition service
     phase_service.pause_timer(timer_state)?;
     
     Ok(())
@@ -34,7 +31,6 @@ pub async fn resume_session(
     timer_state: &mut TimerState,
     phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
 ) -> Result<()> {
-    // Only allow resuming if currently paused
     if timer_state.status() != TimerStatus::Paused {
         return Err(Error::InvalidStateTransition {
             from: format!("{:?}", timer_state.status()),
@@ -42,7 +38,6 @@ pub async fn resume_session(
         });
     }
     
-    // Ensure we have an active task
     if timer_state.active_task_id.is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
@@ -50,7 +45,6 @@ pub async fn resume_session(
         });
     }
     
-    // Resume the timer using the phase transition service
     phase_service.start_timer(timer_state)?;
     
     Ok(())
@@ -122,8 +116,8 @@ mod tests {
         let (phase_service, task_id) = setup();
         let mut timer_state = TimerState::default();
         timer_state.active_task_id = Some(task_id);
-        timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
-        timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
+        timer_state.set_status(TimerStatus::Running).unwrap();
+        timer_state.set_status(TimerStatus::Paused).unwrap();
         
         resume_session(
             &mut timer_state,
@@ -152,8 +146,8 @@ mod tests {
     async fn should_fail_to_resume_without_active_task() {
         let (phase_service, _) = setup();
         let mut timer_state = TimerState::default();
-        timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
-        timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
+        timer_state.set_status(TimerStatus::Running).unwrap();
+        timer_state.set_status(TimerStatus::Paused).unwrap();
         
         let result = resume_session(
             &mut timer_state,

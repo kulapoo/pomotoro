@@ -12,4 +12,5 @@ pub trait TaskRepository: Send + Sync {
     async fn get_by_tags(&self, tags: &[String]) -> Result<Vec<Task>>;
     async fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>>;
     async fn exists(&self, id: TaskId) -> Result<bool>;
+    async fn get_default_task(&self) -> Result<Option<Task>>;
 }

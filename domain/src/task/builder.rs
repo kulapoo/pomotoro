@@ -24,6 +24,7 @@ pub struct TaskBuilder {
     created_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     status: Option<TaskStatus>,
+    default: Option<bool>,
 }
 
 impl Default for TaskBuilder {
@@ -47,6 +48,7 @@ impl TaskBuilder {
             created_at: None,
             completed_at: None,
             status: None,
+            default: None,
         }
     }
 
@@ -64,6 +66,7 @@ impl TaskBuilder {
             .description("Default pomodoro task for focused work".to_string())
             .tags(vec!["focus".to_string()])
             .status(TaskStatus::Active)
+            .default(true)
     }
 
     /// Set the task ID
@@ -156,6 +159,12 @@ impl TaskBuilder {
         self
     }
 
+    /// Set the default flag
+    pub fn default(mut self, default: bool) -> Self {
+        self.default = Some(default);
+        self
+    }
+
     /// Mark the task as completed
     pub fn completed(self) -> Self {
         self.status(TaskStatus::Completed)
@@ -224,6 +233,7 @@ impl TaskBuilder {
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,
             status,
+            default: self.default.unwrap_or(false),
         })
     }
 
@@ -289,6 +299,7 @@ impl TaskBuilder {
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,
             status,
+            default: self.default.unwrap_or(false),
         })
     }
 }

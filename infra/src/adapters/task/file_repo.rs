@@ -160,6 +160,11 @@ impl TaskRepository for FileTaskRepository {
         let tasks = self.load_tasks()?;
         Ok(tasks.contains_key(&id))
     }
+
+    async fn get_default_task(&self) -> Result<Option<Task>> {
+        let tasks = self.load_tasks()?;
+        Ok(tasks.values().find(|task| task.default).cloned())
+    }
 }
 
 #[cfg(test)]

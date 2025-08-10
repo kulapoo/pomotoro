@@ -143,6 +143,10 @@ mod tests {
         async fn exists(&self, id: TaskId) -> Result<bool> {
             Ok(self.tasks.lock().unwrap().contains_key(&id))
         }
+
+        async fn get_default_task(&self) -> Result<Option<Task>> {
+            Ok(self.tasks.lock().unwrap().values().find(|task| task.default).cloned())
+        }
     }
 
     async fn setup_service() -> (StandardTaskCyclerService, Arc<TestTaskRepository>) {

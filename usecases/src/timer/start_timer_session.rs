@@ -36,7 +36,6 @@ pub async fn start_timer_session(
             id: task_id_str.clone(),
         })?;
 
-        // Verify task exists and is not completed
         let task = task_repo
             .get_by_id(task_id.clone())
             .await?
@@ -46,12 +45,10 @@ pub async fn start_timer_session(
             return Err(Error::TaskAlreadyCompleted);
         }
 
-        // Switch to the task first
         timer_service.switch_task(task_id, Some(&task)).await?;
 
         Some(task)
     } else {
-        // Get current state to check if we have an active task
         let current_state = timer_service.get_state().await?;
         if current_state.active_task_id.is_none() {
             return Err(Error::InvalidStateTransition {
@@ -60,7 +57,6 @@ pub async fn start_timer_session(
             });
         }
 
-        // Get the active task for context
         if let Some(task_id) = current_state.active_task_id {
             task_repo.get_by_id(task_id).await?
         } else {
@@ -68,10 +64,8 @@ pub async fn start_timer_session(
         }
     };
 
-    // Start the timer with task context
     timer_service.start_timer(task.as_ref()).await?;
 
-    // Business logic: Publish TimerStarted event after successful start
     let updated_state = timer_service.get_state().await?;
     let timer_started_event = TimerStarted::new(
         updated_state.active_task_id.clone(),
@@ -92,7 +86,6 @@ mod tests {
     use domain::{Task, TimerState, TimerStatus};
     use std::sync::{Arc, RwLock};
 
-    // Mock timer service for testing
     struct MockTimerService {
         state: Arc<RwLock<TimerState>>,
     }
@@ -202,7 +195,6 @@ mod tests {
     async fn should_start_timer_session_with_existing_active_task() {
         let (timer_service, task_repo, event_publisher, task) = setup().await;
 
-        // Set up existing active task
         timer_service
             .switch_task(task.id.clone(), Some(&task))
             .await
@@ -257,7 +249,6 @@ mod tests {
         assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
     }
 
-    // Enhanced event testing for Phase 4
     mod event_tests {
         use super::*;
         use domain::MockEventPublisher;

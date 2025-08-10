@@ -1,29 +1,25 @@
 use std::sync::Arc;
-use thiserror::Error;
 
-use domain::{InMemoryTaskRepository, WorkSessionCompleted};
+use crate::adapters::{task::InMemoryTaskRepository, InMemoryConfigRepository};
 use tauri::AppHandle;
 
 use crate::adapters::{
-    create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc,
-    FileConfigRepo, RodioAudioService, TaskRepositoryArc, TimerService,
+    create_event_publisher_with_bus, DomainEventBus, EventPublisherArc,
+    FileConfigRepo, RodioAudioService, TimerService,
 };
 
 pub struct AppRegistry {
-    pub task_repository: TaskRepositoryArc,
-    pub config_repository: ConfigRepository,
+    pub task_repository: InMemoryTaskRepository,
+    pub config_repository: InMemoryConfigRepository,
 
     pub event_bus: Arc<DomainEventBus>,
     pub event_publisher: EventPublisherArc,
 
-    pub timer_service: TimerService,
-    pub audio_service: RodioAudioService,
+    pub timer_service: Arc<TimerService>,
+    pub audio_service: Arc<RodioAudioService>,
 }
 
 fn init_events(app_handle: AppHandle, event_bus: Arc<DomainEventBus>) -> Result<(), BootstrapError> {
-    tokio::spawn(async move {
-        
-    });
 
     Ok(())
 }
@@ -36,6 +32,9 @@ pub enum BootstrapError {
     AudioInit(String),
     #[error("Failed to create event system: {0}")]
     EventSystem(String),
+
+    #[error("Failed to orchestrate event system: {0}")]
+    OrchestrationError(String),
 }
 
 impl From<BootstrapError> for String {
@@ -44,7 +43,7 @@ impl From<BootstrapError> for String {
     }
 }
 
-pub fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
+pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
     let task_repository: TaskRepositoryArc = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: ConfigRepository = Arc::new(
         FileConfigRepo::new(&app_handle).map_err(|e| BootstrapError::ConfigInit(e.to_string()))?,
@@ -53,11 +52,14 @@ pub fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
     let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
         create_event_publisher_with_bus(app_handle.clone());
 
-    let audio_service =
-        RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?;
+    let audio_service = Arc::new(
+        RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
+    );
 
     let timer_service =
-        TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone()));
+        Arc::new(TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone())));
+
+    usecases::bootstrap(&task_repository, &config_repository, &timer_service, &event_publisher).await.map_err(|e| BootstrapError::OrchestrationError(e.to_string()))?;
 
     let ctx = AppRegistry {
         task_repository,

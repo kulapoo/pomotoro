@@ -153,6 +153,13 @@ impl TaskRepository for InMemoryTaskRepository {
         })?;
         Ok(tasks.contains_key(&id))
     }
+
+    async fn get_default_task(&self) -> Result<Option<Task>> {
+        let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
+            message: format!("Lock error: {}", e) 
+        })?;
+        Ok(tasks.values().find(|task| task.default).cloned())
+    }
 }
 
 #[async_trait]

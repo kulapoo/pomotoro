@@ -3,15 +3,13 @@ mod bootstrap;
 pub mod commands;
 
 use adapters::{
-    create_event_publisher_with_bus, ConfigRepository, DomainEventBus, EventPublisherArc,
-    FileConfigRepo, InMemoryTaskRepository, RodioAudioService, TaskRepositoryArc, TimerService,
+    InMemoryTaskRepository, TaskRepositoryArc,
 };
 use commands::*;
-use domain::WorkSessionCompleted;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-use bootstrap::boostrap;
+use crate::bootstrap::bootstrap;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,7 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
-            let app_registry = boostrap(app.handle().clone()).map_err(|e| {
+            let app_registry = bootstrap(app.handle().clone()).map_err(|e| {
                 eprintln!("Failed to bootstrap app: {}", e.to_string());
                 e
             })?;

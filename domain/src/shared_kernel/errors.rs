@@ -14,6 +14,9 @@ pub enum Error {
     #[error("Task already completed")]
     TaskAlreadyCompleted,
 
+    #[error("Default task not found")]
+    DefaultTaskNotFound,
+
     #[error("Timer state transition not allowed: {from} -> {to}")]
     InvalidStateTransition { from: String, to: String },
 
