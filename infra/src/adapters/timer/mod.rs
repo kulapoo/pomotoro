@@ -5,7 +5,6 @@
 //! - Timer models and state management
 
 pub mod timer_srv;
-pub mod models;
 pub mod timer_repo;
 pub mod phase_completion_handler;
 

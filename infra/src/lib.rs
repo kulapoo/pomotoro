@@ -2,11 +2,8 @@ pub mod adapters;
 mod bootstrap;
 pub mod commands;
 
-use adapters::{
-    InMemoryTaskRepository, TaskRepositoryArc,
-};
 use commands::*;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tauri::Manager;
 
 use crate::bootstrap::bootstrap;
@@ -15,7 +12,6 @@ use crate::bootstrap::bootstrap;
 pub fn run() {
     #[cfg(debug_assertions)] // only enable instrumentation in development builds
     let devtools = tauri_plugin_devtools::init();
-    let task_repository: TaskRepositoryArc = Arc::new(InMemoryTaskRepository::with_default_task());
 
     let mut builder = tauri::Builder::default();
 
@@ -29,14 +25,14 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
-            let app_registry = bootstrap(app.handle().clone()).map_err(|e| {
+            let app_registry = tauri::async_runtime::block_on(bootstrap(app.handle().clone())).map_err(|e| {
                 eprintln!("Failed to bootstrap app: {}", e.to_string());
                 e
             })?;
 
             //  repositories
-            app.manage(app_registry.config_repository);
-            app.manage(task_repository.clone());
+            app.manage(app_registry.config_repository.clone());
+            app.manage(app_registry.task_repository.clone());
 
             // services
             app.manage(Mutex::new(app_registry.audio_service));
@@ -45,19 +41,6 @@ pub fn run() {
             // events
             app.manage(app_registry.event_publisher.clone());
             app.manage(app_registry.event_bus.clone());
-
-            // tauri::async_runtime::spawn(async move {
-            //     match task_repo_bootstrap_clone.get_active_tasks().await {
-            //         Ok(tasks) => {
-            //             if let Some(initial_task) = tasks.first().clone() {
-            //                 timer_service_bootstrap_clone
-            //                     .switch_task(initial_task.id, Some(initial_task))
-            //                     .await;
-            //             }
-            //         }
-            //         Err(e) => eprintln!("Failed to get active tasks: {}", e),
-            //     }
-            // });
 
             Ok(())
         })

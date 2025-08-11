@@ -20,7 +20,7 @@ pub fn create_composite_event_publisher(app_handle: AppHandle) -> EventPublisher
 
 /// Create an event publisher and return both the composite and the domain event bus
 /// for handler registration
-pub fn create_event_publisher_with_bus(app_handle: AppHandle) -> (EventPublisherArc, Arc<DomainEventBus>) {
+pub fn create_event_publisher_with_bus(_app_handle: AppHandle) -> (EventPublisherArc, Arc<DomainEventBus>) {
     let mut composite = CompositeEventPublisher::new();
 
     // Create the domain event bus that we'll register handlers on

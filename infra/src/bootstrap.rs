@@ -5,21 +5,21 @@ use tauri::AppHandle;
 
 use crate::adapters::{
     create_event_publisher_with_bus, DomainEventBus, EventPublisherArc,
-    FileConfigRepo, RodioAudioService, TimerService,
+    RodioAudioService, TimerService,
 };
 
 pub struct AppRegistry {
-    pub task_repository: InMemoryTaskRepository,
-    pub config_repository: InMemoryConfigRepository,
+    pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
+    pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
 
     pub event_bus: Arc<DomainEventBus>,
     pub event_publisher: EventPublisherArc,
 
-    pub timer_service: Arc<TimerService>,
+    pub timer_service: Arc<dyn domain::timer::TimerService + Send + Sync>,
     pub audio_service: Arc<RodioAudioService>,
 }
 
-fn init_events(app_handle: AppHandle, event_bus: Arc<DomainEventBus>) -> Result<(), BootstrapError> {
+fn init_events(_app_handle: AppHandle, _event_bus: Arc<DomainEventBus>) -> Result<(), BootstrapError> {
 
     Ok(())
 }
@@ -44,10 +44,8 @@ impl From<BootstrapError> for String {
 }
 
 pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
-    let task_repository: TaskRepositoryArc = Arc::new(InMemoryTaskRepository::with_default_task());
-    let config_repository: ConfigRepository = Arc::new(
-        FileConfigRepo::new(&app_handle).map_err(|e| BootstrapError::ConfigInit(e.to_string()))?,
-    );
+    let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::with_default_task());
+    let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::default());
 
     let (event_publisher, event_bus): (EventPublisherArc, Arc<DomainEventBus>) =
         create_event_publisher_with_bus(app_handle.clone());
@@ -56,7 +54,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
     );
 
-    let timer_service =
+    let timer_service: Arc<dyn domain::timer::TimerService + Send + Sync> =
         Arc::new(TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone())));
 
     usecases::bootstrap(&task_repository, &config_repository, &timer_service, &event_publisher).await.map_err(|e| BootstrapError::OrchestrationError(e.to_string()))?;
