@@ -11,3 +11,6 @@ pub trait DomainEventHandler: Send + Sync {
     }
 }
 
+pub trait DomainEventRegistry: Send + Sync {
+    fn register_events() -> Result<()>;
+}
