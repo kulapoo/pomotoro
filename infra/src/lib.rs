@@ -25,9 +25,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
-            let app_registry = tauri::async_runtime::block_on(bootstrap(app.handle().clone())).map_err(|e| {
-                eprintln!("Failed to bootstrap app: {}", e.to_string());
-                e
+            let app_registry = tauri::async_runtime::block_on(bootstrap(app.handle().clone())).inspect_err(|e| {
+                eprintln!("Failed to bootstrap app: {e}");
             })?;
 
             //  repositories

@@ -4,6 +4,7 @@ use domain::TimerStateWithTask;
 use crate::components::circular_progress::CircularProgress;
 
 #[component]
+#[allow(dead_code)]
 pub fn TimerDisplay(
     timer_state: ReadSignal<TimerState>, 
     timer_with_task: ReadSignal<TimerStateWithTask>

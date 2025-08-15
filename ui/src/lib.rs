@@ -1,3 +1,5 @@
+#![allow(dead_code)] // Leptos component macros generate code that uses the fields
+
 mod app;
 mod components;
 mod store;

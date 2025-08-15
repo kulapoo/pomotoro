@@ -9,6 +9,12 @@ pub struct CompositeEventPublisher {
     publishers: Vec<Arc<dyn EventPublisher + Send + Sync>>,
 }
 
+impl Default for CompositeEventPublisher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompositeEventPublisher {
     pub fn new() -> Self {
         Self {

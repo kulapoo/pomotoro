@@ -116,7 +116,7 @@ mod tests {
     async fn should_complete_work_session() {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         timer_state.timer.remaining_seconds = 0;
         timer_state.timer.phase = Phase::Work;
         
@@ -142,7 +142,7 @@ mod tests {
     async fn should_complete_break_session() {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         timer_state.timer.remaining_seconds = 0;
         timer_state.timer.phase = Phase::ShortBreak;
         timer_state.timer.is_break_cycle = true;
@@ -173,7 +173,7 @@ mod tests {
         task_repo.create(single_session_task.clone()).await.unwrap();
         
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(single_session_task.id.clone());
+        timer_state.active_task_id = Some(single_session_task.id);
         timer_state.timer.remaining_seconds = 0;
         timer_state.timer.phase = Phase::Work;
         
@@ -210,7 +210,7 @@ mod tests {
     async fn should_fail_with_time_remaining() {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         timer_state.timer.remaining_seconds = 500;
         
         let result = complete_timer_session(
@@ -227,7 +227,7 @@ mod tests {
     async fn should_force_complete_session() {
         let (task_repo, event_publisher, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         timer_state.timer.remaining_seconds = 500;
         timer_state.timer.phase = Phase::Work;
         timer_state.set_status(TimerStatus::Running).unwrap();

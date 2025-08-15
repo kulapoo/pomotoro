@@ -29,7 +29,7 @@ struct AudioPlayback {
 impl RodioAudioService {
     pub fn new() -> std::result::Result<Self, AudioError> {
         let stream_handle = OutputStreamBuilder::open_default_stream()
-            .map_err(|e| AudioError::PlaybackFailed(format!("Failed to create audio stream: {}", e)))?;
+            .map_err(|e| AudioError::PlaybackFailed(format!("Failed to create audio stream: {e}")))?;
 
         Ok(Self {
             stream_handle,
@@ -61,7 +61,7 @@ impl RodioAudioService {
 
         let reader = BufReader::new(file);
         let decoder = Decoder::new(reader)
-            .map_err(|e| AudioError::PlaybackFailed(format!("Failed to decode audio: {}", e)))?;
+            .map_err(|e| AudioError::PlaybackFailed(format!("Failed to decode audio: {e}")))?;
 
         let sink = Sink::connect_new(self.stream_handle.mixer());
 

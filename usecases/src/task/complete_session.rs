@@ -19,7 +19,7 @@ pub async fn complete_session(
         })?;
 
     let mut task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
         .ok_or_else(|| Error::TaskNotFound {
             id: task_id.to_string()
@@ -35,7 +35,7 @@ pub async fn complete_session(
     task_repo.update(task.clone()).await?;
 
     let session_event = TaskSessionCompleted::new(
-        task.id.clone(),
+        task.id,
         task.current_sessions,
         task.max_sessions,
         is_task_completed,
@@ -46,7 +46,7 @@ pub async fn complete_session(
 
     if is_task_completed {
         let completed_event = TaskCompleted::new(
-            task.id.clone(),
+            task.id,
             task.current_sessions,
             task.current_sessions as u64 + 1,
         );
@@ -71,7 +71,7 @@ pub async fn can_complete_session(
         })?;
 
     let task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
         .ok_or_else(|| Error::TaskNotFound {
             id: task_id.to_string()

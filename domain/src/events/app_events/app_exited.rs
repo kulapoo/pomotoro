@@ -28,7 +28,7 @@ impl AppExited {
             app_exit_code,
             exit_duration_ms,
             app_terminated,
-            occurred_at: chrono::Utc::now(),
+            occurred_at,
         }
     }
 

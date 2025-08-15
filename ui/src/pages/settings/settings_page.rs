@@ -194,19 +194,19 @@ pub fn SettingsPage() -> impl IntoView {
 
             match serde_wasm_bindgen::to_value(&updated_config) {
                 Ok(config_value) => {
-                    let result = unsafe { invoke(events::config::SAVE_GLOBAL, config_value).await };
+                    let result = invoke(events::config::SAVE_GLOBAL, config_value).await;
                     match serde_wasm_bindgen::from_value::<()>(result) {
                         Ok(_) => {
                             set_config.set(Some(updated_config));
                             set_success_message.set(Some("Settings saved successfully!".to_string()));
                         }
                         Err(e) => {
-                            set_error_message.set(Some(format!("Failed to save settings: {}", e)));
+                            set_error_message.set(Some(format!("Failed to save settings: {e}")));
                         }
                     }
                 }
                 Err(e) => {
-                    set_error_message.set(Some(format!("Serialization error: {}", e)));
+                    set_error_message.set(Some(format!("Serialization error: {e}")));
                 }
             }
             set_loading.set(false);
@@ -218,14 +218,14 @@ pub fn SettingsPage() -> impl IntoView {
             set_loading.set(true);
             set_error_message.set(None);
             set_success_message.set(None);
-            let result = unsafe { invoke(events::config::RESET_TO_DEFAULTS, JsValue::NULL).await };
+            let result = invoke(events::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
             match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
                 Ok(default_config) => {
                     set_config.set(Some(default_config));
                     set_success_message.set(Some("Settings reset to defaults!".to_string()));
                 }
                 Err(e) => {
-                    set_error_message.set(Some(format!("Failed to reset settings: {}", e)));
+                    set_error_message.set(Some(format!("Failed to reset settings: {e}")));
                 }
             }
             set_loading.set(false);
@@ -359,13 +359,13 @@ fn load_global_config(
         set_loading.set(true);
         set_error_message.set(None);
         
-        let result = unsafe { invoke(events::config::GET_GLOBAL, JsValue::NULL).await };
+        let result = invoke(events::config::GET_GLOBAL, JsValue::NULL).await;
         match serde_wasm_bindgen::from_value::<GlobalConfigDto>(result) {
             Ok(config) => {
                 set_config.set(Some(config));
             }
             Err(e) => {
-                set_error_message.set(Some(format!("Failed to load settings: {}", e)));
+                set_error_message.set(Some(format!("Failed to load settings: {e}")));
             }
         }
         

@@ -5,11 +5,9 @@ use tauri::AppHandle;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 
-use crate::adapters::timer::event_handlers::PhaseCompletionHandler;
 use crate::adapters::timer::timer_repo::FileTimerStateRepository;
 use crate::adapters::EventPublisherArc;
 use domain::timer::TimerService as DomainTimerService;
-use domain::timer::events::PhaseCompleted;
 use domain::Task;
 use domain::{
     DefaultPhaseTransitionService, Phase, PhaseTransitionService, TaskId, TimerStatus,
@@ -21,7 +19,6 @@ pub struct TimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     phase_service: Arc<dyn PhaseTransitionService>,
     event_publisher: EventPublisherArc,
-    phase_handler: Option<PhaseCompletionHandler>,
     state_repository: Option<FileTimerStateRepository>,
 }
 
@@ -32,9 +29,14 @@ impl Clone for TimerService {
             cancel_handle: Arc::clone(&self.cancel_handle),
             phase_service: Arc::clone(&self.phase_service),
             event_publisher: Arc::clone(&self.event_publisher),
-            phase_handler: self.phase_handler.clone(),
             state_repository: None, // TODO: Fix cloning of repository
         }
+    }
+}
+
+impl Default for TimerService {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -44,9 +46,6 @@ impl TimerService {
         app_handle: Option<AppHandle>,
     ) -> Self {
         let phase_service = Arc::new(DefaultPhaseTransitionService::new());
-        let phase_handler = app_handle.as_ref().map(|handle|
-            PhaseCompletionHandler::new(handle.clone())
-        );
         let state_repository = app_handle.as_ref().map(|_handle|
             FileTimerStateRepository::new()
         );
@@ -56,7 +55,6 @@ impl TimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service,
             event_publisher,
-            phase_handler,
             state_repository,
         }
     }
@@ -70,7 +68,6 @@ impl TimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             phase_service: Arc::new(DefaultPhaseTransitionService::new()),
             event_publisher,
-            phase_handler: None,
             state_repository: None,
         }
     }
@@ -82,7 +79,7 @@ impl TimerService {
         {
             let mut state = self.state.write().await;
             self.phase_service
-                .start_timer(&mut *state)
+                .start_timer(&mut state)
                 .map_err(|e| e.to_string())?;
         }
 
@@ -97,7 +94,6 @@ impl TimerService {
         let state_clone = Arc::clone(&self.state);
         let cancel_handle_clone = Arc::clone(&self.cancel_handle);
         let phase_service = Arc::clone(&self.phase_service);
-        let phase_handler = self.phase_handler.clone();
 
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -115,11 +111,6 @@ impl TimerService {
                     if state.remaining_seconds() > 0 {
                         state.timer.remaining_seconds =
                             state.timer.remaining_seconds.saturating_sub(1);
-
-                        // Handle timer tick for UI updates
-                        if let Some(ref handler) = phase_handler {
-                            handler.handle_timer_tick(state.remaining_seconds());
-                        }
                         false
                     } else {
                         true
@@ -129,30 +120,15 @@ impl TimerService {
                 if should_transition {
                     let transition_result = {
                         let mut state = state_clone.write().await;
-                        if phase_service.can_transition(&*state) {
-                            phase_service.transition_to_next_phase(&mut *state)
+                        if phase_service.can_transition(&state) {
+                            phase_service.transition_to_next_phase(&mut state)
                         } else {
                             break;
                         }
                     };
 
-                    if let Ok(result) = transition_result {
-                        let state = state_clone.read().await;
-
-                        // Create domain event for phase completion
-                        let phase_event = PhaseCompleted::new(
-                            state.active_task_id.clone(),
-                            result.old_phase,
-                            result.new_phase,
-                            state.session_count(),
-                            state.task_session_count,
-                            1, // version
-                        );
-
-                        // Handle phase completion (notifications, UI events)
-                        if let Some(ref handler) = phase_handler {
-                            handler.handle_phase_completion(&result.old_phase, &result.new_phase, &phase_event);
-                        }
+                    if let Ok(_result) = transition_result {
+                        let _state = state_clone.read().await;
 
                         // Stop the timer after phase transition
                         let mut state_mut = state_clone.write().await;
@@ -186,13 +162,13 @@ impl TimerService {
             TimerStatus::Running => {
                 let mut state = self.state.write().await;
                 self.phase_service
-                    .start_timer(&mut *state)
+                    .start_timer(&mut state)
                     .map_err(|e| e.to_string())
             }
             TimerStatus::Paused => {
                 let mut state = self.state.write().await;
                 self.phase_service
-                    .pause_timer(&mut *state)
+                    .pause_timer(&mut state)
                     .map_err(|e| e.to_string())
             }
             TimerStatus::Stopped => {
@@ -206,7 +182,7 @@ impl TimerService {
     pub async fn reset_current_phase(&self, _task: Option<&Task>) -> Result<(), String> {
         let mut state = self.state.write().await;
         self.phase_service
-            .reset_timer(&mut *state)
+            .reset_timer(&mut state)
             .map_err(|e| e.to_string())
     }
 
@@ -218,7 +194,7 @@ impl TimerService {
 
         let result = self
             .phase_service
-            .transition_to_next_phase(&mut *state)
+            .transition_to_next_phase(&mut state)
             .map_err(|e| e.to_string())?;
 
         // Note: Business event publishing moved to use cases layer
@@ -327,7 +303,7 @@ impl DomainTimerService for TimerService {
     async fn save_state(&self) -> DomainResult<()> {
         if let Some(ref repository) = self.state_repository {
             let state = self.state.read().await;
-            repository.save_state(&*state).await?
+            repository.save_state(&state).await?
         }
         Ok(())
     }

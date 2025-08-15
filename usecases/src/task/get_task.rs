@@ -23,7 +23,7 @@ pub async fn get_task(
     task_repo
         .get_by_id(task_id)
         .await?
-        .ok_or_else(|| Error::TaskNotFound { id: query.id })
+        .ok_or(Error::TaskNotFound { id: query.id })
 }
 
 pub async fn get_tasks(
@@ -39,19 +39,13 @@ pub async fn get_tasks(
     let mut filtered_tasks = tasks;
     
     if let Some(status) = query.status {
-        filtered_tasks = filtered_tasks
-            .into_iter()
-            .filter(|task| task.status == status)
-            .collect();
+        filtered_tasks.retain(|task| task.status == status);
     }
     
     if let Some(tags) = query.tags {
-        filtered_tasks = filtered_tasks
-            .into_iter()
-            .filter(|task| {
+        filtered_tasks.retain(|task| {
                 tags.iter().any(|tag| task.tags.contains(tag))
-            })
-            .collect();
+            });
     }
     
     Ok(filtered_tasks)

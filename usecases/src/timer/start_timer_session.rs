@@ -37,9 +37,9 @@ pub async fn start_timer_session(
         })?;
 
         let task = task_repo
-            .get_by_id(task_id.clone())
+            .get_by_id(task_id)
             .await?
-            .ok_or_else(|| Error::TaskNotFound { id: task_id_str })?;
+            .ok_or(Error::TaskNotFound { id: task_id_str })?;
 
         if task.is_completed() {
             return Err(Error::TaskAlreadyCompleted);
@@ -68,7 +68,7 @@ pub async fn start_timer_session(
 
     let updated_state = timer_service.get_state().await?;
     let timer_started_event = TimerStarted::new(
-        updated_state.active_task_id.clone(),
+        updated_state.active_task_id,
         updated_state.timer.phase,
         updated_state.timer.remaining_seconds,
         1, // version
@@ -196,7 +196,7 @@ mod tests {
         let (timer_service, task_repo, event_publisher, task) = setup().await;
 
         timer_service
-            .switch_task(task.id.clone(), Some(&task))
+            .switch_task(task.id, Some(&task))
             .await
             .unwrap();
 

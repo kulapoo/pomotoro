@@ -10,7 +10,3 @@ pub trait DomainEventHandler: Send + Sync {
         std::any::type_name::<Self>()
     }
 }
-
-pub trait DomainEventRegistry: Send + Sync {
-    fn register_events() -> Result<()>;
-}

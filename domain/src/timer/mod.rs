@@ -1,6 +1,6 @@
 pub mod phase;
 pub mod id;
-pub mod timer;
+mod timer;
 pub mod state;
 pub mod state_with_task;
 pub mod status;
@@ -10,7 +10,7 @@ pub mod events;
 
 pub use phase::Phase;
 pub use id::{TimerId, TimerMarker};
-pub use timer::Timer;
+pub use self::timer::Timer;
 pub use state::TimerState;
 pub use state_with_task::TimerStateWithTask;
 pub use status::TimerStatus;

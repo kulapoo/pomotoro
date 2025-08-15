@@ -51,7 +51,7 @@ pub async fn get_timer_state_with_task(
 
     // Get active task if available
     let active_task = if let Some(task_id) = &timer_state.active_task_id {
-        task_repo.get_by_id(task_id.clone()).await?
+        task_repo.get_by_id(*task_id).await?
     } else {
         None
     };
@@ -171,13 +171,13 @@ mod tests {
         task_repo.create(task.clone()).await.unwrap();
 
         let timer_service: Arc<dyn TimerService + Send + Sync> =
-            Arc::new(MockTimerService::new_with_task(task.id.clone()));
+            Arc::new(MockTimerService::new_with_task(task.id));
 
         let (timer_state, active_task) = get_timer_state_with_task(&timer_service, &task_repo)
             .await
             .unwrap();
 
-        assert_eq!(timer_state.active_task_id, Some(task.id.clone()));
+        assert_eq!(timer_state.active_task_id, Some(task.id));
         assert!(active_task.is_some());
         assert_eq!(active_task.unwrap().id, task.id);
     }

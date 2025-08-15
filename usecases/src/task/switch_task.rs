@@ -29,7 +29,7 @@ pub async fn switch_task(
     })?;
 
     let task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
         .ok_or_else(|| Error::TaskNotFound {
             id: cmd.task_id.clone(),
@@ -39,13 +39,13 @@ pub async fn switch_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    cycling_service.validate_task_switch(task_id.clone()).await?;
+    cycling_service.validate_task_switch(task_id).await?;
 
     let timer_config = task_config_to_timer_config(&task.config)?;
-    timer_state.switch_task_with_config(task_id.clone(), timer_config)?;
+    timer_state.switch_task_with_config(task_id, timer_config)?;
 
     let switch_event = TaskSwitchWorkflowCompleted::new(
-        timer_state.active_task_id.clone(),
+        timer_state.active_task_id,
         task_id,
         format!("Switched to task: {}", task.name),
         1
@@ -66,7 +66,7 @@ pub async fn switch_to_next_task(
         });
     }
 
-    let current_task_id = timer_state.active_task_id.clone();
+    let current_task_id = timer_state.active_task_id;
 
     let next_task = cycling_service
         .cycle_to_next_active_task(current_task_id)
@@ -74,7 +74,7 @@ pub async fn switch_to_next_task(
 
     if let Some(task) = next_task {
         let timer_config = task_config_to_timer_config(&task.config)?;
-        timer_state.switch_task_with_config(task.id.clone(), timer_config)?;
+        timer_state.switch_task_with_config(task.id, timer_config)?;
         Ok(Some(task.id.to_string()))
     } else {
         Ok(None)
@@ -120,7 +120,7 @@ mod tests {
     async fn should_switch_to_specific_task() {
         let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
 
         let cmd = SwitchTaskCmd {
             task_id: tasks[1].id.to_string(),
@@ -136,7 +136,7 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(timer_state.active_task_id, Some(tasks[1].id.clone()));
+        assert_eq!(timer_state.active_task_id, Some(tasks[1].id));
         assert_eq!(timer_state.task_session_count, 0);
     }
 
@@ -144,7 +144,7 @@ mod tests {
     async fn should_fail_to_switch_while_running() {
         let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
         timer_state.set_status(TimerStatus::Running).unwrap();
 
         let cmd = SwitchTaskCmd {
@@ -167,7 +167,7 @@ mod tests {
     async fn should_fail_to_switch_to_nonexistent_task() {
         let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
 
         let cmd = SwitchTaskCmd {
             task_id: "nonexistent-id".to_string(),
@@ -189,7 +189,7 @@ mod tests {
     async fn should_fail_to_switch_to_completed_task() {
         let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
 
         // Create and complete a task
         let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
@@ -216,7 +216,7 @@ mod tests {
     async fn should_switch_to_next_task() {
         let (task_repo, _event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
 
         // Ensure tasks are in proper state to be cycled
         for task in &tasks {
@@ -233,19 +233,19 @@ mod tests {
             .unwrap();
 
         assert!(next_task_id.is_some());
-        assert_ne!(timer_state.active_task_id, Some(tasks[0].id.clone()));
+        assert_ne!(timer_state.active_task_id, Some(tasks[0].id));
         
         // Check against active tasks from repository instead of original tasks
         assert!(active_tasks
             .iter()
-            .any(|t| Some(t.id.clone()) == timer_state.active_task_id));
+            .any(|t| Some(t.id) == timer_state.active_task_id));
     }
 
     #[tokio::test]
     async fn should_fail_to_switch_to_next_while_running() {
         let (_task_repo, _event_publisher, cycling_service, tasks) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(tasks[0].id.clone());
+        timer_state.active_task_id = Some(tasks[0].id);
         timer_state.set_status(TimerStatus::Running).unwrap();
 
         let result = switch_to_next_task(&mut timer_state, &cycling_service).await;

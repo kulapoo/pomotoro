@@ -76,7 +76,7 @@ impl TimerState {
 
     // Convenience methods to access timer_core properties
     pub fn status(&self) -> TimerStatus {
-        self.timer.status.clone()
+        self.timer.status
     }
 
     pub fn phase(&self) -> Phase {
@@ -137,7 +137,7 @@ mod tests {
         
         // Serialize to JSON
         let json = serde_json::to_string_pretty(&state).unwrap();
-        println!("Serialized TimerState:\n{}", json);
+        println!("Serialized TimerState:\n{json}");
         
         // Deserialize back
         let deserialized: TimerState = serde_json::from_str(&json).unwrap();

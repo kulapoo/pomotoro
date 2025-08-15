@@ -50,17 +50,16 @@ impl EventPublisher for TauriEventPublisher {
 
         // Emit to frontend with specific event type
         if let Err(e) = self.app_handle.emit(event_type, &payload) {
-            eprintln!("Failed to publish event {}: {}", event_type, e);
+            eprintln!("Failed to publish event {event_type}: {e}");
         }
 
         // Also emit generic domain event for catch-all listeners
         if let Err(e) = self.app_handle.emit("domain_event", &payload) {
-            eprintln!("Failed to publish generic domain event: {}", e);
+            eprintln!("Failed to publish generic domain event: {e}");
         }
 
         println!(
-            "Published {} event for aggregate {} (version {})",
-            event_type, aggregate_id, version
+            "Published {event_type} event for aggregate {aggregate_id} (version {version})"
         );
     }
 
@@ -86,7 +85,7 @@ impl EventPublisher for TauriEventPublisher {
             .app_handle
             .emit("domain_event_batch_completed", &batch_payload)
         {
-            eprintln!("Failed to publish batch completion event: {}", e);
+            eprintln!("Failed to publish batch completion event: {e}");
         }
     }
 }
@@ -104,7 +103,7 @@ impl TauriEventPublisher {
         });
 
         if let Err(e) = self.app_handle.emit("ui_event", &payload) {
-            eprintln!("Failed to publish UI event '{}': {}", event_type, e);
+            eprintln!("Failed to publish UI event '{event_type}': {e}");
         }
     }
 

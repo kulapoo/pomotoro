@@ -23,9 +23,9 @@ pub async fn start_session(
         
         // Verify task exists and is not completed
         let task = task_repo
-            .get_by_id(task_id.clone())
+            .get_by_id(task_id)
             .await?
-            .ok_or_else(|| Error::TaskNotFound { id: task_id_str })?;
+            .ok_or(Error::TaskNotFound { id: task_id_str })?;
         
         if task.is_completed() {
             return Err(Error::TaskAlreadyCompleted);
@@ -104,7 +104,7 @@ mod tests {
     async fn should_start_session_with_existing_active_task() {
         let (task_repo, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         
         let cmd = StartSessionCmd {
             task_id: None,
@@ -186,7 +186,7 @@ mod tests {
     async fn should_fail_if_already_running() {
         let (task_repo, phase_service, task) = setup().await;
         let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id.clone());
+        timer_state.active_task_id = Some(task.id);
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         let cmd = StartSessionCmd {

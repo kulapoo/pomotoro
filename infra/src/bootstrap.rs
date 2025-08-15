@@ -14,6 +14,7 @@ pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
 
+    #[allow(dead_code)]
     pub event_handlers: Arc<HandlerRegistry>,
 
     pub event_bus: Arc<DomainEventBus>,
@@ -24,7 +25,7 @@ pub struct AppRegistry {
 }
 
 fn init_events(
-    event_handlers: &Arc<HandlerRegistry>
+    _event_handlers: &Arc<HandlerRegistry>
 ) -> Result<(), BootstrapError> {
 
 

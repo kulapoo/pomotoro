@@ -46,7 +46,7 @@ impl TaskCyclerService for StandardTaskCyclerService {
     }
 
     async fn validate_task_switch(&self, task_id: TaskId) -> Result<Option<Task>> {
-        let task = self.task_repository.get_by_id(task_id.clone()).await?;
+        let task = self.task_repository.get_by_id(task_id).await?;
 
         if let Some(ref task) = task {
             self.domain_service.can_switch_to_task(task)?;
@@ -90,7 +90,7 @@ mod tests {
     #[async_trait]
     impl TaskRepository for TestTaskRepository {
         async fn create(&self, task: Task) -> Result<()> {
-            self.tasks.lock().unwrap().insert(task.id.clone(), task);
+            self.tasks.lock().unwrap().insert(task.id, task);
             Ok(())
         }
 
@@ -117,7 +117,7 @@ mod tests {
         }
 
         async fn update(&self, task: Task) -> Result<()> {
-            self.tasks.lock().unwrap().insert(task.id.clone(), task);
+            self.tasks.lock().unwrap().insert(task.id, task);
             Ok(())
         }
 
@@ -180,7 +180,7 @@ mod tests {
 
         // Next call with current task should return a different task
         let second_task = service
-            .get_next_task(Some(first_task_id.clone()))
+            .get_next_task(Some(first_task_id))
             .await
             .unwrap()
             .unwrap();
@@ -208,7 +208,7 @@ mod tests {
         let tasks = create_test_tasks(&repo).await;
 
         let switched_task = service
-            .validate_task_switch(tasks[1].id.clone())
+            .validate_task_switch(tasks[1].id)
             .await
             .unwrap()
             .unwrap();
@@ -222,7 +222,7 @@ mod tests {
         let defaults = TaskDefaults::default();
         let mut task = Task::new_with_defaults("Completed Task".to_string(), 1, &defaults).unwrap();
         task.increment_session().unwrap(); // Complete the task
-        let task_id = task.id.clone();
+        let task_id = task.id;
         repo.create(task).await.unwrap();
 
         let result = service.validate_task_switch(task_id).await;
@@ -261,7 +261,7 @@ mod tests {
         let tasks = create_test_tasks(&repo).await;
 
         let next_task = service
-            .cycle_to_next_active_task(Some(tasks[0].id.clone()))
+            .cycle_to_next_active_task(Some(tasks[0].id))
             .await
             .unwrap()
             .unwrap();
@@ -281,7 +281,7 @@ mod tests {
 
         // In manual mode, should return current task, not cycle
         let next_task = service
-            .get_next_task(Some(tasks[0].id.clone()))
+            .get_next_task(Some(tasks[0].id))
             .await
             .unwrap()
             .unwrap();

@@ -84,17 +84,17 @@ pub fn TaskCreationForm(
                             // Try parsing as error string (Tauri error case)
                             match serde_wasm_bindgen::from_value::<String>(result) {
                                 Ok(error) => {
-                                    web_sys::console::error_1(&format!("Task creation failed: {}", error).into());
+                                    web_sys::console::error_1(&format!("Task creation failed: {error}").into());
                                 }
                                 Err(parse_error) => {
-                                    web_sys::console::error_1(&format!("Failed to parse result: {}", parse_error).into());
+                                    web_sys::console::error_1(&format!("Failed to parse result: {parse_error}").into());
                                 }
                             }
                         }
                     }
                 }
                 Err(serialization_error) => {
-                    web_sys::console::error_1(&format!("Failed to serialize request: {}", serialization_error).into());
+                    web_sys::console::error_1(&format!("Failed to serialize request: {serialization_error}").into());
                 }
             }
             set_is_creating.set(false);
@@ -107,7 +107,7 @@ pub fn TaskCreationForm(
             
             // Test 1: Get all tasks
             let result = invoke(events::task::GET_ALL, JsValue::NULL).await;
-            web_sys::console::log_1(&format!("GET_ALL result: {:?}", result).into());
+            web_sys::console::log_1(&format!("GET_ALL result: {result:?}").into());
             
             // Test 2: Simple task creation with minimal data
             let simple_request = CreateTaskRequest {
@@ -122,7 +122,7 @@ pub fn TaskCreationForm(
             if let Ok(args) = serde_wasm_bindgen::to_value(&simple_request) {
                 web_sys::console::log_1(&"Calling create_task with simple request...".into());
                 let result = invoke(events::task::CREATE, args).await;
-                web_sys::console::log_1(&format!("CREATE result: {:?}", result).into());
+                web_sys::console::log_1(&format!("CREATE result: {result:?}").into());
             }
         });
     };
@@ -175,7 +175,7 @@ pub fn TaskCreationForm(
                     prop:value=move || max_sessions.get().to_string()
                     on:input=move |ev| {
                         if let Ok(value) = event_target_value(&ev).parse::<u8>() {
-                            if value >= 1 && value <= 20 {
+                            if (1..=20).contains(&value) {
                                 set_max_sessions.set(value);
                             }
                         }

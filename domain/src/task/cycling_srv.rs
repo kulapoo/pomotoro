@@ -127,19 +127,19 @@ mod tests {
 
         // Next call should return second task
         let second_task = service
-            .find_next_task_round_robin(&tasks, Some(first_task.id.clone()))
+            .find_next_task_round_robin(&tasks, Some(first_task.id))
             .unwrap();
         assert_eq!(second_task.name, "Task 2");
 
         // Third call should return third task
         let third_task = service
-            .find_next_task_round_robin(&tasks, Some(second_task.id.clone()))
+            .find_next_task_round_robin(&tasks, Some(second_task.id))
             .unwrap();
         assert_eq!(third_task.name, "Task 3");
 
         // Fourth call should wrap around to first task
         let fourth_task = service
-            .find_next_task_round_robin(&tasks, Some(third_task.id.clone()))
+            .find_next_task_round_robin(&tasks, Some(third_task.id))
             .unwrap();
         assert_eq!(fourth_task.name, "Task 1");
     }
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(first_task.name, "Task 1");
 
         let second_task = service
-            .apply_cycling_strategy(&strategy, &tasks, Some(first_task.id.clone()))
+            .apply_cycling_strategy(&strategy, &tasks, Some(first_task.id))
             .unwrap();
         assert_eq!(second_task.name, "Task 2");
     }
@@ -205,7 +205,7 @@ mod tests {
 
         // In manual mode, should return current task
         let result = service
-            .apply_cycling_strategy(&strategy, &tasks, Some(tasks[1].id.clone()))
+            .apply_cycling_strategy(&strategy, &tasks, Some(tasks[1].id))
             .unwrap();
         assert_eq!(result.name, "Task 2");
 

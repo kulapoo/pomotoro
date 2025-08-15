@@ -73,7 +73,7 @@ pub async fn update_task(
     task_repo.update(task.clone()).await?;
     
     let updated_event = TaskUpdated::new(
-        task.id.clone(),
+        task.id,
         updated_name,
         updated_description,
         updated_max_sessions,

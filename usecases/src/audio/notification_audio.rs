@@ -60,7 +60,7 @@ pub async fn play_notification_sound(
     
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError { 
-            message: format!("Volume must be between 0.0 and 1.0, got {}", volume)
+            message: format!("Volume must be between 0.0 and 1.0, got {volume}")
         });
     }
 
@@ -95,7 +95,7 @@ pub async fn play_background_audio(
     
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError { 
-            message: format!("Volume must be between 0.0 and 1.0, got {}", volume)
+            message: format!("Volume must be between 0.0 and 1.0, got {volume}")
         });
     }
 
@@ -134,7 +134,7 @@ pub async fn stop_background_audio(
     _category: AudioCategory,
 ) -> Result<()> {
     let service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {}", e),
+        message: format!("Failed to acquire audio service lock: {e}"),
     })?;
 
     let active_playbacks = service.get_active_playbacks()?;

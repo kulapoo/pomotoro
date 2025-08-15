@@ -49,7 +49,7 @@ pub async fn skip_timer_phase(
         if let Some(task_ref) = &task {
             let updated_state = timer_service.get_state().await?;
             let work_session_event = WorkSessionCompleted::new(
-                Some(task_ref.id.clone()),
+                Some(task_ref.id),
                 1500, // 25 minutes work session default duration (TODO: get from task config)
                 updated_state.session_count(),
                 task_ref.current_sessions as u32 + 1, // increment since we just completed
@@ -153,7 +153,7 @@ mod tests {
         task_repo.create(task.clone()).await.unwrap();
         
         let timer_service: Arc<dyn TimerService + Send + Sync> = 
-            Arc::new(MockTimerService::new_with_task(task.id.clone()));
+            Arc::new(MockTimerService::new_with_task(task.id));
         
         (timer_service, task_repo, event_publisher, task)
     }
@@ -293,7 +293,7 @@ mod tests {
             
             let timer_service: Arc<dyn TimerService + Send + Sync> = 
                 Arc::new(ControllableMockTimerService::new_with_task_and_phase(
-                    task.id.clone(), current_phase, next_phase
+                    task.id, current_phase, next_phase
                 ));
             
             (timer_service, task_repo, mock_publisher, task)
@@ -394,7 +394,7 @@ mod tests {
             // First work session completion
             let timer_service1: Arc<dyn TimerService + Send + Sync> = 
                 Arc::new(ControllableMockTimerService::new_with_task_and_phase(
-                    task.id.clone(), Phase::Work, Phase::ShortBreak
+                    task.id, Phase::Work, Phase::ShortBreak
                 ));
             
             skip_timer_phase(&timer_service1, &task_repo, &event_publisher).await.unwrap();
@@ -402,7 +402,7 @@ mod tests {
             // Second work session completion
             let timer_service2: Arc<dyn TimerService + Send + Sync> = 
                 Arc::new(ControllableMockTimerService::new_with_task_and_phase(
-                    task.id.clone(), Phase::Work, Phase::ShortBreak
+                    task.id, Phase::Work, Phase::ShortBreak
                 ));
             
             skip_timer_phase(&timer_service2, &task_repo, &event_publisher).await.unwrap();

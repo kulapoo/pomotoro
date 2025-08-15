@@ -217,7 +217,7 @@ mod tests {
         assert_eq!(queue_info.active_tasks, 2);
         assert_eq!(queue_info.completed_tasks, 0);
         assert_eq!(queue_info.current_position, Some(0));
-        assert_eq!(queue_info.active_task_id, Some(tasks[0].id.clone()));
+        assert_eq!(queue_info.active_task_id, Some(tasks[0].id));
     }
 
     #[tokio::test]

@@ -39,7 +39,7 @@ pub async fn create_task(
         tags: request.tags,
     };
     
-    usecases::task::create_task(&*task_repo, &*event_publisher, cmd)
+    usecases::task::create_task(&task_repo, &event_publisher, cmd)
         .await
         .map_err(|e| e.to_string())
 }
@@ -50,7 +50,7 @@ pub async fn get_task(
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Option<Task>, String> {
     let query = GetTaskQuery { id };
-    let result = usecases::task::get_task(&*task_repo, query)
+    let result = usecases::task::get_task(&task_repo, query)
         .await
         .map_err(|e| e.to_string())?;
     Ok(Some(result))
@@ -61,7 +61,7 @@ pub async fn get_all_tasks(
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
     let query = GetTasksQuery { tags: None, status: None, active_only: false };
-    usecases::task::get_tasks(&*task_repo, query)
+    usecases::task::get_tasks(&task_repo, query)
         .await
         .map_err(|e| e.to_string())
 }
@@ -91,7 +91,7 @@ pub async fn update_task(
         audio_config: request.audio_config,
     };
     
-    usecases::task::update_task(&*task_repo, &*event_publisher, cmd)
+    usecases::task::update_task(&task_repo, &event_publisher, cmd)
         .await
         .map_err(|e| e.to_string())
 }
@@ -103,7 +103,7 @@ pub async fn delete_task(
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
     let cmd = DeleteTaskCmd { id };
-    usecases::task::delete_task(&*task_repo, &*event_publisher, cmd)
+    usecases::task::delete_task(&task_repo, &event_publisher, cmd)
         .await
         .map_err(|e| e.to_string())
 }
@@ -124,7 +124,7 @@ pub async fn complete_task_session(
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
-    let _result = usecases::task::complete_session(&*task_repo, &*event_publisher, &task_id)
+    let _result = usecases::task::complete_session(&task_repo, &event_publisher, &task_id)
         .await
         .map_err(|e| e.to_string())?;
     
@@ -143,7 +143,7 @@ pub async fn reset_task_sessions(
     task_id: String,
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Task, String> {
-    usecases::task::reset_sessions(&*task_repo, &task_id)
+    usecases::task::reset_sessions(&task_repo, &task_id)
         .await
         .map_err(|e| e.to_string())?;
     

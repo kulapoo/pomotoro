@@ -7,6 +7,12 @@ pub struct TestConfigRepository {
     config: RwLock<Config>,
 }
 
+impl Default for TestConfigRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestConfigRepository {
     pub fn new() -> Self {
         Self {

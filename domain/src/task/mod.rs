@@ -1,4 +1,4 @@
-pub mod task;
+mod task;
 pub mod builder;
 pub mod config;
 pub mod id;
@@ -13,7 +13,7 @@ pub mod test_repository;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_cycling_service;
 
-pub use task::Task;
+pub use self::task::Task;
 pub use builder::TaskBuilder;
 pub use config::TaskConfig;
 pub use id::{TaskId, TaskMarker};

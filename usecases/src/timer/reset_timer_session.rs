@@ -146,7 +146,7 @@ mod tests {
         task_repo.create(task.clone()).await.unwrap();
         
         let timer_service: Arc<dyn TimerService + Send + Sync> = 
-            Arc::new(MockTimerService::new_with_task(task.id.clone()));
+            Arc::new(MockTimerService::new_with_task(task.id));
         
         (timer_service, task_repo, event_publisher, task)
     }
@@ -203,7 +203,7 @@ mod tests {
             task_repo.create(task.clone()).await.unwrap();
             
             let timer_service: Arc<dyn TimerService + Send + Sync> = 
-                Arc::new(MockTimerService::new_with_task(task.id.clone()));
+                Arc::new(MockTimerService::new_with_task(task.id));
             
             (timer_service, task_repo, mock_publisher, task)
         }

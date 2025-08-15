@@ -157,7 +157,7 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     // Create 100 tasks
     let mut task_ids = Vec::new();
     for i in 0..100 {
-        let task = TaskBuilder::new(format!("Performance Task {}", i), 1)
+        let task = TaskBuilder::new(format!("Performance Task {i}"), 1)
             .with_tags(vec!["performance".to_string(), format!("batch_{}", i / 10)])
             .build();
 
@@ -166,7 +166,7 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let creation_time = start_time.elapsed();
-    assert!(creation_time < Duration::from_millis(1000), "Task creation took too long: {:?}", creation_time);
+    assert!(creation_time < Duration::from_millis(1000), "Task creation took too long: {creation_time:?}");
 
     // Retrieve all tasks
     let retrieval_start = std::time::Instant::now();
@@ -174,7 +174,7 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     let retrieval_time = retrieval_start.elapsed();
 
     assert_eq!(all_tasks.len(), 100);
-    assert!(retrieval_time < Duration::from_millis(100), "Task retrieval took too long: {:?}", retrieval_time);
+    assert!(retrieval_time < Duration::from_millis(100), "Task retrieval took too long: {retrieval_time:?}");
 
     // Test filtering performance
     let filter_start = std::time::Instant::now();
@@ -182,7 +182,7 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     let filter_time = filter_start.elapsed();
 
     assert_eq!(performance_tasks.len(), 100);
-    assert!(filter_time < Duration::from_millis(100), "Task filtering took too long: {:?}", filter_time);
+    assert!(filter_time < Duration::from_millis(100), "Task filtering took too long: {filter_time:?}");
 
     Ok(())
 }

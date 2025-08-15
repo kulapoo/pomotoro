@@ -89,10 +89,12 @@ impl EventPublisher for NoOpEventPublisher {
 /// assert!(events[0].event_type() == "TaskCompleted");
 /// ```
 #[derive(Debug, Default)]
+#[allow(dead_code)]
 pub struct MockEventPublisher {
     events: Arc<Mutex<VecDeque<Box<dyn DomainEvent>>>>,
 }
 
+#[allow(dead_code)]
 impl MockEventPublisher {
     /// Create a new MockEventPublisher
     pub fn new() -> Self {

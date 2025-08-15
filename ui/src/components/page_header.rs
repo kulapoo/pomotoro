@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
+#[allow(dead_code)]
 pub fn PageHeader(
     title: String,
     #[prop(optional)] on_settings_click: Option<Callback<()>>,

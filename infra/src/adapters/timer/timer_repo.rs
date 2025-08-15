@@ -8,6 +8,12 @@ use std::path::PathBuf;
 /// timer logic and file I/O operations.
 pub struct FileTimerStateRepository;
 
+impl Default for FileTimerStateRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FileTimerStateRepository {
     pub fn new() -> Self {
         Self
@@ -21,7 +27,7 @@ impl FileTimerStateRepository {
 
         tokio::fs::create_dir_all(&app_data_dir)
             .await
-            .map_err(|e| format!("Failed to create app data dir: {}", e))?;
+            .map_err(|e| format!("Failed to create app data dir: {e}"))?;
 
         Ok(app_data_dir.join("timer_state.json"))
     }
@@ -33,13 +39,13 @@ impl FileTimerStateRepository {
 
         let json = serde_json::to_string_pretty(state)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to serialize state: {}", e) 
+                message: format!("Failed to serialize state: {e}") 
             })?;
 
         tokio::fs::write(state_path, json)
             .await
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to write state file: {}", e) 
+                message: format!("Failed to write state file: {e}") 
             })?;
 
         Ok(())
@@ -57,12 +63,12 @@ impl FileTimerStateRepository {
         let json = tokio::fs::read_to_string(state_path)
             .await
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to read state file: {}", e) 
+                message: format!("Failed to read state file: {e}") 
             })?;
 
         let saved_state: TimerState = serde_json::from_str(&json)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to deserialize state: {}", e) 
+                message: format!("Failed to deserialize state: {e}") 
             })?;
 
         Ok(Some(saved_state))

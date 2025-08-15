@@ -5,6 +5,12 @@ pub struct TestContext {
     pub _temp_dir: TempDir,
 }
 
+impl Default for TestContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TestContext {
     pub fn new() -> Self {
         let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");

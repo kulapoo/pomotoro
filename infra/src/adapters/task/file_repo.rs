@@ -27,19 +27,19 @@ impl FileTaskRepository {
 
         let content = fs::read_to_string(&self.tasks_file)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to read tasks file: {}", e) 
+                message: format!("Failed to read tasks file: {e}") 
             })?;
 
         let task_dtos: Vec<TaskDto> = serde_json::from_str(&content)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to deserialize tasks: {}", e) 
+                message: format!("Failed to deserialize tasks: {e}") 
             })?;
 
         let mut tasks = HashMap::new();
         for dto in task_dtos {
             let task = Task::try_from(dto)
                 .map_err(|e| Error::RepositoryError { 
-                    message: format!("Failed to convert DTO to Task: {:?}", e) 
+                    message: format!("Failed to convert DTO to Task: {e:?}") 
                 })?;
             tasks.insert(task.id, task);
         }
@@ -56,22 +56,22 @@ impl FileTaskRepository {
 
         let content = serde_json::to_string_pretty(&task_dtos)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to serialize tasks: {}", e) 
+                message: format!("Failed to serialize tasks: {e}") 
             })?;
 
         let mut file = fs::File::create(&self.tasks_file)
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to create tasks file: {}", e) 
+                message: format!("Failed to create tasks file: {e}") 
             })?;
 
         file.write_all(content.as_bytes())
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to write tasks file: {}", e) 
+                message: format!("Failed to write tasks file: {e}") 
             })?;
 
         file.sync_all()
             .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to sync tasks file: {}", e) 
+                message: format!("Failed to sync tasks file: {e}") 
             })?;
 
         Ok(())

@@ -36,7 +36,7 @@ impl TaskResource {
                     set_tasks_clone.set(task_list);
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to load tasks: {}", e).into());
+                    web_sys::console::error_1(&format!("Failed to load tasks: {e}").into());
                 }
             }
             
@@ -49,7 +49,7 @@ impl TaskResource {
                     set_active_task_clone.set(task);
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to load active task: {}", e).into());
+                    web_sys::console::error_1(&format!("Failed to load active task: {e}").into());
                 }
             }
         });
@@ -83,7 +83,7 @@ impl TaskResource {
                     set_tasks.set(task_list);
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to refetch tasks: {}", e).into());
+                    web_sys::console::error_1(&format!("Failed to refetch tasks: {e}").into());
                 }
             }
             
@@ -94,7 +94,7 @@ impl TaskResource {
                     set_active_task.set(timer_state_with_task.active_task);
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to refetch active task: {}", e).into());
+                    web_sys::console::error_1(&format!("Failed to refetch active task: {e}").into());
                 }
             }
         });

@@ -103,7 +103,7 @@ async fn test_e2e_timer_persistence() -> Result<(), Box<dyn std::error::Error>> 
     assert_eq!(resumed_state.active_task_id, paused_state.active_task_id);
     // Remaining time should be close (within tolerance for test timing)
     let time_diff = (resumed_state.remaining_seconds() as i64 - paused_state.remaining_seconds() as i64).abs();
-    assert!(time_diff <= 1, "Time difference too large: {}", time_diff);
+    assert!(time_diff <= 1, "Time difference too large: {time_diff}");
     
     Ok(())
 }
@@ -191,7 +191,7 @@ async fn test_e2e_timer_performance_stress() -> Result<(), Box<dyn std::error::E
     }
     
     let elapsed = start_time.elapsed();
-    assert!(elapsed < Duration::from_millis(1000), "Timer operations took too long: {:?}", elapsed);
+    assert!(elapsed < Duration::from_millis(1000), "Timer operations took too long: {elapsed:?}");
     
     // Verify final state is consistent
     let final_state = timer_service.get_state().await;

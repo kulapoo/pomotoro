@@ -80,7 +80,7 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                                 let task_resource = task_resource_for_click.clone();
                                                 spawn_local(async move {
                                                     if let Err(e) = task_resource.switch_task(task_id).await {
-                                                        web_sys::console::error_1(&format!("Failed to switch task: {}", e).into());
+                                                        web_sys::console::error_1(&format!("Failed to switch task: {e}").into());
                                                     }
                                                 });
                                             }
@@ -100,7 +100,7 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                                         <p style="opacity: 0.8; margin: 10px 0;">{desc}</p>
                                                     }.into_any()
                                                 } else {
-                                                    view! {}.into_any()
+                                                    ().into_any()
                                                 }
                                             })}
 

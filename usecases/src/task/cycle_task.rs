@@ -43,7 +43,7 @@ pub async fn cycle_to_next_task(
     };
     
     let next_task = cycling_service
-        .cycle_to_next_active_task(current_id.clone())
+        .cycle_to_next_active_task(current_id)
         .await?;
     
     let active_tasks = cycling_service.get_active_task_queue().await?;

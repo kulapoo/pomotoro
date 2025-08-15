@@ -35,9 +35,9 @@ pub async fn switch_timer_task(
     
     // Verify task exists and is not completed
     let task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
-        .ok_or_else(|| Error::TaskNotFound { id: cmd.task_id })?;
+        .ok_or(Error::TaskNotFound { id: cmd.task_id })?;
     
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);

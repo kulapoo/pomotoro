@@ -35,7 +35,7 @@ impl DefaultAudioAssetProvider {
             let asset = AudioAsset {
                 id: id.to_string(),
                 name: name.to_string(),
-                file_path: PathBuf::from(format!("assets/sounds/notifications/{}.mp3", id)),
+                file_path: PathBuf::from(format!("assets/sounds/notifications/{id}.mp3")),
                 category: AudioCategory::NotificationSound,
                 duration_ms: None,
             };
@@ -48,7 +48,7 @@ impl DefaultAudioAssetProvider {
             let asset = AudioAsset {
                 id: id.to_string(),
                 name: name.to_string(),
-                file_path: PathBuf::from(format!("assets/sounds/background/{}.mp3", id)),
+                file_path: PathBuf::from(format!("assets/sounds/background/{id}.mp3")),
                 category: AudioCategory::BackgroundAmbient,
                 duration_ms: None,
             };

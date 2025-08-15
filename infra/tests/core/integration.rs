@@ -116,13 +116,13 @@ async fn test_custom_timing_configurations() {
     // Short work sessions
     let short_work_config = TestConfigBuilder::new()
         .with_work_duration(Duration::from_secs(5 * 60))  // Minimum 5 min
-        .with_short_break_duration(Duration::from_secs(1 * 60))  // Minimum 1 min
+        .with_short_break_duration(Duration::from_secs(60))  // Minimum 1 min
         .build();
     
     config_repo.save_config(&short_work_config).await.unwrap();
     let saved_short = config_repo.get_config().await.unwrap();
     assert_eq!(saved_short.task_defaults.work_duration, Duration::from_secs(5 * 60));
-    assert_eq!(saved_short.task_defaults.short_break_duration, Duration::from_secs(1 * 60));
+    assert_eq!(saved_short.task_defaults.short_break_duration, Duration::from_secs(60));
     
     // Long work sessions
     let long_work_config = TestConfigBuilder::new()
@@ -234,7 +234,7 @@ fn test_task_config_validation() {
     // Valid configurations
     let valid_short = TaskConfig::new(
         Duration::from_secs(5 * 60),   // 5 min work (minimum)
-        Duration::from_secs(1 * 60),   // 1 min break (minimum)
+        Duration::from_secs(60),   // 1 min break (minimum)
         Duration::from_secs(5 * 60),   // 5 min long break
         1,                             // 1 session cycle (minimum)
         false,

@@ -11,6 +11,12 @@ pub struct InMemoryTaskRepository {
     tasks: Arc<RwLock<HashMap<TaskId, Task>>>,
 }
 
+impl Default for InMemoryTaskRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryTaskRepository {
     pub fn new() -> Self {
         let mut tasks = HashMap::new();
@@ -36,7 +42,7 @@ impl InMemoryTaskRepository {
     pub fn with_tasks(tasks: Vec<Task>) -> Self {
         let mut task_map = HashMap::new();
         for task in tasks {
-            let task_id = task.id.clone();
+            let task_id = task.id;
             task_map.insert(task_id, task);
         }
         Self {
@@ -49,7 +55,7 @@ impl InMemoryTaskRepository {
 impl TaskRepository for InMemoryTaskRepository {
     async fn create(&self, task: Task) -> Result<()> {
         let mut tasks = self.tasks.write().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         
         if tasks.contains_key(&task.id) {
@@ -58,21 +64,21 @@ impl TaskRepository for InMemoryTaskRepository {
             });
         }
         
-        let task_id = task.id.clone();
+        let task_id = task.id;
         tasks.insert(task_id, task);
         Ok(())
     }
 
     async fn get_by_id(&self, id: TaskId) -> Result<Option<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks.get(&id).cloned())
     }
 
     async fn get_all(&self) -> Result<Vec<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         let mut task_list: Vec<Task> = tasks.values().cloned().collect();
         task_list.sort_by(|a, b| a.created_at.cmp(&b.created_at));
@@ -81,7 +87,7 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn get_active_tasks(&self) -> Result<Vec<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         let mut active_tasks: Vec<Task> = tasks
             .values()
@@ -95,7 +101,7 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn update(&self, task: Task) -> Result<()> {
         let mut tasks = self.tasks.write().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         
         if !tasks.contains_key(&task.id) {
@@ -104,14 +110,14 @@ impl TaskRepository for InMemoryTaskRepository {
             });
         }
         
-        let task_id = task.id.clone();
+        let task_id = task.id;
         tasks.insert(task_id, task);
         Ok(())
     }
 
     async fn delete(&self, id: TaskId) -> Result<bool> {
         let mut tasks = self.tasks.write().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         
         // Check if this is the default task and prevent deletion
@@ -127,7 +133,7 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn get_by_tags(&self, tags: &[String]) -> Result<Vec<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks
             .values()
@@ -138,7 +144,7 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks
             .values()
@@ -149,14 +155,14 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn exists(&self, id: TaskId) -> Result<bool> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks.contains_key(&id))
     }
 
     async fn get_default_task(&self) -> Result<Option<Task>> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks.values().find(|task| task.default).cloned())
     }
@@ -165,7 +171,7 @@ impl TaskRepository for InMemoryTaskRepository {
 #[async_trait]
 impl Readable<Task, TaskId> for InMemoryTaskRepository {
     async fn find_by_id(&self, id: &TaskId) -> Result<Option<Task>> {
-        self.get_by_id(id.clone()).await
+        self.get_by_id(*id).await
     }
 
     async fn find_all(&self) -> Result<Vec<Task>> {
@@ -173,12 +179,12 @@ impl Readable<Task, TaskId> for InMemoryTaskRepository {
     }
 
     async fn exists(&self, id: &TaskId) -> Result<bool> {
-        TaskRepository::exists(self, id.clone()).await
+        TaskRepository::exists(self, *id).await
     }
 
     async fn count(&self) -> Result<usize> {
         let tasks = self.tasks.read().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         Ok(tasks.len())
     }
@@ -192,17 +198,17 @@ impl Writable<Task, TaskId> for InMemoryTaskRepository {
 
     async fn update(&mut self, id: &TaskId, entity: &Task) -> Result<()> {
         let mut updated_entity = entity.clone();
-        updated_entity.id = id.clone();
+        updated_entity.id = *id;
         TaskRepository::update(self, updated_entity).await
     }
 
     async fn delete(&mut self, id: &TaskId) -> Result<bool> {
-        TaskRepository::delete(self, id.clone()).await
+        TaskRepository::delete(self, *id).await
     }
 
     async fn delete_all(&mut self) -> Result<usize> {
         let mut tasks = self.tasks.write().map_err(|e| Error::RepositoryError { 
-            message: format!("Lock error: {}", e) 
+            message: format!("Lock error: {e}") 
         })?;
         let count = tasks.len();
         tasks.clear();
@@ -219,7 +225,7 @@ mod tests {
     async fn should_create_and_retrieve_task() {
         let repo = InMemoryTaskRepository::new();
         let task = Task::new("Test Task".to_string(), 4).unwrap();
-        let task_id = task.id.clone();
+        let task_id = task.id;
 
         repo.create(task.clone()).await.unwrap();
         let retrieved = repo.get_by_id(task_id).await.unwrap();
@@ -232,7 +238,7 @@ mod tests {
     async fn should_update_existing_task() {
         let repo = InMemoryTaskRepository::new();
         let mut task = Task::new("Original".to_string(), 4).unwrap();
-        let task_id = task.id.clone();
+        let task_id = task.id;
 
         repo.create(task.clone()).await.unwrap();
         

@@ -17,9 +17,9 @@ impl InMemoryTaskRepository {
     }
 
     pub fn with_default_task() -> Self {
-        let repo = Self::new();
+        
         // Could add default task here if needed
-        repo
+        Self::new()
     }
 }
 
@@ -27,7 +27,7 @@ impl InMemoryTaskRepository {
 impl TaskRepository for InMemoryTaskRepository {
     async fn create(&self, task: Task) -> Result<()> {
         let mut tasks = self.tasks.lock().unwrap();
-        tasks.insert(task.id.clone(), task);
+        tasks.insert(task.id, task);
         Ok(())
     }
 
@@ -57,7 +57,7 @@ impl TaskRepository for InMemoryTaskRepository {
 
     async fn update(&self, task: Task) -> Result<()> {
         let mut tasks = self.tasks.lock().unwrap();
-        tasks.insert(task.id.clone(), task);
+        tasks.insert(task.id, task);
         Ok(())
     }
 
@@ -98,7 +98,7 @@ impl TaskRepository for InMemoryTaskRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TaskBuilder, TaskStatus};
+    
 
     #[tokio::test]
     async fn should_return_none_when_no_default_task() {
@@ -145,7 +145,7 @@ mod tests {
         let repo = InMemoryTaskRepository::new();
         let mut task = crate::Task::new("Default Task".to_string(), 4).unwrap();
         task.set_as_default();
-        let task_id = task.id.clone();
+        let task_id = task.id;
         
         repo.create(task).await.unwrap();
         

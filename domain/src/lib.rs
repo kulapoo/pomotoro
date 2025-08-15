@@ -1,3 +1,5 @@
+#![allow(clippy::module_inception)]
+
 pub mod shared_kernel;
 pub mod task;
 pub mod timer;

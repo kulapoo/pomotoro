@@ -16,6 +16,7 @@ pub struct TaskCreated {
 }
 
 impl TaskCreated {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         task_id: TaskId,
         name: String,

@@ -36,7 +36,7 @@ pub async fn get_audio_library(
     query: GetAudioLibraryQuery,
 ) -> Result<AudioLibrary> {
     let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {}", e),
+        message: format!("Failed to acquire library service lock: {e}"),
     })?;
 
     let mut library = service.get_library()?;
@@ -89,7 +89,7 @@ pub async fn add_audio_asset(
     };
 
     let mut service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {}", e),
+        message: format!("Failed to acquire library service lock: {e}"),
     })?;
 
     service.add_asset(asset.clone())?;
@@ -101,7 +101,7 @@ pub async fn remove_audio_asset(
     cmd: RemoveAudioAssetCmd,
 ) -> Result<bool> {
     let mut service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {}", e),
+        message: format!("Failed to acquire library service lock: {e}"),
     })?;
 
     service.remove_asset(&cmd.asset_id)
@@ -112,7 +112,7 @@ pub async fn get_audio_asset(
     asset_id: String,
 ) -> Result<Option<AudioAsset>> {
     let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {}", e),
+        message: format!("Failed to acquire library service lock: {e}"),
     })?;
 
     service.get_asset(&asset_id)
@@ -123,7 +123,7 @@ pub async fn get_assets_by_category(
     category: AudioCategory,
 ) -> Result<Vec<AudioAsset>> {
     let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {}", e),
+        message: format!("Failed to acquire library service lock: {e}"),
     })?;
 
     service.get_assets_by_category(category)

@@ -29,7 +29,7 @@ pub async fn create_task(
     task_repo.create(task.clone()).await?;
     
     let created_event = TaskCreated::new(
-        task.id.clone(),
+        task.id,
         task.name.clone(),
         task.description.clone(),
         task.max_sessions,

@@ -4,4 +4,3 @@ pub mod fixtures;
 
 pub use audio_service::*;
 pub use audio_config::*;
-pub use fixtures::*;

@@ -447,7 +447,7 @@ mod tests {
     #[test]
     fn test_clone_and_copy() {
         let note_id = TestTaskId::new();
-        let cloned = note_id.clone();
+        let cloned = note_id;
         let copied = note_id;
 
         assert_eq!(note_id, cloned);
@@ -457,14 +457,14 @@ mod tests {
     #[test]
     fn test_debug_format() {
         let note_id = TestTaskId::new();
-        let debug_str = format!("{:?}", note_id);
+        let debug_str = format!("{note_id:?}");
         assert!(debug_str.contains("EntityId<TestNote>"));
     }
 
     #[test]
     fn test_display_format() {
         let note_id = TestTaskId::new();
-        let display_str = format!("{}", note_id);
+        let display_str = format!("{note_id}");
         // Should display the UUID string
         assert_eq!(display_str, note_id.as_str());
     }

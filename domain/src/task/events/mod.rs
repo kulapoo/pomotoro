@@ -29,7 +29,7 @@ mod tests {
     fn should_have_correct_event_types() {
         let task_id = TaskId::new();
         let task_created = TaskCreated::new(
-            task_id.clone(),
+            task_id,
             "Test".to_string(),
             None,
             4,

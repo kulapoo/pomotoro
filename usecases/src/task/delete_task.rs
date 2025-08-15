@@ -15,7 +15,7 @@ pub async fn delete_task(
         .map_err(|_| Error::TaskNotFound { id: cmd.id.clone() })?;
     
     let task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
         .ok_or_else(|| Error::TaskNotFound { id: cmd.id.clone() })?;
     
@@ -55,7 +55,7 @@ mod tests {
         let (task_repo, event_publisher) = setup().await;
         
         let task = Task::new("Test Task".to_string(), 4).unwrap();
-        let task_id = task.id.clone();
+        let task_id = task.id;
         task_repo.create(task).await.unwrap();
         
         let cmd = DeleteTaskCmd {
@@ -87,7 +87,7 @@ mod tests {
         let (task_repo, event_publisher) = setup().await;
         
         let default_task = Task::new_default().unwrap();
-        let task_id = default_task.id.clone();
+        let task_id = default_task.id;
         task_repo.create(default_task).await.unwrap();
         
         let cmd = DeleteTaskCmd {

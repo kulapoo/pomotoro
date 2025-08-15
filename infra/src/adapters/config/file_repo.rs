@@ -120,6 +120,12 @@ pub struct InMemoryConfigRepo {
     config: Arc<RwLock<Config>>,
 }
 
+impl Default for InMemoryConfigRepo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryConfigRepo {
     pub fn new() -> Self {
         Self {

@@ -66,7 +66,7 @@ impl DomainEventBus {
 
         handlers
             .entry(std::any::type_name::<T>().to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(type_erased_handler);
     }
 

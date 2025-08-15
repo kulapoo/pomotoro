@@ -33,6 +33,7 @@ pub fn ScreenBlocker(
 }
 
 #[component]
+#[allow(dead_code)]
 pub fn ScreenBlockerProvider(
     children: Children,
 ) -> impl IntoView {

@@ -31,7 +31,7 @@ pub async fn set_default_task(
         
         // Publish event for the previously default task
         let updated_event = TaskUpdated::new(
-            current_default.id.clone(),
+            current_default.id,
             None,
             None,
             None,
@@ -47,7 +47,7 @@ pub async fn set_default_task(
     
     // Publish event for the newly default task
     let updated_event = TaskUpdated::new(
-        task.id.clone(),
+        task.id,
         None,
         None,
         None,

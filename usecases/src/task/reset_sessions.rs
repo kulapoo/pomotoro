@@ -11,7 +11,7 @@ pub async fn reset_sessions(
         })?;
 
     let mut task = task_repo
-        .get_by_id(task_id.clone())
+        .get_by_id(task_id)
         .await?
         .ok_or_else(|| Error::TaskNotFound {
             id: task_id.to_string()

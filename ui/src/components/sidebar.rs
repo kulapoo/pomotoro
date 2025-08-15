@@ -19,7 +19,7 @@ pub fn Sidebar(
         (collapsed, set_collapsed)
     } else {
         let (local_collapsed, local_set_collapsed) = signal(false);
-        (local_collapsed.into(), local_set_collapsed.into())
+        (local_collapsed, local_set_collapsed)
     };
     
     let toggle_sidebar = move |_| {
