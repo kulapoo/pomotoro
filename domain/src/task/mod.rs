@@ -1,9 +1,9 @@
 mod task;
 pub mod builder;
-pub mod config;
+pub mod task_config;
 pub mod id;
 pub mod status;
-pub mod repo;
+pub mod task_repo;
 pub mod cycling_srv;
 pub mod events;
 #[cfg(test)]
@@ -15,10 +15,10 @@ pub mod test_cycling_service;
 
 pub use self::task::Task;
 pub use builder::TaskBuilder;
-pub use config::TaskConfig;
+pub use task_config::TaskConfig;
 pub use id::{TaskId, TaskMarker};
 pub use status::TaskStatus;
-pub use repo::TaskRepository;
+pub use task_repo::TaskRepository;
 pub use cycling_srv::{TaskCyclerService, TaskCyclingStrategy, DefaultTaskCyclingService};
 pub use events::{
     TaskCreated, TaskSessionCompleted, TaskCompleted, TaskStatusChanged, TaskUpdated,

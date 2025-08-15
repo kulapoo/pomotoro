@@ -1,5 +1,5 @@
 use domain::Config;
-use super::dto::ConfigDto;
+use super::config_dto::ConfigDto;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use serde_json;

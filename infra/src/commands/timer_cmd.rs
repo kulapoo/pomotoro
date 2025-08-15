@@ -1,7 +1,8 @@
 use tauri::{AppHandle, State};
 use std::sync::Arc;
 
-use crate::adapters::{TaskRepositoryArc, TimerService, EventPublisherArc};
+use crate::adapters::events::domain_bus::EventPublisherArc;
+use crate::adapters::{TaskRepositoryArc, TimerService};
 use domain::{TaskId, TimerState, Phase};
 use domain::timer::TimerService as DomainTimerService;
 use domain::TimerStateWithTask;

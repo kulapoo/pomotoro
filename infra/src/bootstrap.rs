@@ -1,13 +1,13 @@
 use std::sync::Arc;
+use domain::EventPublisher;
 use tokio::sync::Mutex;
 
-use crate::adapters::{task::InMemoryTaskRepository, InMemoryConfigRepository};
+use crate::adapters::{events::domain_bus::EventPublisherArc, task::InMemoryTaskRepository, DomainEventBus, InMemoryConfigRepository};
 use tauri::AppHandle;
 
 use crate::adapters::{
-    create_event_publisher, EventPublisherArc,
     RodioAudioService, TimerService,
-    audio::InMemoryAudioLibraryService,
+    audio::InMemoryAudioLibraryService
 };
 
 pub struct AppRegistry {
@@ -44,13 +44,13 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::default());
 
-    let event_publisher = create_event_publisher(app_handle.clone());
+    let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> = Arc::new(DomainEventBus::new());
 
     let audio_service = Arc::new(
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
     );
-    
-    let audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>> = 
+
+    let audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>> =
         Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
 
     let timer_service: Arc<dyn domain::timer::TimerService + Send + Sync> =

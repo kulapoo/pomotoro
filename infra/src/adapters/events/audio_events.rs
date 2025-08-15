@@ -1,17 +1,3 @@
-use std::sync::Arc;
-use tauri::AppHandle;
-
-use super::DomainEventBus;
-
-pub type EventPublisherArc = Arc<dyn domain::EventPublisher + Send + Sync>;
-
-/// Create an event publisher for the application
-pub fn create_event_publisher(_app_handle: AppHandle) -> EventPublisherArc {
-    Arc::new(DomainEventBus::new())
-}
-
-// Infrastructure-specific event constants
-// These are technical/system integration events, not domain business logic
 
 pub mod audio {
     pub const GET_LIBRARY: &str = "get_audio_library";

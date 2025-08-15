@@ -1,7 +1,7 @@
 //! Infrastructure Layer
 //!
 //! This layer contains concrete implementations of domain interfaces and handles
-//! external concerns like persistence, event publishing, notifications, and 
+//! external concerns like persistence, event publishing, notifications, and
 //! integration with external systems.
 //!
 //! ## Clean Architecture Principles
@@ -14,7 +14,7 @@
 //! ## Domain-Based Structure
 //!
 //! - `config/`: Configuration domain infrastructure
-//! - `task/`: Task domain infrastructure  
+//! - `task/`: Task domain infrastructure
 //! - `timer/`: Timer domain infrastructure
 //! - `audio/`: Audio domain infrastructure
 //! - `events/`: Event publishing infrastructure
@@ -34,7 +34,7 @@ pub use config::{
     AudioConfigDto, GeneralConfigDto, NotificationConfigDto, AppearanceConfigDto, ConfigDto
 };
 
-// Task infrastructure  
+// Task infrastructure
 pub use task::{
     TaskDto, TaskAudioConfigDto, TaskConfigDto,
     FileTaskRepository, InMemoryTaskRepository, TaskRepositoryArc,
@@ -50,7 +50,7 @@ pub use audio::{RodioAudioService, DefaultAudioAssetProvider, BG_SOUNDS};
 // Events infrastructure
 pub use events::{
     DomainEventBus, EventHandler,
-    create_event_publisher, EventPublisherArc
+    audio_events,
 };
 
 // Notifications infrastructure

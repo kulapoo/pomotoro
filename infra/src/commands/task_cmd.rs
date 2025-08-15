@@ -1,7 +1,7 @@
 use tauri::State;
 use domain::{Task, TaskId, TaskConfig, AudioConfig};
 use usecases::task::*;
-use crate::adapters::{TaskRepositoryArc, EventPublisherArc};
+use crate::adapters::{events::domain_bus::EventPublisherArc, TaskRepositoryArc};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {
@@ -31,14 +31,14 @@ pub async fn create_task(
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
     println!("Creating task with name: {}", request.name);
-    
+
     let cmd = CreateTaskCmd {
         name: request.name,
         description: request.description,
         max_sessions: request.max_sessions,
         tags: request.tags,
     };
-    
+
     usecases::task::create_task(&task_repo, &event_publisher, cmd)
         .await
         .map_err(|e| e.to_string())
@@ -90,7 +90,7 @@ pub async fn update_task(
         config: request.config,
         audio_config: request.audio_config,
     };
-    
+
     usecases::task::update_task(&task_repo, &event_publisher, cmd)
         .await
         .map_err(|e| e.to_string())
@@ -118,7 +118,7 @@ pub async fn get_tasks_by_tags(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command] 
+#[tauri::command]
 pub async fn complete_task_session(
     task_id: String,
     task_repo: State<'_, TaskRepositoryArc>,
@@ -127,11 +127,11 @@ pub async fn complete_task_session(
     let _result = usecases::task::complete_session(&task_repo, &event_publisher, &task_id)
         .await
         .map_err(|e| e.to_string())?;
-    
+
     // Return the updated task
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
-    
+
     task_repo.get_by_id(task_id)
         .await
         .map_err(|e| e.to_string())?
@@ -146,11 +146,11 @@ pub async fn reset_task_sessions(
     usecases::task::reset_sessions(&task_repo, &task_id)
         .await
         .map_err(|e| e.to_string())?;
-    
+
     // Return the updated task
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
-    
+
     task_repo.get_by_id(task_id)
         .await
         .map_err(|e| e.to_string())?

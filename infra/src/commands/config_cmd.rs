@@ -1,4 +1,4 @@
-use crate::adapters::{ConfigRepository, EventPublisherArc};
+use crate::adapters::{events::domain_bus::EventPublisherArc, ConfigRepository};
 use domain::{Config, TaskDefaults, AudioConfig, TaskId, GeneralConfig, NotificationConfig, AppearanceConfig};
 use tauri::State;
 
@@ -37,7 +37,7 @@ pub async fn update_timing_config(
     config.task_defaults.work_duration = std::time::Duration::from_secs(work_duration_minutes as u64 * 60);
     config.task_defaults.short_break_duration = std::time::Duration::from_secs(short_break_minutes as u64 * 60);
     config.task_defaults.long_break_duration = std::time::Duration::from_secs(long_break_minutes as u64 * 60);
-    
+
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
 }
@@ -49,7 +49,7 @@ pub async fn update_default_cycle_length(
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
     config.task_defaults.sessions_until_long_break = sessions_until_long_break;
-    
+
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
 }
@@ -61,7 +61,7 @@ pub async fn update_general_config(
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
     config.general = preferences;
-    
+
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
 }
@@ -73,7 +73,7 @@ pub async fn update_notification_config(
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
     config.notification = preferences;
-    
+
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
 }
@@ -85,7 +85,7 @@ pub async fn update_appearance_config(
 ) -> Result<Config, String> {
     let mut config = config_repo.get_config().map_err(|e| e.to_string())?;
     config.appearance = preferences;
-    
+
     config_repo.save_config(&config).map_err(|e| e.to_string())?;
     Ok(config)
 }

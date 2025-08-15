@@ -6,13 +6,13 @@
 //! - Task cycling service
 //! - Task DTOs for persistence
 
-pub mod dto;
+pub mod task_dto;
 pub mod config_dto;
 pub mod file_repo;
 pub mod memory_repo;
 pub mod cycling_srv;
 
-pub use dto::{TaskDto, TaskAudioConfigDto};
+pub use task_dto::{TaskDto, TaskAudioConfigDto};
 pub use config_dto::TaskConfigDto;
 pub use file_repo::FileTaskRepository;
 pub use memory_repo::{InMemoryTaskRepository, TaskRepositoryArc};

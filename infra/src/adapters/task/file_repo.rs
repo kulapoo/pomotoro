@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::fs;
 use std::io::Write;
 use domain::{Task, TaskId, TaskStatus, TaskRepository, Result, Error};
-use super::dto::TaskDto;
+use super::task_dto::TaskDto;
 use async_trait::async_trait;
 use serde_json;
 

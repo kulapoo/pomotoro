@@ -8,7 +8,7 @@ priority - i.e `/timer - 2`
 
 ```
 
-└── pomotoro-domain / # DDD Domain Layer
+└── domain / # DDD Domain Layer
     │   ├── Cargo.toml                   # itala-domain
     │   └── src/
     │       ├── lib.rs
