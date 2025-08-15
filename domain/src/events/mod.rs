@@ -1,12 +1,7 @@
-mod handler;
-
 mod app_events;
 
 pub mod commands;
 pub mod ui;
-
-
-pub use handler::DomainEventHandler;
 
 pub mod timer {
     pub use super::commands::timer::*;

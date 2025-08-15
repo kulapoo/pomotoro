@@ -1,38 +1,13 @@
 use std::sync::Arc;
 use tauri::AppHandle;
 
-use super::{CompositeEventPublisher, DomainEventBus, TauriEventPublisher};
+use super::DomainEventBus;
 
 pub type EventPublisherArc = Arc<dyn domain::EventPublisher + Send + Sync>;
 
-/// Create an event publisher that combines internal handlers and frontend emission
-pub fn create_composite_event_publisher(app_handle: AppHandle) -> EventPublisherArc {
-    let mut composite = CompositeEventPublisher::new();
-
-    // Add internal event bus for application-level handlers
-    composite.add_publisher(Arc::new(DomainEventBus::new()));
-
-    // Add Tauri publisher for frontend emission
-    composite.add_publisher(Arc::new(TauriEventPublisher::new(app_handle)));
-
-    Arc::new(composite)
-}
-
-/// Create an event publisher and return both the composite and the domain event bus
-/// for handler registration
-pub fn create_event_publisher_with_bus(_app_handle: AppHandle) -> (EventPublisherArc, Arc<DomainEventBus>) {
-    let mut composite = CompositeEventPublisher::new();
-
-    // Create the domain event bus that we'll register handlers on
-    let domain_bus = Arc::new(DomainEventBus::new());
-
-    // Add internal event bus for application-level handlers
-    composite.add_publisher(domain_bus.clone());
-
-    // // Add Tauri publisher for frontend emission
-    // composite.add_publisher(Arc::new(TauriEventPublisher::new(app_handle)));
-
-    (Arc::new(composite), domain_bus)
+/// Create an event publisher for the application
+pub fn create_event_publisher(_app_handle: AppHandle) -> EventPublisherArc {
+    Arc::new(DomainEventBus::new())
 }
 
 // Infrastructure-specific event constants

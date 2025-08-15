@@ -8,7 +8,7 @@ pub mod audio;
 pub mod events;
 
 pub use shared_kernel::{
-    DomainEvent, EventPublisher, EventSourced, NoOpEventPublisher,
+    DomainEvent, EventPublisher, NoOpEventPublisher,
     Readable, Searchable, Writable,
     EntityId, EntityMarker, Tag, TimerConfiguration, Timestamp,
     Result, Error, duration_serde

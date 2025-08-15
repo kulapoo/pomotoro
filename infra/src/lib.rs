@@ -39,7 +39,6 @@ pub fn run() {
 
             // events
             app.manage(app_registry.event_publisher.clone());
-            app.manage(app_registry.event_bus.clone());
 
             Ok(())
         })

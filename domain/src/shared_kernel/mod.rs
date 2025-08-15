@@ -4,7 +4,7 @@ pub mod value_objects;
 pub mod errors;
 pub mod serde_utils;
 
-pub use events::{DomainEvent, EventPublisher, EventSourced, NoOpEventPublisher};
+pub use events::{DomainEvent, EventPublisher, NoOpEventPublisher};
 
 #[cfg(any(test, feature = "test-utils"))]
 pub use events::MockEventPublisher;

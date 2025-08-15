@@ -23,7 +23,6 @@ pub mod task;
 pub mod timer;
 pub mod config;
 pub mod audio;
-pub mod events;
 
 mod bootstrap;
 
@@ -37,4 +36,3 @@ pub use timer::{
 };
 pub use config::*;
 pub use audio::*;
-pub use events::HandlerRegistry;

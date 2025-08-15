@@ -49,8 +49,8 @@ pub use audio::{RodioAudioService, DefaultAudioAssetProvider, BG_SOUNDS};
 
 // Events infrastructure
 pub use events::{
-    DomainEventBus, EventHandler, TauriEventPublisher, 
-    CompositeEventPublisher, create_composite_event_publisher, create_event_publisher_with_bus, EventPublisherArc
+    DomainEventBus, EventHandler,
+    create_event_publisher, EventPublisherArc
 };
 
 // Notifications infrastructure
