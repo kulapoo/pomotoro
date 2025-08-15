@@ -16,10 +16,4 @@ impl TimerTestContext {
         }
     }
 
-    pub fn with_task_repo(task_repo: Arc<dyn TaskRepository + Send + Sync>) -> Self {
-        Self {
-            timer_service: Arc::new(TimerService::new()),
-            task_repo,
-        }
-    }
 }

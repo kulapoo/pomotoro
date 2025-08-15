@@ -85,8 +85,10 @@ mod tests {
     #[tokio::test]
     async fn should_reset_current_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.timer.remaining_seconds = 500; // Partially completed
         timer_state.set_status(TimerStatus::Running).unwrap(); // First go to Running
         timer_state.set_status(TimerStatus::Paused).unwrap(); // Then can pause
@@ -104,8 +106,10 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_reset_running_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         let result = reset_session(
@@ -133,8 +137,10 @@ mod tests {
     #[tokio::test]
     async fn should_reset_full_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.task_session_count = 3;
         timer_state.timer.session_count = 2;
         timer_state.timer.is_break_cycle = true;
@@ -157,8 +163,10 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_full_reset_running_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         let result = reset_full_session(

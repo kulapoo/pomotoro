@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::{TaskId, Phase, DomainEvent};
 use chrono::{DateTime, Utc};
+use std::any::Any;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PhaseSkipped {
@@ -49,5 +50,9 @@ impl DomainEvent for PhaseSkipped {
 
     fn clone_box(&self) -> Box<dyn DomainEvent> {
         Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

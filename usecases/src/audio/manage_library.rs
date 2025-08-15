@@ -1,5 +1,6 @@
 use domain::{AudioLibrary, AudioAsset, AudioCategory, Result, Error};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]
 pub struct AddAudioAssetCmd {
@@ -35,9 +36,7 @@ pub async fn get_audio_library(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     query: GetAudioLibraryQuery,
 ) -> Result<AudioLibrary> {
-    let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {e}"),
-    })?;
+    let service = library_service.lock().await;
 
     let mut library = service.get_library()?;
 
@@ -88,9 +87,7 @@ pub async fn add_audio_asset(
         duration_ms: None,
     };
 
-    let mut service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {e}"),
-    })?;
+    let mut service = library_service.lock().await;
 
     service.add_asset(asset.clone())?;
     Ok(asset)
@@ -100,9 +97,7 @@ pub async fn remove_audio_asset(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     cmd: RemoveAudioAssetCmd,
 ) -> Result<bool> {
-    let mut service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {e}"),
-    })?;
+    let mut service = library_service.lock().await;
 
     service.remove_asset(&cmd.asset_id)
 }
@@ -111,9 +106,7 @@ pub async fn get_audio_asset(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     asset_id: String,
 ) -> Result<Option<AudioAsset>> {
-    let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {e}"),
-    })?;
+    let service = library_service.lock().await;
 
     service.get_asset(&asset_id)
 }
@@ -122,9 +115,7 @@ pub async fn get_assets_by_category(
     library_service: &Arc<Mutex<dyn AudioLibraryService>>,
     category: AudioCategory,
 ) -> Result<Vec<AudioAsset>> {
-    let service = library_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire library service lock: {e}"),
-    })?;
+    let service = library_service.lock().await;
 
     service.get_assets_by_category(category)
 }

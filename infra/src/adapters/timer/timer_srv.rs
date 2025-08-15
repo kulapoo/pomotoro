@@ -224,6 +224,16 @@ impl TimerService {
     }
 }
 
+// impl EventRegistrar for TimerService {
+//     fn register(&self, registry: &mut usecases::HandlerRegistry) -> DomainResult<()> {
+//         Ok(())
+//     }
+
+//     fn unregister(&self, registry: &mut usecases::HandlerRegistry) -> DomainResult<()> {
+//         Ok(())
+//     }
+// }
+
 /// Implementation of domain TimerService trait
 ///
 /// This allows the infrastructure TimerService to be used through

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::adapters::{task::InMemoryTaskRepository, InMemoryConfigRepository};
 use tauri::AppHandle;
@@ -7,6 +8,10 @@ use usecases::HandlerRegistry;
 use crate::adapters::{
     create_event_publisher_with_bus, DomainEventBus, EventPublisherArc,
     RodioAudioService, TimerService,
+    timer::handlers::{
+        PhaseCompletionHandler, ConcreteAudioNotificationPlayer, TauriNotificationService,
+    },
+    audio::InMemoryAudioLibraryService,
 };
 
 pub struct AppRegistry {
@@ -22,13 +27,30 @@ pub struct AppRegistry {
 
     pub timer_service: Arc<dyn domain::timer::TimerService + Send + Sync>,
     pub audio_service: Arc<RodioAudioService>,
+    #[allow(dead_code)]
+    pub audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
 }
 
 fn init_events(
-    _event_handlers: &Arc<HandlerRegistry>
+    event_handlers: &mut HandlerRegistry,
+    app_handle: &AppHandle,
+    audio_service: Arc<Mutex<dyn domain::AudioService>>,
+    audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
 ) -> Result<(), BootstrapError> {
-
-
+    // Create the audio notification player
+    let audio_player = Arc::new(RwLock::new(
+        ConcreteAudioNotificationPlayer::new(audio_service, audio_library_service)
+    ));
+    
+    // Create the notification service
+    let notification_service = Arc::new(TauriNotificationService::new(app_handle.clone()));
+    
+    // Create and register the PhaseCompletionHandler
+    let phase_completion_handler = Box::new(
+        PhaseCompletionHandler::new(audio_player, notification_service)
+    );
+    
+    event_handlers.register(phase_completion_handler);
 
     Ok(())
 }
@@ -62,24 +84,37 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
     let audio_service = Arc::new(
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
     );
+    
+    let audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>> = 
+        Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
 
     let timer_service: Arc<dyn domain::timer::TimerService + Send + Sync> =
         Arc::new(TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone())));
 
-    let event_handlers = Arc::new(HandlerRegistry::new());
+    let mut event_handlers = HandlerRegistry::new();
+    
+    // Initialize event handlers with the PhaseCompletionHandler
+    let audio_service_for_handler: Arc<Mutex<dyn domain::AudioService>> = 
+        Arc::new(Mutex::new(RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?));
+        
+    init_events(
+        &mut event_handlers, 
+        &app_handle,
+        audio_service_for_handler,
+        audio_library_service.clone()
+    ).map_err(|e| BootstrapError::EventSystem(e.to_string()))?;
 
     usecases::bootstrap(&task_repository, &config_repository, &timer_service, &event_publisher).await.map_err(|e| BootstrapError::OrchestrationError(e.to_string()))?;
 
-    init_events(&event_handlers).map_err(|e| BootstrapError::EventSystem(e.to_string()))?;
-
     let ctx = AppRegistry {
-        event_handlers,
+        event_handlers: Arc::new(event_handlers),
         task_repository,
         config_repository,
         event_bus,
         event_publisher,
         timer_service,
         audio_service,
+        audio_library_service,
     };
 
     Ok(ctx)

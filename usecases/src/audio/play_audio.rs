@@ -1,5 +1,6 @@
 use domain::{PlaybackRequest, PlaybackHandle, Result, Error, AudioService};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]
 pub struct PlayAudioCmd {
@@ -37,9 +38,7 @@ pub async fn play_audio(
         request = request.with_fade_in(fade_in);
     }
 
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.play_audio(request)
 }
@@ -48,9 +47,7 @@ pub async fn stop_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
     cmd: StopAudioCmd,
 ) -> Result<()> {
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.stop_audio(&cmd.playback_id)
 }
@@ -58,9 +55,7 @@ pub async fn stop_audio(
 pub async fn stop_all_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
 ) -> Result<()> {
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.stop_all_audio()
 }
@@ -69,9 +64,7 @@ pub async fn pause_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
     playback_id: String,
 ) -> Result<()> {
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.pause_audio(&playback_id)
 }
@@ -80,9 +73,7 @@ pub async fn resume_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
     playback_id: String,
 ) -> Result<()> {
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.resume_audio(&playback_id)
 }
@@ -98,9 +89,7 @@ pub async fn set_audio_volume(
         });
     }
 
-    let mut service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let mut service = audio_service.lock().await;
 
     service.set_volume(&playback_id, volume)
 }

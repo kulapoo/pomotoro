@@ -2,7 +2,8 @@ use domain::{AudioCategory, PlaybackHandle, Result, Error};
 use super::play_audio::{PlayAudioCmd, play_audio};
 use domain::AudioService;
 use super::manage_library::{AudioLibraryService, get_assets_by_category};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]
 pub struct PlayNotificationSoundCmd {
@@ -57,16 +58,16 @@ pub async fn play_notification_sound(
     cmd: PlayNotificationSoundCmd,
 ) -> Result<PlaybackHandle> {
     let volume = cmd.volume.unwrap_or(0.7);
-    
+
     if !(0.0..=1.0).contains(&volume) {
-        return Err(Error::ConfigurationError { 
+        return Err(Error::ConfigurationError {
             message: format!("Volume must be between 0.0 and 1.0, got {volume}")
         });
     }
 
     let category = cmd.notification_type.to_asset_category();
     let assets = get_assets_by_category(library_service, category).await?;
-    
+
     let asset_id = if assets.is_empty() {
         cmd.notification_type.default_asset_id().to_string()
     } else {
@@ -92,15 +93,15 @@ pub async fn play_background_audio(
     cmd: PlayBackgroundAudioCmd,
 ) -> Result<PlaybackHandle> {
     let volume = cmd.volume.unwrap_or(0.3);
-    
+
     if !(0.0..=1.0).contains(&volume) {
-        return Err(Error::ConfigurationError { 
+        return Err(Error::ConfigurationError {
             message: format!("Volume must be between 0.0 and 1.0, got {volume}")
         });
     }
 
     let assets = get_assets_by_category(library_service, cmd.category).await?;
-    
+
     if assets.is_empty() {
         return Err(Error::ConfigurationError {
             message: format!("No audio assets found for category: {:?}", cmd.category),
@@ -133,14 +134,12 @@ pub async fn stop_background_audio(
     audio_service: &Arc<Mutex<dyn AudioService>>,
     _category: AudioCategory,
 ) -> Result<()> {
-    let service = audio_service.lock().map_err(|e| Error::ConfigurationError {
-        message: format!("Failed to acquire audio service lock: {e}"),
-    })?;
+    let service = audio_service.lock().await;
 
     let active_playbacks = service.get_active_playbacks()?;
-    
+
     drop(service);
-    
+
     for playback in active_playbacks {
         if playback.is_looped {
             let stop_cmd = super::play_audio::StopAudioCmd {
@@ -241,7 +240,7 @@ mod tests {
     impl MockLibraryService {
         fn new_with_notification_assets() -> Self {
             let mut library = AudioLibrary::new();
-            
+
             let asset = AudioAsset {
                 id: "session-complete-bell".to_string(),
                 name: "Session Complete Bell".to_string(),
@@ -250,7 +249,7 @@ mod tests {
                 duration_ms: Some(2000),
             };
             library.add_asset(asset);
-            
+
             Self { library }
         }
     }
@@ -290,14 +289,14 @@ mod tests {
     async fn should_play_notification_sound() {
         let audio_service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
         let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new_with_notification_assets()));
-        
+
         let cmd = PlayNotificationSoundCmd {
             notification_type: NotificationType::SessionCompleted,
             volume: Some(0.8),
         };
 
         let handle = play_notification_sound(&audio_service, &library_service, cmd).await.unwrap();
-        
+
         assert_eq!(handle.asset_id, "session-complete-bell");
         assert_eq!(handle.volume, 0.8);
         assert!(!handle.is_looped);
@@ -308,7 +307,7 @@ mod tests {
     async fn should_fail_with_invalid_volume() {
         let audio_service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
         let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new_with_notification_assets()));
-        
+
         let cmd = PlayNotificationSoundCmd {
             notification_type: NotificationType::SessionCompleted,
             volume: Some(1.5),

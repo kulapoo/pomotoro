@@ -42,13 +42,20 @@ impl DomainEvent for AppExited {
     fn aggregate_id(&self) -> String {
         "app".to_string()
     }
+    
     fn version(&self) -> u64 {
         self.version
     }
+    
     fn occurred_at(&self) -> chrono::DateTime<chrono::Utc> {
         self.occurred_at
     }
+    
     fn clone_box(&self) -> Box<dyn DomainEvent> {
         Box::new(self.clone())
+    }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }

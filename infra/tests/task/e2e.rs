@@ -3,21 +3,6 @@ use crate::timer::models::TimerTestContext;
 use domain::{TaskStatus, TaskRepository};
 use std::time::Duration;
 
-pub struct E2ETaskConfig {
-    pub timeout_duration: Duration,
-    pub retry_attempts: u32,
-    pub cleanup_on_failure: bool,
-}
-
-impl Default for E2ETaskConfig {
-    fn default() -> Self {
-        Self {
-            timeout_duration: Duration::from_secs(30),
-            retry_attempts: 3,
-            cleanup_on_failure: true,
-        }
-    }
-}
 
 #[tokio::test]
 async fn test_e2e_task_creation_workflow() -> Result<(), Box<dyn std::error::Error>> {

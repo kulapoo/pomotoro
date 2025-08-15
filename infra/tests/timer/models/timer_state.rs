@@ -1,11 +1,12 @@
 use domain::{Phase, TimerStatus, TimerState};
-use std::time::Duration;
 use domain::TaskId;
 
+#[allow(dead_code)]
 pub struct TimerStateBuilder {
     state: TimerState,
 }
 
+#[allow(dead_code)]
 impl TimerStateBuilder {
     pub fn new() -> Self {
         Self {
@@ -90,26 +91,6 @@ impl Default for TimerStateBuilder {
 pub struct TimerTestAssertions;
 
 impl TimerTestAssertions {
-    pub fn assert_state_equals(actual: &TimerState, expected: &TimerState) {
-        assert_eq!(actual.phase(), expected.phase());
-        assert_eq!(actual.status(), expected.status());
-        assert_eq!(actual.remaining_seconds(), expected.remaining_seconds());
-        assert_eq!(actual.session_count(), expected.session_count());
-        assert_eq!(actual.task_session_count, expected.task_session_count);
-        assert_eq!(actual.active_task_id, expected.active_task_id);
-    }
-
-    pub fn assert_phase_duration(state: &TimerState, expected_duration: Duration) {
-        assert_eq!(state.remaining_seconds(), expected_duration.as_secs() as u32);
-    }
-
-    pub fn assert_is_work_phase(state: &TimerState) {
-        assert_eq!(state.phase(), Phase::Work);
-    }
-
-    pub fn assert_is_break_phase(state: &TimerState) {
-        assert!(matches!(state.phase(), Phase::ShortBreak | Phase::LongBreak));
-    }
 
     pub fn assert_is_running(state: &TimerState) {
         assert_eq!(state.status(), TimerStatus::Running);
@@ -117,6 +98,10 @@ impl TimerTestAssertions {
 
     pub fn assert_is_stopped(state: &TimerState) {
         assert_eq!(state.status(), TimerStatus::Stopped);
+    }
+
+    pub fn assert_is_work_phase(state: &TimerState) {
+        assert_eq!(state.phase(), Phase::Work);
     }
 
     pub fn assert_has_active_task(state: &TimerState, task_id: TaskId) {

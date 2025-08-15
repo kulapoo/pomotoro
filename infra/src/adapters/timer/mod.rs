@@ -6,6 +6,7 @@
 
 pub mod timer_srv;
 pub mod timer_repo;
+pub mod handlers;
 
 pub use timer_srv::TimerService;
 pub use timer_repo::FileTimerStateRepository;

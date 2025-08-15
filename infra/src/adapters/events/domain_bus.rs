@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 pub type EventHandler<T> = Arc<dyn Fn(&T) + Send + Sync>;
+type HandlerFn = Box<dyn Fn(&dyn DomainEvent) + Send + Sync>;
+type HandlersMap = HashMap<String, Vec<HandlerFn>>;
 
 /// # DomainEventBus - Application Layer Implementation
 /// 
@@ -29,7 +31,7 @@ pub type EventHandler<T> = Arc<dyn Fn(&T) + Send + Sync>;
 /// ```
 #[derive(Clone)]
 pub struct DomainEventBus {
-    handlers: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(&dyn DomainEvent) + Send + Sync>>>>>,
+    handlers: Arc<Mutex<HandlersMap>>,
 }
 
 impl Default for DomainEventBus {

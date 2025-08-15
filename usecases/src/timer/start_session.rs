@@ -103,8 +103,10 @@ mod tests {
     #[tokio::test]
     async fn should_start_session_with_existing_active_task() {
         let (task_repo, phase_service, task) = setup().await;
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task.id),
+            ..Default::default()
+        };
         
         let cmd = StartSessionCmd {
             task_id: None,
@@ -185,8 +187,10 @@ mod tests {
     #[tokio::test]
     async fn should_fail_if_already_running() {
         let (task_repo, phase_service, task) = setup().await;
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task.id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task.id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         let cmd = StartSessionCmd {

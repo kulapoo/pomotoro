@@ -90,9 +90,6 @@ mod tests {
             }
         }
 
-        fn was_load_called(&self) -> bool {
-            *self.load_called.read().unwrap()
-        }
     }
 
     #[async_trait]

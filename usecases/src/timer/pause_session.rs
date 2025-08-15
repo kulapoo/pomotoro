@@ -70,8 +70,10 @@ mod tests {
     #[tokio::test]
     async fn should_pause_running_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         pause_session(
@@ -85,8 +87,10 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_pause_stopped_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Stopped).unwrap();
         
         let result = pause_session(
@@ -114,8 +118,10 @@ mod tests {
     #[tokio::test]
     async fn should_resume_paused_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         timer_state.set_status(TimerStatus::Paused).unwrap();
         
@@ -130,8 +136,10 @@ mod tests {
     #[tokio::test]
     async fn should_fail_to_resume_running_session() {
         let (phase_service, task_id) = setup();
-        let mut timer_state = TimerState::default();
-        timer_state.active_task_id = Some(task_id);
+        let mut timer_state = TimerState {
+            active_task_id: Some(task_id),
+            ..Default::default()
+        };
         timer_state.set_status(TimerStatus::Running).unwrap();
         
         let result = resume_session(

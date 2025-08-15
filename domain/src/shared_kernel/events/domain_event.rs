@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use std::any::Any;
 
 /// # Implementation Notes
 ///
 /// This trait belongs in the shared kernel as it's a cross-cutting concern used
 /// by all bounded contexts. All domain events in the system should implement this trait.
-pub trait DomainEvent: Send + Sync + std::fmt::Debug + std::any::Any {
+pub trait DomainEvent: Send + Sync + std::fmt::Debug + Any {
     /// Unique identifier for the type of event.
     ///
     /// This should be a stable string that uniquely identifies the event type.
@@ -95,4 +96,22 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug + std::any::Any {
     /// }
     /// ```
     fn clone_box(&self) -> Box<dyn DomainEvent>;
+
+    /// Returns a reference to the underlying Any type for downcasting.
+    ///
+    /// This enables type-safe downcasting of domain events from trait objects
+    /// back to their concrete types when needed by handlers.
+    ///
+    /// # Returns
+    ///
+    /// A reference to self as Any trait object
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// if let Some(task_created) = event.as_any().downcast_ref::<TaskCreated>() {
+    ///     // Handle specific event type
+    /// }
+    /// ```
+    fn as_any(&self) -> &dyn Any;
 }

@@ -36,16 +36,6 @@ impl AudioConfigBuilder {
         self
     }
 
-    pub fn muted(mut self) -> Self {
-        self.config.muted = true;
-        self
-    }
-
-    pub fn unmuted(mut self) -> Self {
-        self.config.muted = false;
-        self
-    }
-
     pub fn silent(mut self) -> Self {
         self.config.work_notification_sound = None;
         self.config.break_notification_sound = None;
@@ -80,14 +70,6 @@ impl Default for AudioConfigBuilder {
 pub struct AudioTestAssertions;
 
 impl AudioTestAssertions {
-    pub fn assert_audio_config_equals(actual: &AudioConfig, expected: &AudioConfig) {
-        assert_eq!(actual.work_notification_sound, expected.work_notification_sound);
-        assert_eq!(actual.break_notification_sound, expected.break_notification_sound);
-        assert_eq!(actual.background_sound, expected.background_sound);
-        assert_eq!(actual.volume, expected.volume);
-        assert_eq!(actual.enable_background_audio, expected.enable_background_audio);
-        assert_eq!(actual.muted, expected.muted);
-    }
 
     pub fn assert_is_muted(config: &AudioConfig) {
         assert!(config.muted);

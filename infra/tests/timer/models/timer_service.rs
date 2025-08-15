@@ -60,14 +60,6 @@ impl TimerTestService {
         Ok(())
     }
 
-    pub async fn switch_to_next_task(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
-        // This would be implemented at the application level in the real system
-        Ok(None)
-    }
-
-    pub fn service(&self) -> Arc<TimerService> {
-        self.service.clone()
-    }
 }
 
 impl std::ops::Deref for TimerTestService {

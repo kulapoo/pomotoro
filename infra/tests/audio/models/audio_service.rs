@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
+use domain::{AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
 use infra::adapters::DefaultAudioAssetProvider;
 
 pub struct MockAudioManager {
@@ -13,13 +13,10 @@ pub struct MockAudioManager {
 #[derive(Debug, Clone)]
 pub struct MockPlayback {
     pub handle: PlaybackHandle,
-    pub asset_id: String,
     pub volume: f32,
     pub is_playing: bool,
     pub is_paused: bool,
     pub is_looped: bool,
-    pub fade_in_ms: Option<u32>,
-    pub fade_out_ms: Option<u32>,
 }
 
 impl MockAudioManager {
@@ -34,14 +31,6 @@ impl MockAudioManager {
 
     pub fn get_library(&self) -> &AudioLibrary {
         &self.library
-    }
-
-    pub fn add_asset(&mut self, asset: AudioAsset) {
-        self.library.add_asset(asset);
-    }
-
-    pub fn remove_asset(&mut self, asset_id: &str) -> Option<AudioAsset> {
-        self.library.remove_asset(asset_id)
     }
 
     pub fn play(&self, request: PlaybackRequest) -> Result<PlaybackHandle, AudioError> {
@@ -60,13 +49,10 @@ impl MockAudioManager {
 
         let playback = MockPlayback {
             handle: handle.clone(),
-            asset_id: request.asset_id.clone(),
             volume: request.volume,
             is_playing: true,
             is_paused: false,
             is_looped: request.looped,
-            fade_in_ms: request.fade_in_ms,
-            fade_out_ms: request.fade_out_ms,
         };
 
         // Track play count for this asset
@@ -116,13 +102,6 @@ impl MockAudioManager {
         Ok(())
     }
 
-    pub fn get_active_playbacks(&self) -> Vec<PlaybackHandle> {
-        let playbacks = self.active_playbacks.lock().unwrap();
-        playbacks.values()
-            .filter(|p| p.is_playing || p.is_paused)
-            .map(|p| p.handle.clone())
-            .collect()
-    }
 
     pub fn stop_all_playbacks(&self) {
         let mut playbacks = self.active_playbacks.lock().unwrap();

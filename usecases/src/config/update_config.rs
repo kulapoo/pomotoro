@@ -114,8 +114,10 @@ mod tests {
     async fn should_update_general_config_only() {
         let (config_repo, event_publisher) = setup().await;
         
-        let mut new_general = GeneralConfig::default();
-        new_general.auto_start_breaks = false;
+        let new_general = GeneralConfig {
+            auto_start_breaks: false,
+            ..Default::default()
+        };
         
         let cmd = UpdateConfigCmd {
             general: Some(new_general),
@@ -136,11 +138,15 @@ mod tests {
     async fn should_update_multiple_config_sections() {
         let (config_repo, event_publisher) = setup().await;
         
-        let mut new_general = GeneralConfig::default();
-        new_general.minimize_to_tray = false;
+        let new_general = GeneralConfig {
+            minimize_to_tray: false,
+            ..Default::default()
+        };
         
-        let mut new_audio = AudioConfig::default();
-        new_audio.volume = 0.8;
+        let new_audio = AudioConfig {
+            volume: 0.8,
+            ..Default::default()
+        };
         
         let cmd = UpdateConfigCmd {
             general: Some(new_general),
@@ -181,8 +187,10 @@ mod tests {
         
         assert!(!config_repo.config_exists().await.unwrap());
         
-        let mut new_general = GeneralConfig::default();
-        new_general.start_minimized = true;
+        let new_general = GeneralConfig {
+            start_minimized: true,
+            ..Default::default()
+        };
         
         let cmd = UpdateConfigCmd {
             general: Some(new_general),
@@ -220,8 +228,10 @@ mod tests {
     async fn should_update_general_config_using_convenience_method() {
         let (config_repo, event_publisher) = setup().await;
         
-        let mut new_general = GeneralConfig::default();
-        new_general.auto_start_work_after_break = true;
+        let new_general = GeneralConfig {
+            auto_start_work_after_break: true,
+            ..Default::default()
+        };
         
         let updated_config = update_general_config(&config_repo, &event_publisher, new_general)
             .await
@@ -235,8 +245,10 @@ mod tests {
     async fn should_update_audio_config_using_convenience_method() {
         let (config_repo, event_publisher) = setup().await;
         
-        let mut new_audio = AudioConfig::default();
-        new_audio.volume = 0.3;
+        let new_audio = AudioConfig {
+            volume: 0.3,
+            ..Default::default()
+        };
         
         let updated_config = update_audio_config(&config_repo, &event_publisher, new_audio)
             .await

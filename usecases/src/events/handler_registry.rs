@@ -2,8 +2,11 @@ use domain::events::DomainEventHandler;
 use std::any::TypeId;
 use std::collections::HashMap;
 
+type HandlerEntry = (String, Box<dyn DomainEventHandler>);
+type HandlersMap = HashMap<TypeId, Vec<HandlerEntry>>;
+
 pub struct HandlerRegistry {
-    handlers: HashMap<TypeId, Vec<(String, Box<dyn DomainEventHandler>)>>,
+    handlers: HandlersMap,
 }
 
 impl HandlerRegistry {
