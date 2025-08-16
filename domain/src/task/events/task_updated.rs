@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, DomainEvent};
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -34,7 +34,7 @@ impl TaskUpdated {
     }
 }
 
-impl DomainEvent for TaskUpdated {
+impl crate::Event for TaskUpdated {
     fn event_type(&self) -> &'static str {
         "TaskUpdated"
     }
@@ -51,7 +51,7 @@ impl DomainEvent for TaskUpdated {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

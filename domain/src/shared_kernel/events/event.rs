@@ -5,7 +5,7 @@ use std::any::Any;
 ///
 /// This trait belongs in the shared kernel as it's a cross-cutting concern used
 /// by all bounded contexts. All domain events in the system should implement this trait.
-pub trait DomainEvent: Send + Sync + std::fmt::Debug + Any {
+pub trait Event: Send + Sync + std::fmt::Debug + Any {
     /// Unique identifier for the type of event.
     ///
     /// This should be a stable string that uniquely identifies the event type.
@@ -91,11 +91,11 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug + Any {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// fn clone_box(&self) -> Box<dyn DomainEvent> {
+    /// fn clone_box(&self) -> Box<dyn Event> {
     ///     Box::new(self.clone())
     /// }
     /// ```
-    fn clone_box(&self) -> Box<dyn DomainEvent>;
+    fn clone_box(&self) -> Box<dyn Event>;
 
     /// Returns a reference to the underlying Any type for downcasting.
     ///

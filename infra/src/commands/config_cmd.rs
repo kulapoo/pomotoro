@@ -1,4 +1,4 @@
-use crate::adapters::{events::domain_bus::EventPublisherArc, ConfigRepository};
+use crate::adapters::{events::mem_event_bus::EventPublisherArc, ConfigRepository};
 use domain::{Config, TaskDefaults, AudioConfig, TaskId, GeneralConfig, NotificationConfig, AppearanceConfig};
 use tauri::State;
 

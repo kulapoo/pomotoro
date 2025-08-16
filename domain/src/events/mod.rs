@@ -1,5 +1,3 @@
-mod app_events;
-
 pub mod commands;
 pub mod ui;
 
@@ -20,5 +18,4 @@ pub mod config {
 
 pub mod app {
     pub use super::ui::app::*;
-    pub use super::app_events::*;
 }

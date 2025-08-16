@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, TimerStatus, Phase, DomainEvent};
+use crate::{TaskId, TimerStatus, Phase};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -31,7 +31,7 @@ impl TimerStatusChanged {
     }
 }
 
-impl DomainEvent for TimerStatusChanged {
+impl crate::Event for TimerStatusChanged {
     fn event_type(&self) -> &'static str {
         "TimerStatusChanged"
     }
@@ -50,7 +50,7 @@ impl DomainEvent for TimerStatusChanged {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

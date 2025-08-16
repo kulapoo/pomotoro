@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
 
-use crate::adapters::events::domain_bus::EventPublisherArc;
+use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::timer::timer_repo::FileTimerStateRepository;
 use domain::timer::TimerService as DomainTimerService;
 use domain::Task;

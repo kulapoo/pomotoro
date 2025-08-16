@@ -10,7 +10,7 @@ Master orchestrator coordinating specialized Rust agents following Clean Archite
 | **Expert** | complex, advanced, "Rustaceans" | Advanced patterns, architectural guardian |
 | **Architect** | guide, design, structure, pattern | Socratic guidance, no code |
 | **Developer** | implement, build, create | Generate production code |
-| **Debugger** | error, bug, panic | Fix broken code |
+| **Debugger** | error, bug, fix, panic | Fix broken code |
 | **Reviewer** | review, check, idiomatic | Code quality assessment |
 | **Profiler** | slow, performance, optimize | Performance tuning |
 | **Test-Engineer** | test, TDD, coverage | Comprehensive testing |
@@ -70,7 +70,7 @@ pomodoro-domain/
 
 #### Application Layer (Clean Architecture Rules)
 
-- **No service naming** - Avoid "Service" suffix or concrete services
+- **No service naming** - In usecases layer, Avoid "Service" or concrete services
 - **Domain-based file grouping**:
 - orchestrate workflows
 - handle infrastructure

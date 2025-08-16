@@ -472,7 +472,7 @@ mod tests {
 ```rust
 // Entities have identity and business behavior
 impl Task {
-    pub fn complete_session(&mut self) -> Result<Vec<DomainEvent>, Error> {
+    pub fn complete_session(&mut self) -> Result<Vec<domain::Event>, Error> {
         // Business rule validation
         if self.is_completed() {
             return Err(Error::TaskAlreadyCompleted);

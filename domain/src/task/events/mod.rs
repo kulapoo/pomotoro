@@ -17,14 +17,12 @@ pub use session_transition_completed::SessionTransitionCompleted;
 pub use task_switch_workflow_completed::TaskSwitchWorkflowCompleted;
 pub use automatic_task_cycling_completed::AutomaticTaskCyclingCompleted;
 pub use task_cycling_exhausted::TaskCyclingExhausted;
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{TaskId, TaskConfig, AudioConfig};
-    use crate::DomainEvent;
+    use crate::Event;
     use std::time::Duration;
-
     #[test]
     fn should_have_correct_event_types() {
         let task_id = TaskId::new();
@@ -43,7 +41,7 @@ mod tests {
         assert_eq!(task_created.aggregate_id(), task_id.to_string());
         assert_eq!(task_created.version(), 1);
     }
-
+    
     #[test]
     fn should_serialize_task_created_event() {
         let event = TaskCreated::new(

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, DomainEvent};
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -31,7 +31,7 @@ impl WorkSessionStarted {
     }
 }
 
-impl DomainEvent for WorkSessionStarted {
+impl crate::Event for WorkSessionStarted {
     fn event_type(&self) -> &'static str {
         "WorkSessionStarted"
     }
@@ -50,10 +50,10 @@ impl DomainEvent for WorkSessionStarted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
-    
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

@@ -49,7 +49,7 @@ pub use audio::{RodioAudioService, DefaultAudioAssetProvider, BG_SOUNDS};
 
 // Events infrastructure
 pub use events::{
-    DomainEventBus, EventHandler,
+    InMemoryEventBus, EventHandler,
     audio_events,
 };
 

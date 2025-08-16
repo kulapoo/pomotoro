@@ -25,13 +25,11 @@ pub use work_session_started::WorkSessionStarted;
 pub use work_session_completed::WorkSessionCompleted;
 pub use session_started::SessionStarted;
 pub use session_flow_reset::SessionFlowReset;
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{TaskId, Phase};
-    use crate::DomainEvent;
-
+    use crate::Event;
     #[test]
     fn should_have_correct_event_types() {
         let timer_started = TimerStarted::new(Some(TaskId::new()), Phase::Work, 1500, 1);
@@ -42,7 +40,7 @@ mod tests {
         assert_eq!(timer_started.version(), 1);
         assert_eq!(timer_paused.version(), 2);
     }
-
+    
     #[test]
     fn should_serialize_timer_started_event() {
         let event = TimerStarted::new(Some(TaskId::new()), Phase::Work, 1500, 1);

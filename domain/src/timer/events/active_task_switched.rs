@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, Phase, DomainEvent};
+use crate::{TaskId, Phase};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -28,14 +28,13 @@ impl ActiveTaskSwitched {
     }
 }
 
-impl DomainEvent for ActiveTaskSwitched {
+impl crate::Event for ActiveTaskSwitched {
     fn event_type(&self) -> &'static str {
         "ActiveTaskSwitched"
     }
 
     fn aggregate_id(&self) -> String {
         self.new_task_id
-            .or(self.old_task_id)
             .map(|id| id.to_string())
             .unwrap_or_else(|| "timer".to_string())
     }
@@ -48,10 +47,10 @@ impl DomainEvent for ActiveTaskSwitched {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
-    
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

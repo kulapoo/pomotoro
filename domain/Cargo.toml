@@ -13,9 +13,6 @@ chrono = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 
-# File system utilities (for config paths)
-dirs = { workspace = true }
-
 [dev-dependencies]
 tokio = { workspace = true }
 

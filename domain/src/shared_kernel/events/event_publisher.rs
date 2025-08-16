@@ -1,4 +1,4 @@
-use crate::DomainEvent;
+use crate::Event;
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
@@ -31,7 +31,7 @@ pub trait EventPublisher: Send + Sync {
     /// - Ensure reliable delivery (at least once)
     /// - Log events for debugging/audit purposes
     /// - Handle failures gracefully (dead letter queue, retry logic)
-    fn publish(&self, event: Box<dyn DomainEvent>);
+    fn publish(&self, event: Box<dyn Event>);
     
     /// Publishes multiple events as a batch operation.
     /// 
@@ -41,7 +41,7 @@ pub trait EventPublisher: Send + Sync {
     /// # Arguments
     /// 
     /// * `events` - Vector of boxed domain events to publish
-    fn publish_batch(&self, events: Vec<Box<dyn DomainEvent>>);
+    fn publish_batch(&self, events: Vec<Box<dyn Event>>);
 }
 
 /// # NoOpEventPublisher
@@ -60,11 +60,11 @@ pub trait EventPublisher: Send + Sync {
 pub struct NoOpEventPublisher;
 
 impl EventPublisher for NoOpEventPublisher {
-    fn publish(&self, _event: Box<dyn DomainEvent>) {
+    fn publish(&self, _event: Box<dyn Event>) {
         // No-op: Events are ignored for testing domain logic
     }
     
-    fn publish_batch(&self, _events: Vec<Box<dyn DomainEvent>>) {
+    fn publish_batch(&self, _events: Vec<Box<dyn Event>>) {
         // No-op: Events are ignored for testing domain logic
     }
 }
@@ -91,7 +91,7 @@ impl EventPublisher for NoOpEventPublisher {
 #[derive(Debug, Default)]
 #[allow(dead_code)]
 pub struct MockEventPublisher {
-    events: Arc<Mutex<VecDeque<Box<dyn DomainEvent>>>>,
+    events: Arc<Mutex<VecDeque<Box<dyn Event>>>>,
 }
 
 #[allow(dead_code)]
@@ -154,12 +154,12 @@ impl MockEventPublisher {
 }
 
 impl EventPublisher for MockEventPublisher {
-    fn publish(&self, event: Box<dyn DomainEvent>) {
+    fn publish(&self, event: Box<dyn Event>) {
         let mut events = self.events.lock().unwrap();
         events.push_back(event);
     }
     
-    fn publish_batch(&self, events: Vec<Box<dyn DomainEvent>>) {
+    fn publish_batch(&self, events: Vec<Box<dyn Event>>) {
         let mut event_queue = self.events.lock().unwrap();
         for event in events {
             event_queue.push_back(event);

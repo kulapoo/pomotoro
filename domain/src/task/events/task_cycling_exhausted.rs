@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, DomainEvent};
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -21,7 +21,7 @@ impl TaskCyclingExhausted {
     }
 }
 
-impl DomainEvent for TaskCyclingExhausted {
+impl crate::Event for TaskCyclingExhausted {
     fn event_type(&self) -> &'static str {
         "TaskCyclingExhausted"
     }
@@ -38,7 +38,7 @@ impl DomainEvent for TaskCyclingExhausted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

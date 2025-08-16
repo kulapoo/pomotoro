@@ -2,3 +2,4 @@
 /target/
 /Cargo.lock
 ui/dist/
+ai_contexts

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, Phase, DomainEvent};
+use crate::{TaskId, Phase};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -28,7 +28,7 @@ impl BreakSessionCompleted {
     }
 }
 
-impl DomainEvent for BreakSessionCompleted {
+impl crate::Event for BreakSessionCompleted {
     fn event_type(&self) -> &'static str {
         "BreakSessionCompleted"
     }
@@ -47,10 +47,10 @@ impl DomainEvent for BreakSessionCompleted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
-    
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

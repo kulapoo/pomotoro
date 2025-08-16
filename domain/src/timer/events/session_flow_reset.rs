@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, DomainEvent};
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -19,7 +19,7 @@ impl SessionFlowReset {
     }
 }
 
-impl DomainEvent for SessionFlowReset {
+impl crate::Event for SessionFlowReset {
     fn event_type(&self) -> &'static str {
         "SessionFlowReset"
     }
@@ -38,7 +38,7 @@ impl DomainEvent for SessionFlowReset {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

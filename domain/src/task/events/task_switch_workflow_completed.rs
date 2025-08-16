@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, DomainEvent};
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -28,7 +28,7 @@ impl TaskSwitchWorkflowCompleted {
     }
 }
 
-impl DomainEvent for TaskSwitchWorkflowCompleted {
+impl crate::Event for TaskSwitchWorkflowCompleted {
     fn event_type(&self) -> &'static str {
         "TaskSwitchWorkflowCompleted"
     }
@@ -45,7 +45,7 @@ impl DomainEvent for TaskSwitchWorkflowCompleted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

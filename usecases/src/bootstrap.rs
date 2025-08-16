@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::{events::{self}, timer::TimerService, ConfigRepository, Error, EventPublisher, Result, TaskRepository};
+use domain::{timer::TimerService, ConfigRepository, Error, EventPublisher, Result, TaskRepository};
 
 use crate::{config, timer::{start_timer_session, StartTimerSessionCmd}};
 
@@ -19,19 +19,6 @@ pub async fn bootstrap(
     };
 
     start_timer_session(timer_service, task_repo, event_publisher, start_session_cmd).await?;
-
-
-    let app_started = events::app::AppStarted {
-        app_version: "v1.0.0".to_string(),
-        default_task_created: true,
-        config_loaded: true,
-        occurred_at: chrono::Utc::now(),
-        startup_duration_ms: Some(1000),
-        timer_auto_started: true,
-        version: 1,
-    };
-
-    event_publisher.publish(Box::new(app_started));
 
     Ok(())
 }

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use domain::EventPublisher;
 use tokio::sync::Mutex;
 
-use crate::adapters::{events::domain_bus::EventPublisherArc, task::InMemoryTaskRepository, DomainEventBus, InMemoryConfigRepository};
+use crate::adapters::{events::{mem_event_bus::EventPublisherArc, app_lifecycle}, task::InMemoryTaskRepository, InMemoryEventBus, InMemoryConfigRepository};
 use tauri::AppHandle;
 
 use crate::adapters::{
@@ -44,7 +44,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::default());
 
-    let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> = Arc::new(DomainEventBus::new());
+    let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> = Arc::new(InMemoryEventBus::new());
 
     let audio_service = Arc::new(
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
@@ -58,6 +58,18 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
 
 
     usecases::bootstrap(&task_repository, &config_repository, &timer_service, &event_publisher).await.map_err(|e| BootstrapError::OrchestrationError(e.to_string()))?;
+
+    let app_started = app_lifecycle::AppStarted::new(
+        1,
+        "v1.0.0".to_string(),
+        true,
+        true,
+        true,
+        Some(100),
+        chrono::Utc::now(),
+    );
+    
+    event_publisher.publish(Box::new(app_started));
 
     let ctx = AppRegistry {
         task_repository,

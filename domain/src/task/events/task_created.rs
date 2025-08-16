@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, TaskConfig, AudioConfig, DomainEvent};
 use chrono::{DateTime, Utc};
+use crate::{TaskId, TaskConfig, AudioConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TaskCreated {
@@ -41,7 +41,7 @@ impl TaskCreated {
     }
 }
 
-impl DomainEvent for TaskCreated {
+impl crate::Event for TaskCreated {
     fn event_type(&self) -> &'static str {
         "TaskCreated"
     }
@@ -58,7 +58,7 @@ impl DomainEvent for TaskCreated {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

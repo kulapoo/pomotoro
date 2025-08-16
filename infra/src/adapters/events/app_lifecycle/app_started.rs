@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use crate::DomainEvent;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -35,7 +34,7 @@ impl AppStarted {
     }
 }
 
-impl DomainEvent for AppStarted {
+impl domain::Event for AppStarted {
     fn event_type(&self) -> &'static str {
         "AppStarted"
     }
@@ -52,10 +51,10 @@ impl DomainEvent for AppStarted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn DomainEvent> {
+    fn clone_box(&self) -> Box<dyn domain::Event> {
         Box::new(self.clone())
     }
-    
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
