@@ -8,6 +8,7 @@ pub use events::{Event, EventPublisher, NoOpEventPublisher};
 
 #[cfg(any(test, feature = "test-utils"))]
 pub use events::MockEventPublisher;
+
 pub use traits::{Readable, ReadableSync, Searchable, SearchCriteria, Writable, WritableSync, Persistable, Versionable};
 pub use value_objects::{EntityId, EntityMarker, Tag, Timestamp, TimerConfiguration};
 pub use errors::{Error, Result};

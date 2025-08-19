@@ -1,14 +1,38 @@
 use leptos::prelude::*;
+use leptos::task::spawn_local;
+use wasm_bindgen::prelude::*;
+use serde_wasm_bindgen;
 
-use domain::TimerState;
+use domain::{TimerState, TimerTick};
 
-// Event listeners removed as TauriEventPublisher is no longer active
-// Frontend will need to poll for state updates or use a different mechanism
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
+    async fn listen(event: &str, callback: &Closure<dyn Fn(JsValue)>) -> JsValue;
+}
 
-pub fn setup_timer_events(_set_timer_state: WriteSignal<TimerState>) {
-    // No-op for now - events are not being published from backend
+pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
+    spawn_local(async move {
+        let callback = Closure::new(move |event: JsValue| {
+            // Extract the payload from the event
+            let payload = js_sys::Reflect::get(&event, &"payload".into()).unwrap_or(JsValue::NULL);
+            
+            if let Ok(timer_tick) = serde_wasm_bindgen::from_value::<TimerTick>(payload) {
+                // Update the timer state with the new remaining seconds
+                set_timer_state.update(|state| {
+                    state.timer.remaining_seconds = timer_tick.remaining_seconds;
+                    state.timer.phase = timer_tick.phase;
+                });
+            }
+        });
+
+        listen("timer:tick", &callback).await;
+        
+        // Keep the closure alive
+        callback.forget();
+    });
 }
 
 pub fn setup_phase_complete_events() {
-    // No-op for now - events are not being published from backend
+    // Will be implemented when needed for phase completion notifications
 }

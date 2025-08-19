@@ -37,7 +37,7 @@ pub use config::test_repository::InMemoryConfigRepository;
 pub use timer::{
     Timer, TimerId, TimerMarker, Phase, TimerState, TimerStateWithTask, TimerStatus,
     PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult,
-    TimerStarted, TimerPaused, TimerReset, PhaseCompleted, PhaseSkipped,
+    TimerStarted, TimerPaused, TimerReset, TimerTick, PhaseCompleted, PhaseSkipped,
     TimerStatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
     BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset
 };

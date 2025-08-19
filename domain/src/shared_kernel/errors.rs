@@ -14,6 +14,9 @@ pub enum Error {
     #[error("Task already completed")]
     TaskAlreadyCompleted,
 
+    #[error("Invalid task lifecycle: {message}")]
+    InvalidLifecycle { message: String },
+
     #[error("Default task not found")]
     DefaultTaskNotFound,
 
@@ -40,6 +43,9 @@ pub enum Error {
 
     #[error("Audio error: {message}")]
     AudioError { message: String },
+
+    #[error("Event publishing error: {message}")]
+    EventPublishingError { message: String },
 }
 
 impl From<crate::AudioError> for Error {

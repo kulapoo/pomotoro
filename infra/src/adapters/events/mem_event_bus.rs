@@ -214,36 +214,6 @@ impl EventSubscriber for InMemoryEventBus {
         Ok(())
     }
 
-    fn unsubscribe(&mut self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
-        // Use the handler's type and name to find and remove it
-        let event_type = handler.subscribes_to();
-        let handler_name = handler.name();
-
-        let mut handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
-
-        if let Some(event_handlers) = handlers.get_mut(&event_type) {
-            // Remove all handlers with matching name
-            let initial_len = event_handlers.len();
-            event_handlers.retain(|h| h.name != handler_name);
-            let removed_count = initial_len - event_handlers.len();
-
-            if removed_count > 0 {
-                // TODO: Use proper logging
-                eprintln!(
-                    "Unsubscribed {} handler(s) named '{}'",
-                    removed_count, handler_name
-                );
-
-                // If no handlers left for this type, remove the entry
-                if event_handlers.is_empty() {
-                    handlers.remove(&event_type);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     fn unsubscribe_by_name(
         &mut self,
         event_type: TypeId,

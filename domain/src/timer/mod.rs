@@ -17,7 +17,7 @@ pub use status::TimerStatus;
 pub use phase_transition_srv::{PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult};
 pub use timer_srv::TimerService;
 pub use events::{
-    TimerStarted, TimerPaused, TimerReset, PhaseCompleted, PhaseSkipped, 
+    TimerStarted, TimerPaused, TimerReset, TimerTick, PhaseCompleted, PhaseSkipped, 
     TimerStatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
     BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset
 };

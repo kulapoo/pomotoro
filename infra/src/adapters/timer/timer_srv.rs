@@ -19,7 +19,7 @@ pub struct TimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     phase_service: Arc<dyn PhaseTransitionService>,
     event_publisher: EventPublisherArc,
-    state_repository: Option<FileTimerStateRepository>,
+    state_repository: Option<Arc<FileTimerStateRepository>>,
 }
 
 impl Clone for TimerService {
@@ -29,7 +29,7 @@ impl Clone for TimerService {
             cancel_handle: Arc::clone(&self.cancel_handle),
             phase_service: Arc::clone(&self.phase_service),
             event_publisher: Arc::clone(&self.event_publisher),
-            state_repository: None, // TODO: Fix cloning of repository
+            state_repository: self.state_repository.as_ref().map(Arc::clone),
         }
     }
 }
@@ -47,7 +47,7 @@ impl TimerService {
     ) -> Self {
         let phase_service = Arc::new(DefaultPhaseTransitionService::new());
         let state_repository = app_handle.as_ref().map(|_handle|
-            FileTimerStateRepository::new()
+            Arc::new(FileTimerStateRepository::new())
         );
 
         Self {
@@ -74,13 +74,36 @@ impl TimerService {
 
     // Persistence operations moved to FileTimerStateRepository
 
-    pub async fn start_timer_internal(&self, _task: Option<Task>) -> Result<(), String> {
+    pub async fn start_timer_internal(&self, task: Option<Task>) -> Result<(), String> {
         // Start the timer using domain service
         {
             let mut state = self.state.write().await;
+
+            // Apply task configuration if provided
+            if let Some(ref task) = task {
+                use domain::TimerConfiguration;
+                let timer_config = TimerConfiguration::new(
+                    task.config.work_duration(),
+                    task.config.short_break_duration(),
+                    task.config.long_break_duration(),
+                    task.config.sessions_until_long_break(),
+                )
+                .map_err(|e| e.to_string())?;
+                state.set_configuration(timer_config);
+            }
+
             self.phase_service
                 .start_timer(&mut state)
                 .map_err(|e| e.to_string())?;
+
+            // Publish timer started event
+            let event = Box::new(domain::TimerStarted::new(
+                state.active_task_id,
+                state.phase(),
+                state.remaining_seconds(),
+                1, // version
+            ));
+            self.event_publisher.publish(event);
         }
 
         // Cancel any existing timer
@@ -92,8 +115,8 @@ impl TimerService {
         }
 
         let state_clone = Arc::clone(&self.state);
-        let cancel_handle_clone = Arc::clone(&self.cancel_handle);
         let phase_service = Arc::clone(&self.phase_service);
+        let event_publisher = Arc::clone(&self.event_publisher);
 
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -101,55 +124,93 @@ impl TimerService {
             loop {
                 interval.tick().await;
 
-                let should_transition = {
+                // Atomic operation: check status, update timer, and handle transitions
+                let continue_timer = {
                     let mut state = state_clone.write().await;
 
+                    // Check if timer should continue
                     if state.status() != TimerStatus::Running {
-                        break;
-                    }
-
-                    if state.remaining_seconds() > 0 {
+                        false // Exit loop
+                    } else if state.remaining_seconds() > 0 {
+                        // Decrement timer
                         state.timer.remaining_seconds =
                             state.timer.remaining_seconds.saturating_sub(1);
-                        false
+                        
+                        // Publish timer tick event
+                        let tick_event = Box::new(domain::TimerTick::new(
+                            state.active_task_id,
+                            state.phase(),
+                            state.remaining_seconds(),
+                            1, // version
+                        ));
+                        event_publisher.publish(tick_event);
+                        
+                        true // Continue timer
+                    } else if phase_service.can_transition(&state) {
+                        // Handle phase transition
+                        match phase_service.transition_to_next_phase(&mut state) {
+                            Ok(result) => {
+                                // Publish phase completed event
+                                let event = Box::new(domain::PhaseCompleted::new(
+                                    state.active_task_id,
+                                    result.old_phase,
+                                    result.new_phase,
+                                    state.session_count(),
+                                    state.task_session_count,
+                                    1, // version
+                                ));
+                                event_publisher.publish(event);
+
+                                // Publish work session completed if applicable
+                                if result.work_session_completed {
+                                    let duration = state.configuration.work_duration.as_secs() as u32;
+                                    let work_event = Box::new(domain::WorkSessionCompleted::new(
+                                        state.active_task_id,
+                                        duration,
+                                        state.session_count(),
+                                        state.task_session_count,
+                                        1, // version
+                                    ));
+                                    event_publisher.publish(work_event);
+                                }
+
+                                // Continue timer with new phase (no auto-stop)
+                                true
+                            }
+                            Err(_) => false // Stop on error
+                        }
                     } else {
-                        true
+                        false // Can't transition, stop
                     }
                 };
 
-                if should_transition {
-                    let transition_result = {
-                        let mut state = state_clone.write().await;
-                        if phase_service.can_transition(&state) {
-                            phase_service.transition_to_next_phase(&mut state)
-                        } else {
-                            break;
-                        }
-                    };
-
-                    if let Ok(_result) = transition_result {
-                        let _state = state_clone.read().await;
-
-                        // Stop the timer after phase transition
-                        let mut state_mut = state_clone.write().await;
-                        let _ = state_mut.set_status(TimerStatus::Stopped);
-                        break;
-                    }
+                if !continue_timer {
+                    break;
                 }
             }
         });
 
-        let mut cancel_guard = cancel_handle_clone.lock().await;
-        *cancel_guard = Some(handle);
+        // Store handle with proper cleanup
+        {
+            let mut cancel_guard = self.cancel_handle.lock().await;
+            *cancel_guard = Some(handle);
+        }
 
         Ok(())
     }
 
     pub async fn stop_timer(&self) {
+        // Cancel running timer task
         let mut cancel_guard = self.cancel_handle.lock().await;
         if let Some(handle) = cancel_guard.take() {
             handle.abort();
+            // Clean up the aborted task
+            let _ = handle.await;
         }
+
+        // Update state to stopped
+        let mut state = self.state.write().await;
+        let _ = state.set_status(TimerStatus::Stopped);
     }
 
     pub async fn get_state(&self) -> TimerState {
@@ -158,32 +219,68 @@ impl TimerService {
     }
 
     pub async fn set_status(&self, status: TimerStatus) -> Result<(), String> {
-        match status {
+        let result = match status {
             TimerStatus::Running => {
                 let mut state = self.state.write().await;
-                self.phase_service
+                let result = self.phase_service
                     .start_timer(&mut state)
-                    .map_err(|e| e.to_string())
+                    .map_err(|e| e.to_string());
+
+                if result.is_ok() {
+                    // Publish resumed event if previously paused
+                    let event = Box::new(domain::TimerStarted::new(
+                        state.active_task_id,
+                        state.phase(),
+                        state.remaining_seconds(),
+                        1, // version
+                    ));
+                    self.event_publisher.publish(event);
+                }
+                result
             }
             TimerStatus::Paused => {
                 let mut state = self.state.write().await;
-                self.phase_service
+                let result = self.phase_service
                     .pause_timer(&mut state)
-                    .map_err(|e| e.to_string())
+                    .map_err(|e| e.to_string());
+
+                if result.is_ok() {
+                    // Publish paused event
+                    let event = Box::new(domain::TimerPaused::new(
+                        state.active_task_id,
+                        state.phase(),
+                        state.remaining_seconds(),
+                        1, // version
+                    ));
+                    self.event_publisher.publish(event);
+                }
+                result
             }
             TimerStatus::Stopped => {
                 let mut state = self.state.write().await;
                 let _ = state.set_status(status);
                 Ok(())
             }
-        }
+        };
+        result
     }
 
     pub async fn reset_current_phase(&self, _task: Option<&Task>) -> Result<(), String> {
         let mut state = self.state.write().await;
-        self.phase_service
+        let result = self.phase_service
             .reset_timer(&mut state)
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string());
+
+        if result.is_ok() {
+            // Publish reset event
+            let event = Box::new(domain::TimerReset::new(
+                state.active_task_id,
+                state.phase(),
+                1, // version
+            ));
+            self.event_publisher.publish(event);
+        }
+        result
     }
 
     pub async fn skip_to_next_phase(&self, _task: Option<&Task>) -> Result<(Phase, Phase), String> {
@@ -197,15 +294,36 @@ impl TimerService {
             .transition_to_next_phase(&mut state)
             .map_err(|e| e.to_string())?;
 
-        // Note: Business event publishing moved to use cases layer
-        // Infrastructure only handles technical timer operations
+        // Publish phase skipped event
+        let event = Box::new(domain::PhaseSkipped::new(
+            state.active_task_id,
+            result.old_phase,
+            result.new_phase,
+            1, // version
+        ));
+        self.event_publisher.publish(event);
 
-        let _ = state.set_status(TimerStatus::Stopped);
+        // Publish work session completed if applicable
+        if result.work_session_completed {
+            let duration = state.configuration.work_duration.as_secs() as u32;
+            let work_event = Box::new(domain::WorkSessionCompleted::new(
+                state.active_task_id,
+                duration,
+                state.session_count(),
+                state.task_session_count,
+                1, // version
+            ));
+            self.event_publisher.publish(work_event);
+        }
+
+        // Keep timer running in new phase (no auto-stop)
         Ok((result.old_phase, result.new_phase))
     }
 
     pub async fn switch_task(&self, task_id: domain::TaskId, task: Option<&Task>) {
         let mut state = self.state.write().await;
+        let old_task_id = state.active_task_id;
+
         if let Some(task) = task {
             // Convert TaskConfig to TimerConfiguration
             use domain::TimerConfiguration;
@@ -221,6 +339,15 @@ impl TimerService {
         } else {
             let _ = state.switch_task(task_id);
         }
+
+        // Publish task switched event
+        let event = Box::new(domain::ActiveTaskSwitched::new(
+            old_task_id,
+            Some(task_id),
+            state.phase(),
+            1, // version
+        ));
+        self.event_publisher.publish(event);
     }
 }
 

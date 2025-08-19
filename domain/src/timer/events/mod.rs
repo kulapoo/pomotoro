@@ -1,6 +1,7 @@
 pub mod timer_started;
 pub mod timer_paused;
 pub mod timer_reset;
+pub mod timer_tick;
 pub mod phase_completed;
 pub mod phase_skipped;
 pub mod timer_status_changed;
@@ -15,6 +16,7 @@ pub mod session_flow_reset;
 pub use timer_started::TimerStarted;
 pub use timer_paused::TimerPaused;
 pub use timer_reset::TimerReset;
+pub use timer_tick::TimerTick;
 pub use phase_completed::PhaseCompleted;
 pub use phase_skipped::PhaseSkipped;
 pub use timer_status_changed::TimerStatusChanged;
