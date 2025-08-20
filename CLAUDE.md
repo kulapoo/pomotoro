@@ -8,11 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Pomotoro, yet another pomodoro app
 
-## Overview
-
 
 ## Documentation
+
+@docs/workflow.md
+
 
 
 ## Goals
 
+@docs/todo
