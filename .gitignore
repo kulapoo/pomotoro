@@ -5,3 +5,4 @@ ui/dist/
 ai_contexts
 !.claude
 !CLAUDE.md
+/tmp
