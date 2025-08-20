@@ -1,9 +1,9 @@
-## Context-Aware Naming Convention
+# Context-Aware Naming Convention
 
-### Core Principle
+## Core Principle
 All types use generic names - module paths provide context. Use type aliases when importing for clarity.
 
-### File Naming
+## File Naming
 ```rust
 ✅ CORRECT
 domain/task/error.rs
@@ -16,7 +16,7 @@ domain/task/task_error.rs           // Redundant prefix
 domain/task/events/task_completed.rs // Redundant prefix
 ```
 
-### Type Naming - Always Generic
+## Type Naming - Always Generic
 ```rust
 // In domain/task/error.rs
 pub enum Error {
@@ -42,9 +42,9 @@ pub struct Create {
 }
 ```
 
-### Import Pattern - Use Type Aliases
+## Import Pattern - Use Type Aliases
 
-#### Within Module Context
+### Within Module Context
 ```rust
 use crate::domain::task;
 
@@ -52,7 +52,7 @@ let err = task::Error::NotFound;
 let event = task::events::Completed { ... };
 ```
 
-#### Cross-Module with Type Aliases
+### Cross-Module with Type Aliases
 ```rust
 use crate::domain::task::Error as TaskError;
 use crate::domain::task::Repository as TaskRepository;
@@ -68,68 +68,78 @@ match result {
 }
 ```
 
-### Why This Pattern?
+## Why This Pattern?
 
 **Consistency** - One rule for everything
 **No Stuttering** - Never see `task::TaskError`
 **Follows Rust stdlib** - `std::io::Error`, not `IoError`
 **Explicit at Use Site** - Type aliases make intent clear where it matters
 
-### Handling Specialized Components
+## Handling Specialized Components
 
-#### Option 1: Submodules with Generic Names (Preferred)
+**Pragmatic Approach**: Start simple with descriptive files. Only create submodules when you have multiple related types that benefit from grouping.
+
+### Option 1: Descriptive Files with Descriptive Types (Start Here)
+```rust
+domain/
+  task/
+    cycle_service.rs         // pub struct CycleService
+    priority_calculator.rs   // pub struct PriorityCalculator
+
+// Usage
+use crate::domain::task::cycle_service::CycleService;
+use crate::domain::task::priority_calculator::PriorityCalculator;
+```
+
+**When to use**: Default choice for specialized components. Simple, flat, and avoids premature abstraction.
+
+### Option 2: Submodules with Generic Names (When Complexity Justifies)
 ```rust
 domain/
   task/
     cycle/
       service.rs     // pub struct Service
       validator.rs   // pub struct Validator
+      state.rs       // pub enum State
     priority/
       calculator.rs  // pub struct Calculator
+      queue.rs       // pub struct Queue
+      strategy.rs    // pub trait Strategy
 
 // Usage
 use crate::domain::task::cycle::Service as CycleService;
-let service = CycleService::new();
+use crate::domain::task::priority::Calculator as PriorityCalculator;
 ```
 
-#### Option 2: Descriptive Files with Descriptive Types
+**When to use**: When you have multiple related types (3+) that form a cohesive subsystem.
+
+**Rule**: Start with descriptive files (Option 1). Refactor to submodules (Option 2) only when you have multiple related types that benefit from grouping. Avoid creating a submodule for a single type.
+
+## Example Module Structure
 ```rust
 domain/
   task/
-    cycle_service.rs    // pub struct CycleService
-    priority_queue.rs   // pub struct PriorityQueue
-
-// Usage
-use crate::domain::task::cycle_service::CycleService;
-use crate::domain::task::priority_queue::PriorityQueue;
-```
-
-**Rule**: Generic names only when module path provides context. If the filename is descriptive, the type name should match.
-
-### Example Module Structure
-```rust
-domain/
-  task/
-    error.rs         // pub enum Error
-    repository.rs    // pub trait Repository
-    service.rs       // pub struct Service (main task service)
-    cycle/
-      service.rs     // pub struct Service (cycle-specific)
-      state.rs       // pub enum State
+    error.rs               // pub enum Error
+    repository.rs          // pub trait Repository
+    service.rs             // pub struct Service (main task service)
+    cycle_service.rs       // pub struct CycleService (single specialized component)
+    priority_calculator.rs // pub struct PriorityCalculator (single specialized component)
     events/
-      completed.rs   // pub struct Completed
-      started.rs     // pub struct Started
+      completed.rs         // pub struct Completed
+      started.rs           // pub struct Started
     commands/
-      create.rs      // pub struct Create
-      update.rs      // pub struct Update
+      create.rs            // pub struct Create
+      update.rs            // pub struct Update
 ```
 
-### Public API Exports
+## Public API Exports
 ```rust
 // In domain/task/mod.rs
 pub use self::error::Error;
 pub use self::repository::Repository;
 pub use self::service::Service;
+pub use self::cycle_service::CycleService;
+pub use self::priority_calculator::PriorityCalculator;
 
 pub mod events {
     pub use super::events::completed::Completed;
@@ -142,12 +152,14 @@ pub mod commands {
 }
 ```
 
-### Library Consumer Usage
+## Library Consumer Usage
 ```rust
 // External crate using your library
 use your_crate::domain::task::{
     Error as TaskError,
     Repository as TaskRepository,
+    CycleService,
+    PriorityCalculator,
     events::Completed as TaskCompleted,
     commands::Create as CreateTask,
 };
