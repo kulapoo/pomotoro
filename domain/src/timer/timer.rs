@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
-use crate::{TimerStatus, Phase, Error, Result};
+use crate::{Error, Result};
+use super::{Phase, status::Status};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Timer {
-    pub status: TimerStatus,
+    pub status: Status,
     pub phase: Phase,
     pub remaining_seconds: u32,
     pub session_count: u32,
@@ -13,7 +14,7 @@ pub struct Timer {
 impl Default for Timer {
     fn default() -> Self {
         Self {
-            status: TimerStatus::Stopped,
+            status: Status::Stopped,
             phase: Phase::Work,
             remaining_seconds: 25 * 60,
             session_count: 0,
@@ -62,10 +63,10 @@ impl Timer {
 
     pub fn reset_current_phase(&mut self, duration_seconds: u32) {
         self.remaining_seconds = duration_seconds;
-        self.status = TimerStatus::Stopped;
+        self.status = Status::Stopped;
     }
 
-    pub fn set_status(&mut self, new_status: TimerStatus) -> Result<()> {
+    pub fn set_status(&mut self, new_status: Status) -> Result<()> {
         if !self.status.can_transition_to(&new_status) {
             return Err(Error::InvalidStateTransition {
                 from: format!("{:?}", self.status),
@@ -99,7 +100,7 @@ impl Timer {
     }
 
     pub fn tick(&mut self) -> bool {
-        if self.status == TimerStatus::Running && self.remaining_seconds > 0 {
+        if self.status == Status::Running && self.remaining_seconds > 0 {
             self.remaining_seconds -= 1;
             self.remaining_seconds == 0
         } else {

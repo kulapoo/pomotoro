@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::{timer::TimerService, ConfigRepository, Error, EventPublisher, Result, TaskRepository};
+use domain::{TimerService, ConfigRepository, Error, EventPublisher, Result, TaskRepository};
 
 use crate::{config, timer::{start_timer_session, StartTimerSessionCmd}};
 

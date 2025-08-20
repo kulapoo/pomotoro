@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use crate::{Result, TimerState, TimerStatus, Phase, TaskId, Task};
+use crate::{Result, Task};
+use super::{state::State, status::Status, Phase};
+use crate::task::id::Id as TaskId;
 
 /// Domain service abstraction for timer operations
 ///
@@ -13,7 +15,7 @@ use crate::{Result, TimerState, TimerStatus, Phase, TaskId, Task};
 /// - **Implementation**: Infrastructure Layer (concrete implementations)
 /// - **Usage**: Application Layer (orchestrates business operations)
 #[async_trait]
-pub trait TimerService: Send + Sync {
+pub trait Service: Send + Sync {
     /// Start the timer with optional task context
     ///
     /// This operation transitions the timer to running state and begins
@@ -28,7 +30,7 @@ pub trait TimerService: Send + Sync {
     /// Pause or resume the timer based on current status
     ///
     /// This operation pauses a running timer or resumes a paused timer.
-    async fn toggle_pause(&self) -> Result<TimerStatus>;
+    async fn toggle_pause(&self) -> Result<Status>;
 
     /// Reset the current phase to its full duration
     ///
@@ -46,7 +48,7 @@ pub trait TimerService: Send + Sync {
     ///
     /// This operation returns the current state of the timer including
     /// remaining time, current phase, and active task.
-    async fn get_state(&self) -> Result<TimerState>;
+    async fn get_state(&self) -> Result<State>;
 
     /// Switch the active task for the timer
     ///

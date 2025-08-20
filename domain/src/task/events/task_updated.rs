@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskUpdated {
-    pub task_id: TaskId,
+pub struct Updated {
+    pub task_id: Id,
     pub name: Option<String>,
     pub description: Option<String>,
     pub max_sessions: Option<u8>,
@@ -13,9 +13,9 @@ pub struct TaskUpdated {
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskUpdated {
+impl Updated {
     pub fn new(
-        task_id: TaskId,
+        task_id: Id,
         name: Option<String>,
         description: Option<String>,
         max_sessions: Option<u8>,
@@ -34,7 +34,7 @@ impl TaskUpdated {
     }
 }
 
-impl crate::Event for TaskUpdated {
+impl crate::Event for Updated {
     fn event_type(&self) -> &'static str {
         "TaskUpdated"
     }

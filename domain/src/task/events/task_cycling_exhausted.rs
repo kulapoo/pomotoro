@@ -1,17 +1,17 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskCyclingExhausted {
-    pub current_task_id: TaskId,
+pub struct CyclingExhausted {
+    pub current_task_id: Id,
     pub attempted_cycles: u32,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskCyclingExhausted {
-    pub fn new(current_task_id: TaskId, attempted_cycles: u32, version: u64) -> Self {
+impl CyclingExhausted {
+    pub fn new(current_task_id: Id, attempted_cycles: u32, version: u64) -> Self {
         Self {
             current_task_id,
             attempted_cycles,
@@ -21,9 +21,9 @@ impl TaskCyclingExhausted {
     }
 }
 
-impl crate::Event for TaskCyclingExhausted {
+impl crate::Event for CyclingExhausted {
     fn event_type(&self) -> &'static str {
-        "TaskCyclingExhausted"
+        "CyclingExhausted"
     }
 
     fn aggregate_id(&self) -> String {

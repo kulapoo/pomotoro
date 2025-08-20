@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Error, Result, duration_serde};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TaskConfig {
+pub struct Config {
     #[serde(with = "duration_serde")]
     pub work_duration: Duration,
     #[serde(with = "duration_serde")]
@@ -14,7 +14,7 @@ pub struct TaskConfig {
     pub enable_screen_blocking: bool,
 }
 
-impl Default for TaskConfig {
+impl Default for Config {
     fn default() -> Self {
         Self::new(
             Duration::from_secs(25 * 60),
@@ -26,8 +26,8 @@ impl Default for TaskConfig {
     }
 }
 
-impl TaskConfig {
-    // Constructor with validation - only way to create TaskConfig
+impl Config {
+    // Constructor with validation - only way to create Config
     pub fn new(
         work_duration: Duration,
         short_break_duration: Duration,

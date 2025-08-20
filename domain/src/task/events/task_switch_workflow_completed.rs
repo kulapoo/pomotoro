@@ -1,20 +1,20 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskSwitchWorkflowCompleted {
-    pub old_task_id: Option<TaskId>,
-    pub new_task_id: TaskId,
+pub struct SwitchWorkflowCompleted {
+    pub old_task_id: Option<Id>,
+    pub new_task_id: Id,
     pub workflow_result: String,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskSwitchWorkflowCompleted {
+impl SwitchWorkflowCompleted {
     pub fn new(
-        old_task_id: Option<TaskId>,
-        new_task_id: TaskId,
+        old_task_id: Option<Id>,
+        new_task_id: Id,
         workflow_result: String,
         version: u64,
     ) -> Self {
@@ -28,9 +28,9 @@ impl TaskSwitchWorkflowCompleted {
     }
 }
 
-impl crate::Event for TaskSwitchWorkflowCompleted {
+impl crate::Event for SwitchWorkflowCompleted {
     fn event_type(&self) -> &'static str {
-        "TaskSwitchWorkflowCompleted"
+        "SwitchWorkflowCompleted"
     }
 
     fn aggregate_id(&self) -> String {

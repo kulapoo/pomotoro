@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskStatusChanged {
-    pub task_id: TaskId,
+pub struct StatusChanged {
+    pub task_id: Id,
     pub old_status: String,
     pub new_status: String,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskStatusChanged {
-    pub fn new(task_id: TaskId, old_status: String, new_status: String, version: u64) -> Self {
+impl StatusChanged {
+    pub fn new(task_id: Id, old_status: String, new_status: String, version: u64) -> Self {
         Self {
             task_id,
             old_status,
@@ -23,7 +23,7 @@ impl TaskStatusChanged {
     }
 }
 
-impl crate::Event for TaskStatusChanged {
+impl crate::Event for StatusChanged {
     fn event_type(&self) -> &'static str {
         "TaskStatusChanged"
     }

@@ -1,5 +1,5 @@
-use domain::{TimerStatus, Result, EventPublisher, TimerPaused};
-use domain::timer::TimerService;
+use domain::{TimerStatus, Result, EventPublisher, timer::Paused};
+use domain::TimerService;
 use std::sync::Arc;
 
 /// Pause or resume a timer session
@@ -23,10 +23,10 @@ pub async fn pause_timer_session(
 ) -> Result<TimerStatus> {
     let new_status = timer_service.toggle_pause().await?;
     
-    // Business logic: Publish TimerPaused event when timer becomes paused
+    // Business logic: Publish Paused event when timer becomes paused
     if new_status == TimerStatus::Paused {
         let state = timer_service.get_state().await?;
-        let timer_paused_event = TimerPaused::new(
+        let timer_paused_event = Paused::new(
             state.active_task_id,
             state.timer.phase,
             state.timer.remaining_seconds,
@@ -185,10 +185,10 @@ mod tests {
             let result = pause_timer_session(&timer_service, &event_publisher).await.unwrap();
             assert_eq!(result, TimerStatus::Paused);
             
-            // Verify TimerPaused event was published
+            // Verify Paused event was published
             assert_eq!(mock_publisher.event_count(), 1);
-            assert!(mock_publisher.has_event_type("TimerPaused"));
-            assert_eq!(mock_publisher.last_event_type().unwrap(), "TimerPaused");
+            assert!(mock_publisher.has_event_type("Paused"));
+            assert_eq!(mock_publisher.last_event_type().unwrap(), "Paused");
         }
         
         #[tokio::test]
@@ -239,7 +239,7 @@ mod tests {
             assert_eq!(mock_publisher.event_count(), 2);
             
             // Verify sequence
-            assert!(mock_publisher.verify_event_sequence(&["TimerPaused", "TimerPaused"]));
+            assert!(mock_publisher.verify_event_sequence(&["Paused", "Paused"]));
         }
     }
 }

@@ -1,15 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Task, TimerState};
+use crate::Task;
+use super::state::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TimerStateWithTask {
-    pub timer_state: TimerState,
+pub struct StateWithTask {
+    pub timer_state: State,
     pub active_task: Option<Task>,
 }
 
-impl TimerStateWithTask {
-    pub fn new(timer_state: TimerState, active_task: Option<Task>) -> Self {
+impl StateWithTask {
+    pub fn new(timer_state: State, active_task: Option<Task>) -> Self {
         Self {
             timer_state,
             active_task,
@@ -43,8 +44,8 @@ impl TimerStateWithTask {
     }
 }
 
-impl Default for TimerStateWithTask {
+impl Default for StateWithTask {
     fn default() -> Self {
-        Self::new(TimerState::default(), None)
+        Self::new(State::default(), None)
     }
 }

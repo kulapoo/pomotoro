@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use std::time::Duration;
-use crate::{TaskId, TaskStatus, TaskConfig, AudioConfig, Error, Result, TaskDefaults};
+use crate::{AudioConfig, Error, Result, TaskDefaults};
+use super::{id::Id, status::Status, config::Config};
 
-// Default values for TaskBuilder - autonomous construction without external dependencies
+// Default values for Builder - autonomous construction without external dependencies
 const DEFAULT_WORK_DURATION: Duration = Duration::from_secs(25 * 60);
 const DEFAULT_SHORT_BREAK_DURATION: Duration = Duration::from_secs(5 * 60);
 const DEFAULT_LONG_BREAK_DURATION: Duration = Duration::from_secs(15 * 60);
@@ -12,29 +13,29 @@ const DEFAULT_MAX_SESSIONS: u8 = 4;
 
 /// Builder for constructing Task instances with fluent interface and centralized validation
 #[derive(Debug, Clone)]
-pub struct TaskBuilder {
-    id: Option<TaskId>,
+pub struct Builder {
+    id: Option<Id>,
     name: Option<String>,
     description: Option<String>,
     max_sessions: Option<u8>,
     current_sessions: Option<u8>,
     tags: Option<Vec<String>>,
-    config: Option<TaskConfig>,
+    config: Option<Config>,
     audio_config: Option<AudioConfig>,
     created_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
-    status: Option<TaskStatus>,
+    status: Option<Status>,
     default: Option<bool>,
 }
 
-impl Default for TaskBuilder {
+impl Default for Builder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl TaskBuilder {
-    /// Create a new TaskBuilder with all fields unset
+impl Builder {
+    /// Create a new Builder with all fields unset
     pub fn new() -> Self {
         Self {
             id: None,
@@ -65,12 +66,12 @@ impl TaskBuilder {
             .name("Focus Session".to_string())
             .description("Default pomodoro task for focused work".to_string())
             .tags(vec!["focus".to_string()])
-            .status(TaskStatus::Active)
+            .status(Status::Active)
             .default(true)
     }
 
     /// Set the task ID
-    pub fn id(mut self, id: TaskId) -> Self {
+    pub fn id(mut self, id: Id) -> Self {
         self.id = Some(id);
         self
     }
@@ -106,7 +107,7 @@ impl TaskBuilder {
     }
 
     /// Set the task configuration
-    pub fn config(mut self, config: TaskConfig) -> Self {
+    pub fn config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self
     }
@@ -130,7 +131,7 @@ impl TaskBuilder {
     }
 
     /// Set configuration with validation (builder method for fluent API)
-    pub fn with_config(mut self, config: TaskConfig) -> Self {
+    pub fn with_config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self
     }
@@ -154,7 +155,7 @@ impl TaskBuilder {
     }
 
     /// Set the task status
-    pub fn status(mut self, status: TaskStatus) -> Self {
+    pub fn status(mut self, status: Status) -> Self {
         self.status = Some(status);
         self
     }
@@ -167,7 +168,7 @@ impl TaskBuilder {
 
     /// Mark the task as completed
     pub fn completed(self) -> Self {
-        self.status(TaskStatus::Completed)
+        self.status(Status::Completed)
             .completed_at(Utc::now())
     }
 
@@ -192,7 +193,7 @@ impl TaskBuilder {
         // Create or use provided config
         let config = match self.config {
             Some(config) => config,
-            None => TaskConfig::new(
+            None => Config::new(
                 DEFAULT_WORK_DURATION,
                 DEFAULT_SHORT_BREAK_DURATION,
                 DEFAULT_LONG_BREAK_DURATION,
@@ -208,14 +209,14 @@ impl TaskBuilder {
         // Determine status based on completion state
         let status = self.status.unwrap_or({
             if current_sessions >= max_sessions {
-                TaskStatus::Completed
+                Status::Completed
             } else {
-                TaskStatus::Queued
+                Status::Queued
             }
         });
 
         // Set completion time if completed
-        let completed_at = if status == TaskStatus::Completed {
+        let completed_at = if status == Status::Completed {
             self.completed_at.or_else(|| Some(Utc::now()))
         } else {
             None
@@ -258,7 +259,7 @@ impl TaskBuilder {
         // Create or use provided config
         let config = match self.config {
             Some(config) => config,
-            None => TaskConfig::new(
+            None => Config::new(
                 defaults.work_duration,
                 defaults.short_break_duration,
                 defaults.long_break_duration,
@@ -274,14 +275,14 @@ impl TaskBuilder {
         // Determine status based on completion state
         let status = self.status.unwrap_or({
             if current_sessions >= max_sessions {
-                TaskStatus::Completed
+                Status::Completed
             } else {
-                TaskStatus::Queued
+                Status::Queued
             }
         });
 
         // Set completion time if completed
-        let completed_at = if status == TaskStatus::Completed {
+        let completed_at = if status == Status::Completed {
             self.completed_at.or_else(|| Some(Utc::now()))
         } else {
             None

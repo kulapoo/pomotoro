@@ -1,5 +1,5 @@
 use domain::{TaskRepository, Phase, Result, EventPublisher, WorkSessionCompleted};
-use domain::timer::TimerService;
+use domain::TimerService;
 use std::sync::Arc;
 
 /// Skip to the next phase in the pomodoro cycle

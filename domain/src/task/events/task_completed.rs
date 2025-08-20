@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskCompleted {
-    pub task_id: TaskId,
+pub struct Completed {
+    pub task_id: Id,
     pub total_sessions: u8,
     pub completed_at: DateTime<Utc>,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskCompleted {
-    pub fn new(task_id: TaskId, total_sessions: u8, version: u64) -> Self {
+impl Completed {
+    pub fn new(task_id: Id, total_sessions: u8, version: u64) -> Self {
         let now = Utc::now();
         Self {
             task_id,
@@ -24,7 +24,7 @@ impl TaskCompleted {
     }
 }
 
-impl crate::Event for TaskCompleted {
+impl crate::Event for Completed {
     fn event_type(&self) -> &'static str {
         "TaskCompleted"
     }

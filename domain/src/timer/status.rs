@@ -1,18 +1,18 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum TimerStatus {
+pub enum Status {
     Stopped,
     Running,
     Paused,
 }
 
-impl TimerStatus {
+impl Status {
     pub fn is_active(&self) -> bool {
-        matches!(self, TimerStatus::Running)
+        matches!(self, Status::Running)
     }
 
-    pub fn can_transition_to(&self, new_status: &TimerStatus) -> bool {
-        matches!((self, new_status), (TimerStatus::Stopped, TimerStatus::Running) | (TimerStatus::Running, TimerStatus::Paused) | (TimerStatus::Paused, TimerStatus::Running) | (_, TimerStatus::Stopped))
+    pub fn can_transition_to(&self, new_status: &Status) -> bool {
+        matches!((self, new_status), (Status::Stopped, Status::Running) | (Status::Running, Status::Paused) | (Status::Paused, Status::Running) | (_, Status::Stopped))
     }
 }

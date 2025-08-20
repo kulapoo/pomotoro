@@ -4,9 +4,9 @@ use crate::shared_kernel::value_objects::identifier::{EntityId, EntityMarker};
 /// 
 /// This marker ensures type safety when working with Task identifiers,
 /// preventing accidental mixing with other entity types.
-pub struct TaskMarker;
+pub struct Marker;
 
-impl EntityMarker for TaskMarker {
+impl EntityMarker for Marker {
     const TYPE_NAME: &'static str = "Task";
 }
 
@@ -14,4 +14,4 @@ impl EntityMarker for TaskMarker {
 /// 
 /// Uses the generic EntityId system to provide compile-time type safety
 /// and prevent mixing Task IDs with other entity types.
-pub type TaskId = EntityId<TaskMarker>;
+pub type Id = EntityId<Marker>;

@@ -1,22 +1,23 @@
 use serde::{Deserialize, Serialize};
-use crate::{TaskId, TimerStatus, Phase};
+use crate::task::id::Id as TaskId;
+use crate::timer::{status::Status, Phase};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TimerStatusChanged {
+pub struct StatusChanged {
     pub active_task_id: Option<TaskId>,
-    pub old_status: TimerStatus,
-    pub new_status: TimerStatus,
+    pub old_status: Status,
+    pub new_status: Status,
     pub phase: Phase,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TimerStatusChanged {
+impl StatusChanged {
     pub fn new(
         active_task_id: Option<TaskId>,
-        old_status: TimerStatus,
-        new_status: TimerStatus,
+        old_status: Status,
+        new_status: Status,
         phase: Phase,
         version: u64,
     ) -> Self {
@@ -31,9 +32,9 @@ impl TimerStatusChanged {
     }
 }
 
-impl crate::Event for TimerStatusChanged {
+impl crate::Event for StatusChanged {
     fn event_type(&self) -> &'static str {
-        "TimerStatusChanged"
+        "StatusChanged"
     }
 
     fn aggregate_id(&self) -> String {

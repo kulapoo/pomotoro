@@ -1,5 +1,5 @@
-use domain::timer::TimerService;
-use domain::{Error, EventPublisher, Result, TaskId, TaskRepository, TimerStarted};
+use domain::TimerService;
+use domain::{Error, EventPublisher, Result, TaskId, TaskRepository, timer::Started};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -67,7 +67,7 @@ pub async fn start_timer_session(
     timer_service.start_timer(task.as_ref()).await?;
 
     let updated_state = timer_service.get_state().await?;
-    let timer_started_event = TimerStarted::new(
+    let timer_started_event = Started::new(
         updated_state.active_task_id,
         updated_state.timer.phase,
         updated_state.timer.remaining_seconds,
@@ -291,10 +291,10 @@ mod tests {
                 .await
                 .unwrap();
 
-            // Verify TimerStarted event was published
+            // Verify Started event was published
             assert_eq!(mock_publisher.event_count(), 1);
-            assert!(mock_publisher.has_event_type("TimerStarted"));
-            assert_eq!(mock_publisher.last_event_type().unwrap(), "TimerStarted");
+            assert!(mock_publisher.has_event_type("Started"));
+            assert_eq!(mock_publisher.last_event_type().unwrap(), "Started");
         }
 
         #[tokio::test]
@@ -340,7 +340,7 @@ mod tests {
 
             // Verify event sequence
             assert_eq!(mock_publisher.event_count(), 2);
-            assert!(mock_publisher.verify_event_sequence(&["TimerStarted", "TimerStarted"]));
+            assert!(mock_publisher.verify_event_sequence(&["Started", "Started"]));
         }
     }
 }

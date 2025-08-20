@@ -1,22 +1,23 @@
-use crate::{Error, Result, Task, TaskId};
+use crate::{Error, Result};
+use super::{Task, id::Id};
 use async_trait::async_trait;
 
 /// Domain contract for task cycling operations
 /// Concrete implementations belong in infrastructure layer
 #[async_trait]
-pub trait TaskCyclerService: Send + Sync {
-    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>>;
-    async fn validate_task_switch(&self, task_id: TaskId) -> Result<Option<Task>>;
+pub trait CyclerService: Send + Sync {
+    async fn get_next_task(&self, current_task_id: Option<Id>) -> Result<Option<Task>>;
+    async fn validate_task_switch(&self, task_id: Id) -> Result<Option<Task>>;
     async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
     async fn cycle_to_next_active_task(
         &self,
-        current_task_id: Option<TaskId>,
+        current_task_id: Option<Id>,
     ) -> Result<Option<Task>>;
 }
 
 /// Domain value object for task cycling strategies
 #[derive(Debug, Clone)]
-pub enum TaskCyclingStrategy {
+pub enum CyclingStrategy {
     Manual,
     RoundRobin,
     PriorityBased,
@@ -24,15 +25,15 @@ pub enum TaskCyclingStrategy {
 
 /// Pure domain service for task cycling logic
 /// Contains only business rules, no I/O operations
-pub struct DefaultTaskCyclingService;
+pub struct DefaultCyclingService;
 
-impl Default for DefaultTaskCyclingService {
+impl Default for DefaultCyclingService {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DefaultTaskCyclingService {
+impl DefaultCyclingService {
     pub fn new() -> Self {
         Self
     }
@@ -42,7 +43,7 @@ impl DefaultTaskCyclingService {
     pub fn find_next_task_round_robin<'a>(
         &self,
         tasks: &'a [Task],
-        current_task_id: Option<TaskId>,
+        current_task_id: Option<Id>,
     ) -> Option<&'a Task> {
         if tasks.is_empty() {
             return None;
@@ -73,19 +74,19 @@ impl DefaultTaskCyclingService {
     /// Pure domain logic: Apply cycling strategy
     pub fn apply_cycling_strategy<'a>(
         &self,
-        strategy: &TaskCyclingStrategy,
+        strategy: &CyclingStrategy,
         tasks: &'a [Task],
-        current_task_id: Option<TaskId>,
+        current_task_id: Option<Id>,
     ) -> Option<&'a Task> {
         match strategy {
-            TaskCyclingStrategy::Manual => {
+            CyclingStrategy::Manual => {
                 // In manual mode, don't automatically cycle
                 current_task_id.and_then(|id| tasks.iter().find(|t| t.id == id))
             }
-            TaskCyclingStrategy::RoundRobin => {
+            CyclingStrategy::RoundRobin => {
                 self.find_next_task_round_robin(tasks, current_task_id)
             }
-            TaskCyclingStrategy::PriorityBased => {
+            CyclingStrategy::PriorityBased => {
                 // TODO: Priority-based cycling - future enhancement
                 // For now, fallback to round-robin
                 self.find_next_task_round_robin(tasks, current_task_id)
@@ -118,7 +119,7 @@ mod tests {
 
     #[test]
     fn should_find_next_task_round_robin() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let tasks = create_test_tasks();
 
         // First call with no current task should return first task
@@ -146,7 +147,7 @@ mod tests {
 
     #[test]
     fn should_return_none_for_empty_task_list() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let empty_tasks: Vec<Task> = vec![];
 
         let result = service.find_next_task_round_robin(&empty_tasks, None);
@@ -155,9 +156,9 @@ mod tests {
 
     #[test]
     fn should_return_first_task_when_current_not_found() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let tasks = create_test_tasks();
-        let non_existent_id = TaskId::new();
+        let non_existent_id = Id::new();
 
         let result = service
             .find_next_task_round_robin(&tasks, Some(non_existent_id))
@@ -167,7 +168,7 @@ mod tests {
 
     #[test]
     fn should_filter_available_tasks() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let mut tasks = create_test_tasks();
 
         // Complete one task
@@ -182,9 +183,9 @@ mod tests {
 
     #[test]
     fn should_apply_round_robin_strategy() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let tasks = create_test_tasks();
-        let strategy = TaskCyclingStrategy::RoundRobin;
+        let strategy = CyclingStrategy::RoundRobin;
 
         let first_task = service
             .apply_cycling_strategy(&strategy, &tasks, None)
@@ -199,9 +200,9 @@ mod tests {
 
     #[test]
     fn should_apply_manual_strategy() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let tasks = create_test_tasks();
-        let strategy = TaskCyclingStrategy::Manual;
+        let strategy = CyclingStrategy::Manual;
 
         // In manual mode, should return current task
         let result = service
@@ -216,7 +217,7 @@ mod tests {
 
     #[test]
     fn should_validate_task_can_be_switched_to() {
-        let service = DefaultTaskCyclingService::new();
+        let service = DefaultCyclingService::new();
         let tasks = create_test_tasks();
 
         // Active task should be valid

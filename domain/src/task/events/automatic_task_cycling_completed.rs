@@ -1,20 +1,20 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct AutomaticTaskCyclingCompleted {
-    pub current_task_id: TaskId,
-    pub next_task_id: Option<TaskId>,
+pub struct AutomaticCyclingCompleted {
+    pub current_task_id: Id,
+    pub next_task_id: Option<Id>,
     pub cycle_count: u32,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl AutomaticTaskCyclingCompleted {
+impl AutomaticCyclingCompleted {
     pub fn new(
-        current_task_id: TaskId,
-        next_task_id: Option<TaskId>,
+        current_task_id: Id,
+        next_task_id: Option<Id>,
         cycle_count: u32,
         version: u64,
     ) -> Self {
@@ -28,9 +28,9 @@ impl AutomaticTaskCyclingCompleted {
     }
 }
 
-impl crate::Event for AutomaticTaskCyclingCompleted {
+impl crate::Event for AutomaticCyclingCompleted {
     fn event_type(&self) -> &'static str {
-        "AutomaticTaskCyclingCompleted"
+        "AutomaticCyclingCompleted"
     }
 
     fn aggregate_id(&self) -> String {

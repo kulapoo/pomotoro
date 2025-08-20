@@ -34,7 +34,11 @@
       "Bash(git checkout:*)",
       "mcp__ide__getDiagnostics",
       "mcp__ide__executeCode",
-      "Bash(rg \"register_timer_handlers\" --type rust -A 3 -B 3)"
+      "Bash(rg \"register_timer_handlers\" --type rust -A 3 -B 3)",
+      "Bash(git mv:*)",
+      "Bash(__NEW_LINE__ for file in timer_tick.rs timer_status_changed.rs phase_completed.rs phase_skipped.rs)",
+      "Bash(do)",
+      "Bash(for file in usecases/src/timer/{switch_timer_task,get_timer_state,reset_timer_session,pause_timer_session,skip_timer_phase,start_timer_session}.rs)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

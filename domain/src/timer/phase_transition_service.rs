@@ -1,43 +1,42 @@
-use crate::{
-    TimerState, Phase, Result, Error
-};
+use crate::{Result, Error};
+use super::{state::State, Phase};
 
 #[cfg(test)]
-use crate::Timer;
+use super::Timer;
 
 pub trait PhaseTransitionService: Send + Sync {
-    fn transition_to_next_phase(&self, timer_state: &mut TimerState) -> Result<PhaseTransitionResult>;
-    fn start_timer(&self, timer_state: &mut TimerState) -> Result<()>;
-    fn pause_timer(&self, timer_state: &mut TimerState) -> Result<()>;
-    fn reset_timer(&self, timer_state: &mut TimerState) -> Result<()>;
-    fn can_transition(&self, timer_state: &TimerState) -> bool;
+    fn transition_to_next_phase(&self, timer_state: &mut State) -> Result<TransitionResult>;
+    fn start_timer(&self, timer_state: &mut State) -> Result<()>;
+    fn pause_timer(&self, timer_state: &mut State) -> Result<()>;
+    fn reset_timer(&self, timer_state: &mut State) -> Result<()>;
+    fn can_transition(&self, timer_state: &State) -> bool;
 }
 
 #[derive(Debug, Clone)]
-pub struct PhaseTransitionResult {
+pub struct TransitionResult {
     pub old_phase: Phase,
     pub new_phase: Phase,
     pub work_session_completed: bool,
     pub cycle_completed: bool,
 }
 
-pub struct DefaultPhaseTransitionService;
+pub struct DefaultService;
 
-impl Default for DefaultPhaseTransitionService {
+impl Default for DefaultService {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DefaultPhaseTransitionService {
+impl DefaultService {
     pub fn new() -> Self {
         Self
     }
 
 }
 
-impl PhaseTransitionService for DefaultPhaseTransitionService {
-    fn transition_to_next_phase(&self, timer_state: &mut TimerState) -> Result<PhaseTransitionResult> {
+impl PhaseTransitionService for DefaultService {
+    fn transition_to_next_phase(&self, timer_state: &mut State) -> Result<TransitionResult> {
         if !self.can_transition(timer_state) {
             return Err(Error::InvalidStateTransition {
                 from: format!("{:?}", timer_state.status()),
@@ -54,7 +53,7 @@ impl PhaseTransitionService for DefaultPhaseTransitionService {
         let cycle_completed = work_session_completed &&
             timer_state.session_count() % sessions_until_long_break == 0;
 
-        let result = PhaseTransitionResult {
+        let result = TransitionResult {
             old_phase: old_phase_returned,
             new_phase,
             work_session_completed,
@@ -64,22 +63,22 @@ impl PhaseTransitionService for DefaultPhaseTransitionService {
         Ok(result)
     }
 
-    fn start_timer(&self, timer_state: &mut TimerState) -> Result<()> {
+    fn start_timer(&self, timer_state: &mut State) -> Result<()> {
         timer_state.set_status(crate::TimerStatus::Running)?;
         Ok(())
     }
 
-    fn pause_timer(&self, timer_state: &mut TimerState) -> Result<()> {
+    fn pause_timer(&self, timer_state: &mut State) -> Result<()> {
         timer_state.set_status(crate::TimerStatus::Paused)?;
         Ok(())
     }
 
-    fn reset_timer(&self, timer_state: &mut TimerState) -> Result<()> {
+    fn reset_timer(&self, timer_state: &mut State) -> Result<()> {
         timer_state.reset_current_phase();
         Ok(())
     }
 
-    fn can_transition(&self, timer_state: &TimerState) -> bool {
+    fn can_transition(&self, timer_state: &State) -> bool {
         timer_state.remaining_seconds() == 0
     }
 }
@@ -90,8 +89,8 @@ mod tests {
     use crate::{TimerStatus, TimerConfiguration};
     use std::time::Duration;
 
-    fn setup_service() -> DefaultPhaseTransitionService {
-        DefaultPhaseTransitionService::new()
+    fn setup_service() -> DefaultService {
+        DefaultService::new()
     }
 
     fn create_test_configuration() -> TimerConfiguration {
@@ -107,7 +106,7 @@ mod tests {
     fn should_transition_from_work_to_short_break() {
         let service = setup_service();
         let configuration = create_test_configuration();
-        let mut timer_state = TimerState {
+        let mut timer_state = State {
             timer: Timer {
                 status: TimerStatus::Stopped,
                 phase: Phase::Work,
@@ -134,7 +133,7 @@ mod tests {
     fn should_transition_from_work_to_long_break_after_cycle() {
         let service = setup_service();
         let configuration = create_test_configuration();
-        let mut timer_state = TimerState {
+        let mut timer_state = State {
             timer: Timer {
                 status: TimerStatus::Stopped,
                 phase: Phase::Work,
@@ -159,7 +158,7 @@ mod tests {
     fn should_transition_from_break_to_work() {
         let service = setup_service();
         let configuration = create_test_configuration();
-        let mut timer_state = TimerState {
+        let mut timer_state = State {
             timer: Timer {
                 status: TimerStatus::Stopped,
                 phase: Phase::ShortBreak,
@@ -183,7 +182,7 @@ mod tests {
     #[test]
     fn should_start_timer() {
         let service = setup_service();
-        let mut timer_state = TimerState::default();
+        let mut timer_state = State::default();
 
         service.start_timer(&mut timer_state).unwrap();
 
@@ -193,7 +192,7 @@ mod tests {
     #[test]
     fn should_pause_timer() {
         let service = setup_service();
-        let mut timer_state = TimerState::default();
+        let mut timer_state = State::default();
         timer_state.set_status(TimerStatus::Running).unwrap();
 
         service.pause_timer(&mut timer_state).unwrap();
@@ -204,7 +203,7 @@ mod tests {
     #[test]
     fn should_reset_timer() {
         let service = setup_service();
-        let mut timer_state = TimerState::default();
+        let mut timer_state = State::default();
         timer_state.timer.remaining_seconds = 500;
 
         service.reset_timer(&mut timer_state).unwrap();
@@ -216,7 +215,7 @@ mod tests {
     #[test]
     fn should_not_allow_transition_when_time_remaining() {
         let service = setup_service();
-        let mut timer_state = TimerState::default();
+        let mut timer_state = State::default();
         timer_state.timer.remaining_seconds = 100; // Time still remaining
 
         assert!(!service.can_transition(&timer_state));
@@ -225,7 +224,7 @@ mod tests {
     #[test]
     fn should_allow_transition_when_time_is_zero() {
         let service = setup_service();
-        let mut timer_state = TimerState::default();
+        let mut timer_state = State::default();
         timer_state.timer.remaining_seconds = 0;
 
         assert!(service.can_transition(&timer_state));

@@ -1,29 +1,30 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use crate::{TaskId, TaskConfig, AudioConfig};
+use crate::AudioConfig;
+use crate::task::{id::Id, config::Config};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TaskCreated {
-    pub task_id: TaskId,
+pub struct Created {
+    pub task_id: Id,
     pub name: String,
     pub description: Option<String>,
     pub max_sessions: u8,
     pub tags: Vec<String>,
-    pub config: TaskConfig,
+    pub config: Config,
     pub audio_config: AudioConfig,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl TaskCreated {
+impl Created {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        task_id: TaskId,
+        task_id: Id,
         name: String,
         description: Option<String>,
         max_sessions: u8,
         tags: Vec<String>,
-        config: TaskConfig,
+        config: Config,
         audio_config: AudioConfig,
         version: u64,
     ) -> Self {
@@ -41,7 +42,7 @@ impl TaskCreated {
     }
 }
 
-impl crate::Event for TaskCreated {
+impl crate::Event for Created {
     fn event_type(&self) -> &'static str {
         "TaskCreated"
     }

@@ -13,13 +13,13 @@ pub mod work_session_completed;
 pub mod session_started;
 pub mod session_flow_reset;
 
-pub use timer_started::TimerStarted;
-pub use timer_paused::TimerPaused;
-pub use timer_reset::TimerReset;
-pub use timer_tick::TimerTick;
+pub use timer_started::Started;
+pub use timer_paused::Paused;
+pub use timer_reset::Reset;
+pub use timer_tick::Tick;
 pub use phase_completed::PhaseCompleted;
 pub use phase_skipped::PhaseSkipped;
-pub use timer_status_changed::TimerStatusChanged;
+pub use timer_status_changed::StatusChanged;
 pub use active_task_switched::ActiveTaskSwitched;
 pub use break_session_started::BreakSessionStarted;
 pub use break_session_completed::BreakSessionCompleted;
@@ -30,25 +30,26 @@ pub use session_flow_reset::SessionFlowReset;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TaskId, Phase};
+    use crate::task::id::Id as TaskId;
+use crate::timer::Phase;
     use crate::Event;
     #[test]
     fn should_have_correct_event_types() {
-        let timer_started = TimerStarted::new(Some(TaskId::new()), Phase::Work, 1500, 1);
-        let timer_paused = TimerPaused::new(Some(TaskId::new()), Phase::Work, 1200, 2);
+        let timer_started = Started::new(Some(TaskId::new()), Phase::Work, 1500, 1);
+        let timer_paused = Paused::new(Some(TaskId::new()), Phase::Work, 1200, 2);
         
-        assert_eq!(timer_started.event_type(), "TimerStarted");
-        assert_eq!(timer_paused.event_type(), "TimerPaused");
+        assert_eq!(timer_started.event_type(), "Started");
+        assert_eq!(timer_paused.event_type(), "Paused");
         assert_eq!(timer_started.version(), 1);
         assert_eq!(timer_paused.version(), 2);
     }
     
     #[test]
     fn should_serialize_timer_started_event() {
-        let event = TimerStarted::new(Some(TaskId::new()), Phase::Work, 1500, 1);
+        let event = Started::new(Some(TaskId::new()), Phase::Work, 1500, 1);
 
         let serialized = serde_json::to_string(&event).unwrap();
-        let deserialized: TimerStarted = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Started = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(event, deserialized);
     }

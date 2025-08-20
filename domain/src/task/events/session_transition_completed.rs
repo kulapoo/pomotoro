@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use crate::TaskId;
+use crate::task::id::Id;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SessionTransitionCompleted {
-    pub task_id: TaskId,
+    pub task_id: Id,
     pub from_phase: String,
     pub to_phase: String,
     pub session_count: u32,
@@ -14,7 +14,7 @@ pub struct SessionTransitionCompleted {
 
 impl SessionTransitionCompleted {
     pub fn new(
-        task_id: TaskId,
+        task_id: Id,
         from_phase: String,
         to_phase: String,
         session_count: u32,

@@ -8,25 +8,25 @@ pub mod task_switch_workflow_completed;
 pub mod automatic_task_cycling_completed;
 pub mod task_cycling_exhausted;
 
-pub use task_created::TaskCreated;
-pub use task_session_completed::TaskSessionCompleted;
-pub use task_completed::TaskCompleted;
-pub use task_status_changed::TaskStatusChanged;
-pub use task_updated::TaskUpdated;
+pub use task_created::Created;
+pub use task_session_completed::SessionCompleted;
+pub use task_completed::Completed;
+pub use task_status_changed::StatusChanged;
+pub use task_updated::Updated;
 pub use session_transition_completed::SessionTransitionCompleted;
-pub use task_switch_workflow_completed::TaskSwitchWorkflowCompleted;
-pub use automatic_task_cycling_completed::AutomaticTaskCyclingCompleted;
-pub use task_cycling_exhausted::TaskCyclingExhausted;
+pub use task_switch_workflow_completed::SwitchWorkflowCompleted;
+pub use automatic_task_cycling_completed::AutomaticCyclingCompleted;
+pub use task_cycling_exhausted::CyclingExhausted;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TaskId, TaskConfig, AudioConfig};
+    use crate::{AudioConfig, TaskId, TaskConfig};
     use crate::Event;
     use std::time::Duration;
     #[test]
     fn should_have_correct_event_types() {
         let task_id = TaskId::new();
-        let task_created = TaskCreated::new(
+        let task_created = Created::new(
             task_id,
             "Test".to_string(),
             None,
@@ -44,7 +44,7 @@ mod tests {
     
     #[test]
     fn should_serialize_task_created_event() {
-        let event = TaskCreated::new(
+        let event = Created::new(
             TaskId::new(),
             "Test Task".to_string(),
             Some("A test task".to_string()),
@@ -62,14 +62,14 @@ mod tests {
         );
 
         let serialized = serde_json::to_string(&event).unwrap();
-        let deserialized: TaskCreated = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Created = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(event, deserialized);
     }
 
     #[test]
     fn should_serialize_task_session_completed_event() {
-        let event = TaskSessionCompleted::new(
+        let event = SessionCompleted::new(
             TaskId::new(),
             2,
             4,
@@ -78,7 +78,7 @@ mod tests {
         );
 
         let serialized = serde_json::to_string(&event).unwrap();
-        let deserialized: TaskSessionCompleted = serde_json::from_str(&serialized).unwrap();
+        let deserialized: SessionCompleted = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(event, deserialized);
     }

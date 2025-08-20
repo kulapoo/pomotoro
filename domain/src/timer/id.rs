@@ -4,9 +4,9 @@ use crate::shared_kernel::value_objects::identifier::{EntityId, EntityMarker};
 /// 
 /// This marker ensures type safety when working with Timer identifiers,
 /// preventing accidental mixing with other entity types.
-pub struct TimerMarker;
+pub struct Marker;
 
-impl EntityMarker for TimerMarker {
+impl EntityMarker for Marker {
     const TYPE_NAME: &'static str = "Timer";
 }
 
@@ -14,4 +14,4 @@ impl EntityMarker for TimerMarker {
 /// 
 /// Uses the generic EntityId system to provide compile-time type safety
 /// and prevent mixing Timer IDs with other entity types.
-pub type TimerId = EntityId<TimerMarker>;
+pub type Id = EntityId<Marker>;

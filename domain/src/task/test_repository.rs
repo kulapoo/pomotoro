@@ -1,15 +1,16 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::{Task, TaskId, TaskStatus, TaskRepository, Result};
+use crate::Result;
+use super::{Task, id::Id, status::Status, repository::Repository};
 
 /// In-memory task repository for testing purposes
 #[derive(Debug, Default)]
-pub struct InMemoryTaskRepository {
-    tasks: Arc<Mutex<HashMap<TaskId, Task>>>,
+pub struct InMemoryRepository {
+    tasks: Arc<Mutex<HashMap<Id, Task>>>,
 }
 
-impl InMemoryTaskRepository {
+impl InMemoryRepository {
     pub fn new() -> Self {
         Self {
             tasks: Arc::new(Mutex::new(HashMap::new())),
@@ -24,14 +25,14 @@ impl InMemoryTaskRepository {
 }
 
 #[async_trait]
-impl TaskRepository for InMemoryTaskRepository {
+impl Repository for InMemoryRepository {
     async fn create(&self, task: Task) -> Result<()> {
         let mut tasks = self.tasks.lock().unwrap();
         tasks.insert(task.id, task);
         Ok(())
     }
 
-    async fn get_by_id(&self, id: TaskId) -> Result<Option<Task>> {
+    async fn get_by_id(&self, id: Id) -> Result<Option<Task>> {
         let tasks = self.tasks.lock().unwrap();
         Ok(tasks.get(&id).cloned())
     }
@@ -47,7 +48,7 @@ impl TaskRepository for InMemoryTaskRepository {
         let tasks = self.tasks.lock().unwrap();
         let mut active_tasks: Vec<Task> = tasks
             .values()
-            .filter(|task| task.status != TaskStatus::Completed)
+            .filter(|task| task.status != Status::Completed)
             .cloned()
             .collect();
         // Sort by creation time for consistent ordering
@@ -61,7 +62,7 @@ impl TaskRepository for InMemoryTaskRepository {
         Ok(())
     }
 
-    async fn delete(&self, id: TaskId) -> Result<bool> {
+    async fn delete(&self, id: Id) -> Result<bool> {
         let mut tasks = self.tasks.lock().unwrap();
         Ok(tasks.remove(&id).is_some())
     }
@@ -75,7 +76,7 @@ impl TaskRepository for InMemoryTaskRepository {
             .collect())
     }
 
-    async fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>> {
+    async fn get_by_status(&self, status: Status) -> Result<Vec<Task>> {
         let tasks = self.tasks.lock().unwrap();
         Ok(tasks
             .values()
@@ -84,7 +85,7 @@ impl TaskRepository for InMemoryTaskRepository {
             .collect())
     }
 
-    async fn exists(&self, id: TaskId) -> Result<bool> {
+    async fn exists(&self, id: Id) -> Result<bool> {
         let tasks = self.tasks.lock().unwrap();
         Ok(tasks.contains_key(&id))
     }
@@ -102,14 +103,14 @@ mod tests {
 
     #[tokio::test]
     async fn should_return_none_when_no_default_task() {
-        let repo = InMemoryTaskRepository::new();
+        let repo = InMemoryRepository::new();
         let default_task = repo.get_default_task().await.unwrap();
         assert!(default_task.is_none());
     }
 
     #[tokio::test]
     async fn should_return_default_task() {
-        let repo = InMemoryTaskRepository::new();
+        let repo = InMemoryRepository::new();
         let mut task = crate::Task::new("Test Task".to_string(), 4).unwrap();
         task.set_as_default();
         
@@ -122,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_return_first_default_task_when_multiple_exist() {
-        let repo = InMemoryTaskRepository::new();
+        let repo = InMemoryRepository::new();
         
         // This scenario shouldn't happen in practice due to business logic,
         // but tests the repository behavior
@@ -142,7 +143,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_return_none_after_default_task_deleted() {
-        let repo = InMemoryTaskRepository::new();
+        let repo = InMemoryRepository::new();
         let mut task = crate::Task::new("Default Task".to_string(), 4).unwrap();
         task.set_as_default();
         let task_id = task.id;
@@ -163,7 +164,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_find_updated_default_task() {
-        let repo = InMemoryTaskRepository::new();
+        let repo = InMemoryRepository::new();
         let mut task = crate::Task::new("Non-default Task".to_string(), 4).unwrap();
         
         repo.create(task.clone()).await.unwrap();

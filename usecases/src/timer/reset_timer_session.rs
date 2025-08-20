@@ -1,5 +1,5 @@
-use domain::{TaskRepository, Result, EventPublisher, TimerReset};
-use domain::timer::TimerService;
+use domain::{TaskRepository, Result, EventPublisher, timer::Reset};
+use domain::TimerService;
 use std::sync::Arc;
 
 /// Reset the current timer session phase
@@ -37,9 +37,9 @@ pub async fn reset_timer_session(
     // Reset the current phase with task context
     timer_service.reset_current_phase(task.as_ref()).await?;
     
-    // Business logic: Publish TimerReset event after successful reset
+    // Business logic: Publish Reset event after successful reset
     let updated_state = timer_service.get_state().await?;
-    let timer_reset_event = TimerReset::new(
+    let timer_reset_event = Reset::new(
         updated_state.active_task_id,
         updated_state.timer.phase,
         1, // version
@@ -215,10 +215,10 @@ mod tests {
             
             reset_timer_session(&timer_service, &task_repo, &event_publisher).await.unwrap();
             
-            // Verify TimerReset event was published
+            // Verify Reset event was published
             assert_eq!(mock_publisher.event_count(), 1);
-            assert!(mock_publisher.has_event_type("TimerReset"));
-            assert_eq!(mock_publisher.last_event_type().unwrap(), "TimerReset");
+            assert!(mock_publisher.has_event_type("Reset"));
+            assert_eq!(mock_publisher.last_event_type().unwrap(), "Reset");
         }
         
         #[tokio::test]
@@ -230,9 +230,9 @@ mod tests {
             
             reset_timer_session(&timer_service, &task_repo, &event_publisher).await.unwrap();
             
-            // Verify TimerReset event was published even without active task
+            // Verify Reset event was published even without active task
             assert_eq!(mock_publisher.event_count(), 1);
-            assert!(mock_publisher.has_event_type("TimerReset"));
+            assert!(mock_publisher.has_event_type("Reset"));
         }
         
         #[tokio::test]
@@ -247,7 +247,7 @@ mod tests {
             
             // Verify multiple events were published
             assert_eq!(mock_publisher.event_count(), 3);
-            assert!(mock_publisher.verify_event_sequence(&["TimerReset", "TimerReset", "TimerReset"]));
+            assert!(mock_publisher.verify_event_sequence(&["Reset", "Reset", "Reset"]));
         }
     }
 }

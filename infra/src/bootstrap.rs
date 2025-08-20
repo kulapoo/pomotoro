@@ -14,7 +14,7 @@ pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     pub event_publisher: EventPublisherArc,
-    pub timer_service: Arc<dyn domain::timer::TimerService + Send + Sync>,
+    pub timer_service: Arc<dyn domain::TimerService + Send + Sync>,
     pub audio_service: Arc<RodioAudioService>,
     #[allow(dead_code)]
     pub audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
@@ -53,7 +53,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
     let audio_library_service: Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>> =
         Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
 
-    let timer_service: Arc<dyn domain::timer::TimerService + Send + Sync> =
+    let timer_service: Arc<dyn domain::TimerService + Send + Sync> =
         Arc::new(TimerService::new_with_services(event_publisher.clone(), Some(app_handle.clone())));
 
 

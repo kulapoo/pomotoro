@@ -1,35 +1,36 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{AudioConfig, Error, Result, TaskConfig, TaskId, TaskStatus};
+use crate::{AudioConfig, Error, Result};
+use super::{id::Id, status::Status, config::Config};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
-    pub id: TaskId,
+    pub id: Id,
     pub name: String,
     pub description: Option<String>,
     pub max_sessions: u8,
     pub current_sessions: u8,
     pub tags: Vec<String>,
-    pub config: TaskConfig,
+    pub config: Config,
     pub audio_config: AudioConfig,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
-    pub status: TaskStatus,
+    pub status: Status,
     pub default: bool,
 }
 
 impl Task {
     pub fn new_default() -> Result<Self> {
-        use super::TaskBuilder;
+        use super::builder::Builder;
 
-        TaskBuilder::default_task().build()
+        Builder::default_task().build()
     }
 
     pub fn new(name: String, max_sessions: u8) -> Result<Self> {
-        use super::TaskBuilder;
+        use super::builder::Builder;
 
-        TaskBuilder::with_name_and_sessions(name, max_sessions).build()
+        Builder::with_name_and_sessions(name, max_sessions).build()
     }
 
     pub fn new_with_defaults(
@@ -37,13 +38,13 @@ impl Task {
         max_sessions: u8,
         defaults: &crate::TaskDefaults,
     ) -> Result<Self> {
-        use super::TaskBuilder;
+        use super::builder::Builder;
 
-        TaskBuilder::with_name_and_sessions(name, max_sessions).build_with_defaults(defaults)
+        Builder::with_name_and_sessions(name, max_sessions).build_with_defaults(defaults)
     }
 
     pub fn is_completed(&self) -> bool {
-        self.current_sessions >= self.max_sessions || self.status == TaskStatus::Completed
+        self.current_sessions >= self.max_sessions || self.status == Status::Completed
     }
 
     pub fn increment_session(&mut self) -> Result<()> {
@@ -53,7 +54,7 @@ impl Task {
 
         self.current_sessions += 1;
         if self.current_sessions >= self.max_sessions {
-            self.status = TaskStatus::Completed;
+            self.status = Status::Completed;
             self.completed_at = Some(Utc::now());
         }
 
@@ -62,7 +63,7 @@ impl Task {
 
     pub fn reset_sessions(&mut self) {
         self.current_sessions = 0;
-        self.status = TaskStatus::Active;
+        self.status = Status::Active;
         self.completed_at = None;
     }
 
@@ -78,26 +79,26 @@ impl Task {
     }
 
     pub fn pause(&mut self) -> Result<()> {
-        if self.status == TaskStatus::Completed {
+        if self.status == Status::Completed {
             return Err(Error::TaskAlreadyCompleted);
         }
-        self.status = TaskStatus::Paused;
+        self.status = Status::Paused;
         Ok(())
     }
 
     pub fn activate(&mut self) -> Result<()> {
-        if self.status == TaskStatus::Completed {
+        if self.status == Status::Completed {
             return Err(Error::TaskAlreadyCompleted);
         }
-        self.status = TaskStatus::Active;
+        self.status = Status::Active;
         Ok(())
     }
 
     pub fn queue(&mut self) -> Result<()> {
-        if self.status == TaskStatus::Completed {
+        if self.status == Status::Completed {
             return Err(Error::TaskAlreadyCompleted);
         }
-        self.status = TaskStatus::Queued;
+        self.status = Status::Queued;
         Ok(())
     }
 

@@ -18,27 +18,27 @@ pub use shared_kernel::{
 pub use shared_kernel::MockEventPublisher;
 
 pub use task::{
-    Task, TaskBuilder, TaskId, TaskMarker, TaskConfig, TaskStatus, TaskRepository,
-    TaskCyclerService, TaskCyclingStrategy, DefaultTaskCyclingService,
-    TaskCreated, TaskSessionCompleted, TaskCompleted, TaskStatusChanged, TaskUpdated,
-    SessionTransitionCompleted, TaskSwitchWorkflowCompleted, AutomaticTaskCyclingCompleted,
-    TaskCyclingExhausted
+    Task, Builder as TaskBuilder, Id as TaskId, Marker as TaskMarker, Config as TaskConfig, Status as TaskStatus, Repository as TaskRepository,
+    CyclerService as TaskCyclerService, CyclingStrategy as TaskCyclingStrategy, DefaultCyclingService as DefaultTaskCyclingService,
+    Created as TaskCreated, SessionCompleted as TaskSessionCompleted, Completed as TaskCompleted, StatusChanged as TaskStatusChanged, Updated as TaskUpdated,
+    SessionTransitionCompleted, SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, AutomaticCyclingCompleted as AutomaticTaskCyclingCompleted,
+    CyclingExhausted as TaskCyclingExhausted
 };
 
 
 
 #[cfg(any(test, feature = "test-utils"))]
-pub use task::test_repository::InMemoryTaskRepository;
+pub use task::test_repository::InMemoryRepository as InMemoryTaskRepository;
 #[cfg(any(test, feature = "test-utils"))]
-pub use task::test_cycling_service::TestTaskCyclingService;
+pub use task::test_cycling_service::TestCyclingService as TestTaskCyclingService;
 #[cfg(any(test, feature = "test-utils"))]
 pub use config::test_repository::InMemoryConfigRepository;
 
 pub use timer::{
-    Timer, TimerId, TimerMarker, Phase, TimerState, TimerStateWithTask, TimerStatus,
-    PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult,
-    TimerStarted, TimerPaused, TimerReset, TimerTick, PhaseCompleted, PhaseSkipped,
-    TimerStatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
+    Timer, Id as TimerId, Marker as TimerMarker, Phase, State as TimerState, StateWithTask as TimerStateWithTask, Status as TimerStatus,
+    Service as TimerService, PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult,
+    Started as TimerStarted, Paused as TimerPaused, Reset as TimerReset, Tick as TimerTick, PhaseCompleted, PhaseSkipped,
+    StatusChanged as TimerStatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
     BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset
 };
 

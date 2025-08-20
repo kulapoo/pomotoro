@@ -1,4 +1,4 @@
-use domain::timer::TimerService;
+use domain::TimerService;
 use domain::{Result, Task, TaskRepository, TimerState};
 use std::sync::Arc;
 

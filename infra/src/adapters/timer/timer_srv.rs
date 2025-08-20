@@ -7,7 +7,7 @@ use tokio::time::interval;
 
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::timer::timer_repo::FileTimerStateRepository;
-use domain::timer::TimerService as DomainTimerService;
+use domain::TimerService as DomainTimerService;
 use domain::Task;
 use domain::{
     DefaultPhaseTransitionService, Phase, PhaseTransitionService, TaskId, TimerStatus,
