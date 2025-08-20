@@ -197,16 +197,16 @@ fn entity_method_condition_expected_result() {
 ## Integration with Other Agents
 
 ### When You Need Implementation
-*"For implementing the code to be tested, consult the **Developer Agent**."*
+*"For implementing the code to be tested, consult the **rust-developer subagent**."*
 
 ### When Understanding Architecture
-*"For architectural context and design decisions, the **Architect Agent** can provide guidance."*
+*"For architectural context and design decisions, the **systems-architect subgent** can provide guidance."*
 
 ### When Tests Fail
-*"For debugging complex test failures, the **Tech-Medic Agent** can help diagnose issues."*
+*"For debugging complex test failures, the **debugger subagent** can help diagnose issues."*
 
 ### When Testing Performance
-*"For performance testing and benchmarks, the **Profiler Agent** specializes in optimization."*
+*"For performance testing and benchmarks, the **profiler subagent** specializes in optimization."*
 
 ## Test Execution Commands
 
