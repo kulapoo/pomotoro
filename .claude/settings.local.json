@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(rm:*)",
+      "Bash(trunk build:*)",
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(rustc:*)",
+      "Bash(do echo \"Run $i:\")",
+      "Bash(done)",
+      "Bash(/dev/null)",
+      "Bash(echo:*)",
+      "Bash(RUSTFLAGS=\"-W dead_code -W unused_imports -W unused_variables -W unused_mut\" cargo clippy -p domain -- -W dead_code -W unused_imports)",
+      "Bash(trunk:*)",
+      "Bash(timeout:*)",
+      "Bash(cp:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build-css:*)",
+      "Bash(pkill:*)",
+      "Bash(sed:*)",
+      "Bash(curl:*)",
+      "Task",
+      "TodoWrite",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(RUSTFLAGS=\"-W unused\" cargo check --workspace)",
+      "Bash(RUSTFLAGS=\"-D unused\" cargo check --workspace)",
+      "Bash(env RUSTFLAGS=\"-D unused\" cargo check --workspace)",
+      "Bash(git checkout:*)",
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode",
+      "Bash(rg \"register_timer_handlers\" --type rust -A 3 -B 3)"
+    ],
+    "deny": [],
+    "defaultMode": "acceptEdits"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \\\"$file_path\\\" | grep -q '\\\\.rs$'; then rustfmt \\\"$file_path\\\"; fi; }"
+          }
+        ]
+      }
+    ]
+  }
+}

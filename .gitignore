@@ -3,3 +3,5 @@
 /Cargo.lock
 ui/dist/
 ai_contexts
+!.claude
+!CLAUDE.md

@@ -7,28 +7,23 @@ Master orchestrator coordinating specialized Rust agents following Clean Archite
 
 | Agent | Triggers | Role |
 |-------|----------|------|
-| **Expert** | complex, advanced, "Rustaceans" | Advanced patterns, architectural guardian |
-| **Architect** | guide, design, structure, pattern | Socratic guidance, no code |
-| **Developer** | implement, build, create | Generate production code |
-| **Debugger** | error, bug, fix, panic | Fix broken code |
-| **Reviewer** | review, check, idiomatic | Code quality assessment |
-| **Profiler** | slow, performance, optimize | Performance tuning |
-| **Test-Engineer** | test, TDD, coverage | Comprehensive testing |
+| **rust-developer** | implement, build, create | Generate production code |
+| **debugger** | error, bug, fix, panic | Fix broken code |
+| **reviewer** | review, check, idiomatic | Code quality assessment |
+| **profiler** | slow, performance, optimize | Performance tuning |
+| **test-engineer** | test, TDD, coverage | Comprehensive testing |
 
-> **Note**: Expert agent combines "Rust for Rustaceans" principles with architectural guardianship - use for complex, multi-layered implementations requiring advanced patterns.
 
 ## Decision Flow
 
 ```
 Request Analysis
-├─ Complex/Advanced? → Expert (full-stack guardian)
-├─ Design/Architecture? → Architect
-├─ Code Generation? → Developer
-├─ Errors/Bugs? → Debugger
-├─ Code Review? → Reviewer
-├─ Performance? → Profiler
-├─ Testing? → Test-Engineer
-└─ Multi-faceted? → Chain multiple agents
+├─ Code Generation? → MUST USE rust-developer sub-agent
+├─ Errors/Bugs? → MUST USE debugger sub-agent
+├─ Code Review? → MUST USE reviewer sub-agent
+├─ Performance? → MUST USE profiler
+├─ Testing? → MUST USE test-engineer
+└─ Multi-faceted? → Chain multiple sub-agents "rust-developer, reviewer, debugger, test-engineer"
 ```
 
 ## Rust Development Summary
@@ -51,56 +46,7 @@ Request Analysis
 - **Pure logic and abstractions** - Zero infrastructure dependencies
 - **Clear bounded contexts** - Establish domain boundaries
 - **Strict modular decoupling** - Enhance maintainability and scalability
-- **File organization** - When multiple items exist in a file, decouple into directories:
-```rust
-pomodoro-domain/
-└── task/
-    ├── events/
-    │   ├── task_completed.rs
-    │   └── task_updated.rs
-    └── repo.rs
-```
-- ✅ Contain pure business logic
-- ✅ Are stateless (no side effects)
-- ✅ Work with domain objects
-- ✅ Implement business rules and calculations
-- ❌ Don't orchestrate workflows
-- ❌ Don't handle infrastructure
-
-
-#### Application Layer (Clean Architecture Rules)
-
-- **No service naming** - In usecases layer, Avoid "Service" or concrete services
-- **Domain-based file grouping**:
-- orchestrate workflows
-- handle infrastructure
-
-```rust
-application/
-├── task/
-│   ├── create_task.rs      # use case
-│   ├── update_task.rs
-│   └── switch_session.rs
-└── timer/
-    └── session_complete.rs
-```
-
-- **Use dependency injection via traits**:
-```rust
-pub async fn create_task(
-    task_repo: &impl TaskRepository,      // domain trait
-    payment_gateway: &impl PaymentGateway, // impl from infra
-    cmd: CreateTaskCmd,
-) -> Result<OrderId, PlaceOrderError> {
-    // Business logic here
-}
-```
-
-#### Infrastructure Layer Rules
-
-- **Concrete implementations** from domain layer traits
-- **All I/O operations** - Database, network, file system
-- **External service handlers**
+- **File organization** - @docs/development/file-structure.md and @docs/development/naming-convention.md
 
 
 
@@ -110,22 +56,22 @@ pub async fn create_task(
 ### Simple Request
 ```
 "Fix this compilation error"
-→ Debugger (single agent)
+→ debugger sub-agent (single agent)
 ```
 
 ### Advanced Request
 ```
 "Implement with Rustacean-level patterns"
-→ Expert (architectural guardian + advanced patterns)
+→ MUST USE rust-developer sub-agent
 ```
 
 ### Complex Request
 ```
 "Build task system with tests"
-→ Architect (design)
-→ Developer (implement)
-→ Test-Engineer (tests)
-→ Reviewer (quality check)
+→ rust-architect sub-agent (design)
+→ rust-developer sub-agent (implement)
+→ test-engineer sub-agent (tests)
+→ reviewer sub-agent (quality check)
 ```
 
 ## Communication Style
