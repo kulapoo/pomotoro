@@ -60,8 +60,8 @@
 - Map out system architecture implications
 - Define success criteria
 
-### 1.2 Systems Architect Subagent Activation
-**CRITICAL PAUSE REQUIREMENT**: 
+### 1.2 systems-architect subagent Activation
+**CRITICAL PAUSE REQUIREMENT**:
 - **MUST** end output with "[PAUSED - Awaiting __proceed]"
 - **FORBIDDEN**: Suggesting next agents or implementation steps
 - **MANDATORY**: Complete PAUSE before any further action
@@ -82,6 +82,7 @@
    - Break down into atomic, testable tasks
    - Establish task dependencies
    - Define acceptance criteria per task
+
 
 ## Phase 2: Documentation Generation
 
@@ -149,7 +150,6 @@ FOR each task IN tasks:
     2. AWAIT __proceed prompt (DO NOT CONTINUE WITHOUT USER INPUT)
     3. EXECUTE:
        - Generate implementation in code.md
-       - Create/update tests
        - Document changes
     4. [MANDATORY PAUSE] - Show completed work
     5. VERIFY:
@@ -226,20 +226,30 @@ FOR each task IN tasks:
 - Task decomposition
 - Architecture validation
 - Integration planning
-**CRITICAL PAUSE OUTPUT**: 
-- **MUST** end with "[PAUSED at Task {n}]" 
+**CRITICAL PAUSE OUTPUT**:
+- **MUST** end with "[PAUSED at Task {n}]"
 - **FORBIDDEN**: Suggesting next agents
 - **MANDATORY**: Full stop after output
 - **NO HANDOFFS**: Never suggest "now X agent should..."
 
 ### Rust Developer Subagent
+**CRITICAL DESIGN REFERENCE REQUIREMENT**:
+- **MUST** read systems-architect's LATEST design from `.claude/specs/{spec-name}/summary.md`
+- **MUST** reference specific architectural decisions from the design file
+- **MUST** implement EXACTLY as specified in systems-architect's output
+- **FORBIDDEN**: Deviating from architectural design without explicit user approval
+- **MANDATORY**: Cross-reference design patterns and bounded contexts from summary.md
+
+**Implementation Rules**:
 - Code generation to `.claude/specs/{spec-name}/task-{n}/code.md` ONLY
 - Test proposals to `.claude/specs/{spec-name}/task-{n}/test.md` ONLY
 - NEVER use Edit/Write/MultiEdit on actual source files
 - ONLY create markdown documentation with code snippets
 - Performance optimization suggestions in documentation
 - Idiomatic Rust patterns in proposed code
-**CRITICAL PAUSE OUTPUT**: 
+- **MUST** include comment: `// Based on: .claude/specs/{spec-name}/summary.md`
+
+**CRITICAL PAUSE OUTPUT**:
 - **MUST** end with "[PAUSED at Task {n}]"
 - **FORBIDDEN**: Suggesting next steps
 - **MANDATORY**: Complete stop after task
@@ -250,7 +260,7 @@ FOR each task IN tasks:
 - Edge case identification
 - Performance benchmarking
 - Security review
-**CRITICAL PAUSE OUTPUT**: 
+**CRITICAL PAUSE OUTPUT**:
 - **MUST** end with "[PAUSED at Task {n}]"
 - **FORBIDDEN**: Triggering next actions
 - **MANDATORY**: Halt all processing
