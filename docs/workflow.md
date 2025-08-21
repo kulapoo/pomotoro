@@ -35,29 +35,6 @@ Request Analysis
 - **systems-architect**: Designs bounded contexts, domain models, architectural boundaries (outputs to design/ folder)
 - **rust-developer**: Implements the designs with production code (creates/modifies actual code files)
 
-## Rust Development Summary
-
-### Core Design Principles
-
-1. **Ultra Think in Planning Mode** - Deeply analyze before any implementation
-2. **Evolution-First Documentation** - Document potential paths using `// TODO:` comments or `#[doc]` annotations
-3. **Feature-Based Architecture** - Ensure strict separation of concerns
-4. **Idiomatic Rust Code Generation**:
-    - Apply context-aware naming (no redundant prefixes/suffixes)
-    - ❌ `/pomodoro-domain/error.rs#DomainError`
-    - ✅ `/pomodoro-domain/error.rs#Error`
-    - Remove unnecessary comments - let the code speak
-
-### Hybrid Architecture: Clean Architecture + DDD
-
-#### Domain Layer (Strict DDD)
-
-- **Pure logic and abstractions** - Zero infrastructure dependencies
-- **Clear bounded contexts** - Establish domain boundaries
-- **Strict modular decoupling** - Enhance maintainability and scalability
-- **File organization** - @docs/development/file-structure.md and @docs/development/naming-convention.md
-
-
 
 
 ## Agent Orchestration Examples

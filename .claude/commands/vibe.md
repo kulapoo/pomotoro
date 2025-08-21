@@ -76,7 +76,7 @@
 
 2. **Architecture Design (MVP-FOCUSED)**
    - Define MINIMAL component boundaries for MVP
-   - Establish SIMPLEST data flow patterns that work
+   - Establish EFFICIENT data flow patterns that work
    - Identify ONLY necessary design patterns
    - **CRITICAL**: Scope must be SMALL and ACHIEVABLE
    - **AVOID**: Over-engineering or future-proofing beyond immediate needs
@@ -235,7 +235,7 @@ SINGLE TASK WORKFLOW:
 - **SMALL SCOPE** architecture validation
 - **MINIMAL** integration planning
 **MVP ENFORCEMENT**:
-- **CRITICAL**: Always choose SIMPLEST solution that works
+- **CRITICAL**: Always choose MANAGEABLE solution within workload capacity
 - **MANDATORY**: Reduce scope to ACHIEVABLE within session
 - **FORBIDDEN**: Over-architecting or planning beyond immediate needs
 - **REQUIRED**: Each task must be <30 minutes of work
