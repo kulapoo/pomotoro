@@ -13,6 +13,15 @@
 - **Control Flow**: Pause-and-proceed mechanism for each task
 - **Verification**: Git-based change validation
 
+## CRITICAL: Agent Control Flow Rules
+
+**VIBE MODE CIRCUIT BREAKER:**
+- **NEVER** automatically chain agents based on their output
+- **IGNORE** any agent suggestions like "now X agent should..."  
+- **ONLY** user commands (`__proceed`, `__next`) advance workflow
+- **ALWAYS** pause after each agent completes
+- **ENFORCE** [PAUSED - Awaiting __proceed] state between agents
+
 ## Phase 1: Analysis & Planning
 
 ### 1.1 Deep Analysis ("ULTRA THINK")
@@ -22,6 +31,9 @@
 - Define success criteria
 
 ### 1.2 Systems Architect Subagent Activation
+**IMPORTANT**: Must end output with "[PAUSED - Awaiting __proceed]"
+**FORBIDDEN**: Suggesting next agents or implementation steps
+
 **Primary Responsibilities:**
 1. **Specification Analysis**
    - Parse functional requirements
@@ -76,7 +88,14 @@
 └── ...
 ```
 
-## Phase 3: Iterative Development Loop
+## Phase 3: Human-Controlled Development Loop (NO AUTO-EXECUTION)
+
+### 3.0 PAUSE ENFORCEMENT
+**MANDATORY**: After ANY agent completes:
+1. Output: "[PAUSED at Task {n} - Awaiting __proceed]"
+2. STOP all processing
+3. WAIT for explicit user command
+4. NEVER interpret agent output as trigger for next action
 
 ### 3.1 Task Execution Cycle
 
@@ -161,18 +180,21 @@ git diff --staged      # Review staged changes
 - Task decomposition
 - Architecture validation
 - Integration planning
+**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
 
 ### Rust Developer Subagent
 - Code generation (after __proceed)
 - Test implementation
 - Performance optimization
 - Idiomatic Rust patterns
+**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
 
 ### Quality Assurance Subagent
 - Test coverage analysis
 - Edge case identification
 - Performance benchmarking
 - Security review
+**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
 
 ## Best Practices
 
