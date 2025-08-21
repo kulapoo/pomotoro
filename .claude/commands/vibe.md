@@ -38,7 +38,7 @@
 
 **FORBIDDEN TOOLS in VIBE MODE:**
 - ❌ Edit - NEVER modify existing files
-- ❌ MultiEdit - NEVER modify existing files  
+- ❌ MultiEdit - NEVER modify existing files
 - ❌ Write to any path outside `.claude/specs/`
 - ❌ Bash commands that modify files
 - ❌ Any tool that changes the actual codebase
@@ -47,7 +47,7 @@
 
 **VIBE MODE CIRCUIT BREAKER:**
 - **NEVER** automatically chain agents based on their output
-- **IGNORE** any agent suggestions like "now X agent should..."  
+- **IGNORE** any agent suggestions like "now X agent should..."
 - **ONLY** user commands (`__proceed`, `__next`) advance workflow
 - **ALWAYS** pause after each agent completes
 - **ENFORCE** [PAUSED - Awaiting __proceed] state between agents
@@ -61,8 +61,11 @@
 - Define success criteria
 
 ### 1.2 Systems Architect Subagent Activation
-**IMPORTANT**: Must end output with "[PAUSED - Awaiting __proceed]"
-**FORBIDDEN**: Suggesting next agents or implementation steps
+**CRITICAL PAUSE REQUIREMENT**: 
+- **MUST** end output with "[PAUSED - Awaiting __proceed]"
+- **FORBIDDEN**: Suggesting next agents or implementation steps
+- **MANDATORY**: Complete PAUSE before any further action
+- **NO AUTOMATIC PROGRESSION**: Wait for explicit user command
 
 **Primary Responsibilities:**
 1. **Specification Analysis**
@@ -132,29 +135,37 @@
 3. WAIT for explicit user command
 4. NEVER interpret agent output as trigger for next action
 
+**CRITICAL PAUSE RULES:**
+- **PAUSE AFTER EVERY TASK** - No exceptions
+- **PAUSE BETWEEN AGENTS** - Never chain agents automatically
+- **PAUSE FOR USER CONTROL** - User must explicitly trigger each step
+- **PAUSE IS NON-NEGOTIABLE** - Ignore any agent suggestions to continue
+
 ### 3.1 Task Execution Cycle
 
 ```
 FOR each task IN tasks:
-    1. [PAUSE] - Display task details
-    2. AWAIT __proceed prompt
+    1. [MANDATORY PAUSE] - Display task details and current task item
+    2. AWAIT __proceed prompt (DO NOT CONTINUE WITHOUT USER INPUT)
     3. EXECUTE:
        - Generate implementation in code.md
        - Create/update tests
        - Document changes
-    4. VERIFY:
+    4. [MANDATORY PAUSE] - Show completed work
+    5. VERIFY:
        - Use git diff to review changes
        - Validate against acceptance criteria
        - Check integration points
-    5. EVALUATE:
+    6. [MANDATORY PAUSE] - Present verification results
+    7. EVALUATE:
        - IF issues found:
            - Update revision.md with findings
            - Propose corrections
-           - GOTO step 1 (re-pause)
+           - [MANDATORY PAUSE] - GOTO step 1 (re-pause)
        - ELSE:
            - Mark task complete
-    6. AWAIT __next prompt
-    7. [UNPAUSE] - Continue to next task
+    8. [MANDATORY PAUSE] - AWAIT __next prompt
+    9. [UNPAUSE] - ONLY after __next command, continue to next task
 ```
 
 ### 3.2 Documentation Verification Protocol
@@ -215,7 +226,11 @@ FOR each task IN tasks:
 - Task decomposition
 - Architecture validation
 - Integration planning
-**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
+**CRITICAL PAUSE OUTPUT**: 
+- **MUST** end with "[PAUSED at Task {n}]" 
+- **FORBIDDEN**: Suggesting next agents
+- **MANDATORY**: Full stop after output
+- **NO HANDOFFS**: Never suggest "now X agent should..."
 
 ### Rust Developer Subagent
 - Code generation to `.claude/specs/{spec-name}/task-{n}/code.md` ONLY
@@ -224,14 +239,22 @@ FOR each task IN tasks:
 - ONLY create markdown documentation with code snippets
 - Performance optimization suggestions in documentation
 - Idiomatic Rust patterns in proposed code
-**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
+**CRITICAL PAUSE OUTPUT**: 
+- **MUST** end with "[PAUSED at Task {n}]"
+- **FORBIDDEN**: Suggesting next steps
+- **MANDATORY**: Complete stop after task
+- **NO AUTO-CHAINING**: Wait for user command
 
 ### Quality Assurance Subagent
 - Test coverage analysis
 - Edge case identification
 - Performance benchmarking
 - Security review
-**OUTPUT REQUIREMENT**: End with "[PAUSED]" - no next step suggestions
+**CRITICAL PAUSE OUTPUT**: 
+- **MUST** end with "[PAUSED at Task {n}]"
+- **FORBIDDEN**: Triggering next actions
+- **MANDATORY**: Halt all processing
+- **USER CONTROL**: Only user can continue
 
 ## Best Practices
 
