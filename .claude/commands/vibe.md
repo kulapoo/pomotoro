@@ -56,6 +56,9 @@
 
 ### 1.1 Deep Analysis ("ULTRA THINK")
 - systems-architect subagent MUST BE USED for Deep Analysis
+- **MVP MINDSET**: Focus on smallest viable solution
+- **SCOPE REDUCTION**: If spec is complex, extract core functionality only
+- **ACHIEVABLE GOALS**: Ensure all tasks can be completed in current session
 
 ### 1.2 systems-architect subagent Activation
 **CRITICAL PAUSE REQUIREMENT**:
@@ -67,18 +70,24 @@
 **Primary Responsibilities:**
 1. **Specification Analysis**
    - Parse functional requirements
-   - Identify non-functional requirements
-   - Map dependencies and integrations
+   - Identify MINIMAL MVP requirements
+   - Focus on ACHIEVABLE scope within current iteration
+   - Map only ESSENTIAL dependencies
 
-2. **Architecture Design**
-   - Define component boundaries
-   - Establish data flow patterns
-   - Identify design patterns needed
+2. **Architecture Design (MVP-FOCUSED)**
+   - Define MINIMAL component boundaries for MVP
+   - Establish SIMPLEST data flow patterns that work
+   - Identify ONLY necessary design patterns
+   - **CRITICAL**: Scope must be SMALL and ACHIEVABLE
+   - **AVOID**: Over-engineering or future-proofing beyond immediate needs
 
-3. **Task Decomposition**
-   - Break down into atomic, testable tasks
-   - Establish task dependencies
-   - Define acceptance criteria per task
+3. **Task Decomposition (SMALL SCOPE)**
+   - Break down into SMALL, atomic, testable tasks
+   - Each task should be completable in <30 minutes
+   - Focus on IMMEDIATE deliverables only
+   - Define MINIMAL acceptance criteria per task
+   - **MAXIMUM**: 5-7 tasks for any spec (prefer 3-5)
+   - **CRITICAL**: If spec seems large, extract MVP subset
 
 
 ## Phase 2: Documentation Generation
@@ -222,9 +231,14 @@ SINGLE TASK WORKFLOW:
 
 ### Systems Architect Subagent
 - Specification analysis (creates summary.md and tasks.md ONLY)
-- Task decomposition into numbered list
-- Architecture validation
-- Integration planning
+- **MVP-FOCUSED** task decomposition (3-5 tasks MAX, prefer 3)
+- **SMALL SCOPE** architecture validation
+- **MINIMAL** integration planning
+**MVP ENFORCEMENT**:
+- **CRITICAL**: Always choose SIMPLEST solution that works
+- **MANDATORY**: Reduce scope to ACHIEVABLE within session
+- **FORBIDDEN**: Over-architecting or planning beyond immediate needs
+- **REQUIRED**: Each task must be <30 minutes of work
 **CRITICAL PAUSE OUTPUT**:
 - **MUST** end with "[PAUSED - Awaiting __proceed for Task 1]"
 - **FORBIDDEN**: Generating any task-specific files
