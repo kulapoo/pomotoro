@@ -55,10 +55,7 @@
 ## Phase 1: Analysis & Planning
 
 ### 1.1 Deep Analysis ("ULTRA THINK")
-- Comprehensive analysis of {spec} requirements
-- Identify technical constraints and dependencies
-- Map out system architecture implications
-- Define success criteria
+- systems-architect subagent MUST BE USED for Deep Analysis
 
 ### 1.2 systems-architect subagent Activation
 **CRITICAL PAUSE REQUIREMENT**:
@@ -145,28 +142,29 @@
 ### 3.1 Task Execution Cycle
 
 ```
-FOR each task IN tasks:
-    1. [MANDATORY PAUSE] - Display task details and current task item
+SINGLE TASK WORKFLOW:
+    1. [MANDATORY PAUSE] - Display current task (e.g., "Task 1: [description]")
     2. AWAIT __proceed prompt (DO NOT CONTINUE WITHOUT USER INPUT)
-    3. EXECUTE:
-       - Generate implementation in code.md
-       - Document changes
-    4. [MANDATORY PAUSE] - Show completed work
-    5. VERIFY:
-       - Use git diff to review changes
-       - Validate against acceptance criteria
-       - Check integration points
-    6. [MANDATORY PAUSE] - Present verification results
-    7. EVALUATE:
-       - IF issues found:
-           - Update revision.md with findings
-           - Propose corrections
-           - [MANDATORY PAUSE] - GOTO step 1 (re-pause)
-       - ELSE:
-           - Mark task complete
-    8. [MANDATORY PAUSE] - AWAIT __next prompt
-    9. [UNPAUSE] - ONLY after __next command, continue to next task
+    3. ANALYZE TASK:
+       - Read existing codebase as needed
+       - Understand requirements
+       - Plan implementation approach
+    4. GENERATE FILES (ONLY FOR CURRENT TASK):
+       - Create task-{n}/task.md with requirements
+       - Create task-{n}/code.md with proposed implementation
+       - Create task-{n}/revision.md (initially empty)
+    5. [MANDATORY PAUSE] - Show "Task {n} analysis and files generated"
+    6. AWAIT __done prompt to mark task complete
+    7. [TASK MARKED COMPLETE]
+    8. [MANDATORY PAUSE] - Display "Ready for Task {n+1}. Use __proceed to continue"
+    9. REPEAT for next task ONLY after __proceed
 ```
+
+**CRITICAL SINGLE-TASK RULE:**
+- **NEVER** jump to next task automatically
+- **NEVER** generate Task 2 files while working on Task 1
+- **ALWAYS** wait for __done before considering task complete
+- **ALWAYS** wait for __proceed before starting next task
 
 ### 3.2 Documentation Verification Protocol
 
@@ -192,17 +190,18 @@ FOR each task IN tasks:
 ## Phase 4: Control Commands
 
 ### User Commands
-- `__proceed` - Execute current task and generate code
-- `__next` - Mark current task complete, move to next
+- `__proceed` - Start analyzing current task and generate its files
+- `__done` - Mark current task as complete after files are generated
 - `__revise` - Request changes to current task
 - `__status` - Display current progress
 - `__abort` - Cancel current workflow
 
 ### System Responses
-- `[PAUSED at Task {n}]` - Awaiting user input
-- `[EXECUTING Task {n}]` - Processing current task
-- `[VERIFIED]` - Git verification complete
-- `[READY for NEXT]` - Task complete, awaiting __next
+- `[PAUSED at Task {n}]` - Awaiting __proceed to start task
+- `[EXECUTING Task {n}]` - Analyzing and generating files for current task
+- `[Task {n} FILES GENERATED]` - Files created, awaiting __done
+- `[Task {n} COMPLETE]` - Task marked done, awaiting __proceed for next task
+- `[READY for Task {n+1}]` - Previous task complete, can start next
 
 ## Phase 5: Documentation Completion
 
@@ -222,54 +221,85 @@ FOR each task IN tasks:
 ## Subagent Responsibilities
 
 ### Systems Architect Subagent
-- Specification analysis
-- Task decomposition
+- Specification analysis (creates summary.md and tasks.md ONLY)
+- Task decomposition into numbered list
 - Architecture validation
 - Integration planning
 **CRITICAL PAUSE OUTPUT**:
-- **MUST** end with "[PAUSED at Task {n}]"
-- **FORBIDDEN**: Suggesting next agents
-- **MANDATORY**: Full stop after output
+- **MUST** end with "[PAUSED - Awaiting __proceed for Task 1]"
+- **FORBIDDEN**: Generating any task-specific files
+- **MANDATORY**: Full stop after creating summary.md and tasks.md
 - **NO HANDOFFS**: Never suggest "now X agent should..."
 
 ### Rust Developer Subagent
-**CRITICAL DESIGN REFERENCE REQUIREMENT**:
+**CRITICAL SINGLE-TASK REQUIREMENT**:
+- **ONLY** work on the CURRENT task number provided
+- **NEVER** generate files for multiple tasks at once
 - **MUST** read systems-architect's LATEST design from `.claude/specs/{spec-name}/summary.md`
 - **MUST** reference specific architectural decisions from the design file
-- **MUST** implement EXACTLY as specified in systems-architect's output
-- **FORBIDDEN**: Deviating from architectural design without explicit user approval
+- **MUST** implement EXACTLY as specified for CURRENT TASK ONLY
+- **FORBIDDEN**: Generating Task 2 files while working on Task 1
 - **MANDATORY**: Cross-reference design patterns and bounded contexts from summary.md
 
-**Implementation Rules**:
-- Code generation to `.claude/specs/{spec-name}/task-{n}/code.md` ONLY
-- Test proposals to `.claude/specs/{spec-name}/task-{n}/test.md` ONLY
+**Implementation Rules (Current Task Only)**:
+- Code generation to `.claude/specs/{spec-name}/task-{CURRENT}/code.md` ONLY
+- Test proposals to `.claude/specs/{spec-name}/task-{CURRENT}/test.md` ONLY
+- NEVER generate files for future tasks
 - NEVER use Edit/Write/MultiEdit on actual source files
-- ONLY create markdown documentation with code snippets
+- ONLY create markdown documentation for CURRENT task
 - Performance optimization suggestions in documentation
 - Idiomatic Rust patterns in proposed code
 - **MUST** include comment: `// Based on: .claude/specs/{spec-name}/summary.md`
 
 **CRITICAL PAUSE OUTPUT**:
-- **MUST** end with "[PAUSED at Task {n}]"
-- **FORBIDDEN**: Suggesting next steps
-- **MANDATORY**: Complete stop after task
-- **NO AUTO-CHAINING**: Wait for user command
+- **MUST** end with "[Task {n} FILES GENERATED - Awaiting __done]"
+- **FORBIDDEN**: Moving to next task
+- **MANDATORY**: Complete stop after generating current task files
+- **NO AUTO-CHAINING**: Wait for __done command
 
 ### Quality Assurance Subagent
-- Test coverage analysis
-- Edge case identification
-- Performance benchmarking
-- Security review
+- Test coverage analysis for CURRENT task only
+- Edge case identification for CURRENT task
+- Performance benchmarking suggestions
+- Security review for CURRENT task implementation
 **CRITICAL PAUSE OUTPUT**:
-- **MUST** end with "[PAUSED at Task {n}]"
-- **FORBIDDEN**: Triggering next actions
-- **MANDATORY**: Halt all processing
-- **USER CONTROL**: Only user can continue
+- **MUST** end with "[Task {n} QA COMPLETE - Awaiting __done]"
+- **FORBIDDEN**: Moving to next task or generating next task files
+- **MANDATORY**: Halt all processing after current task QA
+- **USER CONTROL**: Only user can continue with __done
+
+## Example Workflow
+
+```
+User: vibe work-session-timer
+Assistant: [Activates systems-architect to analyze]
+          [Creates summary.md and tasks.md]
+          "[PAUSED - Awaiting __proceed for Task 1]"
+
+User: __proceed
+Assistant: [Works on Task 1 ONLY]
+          [Creates task-1/task.md, task-1/code.md, task-1/revision.md]
+          "[Task 1 FILES GENERATED - Awaiting __done]"
+
+User: __done
+Assistant: "[Task 1 COMPLETE]"
+          "[READY for Task 2 - Use __proceed to continue]"
+
+User: __proceed
+Assistant: [Works on Task 2 ONLY]
+          [Creates task-2/task.md, task-2/code.md, task-2/revision.md]
+          "[Task 2 FILES GENERATED - Awaiting __done]"
+
+User: __done
+Assistant: "[Task 2 COMPLETE]"
+          "[READY for Task 3 - Use __proceed to continue]"
+```
 
 ## Best Practices
 
 1. **Task Granularity**: Keep tasks small enough to complete in one iteration
 2. **Clear Boundaries**: Each task should have clear input/output definitions
-3. **Test-First**: Define tests before implementation where possible
-4. **Documentation**: Update docs in real-time, not as afterthought
-5. **Version Control**: Commit after each successful task completion
+3. **Single-Task Focus**: Complete one task fully before moving to next
+4. **Test-First**: Define tests before implementation where possible
+5. **Documentation**: Update docs in real-time, not as afterthought
+6. **Version Control**: Commit after each successful task completion
