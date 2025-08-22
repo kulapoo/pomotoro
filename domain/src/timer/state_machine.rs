@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{TimerConfiguration, TaskId};
+use crate::TimerConfiguration;
 
 /// Unified timer state machine that combines status and phase into a single enum.
 /// Each variant encapsulates the data specific to that state.
@@ -12,8 +12,8 @@ pub enum TimerState {
         configuration: TimerConfiguration,
         /// Number of completed work sessions
         session_count: u32,
-        /// Currently active task (if any)
-        active_task: Option<TaskId>,
+        /// Currently active entity (if any)
+        active_entity: Option<String>,
     },
     
     /// Timer is actively counting down during a work session
@@ -24,10 +24,10 @@ pub enum TimerState {
         configuration: TimerConfiguration,
         /// Number of completed work sessions
         session_count: u32,
-        /// Currently active task (must exist during work)
-        active_task: Option<TaskId>,
-        /// Number of sessions completed for the current task
-        task_session_count: u32,
+        /// Currently active entity (must exist during work)
+        active_entity: Option<String>,
+        /// Number of sessions completed for the current entity
+        entity_session_count: u32,
     },
     
     /// Timer is actively counting down during a short break
@@ -38,10 +38,10 @@ pub enum TimerState {
         configuration: TimerConfiguration,
         /// Number of completed work sessions
         session_count: u32,
-        /// Task to resume after break
-        active_task: Option<TaskId>,
-        /// Number of sessions completed for the current task
-        task_session_count: u32,
+        /// Entity to resume after break
+        active_entity: Option<String>,
+        /// Number of sessions completed for the current entity
+        entity_session_count: u32,
     },
     
     /// Timer is actively counting down during a long break
@@ -52,10 +52,10 @@ pub enum TimerState {
         configuration: TimerConfiguration,
         /// Number of completed work sessions
         session_count: u32,
-        /// Task to resume after break
-        active_task: Option<TaskId>,
-        /// Number of sessions completed for the current task
-        task_session_count: u32,
+        /// Entity to resume after break
+        active_entity: Option<String>,
+        /// Number of sessions completed for the current entity
+        entity_session_count: u32,
     },
     
     /// Timer is paused, preserving the previous state
@@ -72,7 +72,7 @@ impl Default for TimerState {
         Self::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         }
     }
 }
@@ -83,7 +83,7 @@ impl TimerState {
         Self::Idle {
             configuration,
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         }
     }
     
@@ -109,20 +109,20 @@ impl TimerState {
         }
     }
     
-    /// Get the currently active task
-    pub fn active_task(&self) -> Option<TaskId> {
+    /// Get the currently active entity
+    pub fn active_entity(&self) -> Option<&str> {
         match self {
-            Self::Idle { active_task, .. } |
-            Self::Working { active_task, .. } |
-            Self::ShortBreak { active_task, .. } |
-            Self::LongBreak { active_task, .. } => *active_task,
-            Self::Paused { paused_from, .. } => paused_from.active_task(),
+            Self::Idle { active_entity, .. } |
+            Self::Working { active_entity, .. } |
+            Self::ShortBreak { active_entity, .. } |
+            Self::LongBreak { active_entity, .. } => active_entity.as_deref(),
+            Self::Paused { paused_from, .. } => paused_from.active_entity(),
         }
     }
     
-    /// Get the currently active task ID (alias for active_task for compatibility)
-    pub fn active_task_id(&self) -> Option<TaskId> {
-        self.active_task()
+    /// Get the currently active entity ID (for compatibility)
+    pub fn active_entity_id(&self) -> Option<String> {
+        self.active_entity().map(|s| s.to_string())
     }
     
     /// Get remaining seconds (shows work duration if idle)
@@ -130,7 +130,7 @@ impl TimerState {
         match self {
             Self::Idle { configuration, .. } => {
                 // When idle, show the work phase duration as the "ready" time
-                configuration.get_phase_duration_seconds(crate::Phase::Work)
+                configuration.get_phase_duration_seconds(super::Phase::Work)
             },
             Self::Working { remaining_seconds, .. } |
             Self::ShortBreak { remaining_seconds, .. } |
@@ -182,33 +182,33 @@ impl TimerState {
     
     
     /// Get the timer status
-    pub fn status(&self) -> crate::TimerStatus {
+    pub fn status(&self) -> super::Status {
         match self {
-            Self::Idle { .. } => crate::TimerStatus::Stopped,
-            Self::Working { .. } | Self::ShortBreak { .. } | Self::LongBreak { .. } => crate::TimerStatus::Running,
-            Self::Paused { .. } => crate::TimerStatus::Paused,
+            Self::Idle { .. } => super::Status::Stopped,
+            Self::Working { .. } | Self::ShortBreak { .. } | Self::LongBreak { .. } => super::Status::Running,
+            Self::Paused { .. } => super::Status::Paused,
         }
     }
     
     
     /// Get the current phase as enum
-    pub fn phase(&self) -> crate::Phase {
+    pub fn phase(&self) -> super::Phase {
         match self {
-            Self::Idle { .. } => crate::Phase::Work, // Default to Work for idle
-            Self::Working { .. } => crate::Phase::Work,
-            Self::ShortBreak { .. } => crate::Phase::ShortBreak,
-            Self::LongBreak { .. } => crate::Phase::LongBreak,
+            Self::Idle { .. } => super::Phase::Work, // Default to Work for idle
+            Self::Working { .. } => super::Phase::Work,
+            Self::ShortBreak { .. } => super::Phase::ShortBreak,
+            Self::LongBreak { .. } => super::Phase::LongBreak,
             Self::Paused { paused_from, .. } => paused_from.phase(),
         }
     }
     
-    /// Get the task session count (only available in Working state)
-    pub fn task_session_count(&self) -> u32 {
+    /// Get the entity session count (only available in Working state)
+    pub fn entity_session_count(&self) -> u32 {
         match self {
-            Self::Working { task_session_count, .. } => *task_session_count,
-            Self::ShortBreak { task_session_count, .. } => *task_session_count,
-            Self::LongBreak { task_session_count, .. } => *task_session_count,
-            Self::Paused { paused_from, .. } => paused_from.task_session_count(),
+            Self::Working { entity_session_count, .. } => *entity_session_count,
+            Self::ShortBreak { entity_session_count, .. } => *entity_session_count,
+            Self::LongBreak { entity_session_count, .. } => *entity_session_count,
+            Self::Paused { paused_from, .. } => paused_from.entity_session_count(),
             _ => 0,
         }
     }
@@ -229,7 +229,7 @@ mod tests {
         assert_eq!(state.session_count(), 0);
         // When idle, remaining_seconds shows the work phase duration as "ready" time
         assert_eq!(state.remaining_seconds(), 1500);
-        assert!(state.active_task().is_none());
+        assert!(state.active_entity().is_none());
     }
     
     #[test]
@@ -238,8 +238,8 @@ mod tests {
             remaining_seconds: 100,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: None,
-            task_session_count: 0,
+            active_entity: None,
+            entity_session_count: 0,
         };
         assert!(state.is_work_phase());
         assert!(!state.is_break_phase());
@@ -252,8 +252,8 @@ mod tests {
             remaining_seconds: 60,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: None,
-            task_session_count: 0,
+            active_entity: None,
+            entity_session_count: 0,
         };
         assert!(state.is_break_phase());
         assert!(!state.is_work_phase());
@@ -266,8 +266,8 @@ mod tests {
             remaining_seconds: 100,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: None,
-            task_session_count: 0,
+            active_entity: None,
+            entity_session_count: 0,
         };
         
         let paused = TimerState::Paused {

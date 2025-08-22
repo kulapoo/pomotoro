@@ -43,18 +43,20 @@ pub async fn switch_task(
 
     let _timer_config = task_config_to_timer_config(&task.config)?;
     // Use state transitions to switch task and update configuration
-    let result = domain::timer::transitions::StateTransitions::switch_task(
+    let result = domain::timer::transitions::StateTransitions::switch_entity(
         timer_state.clone(),
-        Some(task_id)
+        Some(task_id.to_string())
     )?;
     *timer_state = result.new_state;
     
     // Timer configuration update needs to be done through the Timer aggregate
     // For now, we'll just keep the updated state from the switch_task operation
-    // The configuration was already applied when we called StateTransitions::switch_task
+    // The configuration was already applied when we called StateTransitions::switch_entity
 
+    let from_task_id = timer_state.active_entity_id()
+        .and_then(|id_str| TaskId::from_string(&id_str).ok());
     let switch_event = TaskSwitchWorkflowCompleted::new(
-        timer_state.active_task_id(),
+        from_task_id,
         task_id,
         format!("Switched to task: {}", task.name),
         1,
@@ -75,7 +77,8 @@ pub async fn switch_to_next_task(
         });
     }
 
-    let current_task_id = timer_state.active_task_id();
+    let current_task_id = timer_state.active_entity_id()
+        .and_then(|id_str| TaskId::from_string(&id_str).ok());
 
     let next_task = cycling_service
         .cycle_to_next_active_task(current_task_id)
@@ -84,9 +87,9 @@ pub async fn switch_to_next_task(
     if let Some(task) = next_task {
         let _timer_config = task_config_to_timer_config(&task.config)?;
         // Use state transitions to switch task and update configuration
-        let result = domain::timer::transitions::StateTransitions::switch_task(
+        let result = domain::timer::transitions::StateTransitions::switch_entity(
             timer_state.clone(),
-            Some(task.id)
+            Some(task.id.to_string())
         )?;
         *timer_state = result.new_state;
         
@@ -140,7 +143,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
+            active_entity: Some(tasks[0].id.to_string()),
         };
 
         let cmd = SwitchTaskCmd {
@@ -157,7 +160,7 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(timer_state.active_task_id(), Some(tasks[1].id));
+        assert_eq!(timer_state.active_entity_id(), Some(tasks[1].id.to_string()));
         // Task session count is reset when switching tasks
     }
 
@@ -169,8 +172,8 @@ mod tests {
             remaining_seconds: 1500,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
-            task_session_count: 0,
+            active_entity: Some(tasks[0].id.to_string()),
+            entity_session_count: 0,
         };
 
         let cmd = SwitchTaskCmd {
@@ -195,7 +198,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
+            active_entity: Some(tasks[0].id.to_string()),
         };
 
         let cmd = SwitchTaskCmd {
@@ -220,7 +223,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
+            active_entity: Some(tasks[0].id.to_string()),
         };
 
         // Create and complete a task
@@ -250,7 +253,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
+            active_entity: Some(tasks[0].id.to_string()),
         };
 
         // Ensure tasks are in proper state to be cycled
@@ -268,12 +271,12 @@ mod tests {
             .unwrap();
 
         assert!(next_task_id.is_some());
-        assert_ne!(timer_state.active_task_id(), Some(tasks[0].id));
+        assert_ne!(timer_state.active_entity_id(), Some(tasks[0].id.to_string()));
         
         // Check against active tasks from repository instead of original tasks
         assert!(active_tasks
             .iter()
-            .any(|t| Some(t.id) == timer_state.active_task_id()));
+            .any(|t| Some(t.id.to_string()) == timer_state.active_entity_id()));
     }
 
     #[tokio::test]
@@ -284,8 +287,8 @@ mod tests {
             remaining_seconds: 1500,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(tasks[0].id),
-            task_session_count: 0,
+            active_entity: Some(tasks[0].id.to_string()),
+            entity_session_count: 0,
         };
 
         let result = switch_to_next_task(&mut timer_state, &cycling_service).await;
@@ -306,7 +309,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
 
         let next_task_id = switch_to_next_task(&mut timer_state, &cycling_service)

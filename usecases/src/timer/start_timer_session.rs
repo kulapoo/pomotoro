@@ -1,4 +1,4 @@
-use domain::TimerService;
+use super::TimerService;
 use domain::{Error, EventPublisher, Result, TaskId, TaskRepository, timer::Started};
 use std::sync::Arc;
 
@@ -50,15 +50,19 @@ pub async fn start_timer_session(
         Some(task)
     } else {
         let current_state = timer_service.get_state().await?;
-        if current_state.active_task_id().is_none() {
+        if current_state.active_entity_id().is_none() {
             return Err(Error::InvalidStateTransition {
                 from: "no_active_task".to_string(),
                 to: "start_session".to_string(),
             });
         }
 
-        if let Some(task_id) = current_state.active_task_id() {
-            task_repo.get_by_id(task_id).await?
+        if let Some(entity_id_str) = current_state.active_entity_id() {
+            if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
+                task_repo.get_by_id(task_id).await?
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -68,7 +72,7 @@ pub async fn start_timer_session(
 
     let updated_state = timer_service.get_state().await?;
     let timer_started_event = Started::new(
-        updated_state.active_task_id(),
+        updated_state.active_entity_id(),
         updated_state.phase(),
         updated_state.remaining_seconds(),
         1, // version
@@ -104,14 +108,14 @@ mod tests {
         async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
             let mut state = self.state.write().unwrap();
             // Mock implementation: transition to Working state
-            if let TimerState::Idle { configuration, session_count, active_task } = state.clone() {
-                if active_task.is_some() {
+            if let TimerState::Idle { configuration, session_count, active_entity } = state.clone() {
+                if active_entity.is_some() {
                     *state = TimerState::Working {
                         remaining_seconds: configuration.get_phase_duration_seconds(domain::Phase::Work),
                         configuration,
                         session_count,
-                        active_task,
-                        task_session_count: 0,
+                        active_entity,
+                        entity_session_count: 0,
                     };
                 }
             }
@@ -122,11 +126,11 @@ mod tests {
             let mut state = self.state.write().unwrap();
             // Mock implementation: transition to Idle state
             let configuration = state.configuration().clone();
-            let active_task = state.active_task();
+            let active_entity = state.active_entity_id();
             *state = TimerState::Idle {
                 configuration,
                 session_count: 0,
-                active_task,
+                active_entity,
             };
             Ok(())
         }
@@ -160,8 +164,8 @@ mod tests {
                 remaining_seconds: 1500,
                 configuration: TimerConfiguration::default(),
                 session_count: 0,
-                active_task: task.map(|t| t.id()),
-                task_session_count: 0,
+                active_entity: task.map(|t| t.id().to_string()),
+                entity_session_count: 0,
             };
             Ok(())
         }
@@ -172,7 +176,7 @@ mod tests {
         ) -> Result<(domain::Phase, domain::Phase)> {
             let mut state = self.state.write().unwrap();
             let old_phase = state.phase();
-            let task_id = task.map(|t| t.id());
+            let task_id = task.map(|t| t.id().to_string());
             
             // Transition to next phase based on current phase
             let new_phase = match old_phase {
@@ -186,22 +190,22 @@ mod tests {
                     remaining_seconds: 1500,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count() + 1,
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::ShortBreak => TimerState::ShortBreak {
                     remaining_seconds: 300,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::LongBreak => TimerState::LongBreak {
                     remaining_seconds: 900,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
             };
             
@@ -219,7 +223,7 @@ mod tests {
                 *state = TimerState::Idle {
                     configuration,
                     session_count,
-                    active_task: Some(task_id),
+                    active_entity: Some(task_id.to_string()),
                 };
             }
             Ok(())
@@ -262,7 +266,7 @@ mod tests {
 
         let state = timer_service.get_state().await.unwrap();
         assert_eq!(state.status(), TimerStatus::Running);
-        assert_eq!(state.active_task_id(), Some(task.id));
+        assert_eq!(state.active_entity_id(), Some(task.id.to_string()));
     }
 
     #[tokio::test]
@@ -282,7 +286,7 @@ mod tests {
 
         let state = timer_service.get_state().await.unwrap();
         assert_eq!(state.status(), TimerStatus::Running);
-        assert_eq!(state.active_task_id(), Some(task.id));
+        assert_eq!(state.active_entity_id(), Some(task.id.to_string()));
     }
 
     #[tokio::test]

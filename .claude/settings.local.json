@@ -39,7 +39,16 @@
       "Bash(__NEW_LINE__ for file in timer_tick.rs timer_status_changed.rs phase_completed.rs phase_skipped.rs)",
       "Bash(do)",
       "Bash(for i in {1..10})",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/domain/src/timer/events/{break_session_completed,break_session_started,phase_completed,phase_skipped,session_started}.rs)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/domain/src/timer/events/{work_session_started,work_session_completed,session_flow_reset}.rs)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{start_timer_session,pause_timer_session,reset_timer_session,skip_timer_phase,get_timer_state,switch_timer_task}.rs)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/{timer/start_session.rs,task/switch_task.rs})",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{reset_timer_session,skip_timer_phase}.rs)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{reset_timer_session,skip_timer_phase,start_timer_session}.rs)",
+      "Bash(if ! grep -q \"use domain::.*TaskId\" \"$file\")",
+      "Bash(then)",
+      "Bash(fi)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

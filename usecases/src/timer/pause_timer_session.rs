@@ -1,5 +1,5 @@
 use domain::{TimerStatus, Result, EventPublisher, timer::Paused};
-use domain::TimerService;
+use super::TimerService;
 use std::sync::Arc;
 
 /// Pause or resume a timer session
@@ -27,7 +27,7 @@ pub async fn pause_timer_session(
     if new_status == TimerStatus::Paused {
         let state = timer_service.get_state().await?;
         let timer_paused_event = Paused::new(
-            state.active_task_id(),
+            state.active_entity_id(),
             state.phase(),
             state.remaining_seconds(),
             1, // version
@@ -69,16 +69,16 @@ mod tests {
                     remaining_seconds: 1500,
                     configuration: TimerConfiguration::default(),
                     session_count: 0,
-                    active_task: Some(TaskId::new()),
-                    task_session_count: 0,
+                    active_entity: Some(TaskId::new().to_string()),
+                    entity_session_count: 0,
                 },
                 TimerStatus::Paused => TimerState::Paused {
                     paused_from: Box::new(TimerState::Working {
                         remaining_seconds: 1500,
                         configuration: TimerConfiguration::default(),
                         session_count: 0,
-                        active_task: Some(TaskId::new()),
-                        task_session_count: 0,
+                        active_entity: Some(TaskId::new().to_string()),
+                        entity_session_count: 0,
                     }),
                     remaining_seconds: 1500,
                 },
@@ -94,13 +94,13 @@ mod tests {
     impl TimerService for MockTimerService {
         async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
             let state = self.state.read().unwrap();
-            if let TimerState::Idle { configuration, session_count, active_task } = &*state {
+            if let TimerState::Idle { configuration, session_count, active_entity } = &*state {
                 let new_state = TimerState::Working {
                     remaining_seconds: configuration.get_phase_duration_seconds(Phase::Work),
                     configuration: configuration.clone(),
                     session_count: *session_count,
-                    active_task: *active_task,
-                    task_session_count: 0,
+                    active_entity: active_entity.clone(),
+                    entity_session_count: 0,
                 };
                 drop(state);
                 *self.state.write().unwrap() = new_state;
@@ -109,14 +109,14 @@ mod tests {
         }
         
         async fn stop_timer(&self) -> Result<()> {
-            let state = self.state.read().unwrap();
-            let config = state.configuration().clone();
-            let active_task = state.active_task();
-            drop(state);
+            let (config, active_entity) = {
+                let state = self.state.read().unwrap();
+                (state.configuration().clone(), state.active_entity().map(|s| s.to_string()))
+            };
             *self.state.write().unwrap() = TimerState::Idle {
                 configuration: config,
                 session_count: 0,
-                active_task,
+                active_entity,
             };
             Ok(())
         }
@@ -148,8 +148,8 @@ mod tests {
                 remaining_seconds: 1500,
                 configuration: TimerConfiguration::default(),
                 session_count: 0,
-                active_task: task.map(|t| t.id()),
-                task_session_count: 0,
+                active_entity: task.map(|t| t.id().to_string()),
+                entity_session_count: 0,
             };
             Ok(())
         }
@@ -157,7 +157,7 @@ mod tests {
         async fn skip_to_next_phase(&self, task: Option<&domain::Task>) -> Result<(Phase, Phase)> {
             let mut state = self.state.write().unwrap();
             let old_phase = state.phase();
-            let task_id = task.map(|t| t.id());
+            let task_id = task.map(|t| t.id().to_string());
             
             // Transition to next phase based on current phase
             let new_phase = match old_phase {
@@ -171,22 +171,22 @@ mod tests {
                     remaining_seconds: 1500,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count() + 1,
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::ShortBreak => TimerState::ShortBreak {
                     remaining_seconds: 300,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::LongBreak => TimerState::LongBreak {
                     remaining_seconds: 900,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
             };
             
@@ -203,7 +203,7 @@ mod tests {
                 let new_state = TimerState::Idle {
                     configuration: configuration.clone(),
                     session_count: *session_count,
-                    active_task: Some(task_id),
+                    active_entity: Some(task_id.to_string()),
                 };
                 drop(state);
                 *self.state.write().unwrap() = new_state;

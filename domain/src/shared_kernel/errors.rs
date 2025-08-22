@@ -56,4 +56,25 @@ impl From<crate::AudioError> for Error {
     }
 }
 
+impl From<crate::timer::Error> for Error {
+    fn from(timer_error: crate::timer::Error) -> Self {
+        match timer_error {
+            crate::timer::Error::InvalidStateTransition { from, to } => {
+                Error::InvalidStateTransition { from, to }
+            }
+            crate::timer::Error::NoActiveEntity => {
+                Error::ConfigurationError {
+                    message: "Timer requires an active entity to start".to_string(),
+                }
+            }
+            crate::timer::Error::InvalidConfiguration(msg) => {
+                Error::ConfigurationError { message: msg }
+            }
+            crate::timer::Error::InvalidOperation(msg) => {
+                Error::ConfigurationError { message: msg }
+            }
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, Error>;

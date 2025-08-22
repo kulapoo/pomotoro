@@ -1,4 +1,4 @@
-use crate::{Result, Error, Phase, TaskId};
+use super::{Phase, Error, Result};
 use super::state_machine::TimerState;
 
 /// Result of a state transition
@@ -21,12 +21,9 @@ impl StateTransitions {
     /// Start the timer from idle state
     pub fn start(state: TimerState) -> Result<TransitionResult> {
         match state {
-            TimerState::Idle { configuration, session_count, active_task } => {
-                if active_task.is_none() {
-                    return Err(Error::InvalidStateTransition {
-                        from: "Stopped".to_string(),
-                        to: "Working (no task)".to_string(),
-                    });
+            TimerState::Idle { configuration, session_count, active_entity } => {
+                if active_entity.is_none() {
+                    return Err(Error::NoActiveEntity);
                 }
                 
                 let remaining_seconds = configuration.get_phase_duration_seconds(Phase::Work);
@@ -36,8 +33,8 @@ impl StateTransitions {
                         remaining_seconds,
                         configuration,
                         session_count,
-                        active_task,
-                        task_session_count: 0,
+                        active_entity,
+                        entity_session_count: 0,
                     },
                     completed_phase: None,
                     work_session_completed: false,
@@ -104,7 +101,7 @@ impl StateTransitions {
     /// Reset the timer to idle
     pub fn reset(state: TimerState) -> Result<TransitionResult> {
         let configuration = state.configuration().clone();
-        let active_task = state.active_task();
+        let active_entity = state.active_entity().map(|s| s.to_string());
         let session_count = match &state {
             // Preserve session count when resetting from break
             TimerState::ShortBreak { session_count, .. } |
@@ -117,7 +114,7 @@ impl StateTransitions {
             new_state: TimerState::Idle {
                 configuration,
                 session_count,
-                active_task,
+                active_entity,
             },
             completed_phase: None,
             work_session_completed: false,
@@ -128,9 +125,9 @@ impl StateTransitions {
     /// Transition to the next phase when current phase completes
     pub fn complete_phase(state: TimerState) -> Result<TransitionResult> {
         match state {
-            TimerState::Working { configuration, session_count, active_task, task_session_count, .. } => {
+            TimerState::Working { configuration, session_count, active_entity, entity_session_count, .. } => {
                 let new_session_count = session_count + 1;
-                let new_task_session_count = task_session_count + 1;
+                let new_entity_session_count = entity_session_count + 1;
                 
                 // Determine next phase based on session count
                 let sessions_until_long = configuration.sessions_until_long_break as u32;
@@ -142,8 +139,8 @@ impl StateTransitions {
                             remaining_seconds,
                             configuration,
                             session_count: new_session_count,
-                            active_task,
-                            task_session_count: new_task_session_count,
+                            active_entity,
+                            entity_session_count: new_entity_session_count,
                         },
                         true,
                     )
@@ -155,8 +152,8 @@ impl StateTransitions {
                             remaining_seconds,
                             configuration,
                             session_count: new_session_count,
-                            active_task,
-                            task_session_count: new_task_session_count,
+                            active_entity,
+                            entity_session_count: new_entity_session_count,
                         },
                         false,
                     )
@@ -169,7 +166,7 @@ impl StateTransitions {
                     cycle_completed,
                 })
             }
-            TimerState::ShortBreak { configuration, session_count, active_task, task_session_count, .. } => {
+            TimerState::ShortBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
                 // Return to work
                 let remaining_seconds = configuration.get_phase_duration_seconds(Phase::Work);
                 
@@ -178,15 +175,15 @@ impl StateTransitions {
                         remaining_seconds,
                         configuration,
                         session_count,
-                        active_task,
-                        task_session_count, // Preserve task sessions when returning from break
+                        active_entity,
+                        entity_session_count, // Preserve entity sessions when returning from break
                     },
                     completed_phase: Some(Phase::ShortBreak),
                     work_session_completed: false,
                     cycle_completed: false,
                 })
             }
-            TimerState::LongBreak { configuration, session_count, active_task, task_session_count, .. } => {
+            TimerState::LongBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
                 // Return to work, potentially reset session count
                 let remaining_seconds = configuration.get_phase_duration_seconds(Phase::Work);
                 let reset_sessions = session_count >= configuration.sessions_until_long_break as u32;
@@ -196,8 +193,8 @@ impl StateTransitions {
                         remaining_seconds,
                         configuration,
                         session_count: if reset_sessions { 0 } else { session_count },
-                        active_task,
-                        task_session_count, // Preserve task sessions when returning from break
+                        active_entity,
+                        entity_session_count, // Preserve entity sessions when returning from break
                     },
                     completed_phase: Some(Phase::LongBreak),
                     work_session_completed: false,
@@ -250,15 +247,15 @@ impl StateTransitions {
         Ok((state, phase_complete))
     }
     
-    /// Switch the active task (only allowed in idle state)
-    pub fn switch_task(state: TimerState, new_task: Option<TaskId>) -> Result<TransitionResult> {
+    /// Switch the active entity (only allowed in idle state)
+    pub fn switch_entity(state: TimerState, new_entity: Option<String>) -> Result<TransitionResult> {
         match state {
             TimerState::Idle { configuration, session_count, .. } => {
                 Ok(TransitionResult {
                     new_state: TimerState::Idle {
                         configuration,
                         session_count,
-                        active_task: new_task,
+                        active_entity: new_entity,
                     },
                     completed_phase: None,
                     work_session_completed: false,
@@ -267,7 +264,7 @@ impl StateTransitions {
             }
             _ => Err(Error::InvalidStateTransition {
                 from: format!("{:?}", state),
-                to: "SwitchTask".to_string(),
+                to: "SwitchEntity".to_string(),
             }),
         }
     }
@@ -275,7 +272,7 @@ impl StateTransitions {
     /// Check if a transition is valid from the current state
     pub fn can_transition(from: &TimerState, transition: TransitionType) -> bool {
         match (from, transition) {
-            (TimerState::Idle { active_task, .. }, TransitionType::Start) => active_task.is_some(),
+            (TimerState::Idle { active_entity, .. }, TransitionType::Start) => active_entity.is_some(),
             (TimerState::Idle { .. }, TransitionType::Reset) => true,
             (TimerState::Idle { .. }, TransitionType::SwitchTask) => true,
             
@@ -318,19 +315,19 @@ pub enum TransitionType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{TaskId, TimerConfiguration};
+    use crate::TimerConfiguration;
     
-    fn create_task_id() -> TaskId {
-        TaskId::new()
+    fn create_entity_id() -> String {
+        uuid::Uuid::new_v4().to_string()
     }
     
     #[test]
     fn should_start_timer_from_idle() {
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         let state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(task_id),
+            active_entity: Some(entity_id),
         };
         
         let result = StateTransitions::start(state).unwrap();
@@ -339,11 +336,11 @@ mod tests {
     }
     
     #[test]
-    fn should_not_start_without_task() {
+    fn should_not_start_without_entity() {
         let state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let result = StateTransitions::start(state);
@@ -356,8 +353,8 @@ mod tests {
             remaining_seconds: 100,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         let result = StateTransitions::pause(state).unwrap();
@@ -370,8 +367,8 @@ mod tests {
             remaining_seconds: 100,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         let paused = TimerState::Paused {
@@ -389,8 +386,8 @@ mod tests {
             remaining_seconds: 0,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         let result = StateTransitions::complete_phase(state).unwrap();
@@ -409,8 +406,8 @@ mod tests {
             remaining_seconds: 0,
             configuration: config,
             session_count: 1, // Will be 2 after completion
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         let result = StateTransitions::complete_phase(state).unwrap();
@@ -424,8 +421,8 @@ mod tests {
             remaining_seconds: 2,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         let (new_state, complete) = StateTransitions::tick(state).unwrap();
@@ -442,7 +439,7 @@ mod tests {
         let idle = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
+            active_entity: Some(create_entity_id()),
         };
         
         assert!(StateTransitions::can_transition(&idle, TransitionType::Start));
@@ -452,8 +449,8 @@ mod tests {
             remaining_seconds: 100,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(create_task_id()),
-            task_session_count: 0,
+            active_entity: Some(create_entity_id()),
+            entity_session_count: 0,
         };
         
         assert!(StateTransitions::can_transition(&working, TransitionType::Pause));

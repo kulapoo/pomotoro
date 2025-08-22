@@ -120,12 +120,12 @@ async fn test_e2e_task_switching_workflow() -> Result<(), Box<dyn std::error::Er
     // Start with work task
     timer_context.timer_service.switch_task(work_task.id, Some(&work_task)).await?;
     let state1 = timer_context.timer_service.get_state().await?;
-    assert_eq!(state1.active_task_id(), Some(work_task.id));
+    assert_eq!(state1.active_entity_id(), Some(work_task.id.to_string()));
 
     // Switch to study task
     timer_context.timer_service.switch_task(study_task.id, Some(&study_task)).await?;
     let state2 = timer_context.timer_service.get_state().await?;
-    assert_eq!(state2.active_task_id(), Some(study_task.id));
+    assert_eq!(state2.active_entity_id(), Some(study_task.id.to_string()));
 
     // Verify task switching preserves timer state structure
     assert_eq!(state2.phase(), state1.phase());

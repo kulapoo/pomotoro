@@ -1,4 +1,4 @@
-use domain::TimerService;
+use super::TimerService;
 use domain::{Result, TimerState};
 use std::sync::Arc;
 
@@ -45,7 +45,7 @@ mod tests {
                 state: Arc::new(RwLock::new(TimerState::Idle {
                     configuration: TimerConfiguration::default(),
                     session_count: 0,
-                    active_task: None,
+                    active_entity: None,
                 })),
                 load_called: Arc::new(RwLock::new(false)),
             }
@@ -56,7 +56,7 @@ mod tests {
                 state: Arc::new(RwLock::new(TimerState::Idle {
                     configuration: TimerConfiguration::default(),
                     session_count: 0,
-                    active_task: Some(task_id),
+                    active_entity: Some(task_id.to_string()),
                 })),
                 load_called: Arc::new(RwLock::new(false)),
             }
@@ -67,13 +67,13 @@ mod tests {
     impl TimerService for MockTimerService {
         async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
             let mut state = self.state.write().unwrap();
-            if let TimerState::Idle { configuration, session_count, active_task } = &*state {
+            if let TimerState::Idle { configuration, session_count, active_entity } = &*state {
                 *state = TimerState::Working {
                     remaining_seconds: configuration.get_phase_duration_seconds(Phase::Work),
                     configuration: configuration.clone(),
                     session_count: *session_count,
-                    active_task: *active_task,
-                    task_session_count: 0,
+                    active_entity: active_entity.clone(),
+                    entity_session_count: 0,
                 };
             }
             Ok(())
@@ -84,7 +84,7 @@ mod tests {
             *state = TimerState::Idle {
                 configuration: TimerConfiguration::default(),
                 session_count: 0,
-                active_task: None,
+                active_entity: None,
             };
             Ok(())
         }
@@ -92,14 +92,14 @@ mod tests {
         async fn toggle_pause(&self) -> Result<TimerStatus> {
             let mut state = self.state.write().unwrap();
             match &*state {
-                TimerState::Working { remaining_seconds, configuration, session_count, active_task, task_session_count } => {
+                TimerState::Working { remaining_seconds, configuration, session_count, active_entity, entity_session_count } => {
                     *state = TimerState::Paused {
                         paused_from: Box::new(TimerState::Working {
                             remaining_seconds: *remaining_seconds,
                             configuration: configuration.clone(),
                             session_count: *session_count,
-                            active_task: *active_task,
-                            task_session_count: *task_session_count,
+                            active_entity: active_entity.clone(),
+                            entity_session_count: *entity_session_count,
                         }),
                         remaining_seconds: *remaining_seconds,
                     };
@@ -118,7 +118,7 @@ mod tests {
             *state = TimerState::Idle {
                 configuration: TimerConfiguration::default(),
                 session_count: 0,
-                active_task: None,
+                active_entity: None,
             };
             Ok(())
         }
@@ -140,14 +140,14 @@ mod tests {
         async fn switch_task(&self, task_id: TaskId, _task: Option<&domain::Task>) -> Result<()> {
             let mut state = self.state.write().unwrap();
             match &mut *state {
-                TimerState::Idle { active_task, .. } => *active_task = Some(task_id),
-                TimerState::Working { active_task, .. } => *active_task = Some(task_id),
-                TimerState::ShortBreak { active_task, .. } => *active_task = Some(task_id),
-                TimerState::LongBreak { active_task, .. } => *active_task = Some(task_id),
+                TimerState::Idle { active_entity, .. } => *active_entity = Some(task_id.to_string()),
+                TimerState::Working { active_entity, .. } => *active_entity = Some(task_id.to_string()),
+                TimerState::ShortBreak { active_entity, .. } => *active_entity = Some(task_id.to_string()),
+                TimerState::LongBreak { active_entity, .. } => *active_entity = Some(task_id.to_string()),
                 TimerState::Paused { paused_from, .. } => {
                     // Update the paused state as well
                     match paused_from.as_mut() {
-                        TimerState::Working { active_task, .. } => *active_task = Some(task_id),
+                        TimerState::Working { active_entity, .. } => *active_entity = Some(task_id.to_string()),
                         _ => {}
                     }
                 }

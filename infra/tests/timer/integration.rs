@@ -11,7 +11,7 @@ async fn test_timer_initial_state() -> Result<(), Box<dyn std::error::Error>> {
     TimerTestAssertions::assert_is_work_phase(&state);
     TimerTestAssertions::assert_is_stopped(&state);
     TimerTestAssertions::assert_session_count(&state, 0);
-    assert_eq!(state.task_session_count(), 0);
+    assert_eq!(state.session_count(), 0);
     assert_eq!(state.remaining_seconds(), 25 * 60);
     
     Ok(())
@@ -168,13 +168,13 @@ fn test_timer_state_builder() {
         .running()
         .work_phase()
         .with_session_count(2)
-        .with_task_session_count(1)
+        .with_entity_session_count(1)
         .build();
 
     TimerTestAssertions::assert_is_running(&state);
     TimerTestAssertions::assert_is_work_phase(&state);
     TimerTestAssertions::assert_session_count(&state, 2);
-    assert_eq!(state.task_session_count(), 1);
+    assert_eq!(state.entity_session_count(), 1);
     assert_eq!(state.remaining_seconds(), 25 * 60);
 }
 
@@ -216,14 +216,14 @@ async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::
     timer_service.force_complete_session().await.unwrap();
 
     let state_after_quick = timer_service.get_state().await?;
-    assert_eq!(state_after_quick.task_session_count(), 1);
+    assert_eq!(state_after_quick.entity_session_count(), 1);
 
     // Switch to medium task - should maintain independent tracking
     // First stop the timer to allow task switching
     timer_service.stop_timer().await?;
     timer_service.setup_with_task(&medium_task).await;
     let state_with_medium = timer_service.get_state().await?;
-    assert_eq!(state_with_medium.task_session_count(), 0); // Fresh start for medium task
+    assert_eq!(state_with_medium.entity_session_count(), 0); // Fresh start for medium task
     TimerTestAssertions::assert_has_active_task(&state_with_medium, medium_task_id);
 
     // Complete one session of medium task
@@ -232,14 +232,14 @@ async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::
     timer_service.force_complete_session().await.unwrap(); // Work -> Break (increments count)
 
     let state_medium_progress = timer_service.get_state().await?;
-    assert_eq!(state_medium_progress.task_session_count(), 1);
+    assert_eq!(state_medium_progress.entity_session_count(), 1);
 
     // Switch to long task - should also start fresh
     // First stop the timer to allow task switching
     timer_service.stop_timer().await?;
     timer_service.setup_with_task(&long_task).await;
     let state_with_long = timer_service.get_state().await?;
-    assert_eq!(state_with_long.task_session_count(), 0); // Independent tracking
+    assert_eq!(state_with_long.entity_session_count(), 0); // Independent tracking
     TimerTestAssertions::assert_has_active_task(&state_with_long, long_task_id);
     Ok(())
 }
@@ -307,7 +307,7 @@ async fn test_automatic_task_progression() -> Result<(), Box<dyn std::error::Err
     task_repo.update(task.clone()).await.unwrap();
 
     let state_after_session1 = timer_service.get_state().await?;
-    assert_eq!(state_after_session1.task_session_count(), 1);
+    assert_eq!(state_after_session1.entity_session_count(), 1);
     TimerTestAssertions::assert_has_active_task(&state_after_session1, task.id);
 
     // Complete second (final) session - should auto-complete task
@@ -320,7 +320,7 @@ async fn test_automatic_task_progression() -> Result<(), Box<dyn std::error::Err
     task_repo.update(task.clone()).await.unwrap();
 
     let state_after_completion = timer_service.get_state().await?;
-    assert_eq!(state_after_completion.task_session_count(), 2);
+    assert_eq!(state_after_completion.entity_session_count(), 2);
 
     // Task should be marked as completed in repository
     let completed_task = task_repo.get_by_id(task.id).await.unwrap().unwrap();

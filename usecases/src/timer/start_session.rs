@@ -33,9 +33,9 @@ pub async fn start_session(
         // Switch to the task with its configuration using proper mapper
         let _timer_config = task_config_to_timer_config(&task.config)?;
         // Use state transitions to switch task and update configuration
-        let result = domain::timer::transitions::StateTransitions::switch_task(
+        let result = domain::timer::transitions::StateTransitions::switch_entity(
             timer_state.clone(),
-            Some(task_id)
+            Some(task_id.to_string())
         )?;
         *timer_state = result.new_state;
         
@@ -44,7 +44,7 @@ pub async fn start_session(
     }
     
     // Ensure we have an active task
-    if timer_state.active_task_id().is_none() {
+    if timer_state.active_entity_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "start_session".to_string(),
@@ -92,7 +92,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let cmd = StartSessionCmd {
@@ -106,7 +106,7 @@ mod tests {
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Running);
-        assert_eq!(timer_state.active_task_id(), Some(task.id));
+        assert_eq!(timer_state.active_entity_id(), Some(task.id.to_string()));
     }
 
     #[tokio::test]
@@ -115,7 +115,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(task.id),
+            active_entity: Some(task.id.to_string()),
         };
         
         let cmd = StartSessionCmd {
@@ -129,7 +129,7 @@ mod tests {
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Running);
-        assert_eq!(timer_state.active_task_id(), Some(task.id));
+        assert_eq!(timer_state.active_entity_id(), Some(task.id.to_string()));
     }
 
     #[tokio::test]
@@ -138,7 +138,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let cmd = StartSessionCmd {
@@ -160,7 +160,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let cmd = StartSessionCmd {
@@ -182,7 +182,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
@@ -210,8 +210,8 @@ mod tests {
             remaining_seconds: 1500,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(task.id),
-            task_session_count: 0,
+            active_entity: Some(task.id.to_string()),
+            entity_session_count: 0,
         };
         
         let cmd = StartSessionCmd {

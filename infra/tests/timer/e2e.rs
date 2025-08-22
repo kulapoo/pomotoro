@@ -100,7 +100,7 @@ async fn test_e2e_timer_persistence() -> Result<(), Box<dyn std::error::Error>> 
     
     assert_eq!(resumed_state.phase(), paused_state.phase());
     assert_eq!(resumed_state.session_count(), paused_state.session_count());
-    assert_eq!(resumed_state.active_task_id(), paused_state.active_task_id());
+    assert_eq!(resumed_state.active_entity_id(), paused_state.active_entity_id());
     // Remaining time should be close (within tolerance for test timing)
     let time_diff = (resumed_state.remaining_seconds() as i64 - paused_state.remaining_seconds() as i64).abs();
     assert!(time_diff <= 1, "Time difference too large: {time_diff}");

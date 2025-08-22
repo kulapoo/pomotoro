@@ -15,7 +15,7 @@ pub fn TimerPage() -> impl IntoView {
                 <div class="task-label">"Current Task"</div>
                 <div class="task-title">{move || {
                     let state = page_state.timer_state.get();
-                    state.active_task().map(|_| "Active Task".to_string()).unwrap_or_else(|| "No active task".to_string())
+                    state.active_entity_id().map(|_| "Active Task".to_string()).unwrap_or_else(|| "No active task".to_string())
                 }}</div>
                 <div class="task-progress">{move || TimerViewModel::get_session_display(&page_state.timer_state.get())}</div>
             </div>

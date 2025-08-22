@@ -7,8 +7,8 @@ pub struct TimerStateBuilder {
     status: TimerStatus,
     remaining_seconds: u32,
     session_count: u32,
-    task_session_count: u32,
-    active_task: Option<TaskId>,
+    entity_session_count: u32,
+    active_entity: Option<TaskId>,
     configuration: TimerConfiguration,
 }
 
@@ -20,8 +20,8 @@ impl TimerStateBuilder {
             status: TimerStatus::Idle,
             remaining_seconds: 0,
             session_count: 0,
-            task_session_count: 0,
-            active_task: None,
+            entity_session_count: 0,
+            active_entity: None,
             configuration: TimerConfiguration::default(),
         }
     }
@@ -46,13 +46,13 @@ impl TimerStateBuilder {
         self
     }
 
-    pub fn with_task_session_count(mut self, count: u32) -> Self {
-        self.task_session_count = count;
+    pub fn with_entity_session_count(mut self, count: u32) -> Self {
+        self.entity_session_count = count;
         self
     }
 
-    pub fn with_active_task(mut self, task_id: TaskId) -> Self {
-        self.active_task = Some(task_id);
+    pub fn with_active_entity(mut self, task_id: TaskId) -> Self {
+        self.active_entity = Some(task_id);
         self
     }
 
@@ -94,28 +94,28 @@ impl TimerStateBuilder {
             (TimerStatus::Idle, _) => TimerState::Idle {
                 configuration: self.configuration,
                 session_count: self.session_count,
-                active_task: self.active_task,
+                active_entity: self.active_entity.map(|id| id.to_string()),
             },
             (TimerStatus::Running, Phase::Work) => TimerState::Working {
                 remaining_seconds: self.remaining_seconds,
                 configuration: self.configuration,
                 session_count: self.session_count,
-                active_task: self.active_task,
-                task_session_count: self.task_session_count,
+                active_entity: self.active_entity.map(|id| id.to_string()),
+                entity_session_count: self.entity_session_count,
             },
             (TimerStatus::Running, Phase::ShortBreak) => TimerState::ShortBreak {
                 remaining_seconds: self.remaining_seconds,
                 configuration: self.configuration,
                 session_count: self.session_count,
-                active_task: self.active_task,
-                task_session_count: self.task_session_count,
+                active_entity: self.active_entity.map(|id| id.to_string()),
+                entity_session_count: self.entity_session_count,
             },
             (TimerStatus::Running, Phase::LongBreak) => TimerState::LongBreak {
                 remaining_seconds: self.remaining_seconds,
                 configuration: self.configuration,
                 session_count: self.session_count,
-                active_task: self.active_task,
-                task_session_count: self.task_session_count,
+                active_entity: self.active_entity.map(|id| id.to_string()),
+                entity_session_count: self.entity_session_count,
             },
             (TimerStatus::Paused, _) => {
                 let base_state = match self.phase {
@@ -123,22 +123,22 @@ impl TimerStateBuilder {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_task: self.active_task,
-                        task_session_count: self.task_session_count,
+                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        entity_session_count: self.entity_session_count,
                     },
                     Phase::ShortBreak => TimerState::ShortBreak {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_task: self.active_task,
-                        task_session_count: self.task_session_count,
+                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        entity_session_count: self.entity_session_count,
                     },
                     Phase::LongBreak => TimerState::LongBreak {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_task: self.active_task,
-                        task_session_count: self.task_session_count,
+                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        entity_session_count: self.entity_session_count,
                     },
                 };
                 TimerState::Paused {
@@ -149,7 +149,7 @@ impl TimerStateBuilder {
             _ => TimerState::Idle {
                 configuration: self.configuration,
                 session_count: self.session_count,
-                active_task: self.active_task,
+                active_entity: self.active_entity.map(|id| id.to_string()),
             },
         }
     }
@@ -182,7 +182,7 @@ impl TimerTestAssertions {
     }
 
     pub fn assert_has_active_task(state: &TimerState, task_id: TaskId) {
-        assert_eq!(state.active_task_id(), Some(task_id));
+        assert_eq!(state.active_entity_id(), Some(task_id.to_string()));
     }
 
     pub fn assert_session_count(state: &TimerState, expected: u32) {

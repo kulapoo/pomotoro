@@ -13,7 +13,7 @@ pub async fn pause_session(
         });
     }
     
-    if timer_state.active_task_id().is_none() {
+    if timer_state.active_entity_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "pause_session".to_string(),
@@ -35,7 +35,7 @@ pub async fn resume_session(
         });
     }
     
-    if timer_state.active_task_id().is_none() {
+    if timer_state.active_entity_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "resume_session".to_string(),
@@ -61,8 +61,8 @@ mod tests {
             remaining_seconds: 1500,
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(task_id),
-            task_session_count: 0,
+            active_entity: Some(task_id.to_string()),
+            entity_session_count: 0,
         };
         
         pause_session(&mut timer_state).await.unwrap();
@@ -76,7 +76,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: Some(task_id),
+            active_entity: Some(task_id.to_string()),
         };
         
         let result = pause_session(&mut timer_state).await;

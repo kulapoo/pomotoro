@@ -30,13 +30,12 @@ pub use session_flow_reset::SessionFlowReset;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::task::id::Id as TaskId;
-use crate::timer::Phase;
+    use crate::timer::Phase;
     use crate::Event;
     #[test]
     fn should_have_correct_event_types() {
-        let timer_started = Started::new(Some(TaskId::new()), Phase::Work, 1500, 1);
-        let timer_paused = Paused::new(Some(TaskId::new()), Phase::Work, 1200, 2);
+        let timer_started = Started::new(Some(uuid::Uuid::new_v4().to_string()), Phase::Work, 1500, 1);
+        let timer_paused = Paused::new(Some(uuid::Uuid::new_v4().to_string()), Phase::Work, 1200, 2);
         
         assert_eq!(timer_started.event_type(), "Started");
         assert_eq!(timer_paused.event_type(), "Paused");
@@ -46,7 +45,7 @@ use crate::timer::Phase;
     
     #[test]
     fn should_serialize_timer_started_event() {
-        let event = Started::new(Some(TaskId::new()), Phase::Work, 1500, 1);
+        let event = Started::new(Some(uuid::Uuid::new_v4().to_string()), Phase::Work, 1500, 1);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Started = serde_json::from_str(&serialized).unwrap();
@@ -57,7 +56,7 @@ use crate::timer::Phase;
     #[test]
     fn should_serialize_phase_completed_event() {
         let event = PhaseCompleted::new(
-            Some(TaskId::new()),
+            Some(uuid::Uuid::new_v4().to_string()),
             Phase::Work,
             Phase::ShortBreak,
             1,
@@ -73,10 +72,10 @@ use crate::timer::Phase;
 
     #[test]
     fn should_serialize_active_task_switched_event() {
-        let old_task_id = TaskId::new();
-        let new_task_id = TaskId::new();
+        let old_entity_id = uuid::Uuid::new_v4().to_string();
+        let new_entity_id = uuid::Uuid::new_v4().to_string();
         
-        let event = ActiveTaskSwitched::new(Some(old_task_id), Some(new_task_id), Phase::Work, 3);
+        let event = ActiveTaskSwitched::new(Some(old_entity_id), Some(new_entity_id), Phase::Work, 3);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: ActiveTaskSwitched = serde_json::from_str(&serialized).unwrap();

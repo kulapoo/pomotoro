@@ -1,5 +1,5 @@
 use domain::{TaskRepository, TaskId, Result, Error, EventPublisher};
-use domain::TimerService;
+use super::TimerService;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -75,13 +75,13 @@ mod tests {
     impl TimerService for MockTimerService {
         async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
             let state = self.state.read().unwrap();
-            if let TimerState::Idle { configuration, session_count, active_task } = &*state {
+            if let TimerState::Idle { configuration, session_count, active_entity } = &*state {
                 let new_state = TimerState::Working {
                     remaining_seconds: configuration.get_phase_duration_seconds(Phase::Work),
                     configuration: configuration.clone(),
                     session_count: *session_count,
-                    active_task: *active_task,
-                    task_session_count: 0,
+                    active_entity: active_entity.clone(),
+                    entity_session_count: 0,
                 };
                 drop(state);
                 *self.state.write().unwrap() = new_state;
@@ -92,12 +92,12 @@ mod tests {
         async fn stop_timer(&self) -> Result<()> {
             let state = self.state.read().unwrap();
             let config = state.configuration().clone();
-            let active_task = state.active_task();
+            let active_entity = state.active_entity_id();
             drop(state);
             *self.state.write().unwrap() = TimerState::Idle {
                 configuration: config,
                 session_count: 0,
-                active_task,
+                active_entity,
             };
             Ok(())
         }
@@ -129,8 +129,8 @@ mod tests {
                 remaining_seconds: 1500,
                 configuration: TimerConfiguration::default(),
                 session_count: 0,
-                active_task: task.map(|t| t.id()),
-                task_session_count: 0,
+                active_entity: task.map(|t| t.id().to_string()),
+                entity_session_count: 0,
             };
             Ok(())
         }
@@ -138,7 +138,7 @@ mod tests {
         async fn skip_to_next_phase(&self, task: Option<&domain::Task>) -> Result<(Phase, Phase)> {
             let mut state = self.state.write().unwrap();
             let old_phase = state.phase();
-            let task_id = task.map(|t| t.id());
+            let task_id = task.map(|t| t.id().to_string());
             
             // Transition to next phase based on current phase
             let new_phase = match old_phase {
@@ -152,22 +152,22 @@ mod tests {
                     remaining_seconds: 1500,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count() + 1,
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::ShortBreak => TimerState::ShortBreak {
                     remaining_seconds: 300,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
                 Phase::LongBreak => TimerState::LongBreak {
                     remaining_seconds: 900,
                     configuration: TimerConfiguration::default(),
                     session_count: state.session_count(),
-                    active_task: task_id,
-                    task_session_count: 0,
+                    active_entity: task_id.map(|id| id.to_string()),
+                    entity_session_count: 0,
                 },
             };
             
@@ -184,7 +184,7 @@ mod tests {
                 let new_state = TimerState::Idle {
                     configuration: configuration.clone(),
                     session_count: *session_count,
-                    active_task: Some(task_id),
+                    active_entity: Some(task_id.to_string()),
                 };
                 drop(state);
                 *self.state.write().unwrap() = new_state;
@@ -224,7 +224,7 @@ mod tests {
         switch_timer_task(&timer_service, &task_repo, &event_publisher, cmd).await.unwrap();
         
         let state = timer_service.get_state().await.unwrap();
-        assert_eq!(state.active_task_id(), Some(task.id));
+        assert_eq!(state.active_entity_id(), Some(task.id.to_string()));
     }
     
     #[tokio::test]

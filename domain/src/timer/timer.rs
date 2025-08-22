@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
-use crate::{Result, Error, TimerConfiguration, TaskId, EventPublisher};
+use crate::{TimerConfiguration, EventPublisher};
 use super::{
+    Error, Result,
     state_machine::TimerState,
     transitions::{StateTransitions, TransitionResult, TransitionType},
     Phase,
@@ -123,7 +124,7 @@ impl Timer {
         if let Some(publisher) = &self.event_publisher {
             let phase = self.get_current_phase();
             let event = Tick::new(
-                self.state.active_task_id(),
+                self.state.active_entity_id(),
                 phase,
                 self.state.remaining_seconds(),
                 1,
@@ -140,16 +141,16 @@ impl Timer {
         Ok(phase_complete)
     }
     
-    /// Set the active task
-    pub fn set_active_task(&mut self, task_id: Option<TaskId>) -> Result<()> {
+    /// Set the active entity
+    pub fn set_active_entity(&mut self, entity_id: Option<String>) -> Result<()> {
         if !StateTransitions::can_transition(&self.state, TransitionType::SwitchTask) {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
-                to: "SetTask".to_string(),
+                to: "SetEntity".to_string(),
             });
         }
         
-        let result = StateTransitions::switch_task(self.state.clone(), task_id)?;
+        let result = StateTransitions::switch_entity(self.state.clone(), entity_id)?;
         self.apply_transition(result)
     }
     
@@ -157,11 +158,11 @@ impl Timer {
     pub fn update_configuration(&mut self, configuration: TimerConfiguration) -> Result<()> {
         // Only allow configuration updates when idle
         match &self.state {
-            TimerState::Idle { session_count, active_task, .. } => {
+            TimerState::Idle { session_count, active_entity, .. } => {
                 self.state = TimerState::Idle {
                     configuration,
                     session_count: *session_count,
-                    active_task: *active_task,
+                    active_entity: active_entity.clone(),
                 };
                 Ok(())
             }
@@ -287,7 +288,7 @@ impl Timer {
             match (&old_state, &self.state) {
                 (TimerState::Idle { .. }, TimerState::Working { .. }) => {
                     let event = Started::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         Phase::Work,
                         self.state.configuration().work_duration.as_secs() as u32,
                         1,
@@ -295,7 +296,7 @@ impl Timer {
                     publisher.publish(Box::new(event));
                     
                     let work_event = WorkSessionStarted::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         self.state.configuration().work_duration.as_secs() as u32,
                         self.state.session_count(),
                         1,
@@ -306,7 +307,7 @@ impl Timer {
                 (_, TimerState::Paused { .. }) => {
                     let phase = self.get_current_phase();
                     let event = Paused::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         phase,
                         self.state.remaining_seconds(),
                         1,
@@ -317,7 +318,7 @@ impl Timer {
                     // Resume event - we use Started event for compatibility
                     let phase = self.get_current_phase();
                     let event = Started::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         phase,
                         self.state.remaining_seconds(),
                         1,
@@ -325,7 +326,7 @@ impl Timer {
                     publisher.publish(Box::new(event));
                 }
                 (_, TimerState::Idle { .. }) => {
-                    let event = Reset::new(self.state.active_task_id(), Phase::Work, 1);
+                    let event = Reset::new(self.state.active_entity_id(), Phase::Work, 1);
                     publisher.publish(Box::new(event));
                 }
                 (TimerState::Working { .. }, TimerState::ShortBreak { .. }) |
@@ -338,7 +339,7 @@ impl Timer {
                     
                     if result.completed_phase.is_some() {
                         let event = PhaseCompleted::new(
-                            self.state.active_task_id(),
+                            self.state.active_entity_id(),
                             Phase::Work,
                             to_phase,
                             self.state.session_count(),
@@ -348,7 +349,7 @@ impl Timer {
                         publisher.publish(Box::new(event));
                     } else {
                         let event = PhaseSkipped::new(
-                            self.state.active_task_id(),
+                            self.state.active_entity_id(),
                             Phase::Work,
                             to_phase,
                             1,
@@ -358,7 +359,7 @@ impl Timer {
                     
                     if result.work_session_completed {
                         let work_complete = WorkSessionCompleted::new(
-                            self.state.active_task_id(),
+                            self.state.active_entity_id(),
                             self.state.configuration().work_duration.as_secs() as u32,
                             self.state.session_count(),
                             1, // task_session_count - simplified for now
@@ -373,7 +374,7 @@ impl Timer {
                         self.state.configuration().long_break_duration.as_secs() as u32
                     };
                     let break_event = BreakSessionStarted::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         to_phase,
                         duration,
                         1,
@@ -390,7 +391,7 @@ impl Timer {
                     
                     if result.completed_phase.is_some() {
                         let event = PhaseCompleted::new(
-                            self.state.active_task_id(),
+                            self.state.active_entity_id(),
                             from_phase,
                             Phase::Work,
                             self.state.session_count(),
@@ -400,7 +401,7 @@ impl Timer {
                         publisher.publish(Box::new(event));
                     } else {
                         let event = PhaseSkipped::new(
-                            self.state.active_task_id(),
+                            self.state.active_entity_id(),
                             from_phase,
                             Phase::Work,
                             1,
@@ -414,7 +415,7 @@ impl Timer {
                         self.state.configuration().long_break_duration.as_secs() as u32
                     };
                     let break_complete = BreakSessionCompleted::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         from_phase,
                         duration,
                         1,
@@ -422,7 +423,7 @@ impl Timer {
                     publisher.publish(Box::new(break_complete));
                     
                     let work_event = WorkSessionStarted::new(
-                        self.state.active_task_id(),
+                        self.state.active_entity_id(),
                         self.state.configuration().work_duration.as_secs() as u32,
                         self.state.session_count(),
                         1,
@@ -433,11 +434,11 @@ impl Timer {
                 _ => {}
             }
             
-            // Handle task switch events
-            if old_state.active_task_id() != self.state.active_task_id() {
+            // Handle entity switch events
+            if old_state.active_entity_id() != self.state.active_entity_id() {
                 let event = ActiveTaskSwitched::new(
-                    old_state.active_task_id(),
-                    self.state.active_task_id(),
+                    old_state.active_entity_id(),
+                    self.state.active_entity_id(),
                     self.get_current_phase(),
                     1,
                 );
@@ -481,11 +482,10 @@ impl Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TaskId;
     use crate::shared_kernel::MockEventPublisher;
     
-    fn create_task_id() -> TaskId {
-        TaskId::new()
+    fn create_entity_id() -> String {
+        uuid::Uuid::new_v4().to_string()
     }
     
     #[test]
@@ -497,11 +497,11 @@ mod tests {
     }
     
     #[test]
-    fn should_start_timer_with_task() {
+    fn should_start_timer_with_entity() {
         let mut timer = Timer::default();
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         
-        timer.set_active_task(Some(task_id)).unwrap();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         assert!(timer.is_running());
@@ -509,7 +509,7 @@ mod tests {
     }
     
     #[test]
-    fn should_not_start_without_task() {
+    fn should_not_start_without_entity() {
         let mut timer = Timer::default();
         let result = timer.start();
         assert!(result.is_err());
@@ -518,9 +518,9 @@ mod tests {
     #[test]
     fn should_pause_and_resume() {
         let mut timer = Timer::default();
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         
-        timer.set_active_task(Some(task_id)).unwrap();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         let initial_time = timer.remaining_seconds();
@@ -535,9 +535,9 @@ mod tests {
     #[test]
     fn should_process_ticks() {
         let mut timer = Timer::default();
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         
-        timer.set_active_task(Some(task_id)).unwrap();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         let initial_time = timer.remaining_seconds();
@@ -549,9 +549,9 @@ mod tests {
     #[test]
     fn should_skip_phase() {
         let mut timer = Timer::default();
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         
-        timer.set_active_task(Some(task_id)).unwrap();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         timer.skip_phase().unwrap();
@@ -565,8 +565,8 @@ mod tests {
         let mut timer = Timer::default()
             .with_event_publisher(Box::new(publisher));
         
-        let task_id = create_task_id();
-        timer.set_active_task(Some(task_id)).unwrap();
+        let entity_id = create_entity_id();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         // Events would be published if we could access the publisher
@@ -580,8 +580,8 @@ mod tests {
         assert_eq!(timer.format_time(), "25:00");
         
         let mut timer = Timer::default();
-        let task_id = create_task_id();
-        timer.set_active_task(Some(task_id)).unwrap();
+        let entity_id = create_entity_id();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         assert_eq!(timer.format_time(), "25:00");
     }
@@ -589,9 +589,9 @@ mod tests {
     #[test]
     fn should_calculate_progress() {
         let mut timer = Timer::default();
-        let task_id = create_task_id();
+        let entity_id = create_entity_id();
         
-        timer.set_active_task(Some(task_id)).unwrap();
+        timer.set_active_entity(Some(entity_id)).unwrap();
         timer.start().unwrap();
         
         // Initially at 0% (just started)

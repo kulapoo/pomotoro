@@ -21,7 +21,7 @@ pub struct TaskResource {
 impl TaskResource {
     pub fn new() -> Self {
         let (tasks, set_tasks) = signal(Vec::<Task>::new());
-        let (active_task, set_active_task) = signal(None::<Task>);
+        let (active_entity, set_active_task) = signal(None::<Task>);
 
         let set_tasks_clone = set_tasks;
         let set_active_task_clone = set_active_task;
@@ -46,18 +46,22 @@ impl TaskResource {
             match from_value::<TimerState>(result) {
                 Ok(timer_state) => {
                     // If there's an active task ID, fetch the actual task
-                    if let Some(task_id) = timer_state.active_task() {
-                        let task_args = to_value(&task_id).unwrap();
-                        let task_result = invoke(events::task::GET, task_args).await;
-                        match from_value::<Task>(task_result) {
-                            Ok(task) => {
-                                web_sys::console::log_1(&format!("Active task: {}", &task.name).into());
-                                set_active_task_clone.set(Some(task));
+                    if let Some(entity_id_str) = timer_state.active_entity_id() {
+                        if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
+                            let task_args = to_value(&task_id).unwrap();
+                            let task_result = invoke(events::task::GET, task_args).await;
+                            match from_value::<Task>(task_result) {
+                                Ok(task) => {
+                                    web_sys::console::log_1(&format!("Active task: {}", &task.name).into());
+                                    set_active_task_clone.set(Some(task));
+                                }
+                                Err(e) => {
+                                    web_sys::console::error_1(&format!("Failed to load active task: {e}").into());
+                                    set_active_task_clone.set(None);
+                                }
                             }
-                            Err(e) => {
-                                web_sys::console::error_1(&format!("Failed to load active task: {e}").into());
-                                set_active_task_clone.set(None);
-                            }
+                        } else {
+                            set_active_task_clone.set(None);
                         }
                     } else {
                         set_active_task_clone.set(None);
@@ -69,7 +73,7 @@ impl TaskResource {
             }
         });
 
-        Self { tasks, active_task, set_tasks, set_active_task }
+        Self { tasks, active_task: active_entity, set_tasks, set_active_task }
     }
 
     pub async fn switch_task(&self, task_id: TaskId) -> Result<(), String> {
@@ -79,10 +83,14 @@ impl TaskResource {
         match from_value::<TimerState>(result) {
             Ok(timer_state) => {
                 // If there's an active task ID, find the corresponding task
-                if let Some(task_id) = timer_state.active_task() {
-                    let tasks = self.tasks.get();
-                    let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
-                    self.set_active_task.set(active_task);
+                if let Some(entity_id_str) = timer_state.active_entity_id() {
+                    if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
+                        let tasks = self.tasks.get();
+                        let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
+                        self.set_active_task.set(active_task);
+                    } else {
+                        self.set_active_task.set(None);
+                    }
                 } else {
                     self.set_active_task.set(None);
                 }
@@ -115,10 +123,14 @@ impl TaskResource {
                 Ok(timer_state) => {
                     web_sys::console::log_1(&"Refetched timer state".into());
                     // If there's an active task ID, find the corresponding task
-                    if let Some(task_id) = timer_state.active_task() {
-                        let tasks = tasks.get_untracked();
-                        let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
-                        set_active_task.set(active_task);
+                    if let Some(entity_id_str) = timer_state.active_entity_id() {
+                        if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
+                            let tasks = tasks.get_untracked();
+                            let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
+                            set_active_task.set(active_task);
+                        } else {
+                            set_active_task.set(None);
+                        }
                     } else {
                         set_active_task.set(None);
                     }

@@ -7,7 +7,7 @@ pub async fn reset_session(
     timer_state: &mut TimerState,
 ) -> Result<()> {
     // Ensure we have an active task
-    if timer_state.active_task_id().is_none() {
+    if timer_state.active_entity_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "reset_session".to_string(),
@@ -31,7 +31,7 @@ pub async fn reset_full_session(
     timer_state: &mut TimerState,
 ) -> Result<()> {
     // Ensure we have an active task
-    if timer_state.active_task_id().is_none() {
+    if timer_state.active_entity_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "reset_full_session".to_string(),
@@ -64,7 +64,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: Some(task_id),
+            active_entity: Some(task_id.to_string()),
         };
         
         reset_session(&mut timer_state).await.unwrap();
@@ -79,8 +79,8 @@ mod tests {
             remaining_seconds: 1500,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: Some(task_id),
-            task_session_count: 0,
+            active_entity: Some(task_id.to_string()),
+            entity_session_count: 0,
         };
         
         let result = reset_session(&mut timer_state).await;
@@ -93,7 +93,7 @@ mod tests {
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
-            active_task: None,
+            active_entity: None,
         };
         
         let result = reset_session(&mut timer_state).await;

@@ -22,7 +22,7 @@ pub async fn complete_timer_session(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<SessionCompleted> {
-    let active_task_id = timer_state.active_task_id()
+    let active_task_id = timer_state.active_entity_id()
         .ok_or_else(|| Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "complete_session".to_string(),
@@ -60,7 +60,7 @@ pub async fn complete_timer_session(
     
     // Publish phase completed event
     let event = PhaseCompleted::new(
-        timer_state.active_task_id(),
+        timer_state.active_entity_id(),
         result.old_phase,
         result.new_phase,
         result.sessions_completed as u32,
@@ -118,8 +118,8 @@ mod tests {
             remaining_seconds: 0,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: Some(task_id),
-            task_session_count: 0,
+            active_entity: Some(task_id.to_string()),
+            entity_session_count: 0,
         };
         
         let result = complete_timer_session(
@@ -140,8 +140,8 @@ mod tests {
             remaining_seconds: 0,
             configuration: TimerConfiguration::default(),
             session_count: 1,
-            active_task: None,
-            task_session_count: 0,
+            active_entity: None,
+            entity_session_count: 0,
         };
         
         let result = complete_timer_session(

@@ -12,6 +12,7 @@ use domain::{
     timer::Timer,
     Result as DomainResult, TimerState,
 };
+use usecases::timer::TimerService as DomainTimerService;
 
 pub struct TimerService {
     timer: Arc<Mutex<Timer>>,
@@ -141,7 +142,13 @@ impl TimerService {
                         false
                     } else {
                         // Process tick
-                        let _phase_complete = timer.tick().unwrap_or(false);
+                        let _phase_complete = match timer.tick() {
+                            Ok(complete) => complete,
+                            Err(e) => {
+                                eprintln!("Timer tick error: {e}");
+                                false
+                            }
+                        };
                         true
                     }
                 };
@@ -164,7 +171,7 @@ impl TimerService {
         let mut timer = self.timer.lock().await;
         
         // Set the active task
-        timer.set_active_task(Some(task_id))?;
+        timer.set_active_entity(Some(task_id.to_string()))?;
         
         // Update configuration if task provided
         if let Some(task) = task {
@@ -235,7 +242,13 @@ impl TimerService {
                         if !timer.is_running() {
                             false
                         } else {
-                            let _phase_complete = timer.tick().unwrap_or(false);
+                            let _phase_complete = match timer.tick() {
+                                Ok(complete) => complete,
+                                Err(e) => {
+                                    eprintln!("Timer tick error during resume: {e}");
+                                    false
+                                }
+                            };
                             true
                         }
                     };
@@ -279,7 +292,7 @@ impl TimerService {
 
 // Implement the async trait for domain compatibility
 #[async_trait]
-impl domain::timer::TimerService for TimerService {
+impl DomainTimerService for TimerService {
     async fn get_state(&self) -> DomainResult<TimerState> {
         self.get_state().await
     }

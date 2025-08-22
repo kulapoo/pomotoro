@@ -34,35 +34,36 @@ impl ThreadSafeTimerService {
     
     
     pub async fn start(&self) -> Result<()> {
-        self.timer.lock().unwrap().start()
+        Ok(self.timer.lock().unwrap().start()?)
     }
     
     pub async fn pause(&self) -> Result<()> {
-        self.timer.lock().unwrap().pause()
+        Ok(self.timer.lock().unwrap().pause()?)
     }
     
     pub async fn resume(&self) -> Result<()> {
-        self.timer.lock().unwrap().resume()
+        Ok(self.timer.lock().unwrap().resume()?)
     }
     
     pub async fn reset(&self) -> Result<()> {
-        self.timer.lock().unwrap().reset()
+        Ok(self.timer.lock().unwrap().reset()?)
     }
     
     pub async fn skip_phase(&self) -> Result<()> {
-        self.timer.lock().unwrap().skip_phase()
+        Ok(self.timer.lock().unwrap().skip_phase()?)
     }
     
     pub async fn tick(&self) -> Result<bool> {
-        self.timer.lock().unwrap().tick()
+        Ok(self.timer.lock().unwrap().tick()?)
     }
     
     pub async fn set_active_task(&self, task_id: Option<TaskId>) -> Result<()> {
-        self.timer.lock().unwrap().set_active_task(task_id)
+        let task_id_str = task_id.map(|id| id.to_string());
+        Ok(self.timer.lock().unwrap().set_active_entity(task_id_str)?)
     }
     
     pub async fn update_configuration(&self, configuration: TimerConfiguration) -> Result<()> {
-        self.timer.lock().unwrap().update_configuration(configuration)
+        Ok(self.timer.lock().unwrap().update_configuration(configuration)?)
     }
     
     pub async fn toggle_pause(&self) -> Result<TimerStatus> {
@@ -129,35 +130,36 @@ impl DomainTimerService {
     }
     
     pub fn start(&mut self) -> Result<()> {
-        self.timer.start()
+        Ok(self.timer.start()?)
     }
     
     pub fn pause(&mut self) -> Result<()> {
-        self.timer.pause()
+        Ok(self.timer.pause()?)
     }
     
     pub fn resume(&mut self) -> Result<()> {
-        self.timer.resume()
+        Ok(self.timer.resume()?)
     }
     
     pub fn reset(&mut self) -> Result<()> {
-        self.timer.reset()
+        Ok(self.timer.reset()?)
     }
     
     pub fn skip_phase(&mut self) -> Result<()> {
-        self.timer.skip_phase()
+        Ok(self.timer.skip_phase()?)
     }
     
     pub fn tick(&mut self) -> Result<bool> {
-        self.timer.tick()
+        Ok(self.timer.tick()?)
     }
     
     pub fn set_active_task(&mut self, task_id: Option<TaskId>) -> Result<()> {
-        self.timer.set_active_task(task_id)
+        let task_id_str = task_id.map(|id| id.to_string());
+        Ok(self.timer.set_active_entity(task_id_str)?)
     }
     
     pub fn update_configuration(&mut self, configuration: TimerConfiguration) -> Result<()> {
-        self.timer.update_configuration(configuration)
+        Ok(self.timer.update_configuration(configuration)?)
     }
 }
 

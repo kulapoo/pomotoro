@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::{TaskRepositoryArc, TimerService};
 use domain::{TaskId, TimerState, Phase};
-use domain::TimerService as DomainTimerService;
+use usecases::timer::TimerService as DomainTimerService;
 use usecases::timer::{
     get_timer_state as app_get_timer_state,
     start_timer_session, StartTimerSessionCmd,
