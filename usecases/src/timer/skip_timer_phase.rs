@@ -405,7 +405,14 @@ mod tests {
             
             async fn switch_task(&self, task_id: TaskId, _task: Option<&domain::Task>) -> Result<()> {
                 let mut state = self.state.write().unwrap();
-                state.switch_task_with_config(task_id, TimerConfiguration::default())?;
+                // Mock implementation: only allow task switch when idle
+                if let TimerState::Idle { configuration, session_count, .. } = state.clone() {
+                    *state = TimerState::Idle {
+                        configuration,
+                        session_count,
+                        active_task: Some(task_id),
+                    };
+                }
                 Ok(())
             }
             
