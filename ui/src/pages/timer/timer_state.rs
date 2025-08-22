@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use crate::store::{setup_timer_events, setup_phase_complete_events};
-use domain::{TimerStateWithTask, TimerState, events};
+use domain::{TimerState, events};
 
 #[wasm_bindgen]
 extern "C" {
@@ -12,22 +12,19 @@ extern "C" {
 
 pub struct TimerPageState {
     pub timer_state: ReadSignal<TimerState>,
-    pub timer_with_task: ReadSignal<TimerStateWithTask>,
     pub set_timer_state: WriteSignal<TimerState>,
 }
 
 impl TimerPageState {
     pub fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
-        let (timer_with_task, set_timer_with_task) = signal(TimerStateWithTask::new(TimerState::default(), None));
 
         // Initial load of timer state
         Effect::new(move |_| {
             spawn_local(async move {
-                let result = invoke(events::timer::GET_STATE_WITH_TASK, JsValue::NULL).await;
-                if let Ok(state_with_task) = serde_wasm_bindgen::from_value::<TimerStateWithTask>(result) {
-                    set_timer_with_task.set(state_with_task.clone());
-                    set_timer_state.set(state_with_task.timer_state);
+                let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
+                    set_timer_state.set(state);
                 }
             });
         });
@@ -38,7 +35,6 @@ impl TimerPageState {
 
         Self {
             timer_state,
-            timer_with_task,
             set_timer_state,
         }
     }

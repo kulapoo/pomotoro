@@ -1,4 +1,4 @@
-use domain::{Phase, Task, TimerStatus};
+use domain::{Phase, Task};
 use infra::adapters::TimerService;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,22 +15,37 @@ impl TimerTestService {
     }
 
     pub async fn setup_with_task(&self, task: &Task) {
-        self.service.switch_task(task.id, Some(task)).await;
+        let _ = self.service.switch_task(task.id, Some(task)).await;
     }
 
     pub async fn start_work_session(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let _ = self.service.set_status(TimerStatus::Running).await;
+        // Check current state and act accordingly
+        let state = self.service.get_state().await?;
+        if state.is_paused() {
+            // Resume from paused state
+            self.service.toggle_pause().await?;
+        } else if !state.is_running() {
+            // Start from stopped state
+            self.service.start_timer(None).await?;
+        }
+        Ok(())
+    }
+    
+    pub async fn resume_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let state = self.service.get_state().await?;
+        if state.is_paused() {
+            self.service.toggle_pause().await?;
+        }
         Ok(())
     }
 
     pub async fn pause_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let _ = self.service.set_status(TimerStatus::Paused).await;
+        self.service.toggle_pause().await?;
         Ok(())
     }
 
     pub async fn stop_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.service.stop_timer().await;
-        let _ = self.service.set_status(TimerStatus::Stopped).await;
+        self.service.stop_timer().await?;
         Ok(())
     }
 

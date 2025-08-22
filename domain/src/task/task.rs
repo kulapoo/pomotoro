@@ -21,6 +21,10 @@ pub struct Task {
 }
 
 impl Task {
+    pub fn id(&self) -> Id {
+        self.id
+    }
+
     pub fn new_default() -> Result<Self> {
         use super::builder::Builder;
 

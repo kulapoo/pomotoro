@@ -166,3 +166,15 @@ impl EventPublisher for MockEventPublisher {
         }
     }
 }
+
+/// Implementation of EventPublisher for Arc<T> where T: EventPublisher
+/// This allows Arc-wrapped publishers to be used directly as event publishers
+impl<T: EventPublisher + ?Sized> EventPublisher for std::sync::Arc<T> {
+    fn publish(&self, event: Box<dyn Event>) {
+        (**self).publish(event)
+    }
+    
+    fn publish_batch(&self, events: Vec<Box<dyn Event>>) {
+        (**self).publish_batch(events)
+    }
+}

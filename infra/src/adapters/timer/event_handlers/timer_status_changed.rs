@@ -1,0 +1,44 @@
+use async_trait::async_trait;
+use domain::{Event, Result, TimerStatusChanged};
+use std::any::TypeId;
+use tauri::Emitter;
+
+use crate::adapters::events::EventHandler;
+
+pub struct TimerStatusChangedHandler {
+    app_handle: tauri::AppHandle,
+}
+
+impl TimerStatusChangedHandler {
+    pub fn new(app_handle: tauri::AppHandle) -> Self {
+        Self { app_handle }
+    }
+}
+
+#[async_trait]
+impl EventHandler for TimerStatusChangedHandler {
+    fn subscribes_to(&self) -> TypeId {
+        TypeId::of::<TimerStatusChanged>()
+    }
+
+    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
+        if let Some(status_changed) = event.as_any().downcast_ref::<TimerStatusChanged>() {
+            self.app_handle
+                .emit("timer:status_changed", status_changed.clone())
+                .map_err(|e| domain::Error::RepositoryError {
+                    message: format!("Failed to emit timer status changed event: {}", e),
+                })?;
+        }
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "TimerStatusChangedHandler"
+    }
+}
+
+impl From<TimerStatusChangedHandler> for Box<dyn EventHandler> {
+    fn from(handler: TimerStatusChangedHandler) -> Self {
+        Box::new(handler)
+    }
+}

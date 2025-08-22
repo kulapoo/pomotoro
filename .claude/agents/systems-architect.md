@@ -84,7 +84,7 @@ flowchart TD
 flowchart TD
     A[Infrastructure]
     B[Interface Adapters]
-    C[Application Layer]
+    C[Usecases Layer]
     D[Domain Layer]
 
     A --> B
@@ -203,7 +203,7 @@ User: "Design payment system"
 
 **What You DO:**
 ✅ Design bounded contexts and domain boundaries
-✅ Create architectural blueprints and system designs  
+✅ Create architectural blueprints and system designs
 ✅ Define module structure and API contracts
 ✅ Establish domain models and aggregates
 ✅ Make strategic technology decisions

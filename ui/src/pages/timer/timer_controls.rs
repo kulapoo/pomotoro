@@ -3,6 +3,7 @@ use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use domain::{TimerState, TimerStatus};
 use domain::events;
+use crate::pages::timer::timer_view_model::TimerViewModel;
 
 #[wasm_bindgen]
 extern "C" {
@@ -24,7 +25,7 @@ pub fn TimerControls(
             };
             let result = invoke(command, JsValue::NULL).await;
             if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
-                web_sys::console::log_1(&JsValue::from(state.get_phase_name()));
+                web_sys::console::log_1(&JsValue::from(TimerViewModel::get_phase_name(&state)));
                 set_timer_state.set(state);
             }
         });

@@ -5,7 +5,7 @@ pub mod timer {
     pub const PAUSE: &str = "pause_timer";
     pub const RESET: &str = "reset_timer";
     pub const SKIP_PHASE: &str = "skip_phase";
-    pub const GET_STATE_WITH_TASK: &str = "get_timer_state_with_task";
+    pub const GET_STATE: &str = "get_timer_state";
     pub const SWITCH_ACTIVE_TASK: &str = "switch_active_task";
     
     // Business Events

@@ -35,11 +35,12 @@ pub use task::test_cycling_service::TestCyclingService as TestTaskCyclingService
 pub use config::test_repository::InMemoryConfigRepository;
 
 pub use timer::{
-    Timer, Id as TimerId, Marker as TimerMarker, Phase, State as TimerState, StateWithTask as TimerStateWithTask, Status as TimerStatus,
-    Service as TimerService, PhaseTransitionService, DefaultPhaseTransitionService, PhaseTransitionResult,
+    Timer, Id as TimerId, Marker as TimerMarker, Phase, State as TimerState, Status as TimerStatus,
+    TimerService,
     Started as TimerStarted, Paused as TimerPaused, Reset as TimerReset, Tick as TimerTick, PhaseCompleted, PhaseSkipped,
     StatusChanged as TimerStatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
-    BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset
+    BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset,
+    StateTransitions, TransitionResult, TransitionType
 };
 
 pub use config::{

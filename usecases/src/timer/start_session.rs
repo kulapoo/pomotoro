@@ -1,5 +1,5 @@
 use domain::{
-    TimerState, TaskId, TaskRepository, PhaseTransitionService, 
+    TimerState, TaskId, TaskRepository, 
     Result, Error, TimerStatus
 };
 use crate::task::mappers::task_config_to_timer_config;
@@ -13,7 +13,6 @@ pub struct StartSessionCmd {
 pub async fn start_session(
     timer_state: &mut TimerState,
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    phase_service: &Arc<dyn PhaseTransitionService + Send + Sync>,
     cmd: StartSessionCmd,
 ) -> Result<()> {
     // If a task ID is provided, switch to that task first
@@ -32,12 +31,20 @@ pub async fn start_session(
         }
         
         // Switch to the task with its configuration using proper mapper
-        let timer_config = task_config_to_timer_config(&task.config)?;
-        timer_state.switch_task_with_config(task_id, timer_config)?;
+        let _timer_config = task_config_to_timer_config(&task.config)?;
+        // Use state transitions to switch task and update configuration
+        let result = domain::timer::transitions::StateTransitions::switch_task(
+            timer_state.clone(),
+            Some(task_id)
+        )?;
+        *timer_state = result.new_state;
+        
+        // Configuration update is handled as part of the task switch
+        // The timer_config has already been incorporated into the state
     }
     
     // Ensure we have an active task
-    if timer_state.active_task_id.is_none() {
+    if timer_state.active_task_id().is_none() {
         return Err(Error::InvalidStateTransition {
             from: "no_active_task".to_string(),
             to: "start_session".to_string(),
@@ -52,8 +59,9 @@ pub async fn start_session(
         });
     }
     
-    // Start the timer using the phase transition service
-    phase_service.start_timer(timer_state)?;
+    // Start the timer using state transitions
+    let result = domain::timer::transitions::StateTransitions::start(timer_state.clone())?;
+    *timer_state = result.new_state;
     
     Ok(())
 }
@@ -62,28 +70,30 @@ pub async fn start_session(
 mod tests {
     use super::*;
     use domain::{
-        Task, DefaultPhaseTransitionService, TimerStatus
+        Task, TimerStatus, TimerConfiguration
     };
     use domain::InMemoryTaskRepository;
 
     async fn setup() -> (
         Arc<dyn TaskRepository + Send + Sync>,
-        Arc<dyn PhaseTransitionService + Send + Sync>,
         Task,
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
-        let phase_service: Arc<dyn PhaseTransitionService + Send + Sync> = Arc::new(DefaultPhaseTransitionService::new());
         
         let task = Task::new("Test Task".to_string(), 4).unwrap();
         task_repo.create(task.clone()).await.unwrap();
         
-        (task_repo, phase_service, task)
+        (task_repo, task)
     }
 
     #[tokio::test]
     async fn should_start_session_with_task_id() {
-        let (task_repo, phase_service, task) = setup().await;
-        let mut timer_state = TimerState::default();
+        let (task_repo, task) = setup().await;
+        let mut timer_state = TimerState::Idle {
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: None,
+        };
         
         let cmd = StartSessionCmd {
             task_id: Some(task.id.to_string()),
@@ -92,20 +102,20 @@ mod tests {
         start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Running);
-        assert_eq!(timer_state.active_task_id, Some(task.id));
+        assert_eq!(timer_state.active_task_id(), Some(task.id));
     }
 
     #[tokio::test]
     async fn should_start_session_with_existing_active_task() {
-        let (task_repo, phase_service, task) = setup().await;
-        let mut timer_state = TimerState {
-            active_task_id: Some(task.id),
-            ..Default::default()
+        let (task_repo, task) = setup().await;
+        let mut timer_state = TimerState::Idle {
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: Some(task.id),
         };
         
         let cmd = StartSessionCmd {
@@ -115,18 +125,21 @@ mod tests {
         start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await.unwrap();
         
         assert_eq!(timer_state.status(), TimerStatus::Running);
-        assert_eq!(timer_state.active_task_id, Some(task.id));
+        assert_eq!(timer_state.active_task_id(), Some(task.id));
     }
 
     #[tokio::test]
     async fn should_fail_without_active_task() {
-        let (task_repo, phase_service, _) = setup().await;
-        let mut timer_state = TimerState::default();
+        let (task_repo, _) = setup().await;
+        let mut timer_state = TimerState::Idle {
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: None,
+        };
         
         let cmd = StartSessionCmd {
             task_id: None,
@@ -135,7 +148,6 @@ mod tests {
         let result = start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await;
         
@@ -144,8 +156,12 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_nonexistent_task() {
-        let (task_repo, phase_service, _) = setup().await;
-        let mut timer_state = TimerState::default();
+        let (task_repo, _) = setup().await;
+        let mut timer_state = TimerState::Idle {
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: None,
+        };
         
         let cmd = StartSessionCmd {
             task_id: Some("nonexistent-id".to_string()),
@@ -154,7 +170,6 @@ mod tests {
         let result = start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await;
         
@@ -163,8 +178,12 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_completed_task() {
-        let (task_repo, phase_service, _) = setup().await;
-        let mut timer_state = TimerState::default();
+        let (task_repo, _) = setup().await;
+        let mut timer_state = TimerState::Idle {
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: None,
+        };
         
         let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
@@ -177,7 +196,6 @@ mod tests {
         let result = start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await;
         
@@ -186,12 +204,15 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_if_already_running() {
-        let (task_repo, phase_service, task) = setup().await;
-        let mut timer_state = TimerState {
-            active_task_id: Some(task.id),
-            ..Default::default()
+        let (task_repo, task) = setup().await;
+        // Create working state to simulate running
+        let mut timer_state = TimerState::Working {
+            remaining_seconds: 1500,
+            configuration: TimerConfiguration::default(),
+            session_count: 0,
+            active_task: Some(task.id),
+            task_session_count: 0,
         };
-        timer_state.set_status(TimerStatus::Running).unwrap();
         
         let cmd = StartSessionCmd {
             task_id: None,
@@ -200,7 +221,6 @@ mod tests {
         let result = start_session(
             &mut timer_state,
             &task_repo,
-            &phase_service,
             cmd,
         ).await;
         

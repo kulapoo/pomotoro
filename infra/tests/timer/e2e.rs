@@ -15,7 +15,7 @@ async fn test_e2e_complete_work_session() -> Result<(), Box<dyn std::error::Erro
     timer_service.setup_with_task(default_task).await;
     timer_service.start_work_session().await?;
     
-    let running_state = timer_service.get_state().await;
+    let running_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_running(&running_state);
     TimerTestAssertions::assert_is_work_phase(&running_state);
     
@@ -24,7 +24,7 @@ async fn test_e2e_complete_work_session() -> Result<(), Box<dyn std::error::Erro
     assert_eq!(old_phase, Phase::Work);
     assert_eq!(new_phase, Phase::ShortBreak);
     
-    let break_state = timer_service.get_state().await;
+    let break_state = timer_service.get_state().await?;
     assert_eq!(break_state.phase(), Phase::ShortBreak);
     assert_eq!(break_state.session_count(), 1);
     
@@ -44,7 +44,7 @@ async fn test_e2e_full_pomodoro_cycle() -> Result<(), Box<dyn std::error::Error>
     for session in 1..=4 {
         // Start work session
         timer_service.start_work_session().await?;
-        let work_state = timer_service.get_state().await;
+        let work_state = timer_service.get_state().await?;
         TimerTestAssertions::assert_is_work_phase(&work_state);
         
         // Complete work session
@@ -63,12 +63,12 @@ async fn test_e2e_full_pomodoro_cycle() -> Result<(), Box<dyn std::error::Error>
             assert_eq!(new_phase, Phase::LongBreak);
         }
         
-        let state = timer_service.get_state().await;
+        let state = timer_service.get_state().await?;
         assert_eq!(state.session_count(), session);
     }
     
     // Verify we're in long break after 4 sessions
-    let final_state = timer_service.get_state().await;
+    let final_state = timer_service.get_state().await?;
     assert_eq!(final_state.phase(), Phase::LongBreak);
     assert_eq!(final_state.session_count(), 4);
     
@@ -92,15 +92,15 @@ async fn test_e2e_timer_persistence() -> Result<(), Box<dyn std::error::Error>> 
     
     // Pause and get current state
     timer_service.pause_timer().await?;
-    let paused_state = timer_service.get_state().await;
+    let paused_state = timer_service.get_state().await?;
     
     // Resume and verify state is preserved
     timer_service.start_work_session().await?;
-    let resumed_state = timer_service.get_state().await;
+    let resumed_state = timer_service.get_state().await?;
     
     assert_eq!(resumed_state.phase(), paused_state.phase());
     assert_eq!(resumed_state.session_count(), paused_state.session_count());
-    assert_eq!(resumed_state.active_task_id, paused_state.active_task_id);
+    assert_eq!(resumed_state.active_task_id(), paused_state.active_task_id());
     // Remaining time should be close (within tolerance for test timing)
     let time_diff = (resumed_state.remaining_seconds() as i64 - paused_state.remaining_seconds() as i64).abs();
     assert!(time_diff <= 1, "Time difference too large: {time_diff}");
@@ -125,18 +125,19 @@ async fn test_e2e_timer_with_multiple_tasks() -> Result<(), Box<dyn std::error::
     timer_service.setup_with_task(&work_task).await;
     timer_service.start_work_session().await?;
     
-    let work_state = timer_service.get_state().await;
+    let work_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_has_active_task(&work_state, work_task_id);
     TimerTestAssertions::assert_is_running(&work_state);
     
     // Complete a session
     timer_service.skip_to_next_phase(Some(&work_task)).await?;
-    let after_work = timer_service.get_state().await;
+    let after_work = timer_service.get_state().await?;
     assert_eq!(after_work.session_count(), 1);
     
-    // Switch to study task
+    // Switch to study task - need to stop timer first since we're in break
+    timer_service.stop_timer().await?;
     timer_service.setup_with_task(&study_task).await;
-    let study_state = timer_service.get_state().await;
+    let study_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_has_active_task(&study_state, study_task_id);
     
     // Session count should be preserved globally
@@ -157,13 +158,13 @@ async fn test_e2e_timer_reset_functionality() -> Result<(), Box<dyn std::error::
     timer_service.setup_with_task(default_task).await;
     timer_service.start_work_session().await?;
     
-    let initial_state = timer_service.get_state().await;
+    let initial_state = timer_service.get_state().await?;
     assert_eq!(initial_state.phase(), Phase::Work);
     
     // Reset current phase
     timer_service.reset_current_phase(Some(default_task)).await?;
     
-    let reset_state = timer_service.get_state().await;
+    let reset_state = timer_service.get_state().await?;
     assert_eq!(reset_state.phase(), Phase::Work);
     assert_eq!(reset_state.remaining_seconds(), 25 * 60);
     assert_eq!(reset_state.session_count(), initial_state.session_count()); // Session count preserved
@@ -194,7 +195,7 @@ async fn test_e2e_timer_performance_stress() -> Result<(), Box<dyn std::error::E
     assert!(elapsed < Duration::from_millis(1000), "Timer operations took too long: {elapsed:?}");
     
     // Verify final state is consistent
-    let final_state = timer_service.get_state().await;
+    let final_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_stopped(&final_state);
     
     Ok(())

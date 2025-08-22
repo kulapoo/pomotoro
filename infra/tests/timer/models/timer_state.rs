@@ -1,84 +1,157 @@
-use domain::{Phase, TimerStatus, TimerState};
+use domain::{Phase, TimerStatus, TimerState, TimerConfiguration};
 use domain::TaskId;
 
 #[allow(dead_code)]
 pub struct TimerStateBuilder {
-    state: TimerState,
+    phase: Phase,
+    status: TimerStatus,
+    remaining_seconds: u32,
+    session_count: u32,
+    task_session_count: u32,
+    active_task: Option<TaskId>,
+    configuration: TimerConfiguration,
 }
 
 #[allow(dead_code)]
 impl TimerStateBuilder {
     pub fn new() -> Self {
         Self {
-            state: TimerState::default(),
+            phase: Phase::Work,
+            status: TimerStatus::Idle,
+            remaining_seconds: 0,
+            session_count: 0,
+            task_session_count: 0,
+            active_task: None,
+            configuration: TimerConfiguration::default(),
         }
     }
 
     pub fn with_phase(mut self, phase: Phase) -> Self {
-        self.state.timer.phase = phase;
+        self.phase = phase;
         self
     }
 
     pub fn with_status(mut self, status: TimerStatus) -> Self {
-        self.state.timer.status = status;
+        self.status = status;
         self
     }
 
     pub fn with_remaining_seconds(mut self, seconds: u32) -> Self {
-        self.state.timer.remaining_seconds = seconds;
+        self.remaining_seconds = seconds;
         self
     }
 
     pub fn with_session_count(mut self, count: u32) -> Self {
-        self.state.timer.session_count = count;
+        self.session_count = count;
         self
     }
 
     pub fn with_task_session_count(mut self, count: u32) -> Self {
-        self.state.task_session_count = count;
+        self.task_session_count = count;
         self
     }
 
     pub fn with_active_task(mut self, task_id: TaskId) -> Self {
-        self.state.active_task_id = Some(task_id);
+        self.active_task = Some(task_id);
         self
     }
 
     pub fn running(mut self) -> Self {
-        self.state.timer.status = TimerStatus::Running;
+        self.status = TimerStatus::Running;
         self
     }
 
     pub fn paused(mut self) -> Self {
-        self.state.timer.status = TimerStatus::Paused;
+        self.status = TimerStatus::Paused;
         self
     }
 
     pub fn stopped(mut self) -> Self {
-        self.state.timer.status = TimerStatus::Stopped;
+        self.status = TimerStatus::Stopped;
         self
     }
 
     pub fn work_phase(mut self) -> Self {
-        self.state.timer.phase = Phase::Work;
-        self.state.timer.remaining_seconds = 25 * 60; // 25 minutes
+        self.phase = Phase::Work;
+        self.remaining_seconds = 25 * 60; // 25 minutes
         self
     }
 
     pub fn short_break_phase(mut self) -> Self {
-        self.state.timer.phase = Phase::ShortBreak;
-        self.state.timer.remaining_seconds = 5 * 60; // 5 minutes
+        self.phase = Phase::ShortBreak;
+        self.remaining_seconds = 5 * 60; // 5 minutes
         self
     }
 
     pub fn long_break_phase(mut self) -> Self {
-        self.state.timer.phase = Phase::LongBreak;
-        self.state.timer.remaining_seconds = 15 * 60; // 15 minutes
+        self.phase = Phase::LongBreak;
+        self.remaining_seconds = 15 * 60; // 15 minutes
         self
     }
 
     pub fn build(self) -> TimerState {
-        self.state
+        match (self.status, self.phase) {
+            (TimerStatus::Idle, _) => TimerState::Idle {
+                configuration: self.configuration,
+                session_count: self.session_count,
+                active_task: self.active_task,
+            },
+            (TimerStatus::Running, Phase::Work) => TimerState::Working {
+                remaining_seconds: self.remaining_seconds,
+                configuration: self.configuration,
+                session_count: self.session_count,
+                active_task: self.active_task,
+                task_session_count: self.task_session_count,
+            },
+            (TimerStatus::Running, Phase::ShortBreak) => TimerState::ShortBreak {
+                remaining_seconds: self.remaining_seconds,
+                configuration: self.configuration,
+                session_count: self.session_count,
+                active_task: self.active_task,
+                task_session_count: self.task_session_count,
+            },
+            (TimerStatus::Running, Phase::LongBreak) => TimerState::LongBreak {
+                remaining_seconds: self.remaining_seconds,
+                configuration: self.configuration,
+                session_count: self.session_count,
+                active_task: self.active_task,
+                task_session_count: self.task_session_count,
+            },
+            (TimerStatus::Paused, _) => {
+                let base_state = match self.phase {
+                    Phase::Work => TimerState::Working {
+                        remaining_seconds: self.remaining_seconds,
+                        configuration: self.configuration.clone(),
+                        session_count: self.session_count,
+                        active_task: self.active_task,
+                        task_session_count: self.task_session_count,
+                    },
+                    Phase::ShortBreak => TimerState::ShortBreak {
+                        remaining_seconds: self.remaining_seconds,
+                        configuration: self.configuration.clone(),
+                        session_count: self.session_count,
+                        active_task: self.active_task,
+                        task_session_count: self.task_session_count,
+                    },
+                    Phase::LongBreak => TimerState::LongBreak {
+                        remaining_seconds: self.remaining_seconds,
+                        configuration: self.configuration.clone(),
+                        session_count: self.session_count,
+                        active_task: self.active_task,
+                        task_session_count: self.task_session_count,
+                    },
+                };
+                TimerState::Paused {
+                    paused_from: Box::new(base_state),
+                    remaining_seconds: self.remaining_seconds,
+                }
+            }
+            _ => TimerState::Idle {
+                configuration: self.configuration,
+                session_count: self.session_count,
+                active_task: self.active_task,
+            },
+        }
     }
 }
 
@@ -97,7 +170,11 @@ impl TimerTestAssertions {
     }
 
     pub fn assert_is_stopped(state: &TimerState) {
-        assert_eq!(state.status(), TimerStatus::Stopped);
+        // Timer can be either Idle or Stopped when not running
+        assert!(
+            state.status() == TimerStatus::Idle || state.status() == TimerStatus::Stopped,
+            "Expected Idle or Stopped, got {:?}", state.status()
+        );
     }
 
     pub fn assert_is_work_phase(state: &TimerState) {
@@ -105,7 +182,7 @@ impl TimerTestAssertions {
     }
 
     pub fn assert_has_active_task(state: &TimerState, task_id: TaskId) {
-        assert_eq!(state.active_task_id, Some(task_id));
+        assert_eq!(state.active_task_id(), Some(task_id));
     }
 
     pub fn assert_session_count(state: &TimerState, expected: u32) {

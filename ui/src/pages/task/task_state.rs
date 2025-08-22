@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
-use domain::{Task, TaskId, TimerStateWithTask, events};
+use domain::{Task, TaskId, TimerState, events};
 
 #[wasm_bindgen]
 extern "C" {
@@ -40,16 +40,31 @@ impl TaskResource {
                 }
             }
             
-            // Load timer state with active task
-            web_sys::console::log_1(&"Loading timer state with task...".into());
-            let result = invoke(events::timer::GET_STATE_WITH_TASK, JsValue::NULL).await;
-            match from_value::<Option<Task>>(result) {
-                Ok(task) => {
-                    web_sys::console::log_1(&format!("Active task: {:?}", task.as_ref().map(|t| &t.name)).into());
-                    set_active_task_clone.set(task);
+            // Load timer state and active task
+            web_sys::console::log_1(&"Loading timer state...".into());
+            let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+            match from_value::<TimerState>(result) {
+                Ok(timer_state) => {
+                    // If there's an active task ID, fetch the actual task
+                    if let Some(task_id) = timer_state.active_task() {
+                        let task_args = to_value(&task_id).unwrap();
+                        let task_result = invoke(events::task::GET, task_args).await;
+                        match from_value::<Task>(task_result) {
+                            Ok(task) => {
+                                web_sys::console::log_1(&format!("Active task: {}", &task.name).into());
+                                set_active_task_clone.set(Some(task));
+                            }
+                            Err(e) => {
+                                web_sys::console::error_1(&format!("Failed to load active task: {e}").into());
+                                set_active_task_clone.set(None);
+                            }
+                        }
+                    } else {
+                        set_active_task_clone.set(None);
+                    }
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to load active task: {e}").into());
+                    web_sys::console::error_1(&format!("Failed to load timer state: {e}").into());
                 }
             }
         });
@@ -61,9 +76,16 @@ impl TaskResource {
         let args = to_value(&task_id).map_err(|e| e.to_string())?;
         let result = invoke(events::timer::SWITCH_ACTIVE_TASK, args).await;
         
-        match from_value::<TimerStateWithTask>(result) {
-            Ok(timer_state_with_task) => {
-                self.set_active_task.set(timer_state_with_task.active_task.clone());
+        match from_value::<TimerState>(result) {
+            Ok(timer_state) => {
+                // If there's an active task ID, find the corresponding task
+                if let Some(task_id) = timer_state.active_task() {
+                    let tasks = self.tasks.get();
+                    let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
+                    self.set_active_task.set(active_task);
+                } else {
+                    self.set_active_task.set(None);
+                }
                 Ok(())
             }
             Err(e) => Err(e.to_string()),
@@ -71,6 +93,7 @@ impl TaskResource {
     }
 
     pub fn refetch(&self) {
+        let tasks = self.tasks;
         let set_tasks = self.set_tasks;
         let set_active_task = self.set_active_task;
         
@@ -87,14 +110,21 @@ impl TaskResource {
                 }
             }
             
-            let result = invoke(events::timer::GET_STATE_WITH_TASK, JsValue::NULL).await;
-            match from_value::<TimerStateWithTask>(result) {
-                Ok(timer_state_with_task) => {
-                    web_sys::console::log_1(&"Refetched active task".into());
-                    set_active_task.set(timer_state_with_task.active_task);
+            let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+            match from_value::<TimerState>(result) {
+                Ok(timer_state) => {
+                    web_sys::console::log_1(&"Refetched timer state".into());
+                    // If there's an active task ID, find the corresponding task
+                    if let Some(task_id) = timer_state.active_task() {
+                        let tasks = tasks.get_untracked();
+                        let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
+                        set_active_task.set(active_task);
+                    } else {
+                        set_active_task.set(None);
+                    }
                 }
                 Err(e) => {
-                    web_sys::console::error_1(&format!("Failed to refetch active task: {e}").into());
+                    web_sys::console::error_1(&format!("Failed to refetch timer state: {e}").into());
                 }
             }
         });

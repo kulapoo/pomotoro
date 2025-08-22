@@ -32,7 +32,7 @@ pub use task::*;
 pub use timer::{
     start_session, StartSessionCmd, pause_session, resume_session,
     reset_session, reset_full_session, complete_timer_session,
-    force_complete_timer_session, SessionCompleted
+    SessionCompleted
 };
 pub use config::*;
 pub use audio::*;

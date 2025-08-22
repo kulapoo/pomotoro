@@ -48,7 +48,6 @@ pub fn run() {
             pause_timer,
             reset_timer,
             skip_phase,
-            get_timer_state_with_task,
             switch_active_task,
             create_task,
             get_task,

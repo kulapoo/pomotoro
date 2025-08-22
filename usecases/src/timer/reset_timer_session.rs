@@ -28,7 +28,7 @@ pub async fn reset_timer_session(
     let current_state = timer_service.get_state().await?;
     
     // Get the active task for context
-    let task = if let Some(task_id) = current_state.active_task_id {
+    let task = if let Some(task_id) = current_state.active_task_id() {
         task_repo.get_by_id(task_id).await?
     } else {
         None
@@ -40,8 +40,8 @@ pub async fn reset_timer_session(
     // Business logic: Publish Reset event after successful reset
     let updated_state = timer_service.get_state().await?;
     let timer_reset_event = Reset::new(
-        updated_state.active_task_id,
-        updated_state.timer.phase,
+        updated_state.active_task_id(),
+        updated_state.phase(),
         1, // version
     );
     event_publisher.publish(Box::new(timer_reset_event));
@@ -50,9 +50,10 @@ pub async fn reset_timer_session(
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
-    use domain::{Task, TimerState, TimerStatus, TaskId, Phase};
+    use domain::{Task, TimerState, TimerStatus, TaskId, Phase, TimerConfiguration};
     use domain::InMemoryTaskRepository;
     use std::sync::{Arc, RwLock};
     use async_trait::async_trait;
@@ -70,8 +71,11 @@ mod tests {
         }
         
         fn new_with_task(task_id: TaskId) -> Self {
-            let mut state = TimerState::default();
-            state.switch_task(task_id).unwrap();
+            let state = TimerState::Idle {
+                configuration: TimerConfiguration::default(),
+                session_count: 0,
+                active_task: Some(task_id),
+            };
             Self {
                 state: Arc::new(RwLock::new(state)),
             }
@@ -80,55 +84,126 @@ mod tests {
     
     #[async_trait]
     impl TimerService for MockTimerService {
-        async fn start_timer(&self, _task: Option<&Task>) -> Result<()> {
-            let mut state = self.state.write().unwrap();
-            state.set_status(TimerStatus::Running)?;
+        async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
+            let state = self.state.read().unwrap();
+            if let TimerState::Idle { configuration, session_count, active_task } = &*state {
+                let new_state = TimerState::Working {
+                    remaining_seconds: configuration.get_phase_duration_seconds(Phase::Work),
+                    configuration: configuration.clone(),
+                    session_count: *session_count,
+                    active_task: *active_task,
+                    task_session_count: 0,
+                };
+                drop(state);
+                *self.state.write().unwrap() = new_state;
+            }
             Ok(())
         }
         
         async fn stop_timer(&self) -> Result<()> {
-            let mut state = self.state.write().unwrap();
-            state.set_status(TimerStatus::Stopped)?;
+            let state = self.state.read().unwrap();
+            let config = state.configuration().clone();
+            let active_task = state.active_task();
+            drop(state);
+            *self.state.write().unwrap() = TimerState::Idle {
+                configuration: config,
+                session_count: 0,
+                active_task,
+            };
             Ok(())
         }
         
         async fn toggle_pause(&self) -> Result<TimerStatus> {
-            let mut state = self.state.write().unwrap();
-            let new_status = match state.status() {
-                TimerStatus::Running => TimerStatus::Paused,
-                TimerStatus::Paused => TimerStatus::Running,
-                TimerStatus::Stopped => TimerStatus::Stopped,
+            let state = self.state.read().unwrap();
+            let new_state = match &*state {
+                TimerState::Working { .. } | TimerState::ShortBreak { .. } | TimerState::LongBreak { .. } => {
+                    TimerState::Paused {
+                        paused_from: Box::new(state.clone()),
+                        remaining_seconds: state.remaining_seconds(),
+                    }
+                }
+                TimerState::Paused { paused_from, .. } => {
+                    *paused_from.clone()
+                }
+                _ => state.clone(),
             };
-            state.set_status(new_status)?;
-            Ok(new_status)
+            let status = new_state.status();
+            drop(state);
+            *self.state.write().unwrap() = new_state;
+            Ok(status)
         }
         
-        async fn reset_current_phase(&self, _task: Option<&Task>) -> Result<()> {
+        async fn reset_current_phase(&self, task: Option<&domain::Task>) -> Result<()> {
             let mut state = self.state.write().unwrap();
-            state.reset_current_phase();
+            // Reset to a new work phase
+            *state = TimerState::Working {
+                remaining_seconds: 1500,
+                configuration: TimerConfiguration::default(),
+                session_count: 0,
+                active_task: task.map(|t| t.id()),
+                task_session_count: 0,
+            };
             Ok(())
         }
         
-        async fn skip_to_next_phase(&self, _task: Option<&Task>) -> Result<(Phase, Phase)> {
+        async fn skip_to_next_phase(&self, task: Option<&domain::Task>) -> Result<(Phase, Phase)> {
             let mut state = self.state.write().unwrap();
-            state.next_phase()
+            let old_phase = state.phase();
+            let task_id = task.map(|t| t.id());
+            
+            // Transition to next phase based on current phase
+            let new_phase = match old_phase {
+                Phase::Work => Phase::ShortBreak,
+                Phase::ShortBreak => Phase::Work,
+                Phase::LongBreak => Phase::Work,
+            };
+            
+            *state = match new_phase {
+                Phase::Work => TimerState::Working {
+                    remaining_seconds: 1500,
+                    configuration: TimerConfiguration::default(),
+                    session_count: state.session_count() + 1,
+                    active_task: task_id,
+                    task_session_count: 0,
+                },
+                Phase::ShortBreak => TimerState::ShortBreak {
+                    remaining_seconds: 300,
+                    configuration: TimerConfiguration::default(),
+                    session_count: state.session_count(),
+                    active_task: task_id,
+                    task_session_count: 0,
+                },
+                Phase::LongBreak => TimerState::LongBreak {
+                    remaining_seconds: 900,
+                    configuration: TimerConfiguration::default(),
+                    session_count: state.session_count(),
+                    active_task: task_id,
+                    task_session_count: 0,
+                },
+            };
+            
+            Ok((old_phase, new_phase))
         }
         
         async fn get_state(&self) -> Result<TimerState> {
             Ok(self.state.read().unwrap().clone())
         }
         
-        async fn switch_task(&self, task_id: TaskId, _task: Option<&Task>) -> Result<()> {
-            let mut state = self.state.write().unwrap();
-            state.switch_task(task_id)?;
+        async fn switch_task(&self, task_id: TaskId, _task: Option<&domain::Task>) -> Result<()> {
+            let state = self.state.read().unwrap();
+            if let TimerState::Idle { configuration, session_count, .. } = &*state {
+                let new_state = TimerState::Idle {
+                    configuration: configuration.clone(),
+                    session_count: *session_count,
+                    active_task: Some(task_id),
+                };
+                drop(state);
+                *self.state.write().unwrap() = new_state;
+            }
             Ok(())
         }
         
         async fn load_state(&self) -> Result<()> {
-            Ok(())
-        }
-        
-        async fn save_state(&self) -> Result<()> {
             Ok(())
         }
     }
@@ -158,14 +233,14 @@ mod tests {
         // Modify timer state to simulate partial progress
         {
             let state = timer_service.get_state().await.unwrap();
-            assert_eq!(state.active_task_id, Some(task.id));
+            assert_eq!(state.active_task_id(), Some(task.id));
         }
         
         reset_timer_session(&timer_service, &task_repo, &event_publisher).await.unwrap();
         
         // Verify reset was called (in real implementation, this would reset remaining time)
         let state = timer_service.get_state().await.unwrap();
-        assert_eq!(state.active_task_id, Some(task.id));
+        assert_eq!(state.active_task_id(), Some(task.id));
     }
     
     #[tokio::test]
@@ -178,7 +253,7 @@ mod tests {
         reset_timer_session(&timer_service, &task_repo, &event_publisher).await.unwrap();
         
         let state = timer_service.get_state().await.unwrap();
-        assert_eq!(state.active_task_id, None);
+        assert_eq!(state.active_task_id(), None);
     }
     
     // Enhanced event testing for Phase 4

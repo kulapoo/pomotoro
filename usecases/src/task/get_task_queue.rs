@@ -19,6 +19,12 @@ pub struct TaskQueueInfo {
     pub completed_tasks: usize,
 }
 
+impl TaskQueueInfo {
+    pub fn active_task_id(&self) -> Option<TaskId> {
+        self.active_task_id
+    }
+}
+
 pub async fn get_task_queue(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: &Arc<dyn TaskCyclerService + Send + Sync>,
@@ -217,7 +223,7 @@ mod tests {
         assert_eq!(queue_info.active_tasks, 2);
         assert_eq!(queue_info.completed_tasks, 0);
         assert_eq!(queue_info.current_position, Some(0));
-        assert_eq!(queue_info.active_task_id, Some(tasks[0].id));
+        assert_eq!(queue_info.active_task_id(), Some(tasks[0].id));
     }
 
     #[tokio::test]
