@@ -1,4 +1,4 @@
-use super::TimerService;
+use domain::timer::TimerService;
 use domain::{Result, TimerState};
 use std::sync::Arc;
 

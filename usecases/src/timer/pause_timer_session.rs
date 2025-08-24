@@ -1,5 +1,5 @@
 use domain::{TimerStatus, Result, EventPublisher, timer::Paused};
-use super::TimerService;
+use domain::timer::TimerService;
 use std::sync::Arc;
 
 /// Pause or resume a timer session

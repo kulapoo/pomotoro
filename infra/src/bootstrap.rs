@@ -9,7 +9,7 @@ use crate::adapters::{
     RodioAudioService, TimerService,
     audio::InMemoryAudioLibraryService
 };
-use usecases::timer::TimerService as DomainTimerService;
+use domain::timer::TimerService as DomainTimerService;
 
 pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,

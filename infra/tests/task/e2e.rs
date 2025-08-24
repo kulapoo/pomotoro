@@ -1,6 +1,6 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
 use crate::timer::models::TimerTestContext;
-use domain::{TaskStatus, TaskRepository};
+use domain::{TaskStatus, TaskRepository, timer::TimerService};
 use std::time::Duration;
 
 

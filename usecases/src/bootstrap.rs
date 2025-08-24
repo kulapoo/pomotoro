@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::{ConfigRepository, Error, EventPublisher, Result, TaskRepository};
-use crate::timer::TimerService;
+use domain::timer::TimerService;
 
 use crate::{config, timer::{start_timer_session, StartTimerSessionCmd}};
 

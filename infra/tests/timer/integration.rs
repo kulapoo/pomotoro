@@ -1,6 +1,6 @@
 use crate::task::models::TaskTestRepository;
 use crate::timer::models::{TimerStateBuilder, TimerTestService, TimerTestAssertions};
-use domain::{Phase, TimerStatus, TaskRepository};
+use domain::{Phase, TimerStatus, TaskRepository, timer::TimerService};
 
 #[tokio::test]
 async fn test_timer_initial_state() -> Result<(), Box<dyn std::error::Error>> {

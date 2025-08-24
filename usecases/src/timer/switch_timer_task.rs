@@ -1,5 +1,5 @@
 use domain::{TaskRepository, TaskId, Result, Error, EventPublisher};
-use super::TimerService;
+use domain::timer::TimerService;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]

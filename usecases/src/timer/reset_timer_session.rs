@@ -1,5 +1,5 @@
 use domain::{TaskRepository, TaskId, Result, EventPublisher, timer::Reset};
-use super::TimerService;
+use domain::timer::TimerService;
 use std::sync::Arc;
 
 /// Reset the current timer session phase

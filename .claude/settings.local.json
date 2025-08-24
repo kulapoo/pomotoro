@@ -51,7 +51,9 @@
       "Bash(fi)",
       "Bash(rg:*)",
       "Bash(just dev:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{reset_timer_session,skip_timer_phase,pause_timer_session,start_timer_session,switch_timer_task}.rs)",
+      "Bash(do sed -i 's/use super::TimerService;/use domain::timer::TimerService;/' \"$file\")"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

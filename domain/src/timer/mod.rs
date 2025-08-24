@@ -3,12 +3,14 @@ pub mod state_machine;
 pub mod timer;
 pub mod transitions;
 pub mod events;
+pub mod service;
 
 // Re-export core types
 pub use error::{Error, Result};
 pub use timer::Timer;
 pub use state_machine::TimerState;
 pub use transitions::{TransitionResult, StateTransitions, TransitionType};
+pub use service::TimerService;
 // Timer-specific value objects
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Hash)]
 pub enum Phase {

@@ -1,4 +1,4 @@
-use domain::{Phase, Task};
+use domain::{Phase, Task, timer::TimerService as TimerServiceTrait};
 use infra::adapters::TimerService;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,26 +15,26 @@ impl TimerTestService {
     }
 
     pub async fn setup_with_task(&self, task: &Task) {
-        let _ = self.service.switch_task(task.id, Some(task)).await;
+        let _ = TimerServiceTrait::switch_task(&*self.service, task.id, Some(task)).await;
     }
 
     pub async fn start_work_session(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Check current state and act accordingly
-        let state = self.service.get_state().await?;
+        let state = TimerServiceTrait::get_state(&*self.service).await?;
         if state.is_paused() {
             // Resume from paused state
-            self.service.toggle_pause().await?;
+            TimerServiceTrait::toggle_pause(&*self.service).await?;
         } else if !state.is_running() {
             // Start from stopped state
-            self.service.start_timer(None).await?;
+            TimerServiceTrait::start_timer(&*self.service, None).await?;
         }
         Ok(())
     }
     
     pub async fn resume_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let state = self.service.get_state().await?;
+        let state = TimerServiceTrait::get_state(&*self.service).await?;
         if state.is_paused() {
-            self.service.toggle_pause().await?;
+            TimerServiceTrait::toggle_pause(&*self.service).await?;
         }
         Ok(())
     }
@@ -45,7 +45,7 @@ impl TimerTestService {
     }
 
     pub async fn stop_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.service.stop_timer().await?;
+        TimerServiceTrait::stop_timer(&*self.service).await?;
         Ok(())
     }
 
@@ -53,7 +53,7 @@ impl TimerTestService {
         &self,
         task: Option<&Task>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let _ = self.service.reset_current_phase(task).await;
+        let _ = TimerServiceTrait::reset_current_phase(&*self.service, task).await;
         Ok(())
     }
 
@@ -61,7 +61,7 @@ impl TimerTestService {
         &self,
         task: Option<&Task>,
     ) -> Result<(Phase, Phase), Box<dyn std::error::Error>> {
-        let result = self.service.skip_to_next_phase(task).await;
+        let result = TimerServiceTrait::skip_to_next_phase(&*self.service, task).await;
         Ok(result?)
     }
 
@@ -71,7 +71,7 @@ impl TimerTestService {
 
     pub async fn force_complete_session(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Force complete the current session by transitioning to next phase
-        self.service.skip_to_next_phase(None).await?;
+        TimerServiceTrait::skip_to_next_phase(&*self.service, None).await?;
         Ok(())
     }
 

@@ -1,6 +1,6 @@
 use crate::task::models::TaskTestRepository;
 use crate::timer::models::{TimerTestService, TimerTestAssertions};
-use domain::{Phase, TaskRepository};
+use domain::{Phase, TaskRepository, timer::TimerService};
 use std::time::Duration;
 
 #[tokio::test]

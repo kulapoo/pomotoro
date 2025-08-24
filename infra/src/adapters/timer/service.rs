@@ -9,10 +9,9 @@ use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::timer::repository::FileTimerStateRepository;
 use domain::{
     Task, Phase, TaskId, TimerStatus, TimerConfiguration,
-    timer::Timer,
+    timer::{Timer, TimerService as DomainTimerService},
     Result as DomainResult, TimerState,
 };
-use usecases::timer::TimerService as DomainTimerService;
 
 pub struct TimerService {
     timer: Arc<Mutex<Timer>>,
@@ -71,23 +70,6 @@ impl TimerService {
         }
     }
 
-    pub async fn get_state(&self) -> DomainResult<TimerState> {
-        Ok(self.timer.lock().await.state().clone())
-    }
-
-    pub async fn load_state(&self) -> DomainResult<()> {
-        if let Some(repo) = &self.state_repository {
-            if let Ok(Some(state)) = repo.load_state().await {
-                let mut timer = self.timer.lock().await;
-                // We need to restore the state - this might require a new method
-                // For now, we'll just update configuration
-                if let TimerState::Idle { configuration, .. } = &state {
-                    timer.update_configuration(configuration.clone())?;
-                }
-            }
-        }
-        Ok(())
-    }
 
     pub async fn save_state(&self) -> DomainResult<()> {
         if let Some(repo) = &self.state_repository {
@@ -160,7 +142,30 @@ impl TimerService {
         Ok(())
     }
 
-    pub async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
+}
+
+// Implement the async trait for domain compatibility
+#[async_trait]
+impl DomainTimerService for TimerService {
+    async fn get_state(&self) -> DomainResult<TimerState> {
+        Ok(self.timer.lock().await.state().clone())
+    }
+
+    async fn load_state(&self) -> DomainResult<()> {
+        if let Some(repo) = &self.state_repository {
+            if let Ok(Some(state)) = repo.load_state().await {
+                let mut timer = self.timer.lock().await;
+                // We need to restore the state - this might require a new method
+                // For now, we'll just update configuration
+                if let TimerState::Idle { configuration, .. } = &state {
+                    timer.update_configuration(configuration.clone())?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
         let mut timer = self.timer.lock().await;
 
         timer.set_active_entity(Some(task_id.to_string()))?;
@@ -181,13 +186,13 @@ impl TimerService {
         Ok(())
     }
 
-    pub async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
+    async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
         self.start_timer_internal(task.cloned())
             .await
             .map_err(|e| domain::Error::RepositoryError { message: e })
     }
 
-    pub async fn stop_timer(&self) -> DomainResult<()> {
+    async fn stop_timer(&self) -> DomainResult<()> {
         {
             let mut cancel_guard = self.cancel_handle.lock().await;
             if let Some(handle) = cancel_guard.take() {
@@ -201,7 +206,7 @@ impl TimerService {
         Ok(())
     }
 
-    pub async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
+    async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
         let mut timer = self.timer.lock().await;
 
         let new_status = if timer.is_running() {
@@ -258,13 +263,13 @@ impl TimerService {
         Ok(new_status)
     }
 
-    pub async fn reset_current_phase(&self, _task: Option<&Task>) -> DomainResult<()> {
+    async fn reset_current_phase(&self, _task: Option<&Task>) -> DomainResult<()> {
         self.timer.lock().await.reset()?;
         self.save_state().await.ok();
         Ok(())
     }
 
-    pub async fn skip_to_next_phase(&self, _task: Option<&Task>) -> DomainResult<(Phase, Phase)> {
+    async fn skip_to_next_phase(&self, _task: Option<&Task>) -> DomainResult<(Phase, Phase)> {
         let mut timer = self.timer.lock().await;
         let old_phase = timer.state().phase();
         timer.skip_phase()?;
@@ -274,41 +279,5 @@ impl TimerService {
         self.save_state().await.ok();
 
         Ok((old_phase, new_phase))
-    }
-}
-
-// Implement the async trait for domain compatibility
-#[async_trait]
-impl DomainTimerService for TimerService {
-    async fn get_state(&self) -> DomainResult<TimerState> {
-        self.get_state().await
-    }
-
-    async fn load_state(&self) -> DomainResult<()> {
-        self.load_state().await
-    }
-
-    async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
-        self.switch_task(task_id, task).await
-    }
-
-    async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
-        self.start_timer(task).await
-    }
-
-    async fn stop_timer(&self) -> DomainResult<()> {
-        self.stop_timer().await
-    }
-
-    async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
-        self.toggle_pause().await
-    }
-
-    async fn reset_current_phase(&self, task: Option<&Task>) -> DomainResult<()> {
-        self.reset_current_phase(task).await
-    }
-
-    async fn skip_to_next_phase(&self, task: Option<&Task>) -> DomainResult<(Phase, Phase)> {
-        self.skip_to_next_phase(task).await
     }
 }
