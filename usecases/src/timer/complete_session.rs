@@ -28,7 +28,6 @@ pub async fn complete_timer_session(
             to: "complete_session".to_string(),
         })?;
     
-    // Get current phase before transition
     let old_phase = timer_state.phase();
     
     // Complete the task session if this was a work phase

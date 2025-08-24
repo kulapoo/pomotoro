@@ -18,7 +18,6 @@ pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
             let payload = js_sys::Reflect::get(&event, &"payload".into()).unwrap_or(JsValue::NULL);
             
             if let Ok(timer_tick) = serde_wasm_bindgen::from_value::<TimerTick>(payload) {
-                // Update the timer state with the new remaining seconds
                 set_timer_state.update(|_state| {
                     // Note: TimerState is an enum state machine, so we can't directly update fields.
                     // This approach won't work with the new state machine design.

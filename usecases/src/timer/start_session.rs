@@ -59,7 +59,6 @@ pub async fn start_session(
         });
     }
     
-    // Start the timer using state transitions
     let result = domain::timer::transitions::StateTransitions::start(timer_state.clone())?;
     *timer_state = result.new_state;
     

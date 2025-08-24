@@ -41,7 +41,6 @@ pub async fn set_default_task(
         event_publisher.publish(Box::new(updated_event));
     }
     
-    // Set new task as default
     task.set_as_default();
     task_repo.update(task.clone()).await?;
     
@@ -141,10 +140,9 @@ mod tests {
             task_id: task.id.to_string(),
         };
         
-        // Set as default first time
         set_default_task(&task_repo, &event_publisher, cmd.clone()).await.unwrap();
         
-        // Set as default second time (should be idempotent)
+        // Should be idempotent
         let result = set_default_task(&task_repo, &event_publisher, cmd).await.unwrap();
         
         assert!(result.is_default());

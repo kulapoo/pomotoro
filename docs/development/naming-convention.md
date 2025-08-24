@@ -3,6 +3,9 @@
 ## Core Principle
 All types use generic names - module paths provide context. Use type aliases when importing for clarity.
 
+
+> Note: Make sure to set breadcrumbs setting to "On" and only "display symbol" is off
+
 ## File Naming
 ```rust
 ✅ CORRECT

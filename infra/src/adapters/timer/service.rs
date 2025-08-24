@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use tokio::time::interval;
 
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
-use crate::adapters::timer::timer_repo::FileTimerStateRepository;
+use crate::adapters::timer::repository::FileTimerStateRepository;
 use domain::{
     Task, Phase, TaskId, TimerStatus, TimerConfiguration,
     timer::Timer,
@@ -62,7 +62,7 @@ impl TimerService {
         let event_publisher = Arc::new(domain::NoOpEventPublisher);
         let timer = Timer::new(TimerConfiguration::default())
             .with_event_publisher(Box::new(event_publisher.clone()));
-        
+
         Self {
             timer: Arc::new(Mutex::new(timer)),
             cancel_handle: Arc::new(Mutex::new(None)),
@@ -78,7 +78,6 @@ impl TimerService {
     pub async fn load_state(&self) -> DomainResult<()> {
         if let Some(repo) = &self.state_repository {
             if let Ok(Some(state)) = repo.load_state().await {
-                // Create a new timer with the loaded state
                 let mut timer = self.timer.lock().await;
                 // We need to restore the state - this might require a new method
                 // For now, we'll just update configuration
@@ -98,8 +97,7 @@ impl TimerService {
         Ok(())
     }
 
-    pub async fn start_timer_internal(&self, task: Option<Task>) -> Result<(), String> {
-        // Apply task configuration if provided
+    async fn start_timer_internal(&self, task: Option<Task>) -> Result<(), String> {
         if let Some(ref task) = task {
             let timer_config = TimerConfiguration::new(
                 task.config.work_duration(),
@@ -114,12 +112,10 @@ impl TimerService {
                 .map_err(|e| e.to_string())?;
         }
 
-        // Start the timer
         self.timer.lock().await
             .start()
             .map_err(|e| e.to_string())?;
 
-        // Cancel any existing timer
         {
             let mut cancel_guard = self.cancel_handle.lock().await;
             if let Some(handle) = cancel_guard.take() {
@@ -127,7 +123,6 @@ impl TimerService {
             }
         }
 
-        // Start the tick loop
         let timer_clone = Arc::clone(&self.timer);
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -137,12 +132,11 @@ impl TimerService {
 
                 let should_continue = {
                     let mut timer = timer_clone.lock().await;
-                    
+
                     if !timer.is_running() {
                         false
                     } else {
-                        // Process tick
-                        let _phase_complete = match timer.tick() {
+                        match timer.tick() {
                             Ok(complete) => complete,
                             Err(e) => {
                                 eprintln!("Timer tick error: {e}");
@@ -160,20 +154,17 @@ impl TimerService {
         });
 
         *self.cancel_handle.lock().await = Some(handle);
-        
-        // Save state after starting
+
         self.save_state().await.ok();
-        
+
         Ok(())
     }
 
     pub async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
         let mut timer = self.timer.lock().await;
-        
-        // Set the active task
+
         timer.set_active_entity(Some(task_id.to_string()))?;
-        
-        // Update configuration if task provided
+
         if let Some(task) = task {
             let timer_config = TimerConfiguration::new(
                 task.config.work_duration(),
@@ -183,10 +174,10 @@ impl TimerService {
             )?;
             timer.update_configuration(timer_config)?;
         }
-        
+
         drop(timer);
         self.save_state().await.ok();
-        
+
         Ok(())
     }
 
@@ -197,7 +188,6 @@ impl TimerService {
     }
 
     pub async fn stop_timer(&self) -> DomainResult<()> {
-        // Cancel the timer loop
         {
             let mut cancel_guard = self.cancel_handle.lock().await;
             if let Some(handle) = cancel_guard.take() {
@@ -205,18 +195,16 @@ impl TimerService {
             }
         }
 
-        // Reset the timer
         self.timer.lock().await.reset()?;
         self.save_state().await.ok();
-        
+
         Ok(())
     }
 
     pub async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
         let mut timer = self.timer.lock().await;
-        
+
         let new_status = if timer.is_running() {
-            // Cancel the timer loop when pausing
             {
                 let mut cancel_guard = self.cancel_handle.lock().await;
                 if let Some(handle) = cancel_guard.take() {
@@ -227,8 +215,7 @@ impl TimerService {
             TimerStatus::Paused
         } else if timer.is_paused() {
             timer.resume()?;
-            
-            // Restart the timer loop when resuming
+
             let timer_clone = Arc::clone(&self.timer);
             let handle = tokio::spawn(async move {
                 let mut interval = interval(Duration::from_secs(1));
@@ -238,7 +225,7 @@ impl TimerService {
 
                     let should_continue = {
                         let mut timer = timer_clone.lock().await;
-                        
+
                         if !timer.is_running() {
                             false
                         } else {
@@ -264,10 +251,10 @@ impl TimerService {
         } else {
             timer.state().status()
         };
-        
+
         drop(timer);
         self.save_state().await.ok();
-        
+
         Ok(new_status)
     }
 
@@ -282,10 +269,10 @@ impl TimerService {
         let old_phase = timer.state().phase();
         timer.skip_phase()?;
         let new_phase = timer.state().phase();
-        
+
         drop(timer);
         self.save_state().await.ok();
-        
+
         Ok((old_phase, new_phase))
     }
 }

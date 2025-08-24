@@ -124,9 +124,9 @@ impl InMemoryEventBus {
 
 impl EventPublisher for InMemoryEventBus {
     fn publish(&self, event: Box<dyn Event>) {
-        // Check for runtime availability early
+
         if tokio::runtime::Handle::try_current().is_err() {
-            // TODO: Use proper logging
+
             eprintln!("Warning: No tokio runtime available for publishing events");
             return;
         }
@@ -135,7 +135,7 @@ impl EventPublisher for InMemoryEventBus {
         let type_id = event.as_any().type_id();
 
         if let Some(event_handlers) = handlers.get(&type_id) {
-            // Execute each handler's closure
+
             for handler_meta in event_handlers {
                 (handler_meta.handler_fn)(event.as_ref());
             }
@@ -150,42 +150,42 @@ impl EventPublisher for InMemoryEventBus {
 }
 
 impl EventSubscriber for InMemoryEventBus {
-    fn subscribe(&mut self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
+    fn subscribe(&self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
         let event_type = handler.subscribes_to();
         let handler_name = handler.name().to_string();
         let handler_id = self.next_handler_id.fetch_add(1, Ordering::SeqCst);
         let handler_arc = Arc::new(handler);
 
-        // Log subscription
+
         eprintln!("Subscribing handler '{}' with ID {} for event type", handler_name, handler_id);
 
-        // Create a closure that spawns an async task for the handler
+
         let handler_fn = Arc::new(move |event: &dyn Event| {
             let event_box = event.clone_box();
             let handler_clone = Arc::clone(&handler_arc);
 
-            // Get current tokio runtime or return if none available
+
             let handle = match tokio::runtime::Handle::try_current() {
                 Ok(handle) => handle,
                 Err(_) => {
-                    // TODO: Use proper logging framework (tracing/log)
+
                     eprintln!("Warning: No tokio runtime available for event handler");
                     return;
                 }
             };
 
-            // Spawn async task to handle the event
+
             handle.spawn(async move {
-                // Execute the async handler
+
                 if let Err(e) = handler_clone.handle(event_box).await {
-                    // TODO: Add proper error handling/logging
-                    // TODO: Add to dead letter queue
+
+
                     eprintln!("Event handler error: {}", e);
                 }
             });
         }) as Arc<dyn Fn(&dyn Event) + Send + Sync>;
 
-        // Store handler with metadata
+
         let handler_metadata = HandlerMetadata {
             id: handler_id,
             name: handler_name,
@@ -202,12 +202,12 @@ impl EventSubscriber for InMemoryEventBus {
         Ok(())
     }
 
-    fn clear_handlers_for_type(&mut self, event_type: TypeId) -> domain::Result<()> {
+    fn clear_handlers_for_type(&self, event_type: TypeId) -> domain::Result<()> {
         let mut handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
         let removed_count = handlers.remove(&event_type).map(|v| v.len()).unwrap_or(0);
 
         if removed_count > 0 {
-            // TODO: Use proper logging
+
             eprintln!("Cleared {} handlers for event type", removed_count);
         }
 
@@ -215,7 +215,7 @@ impl EventSubscriber for InMemoryEventBus {
     }
 
     fn unsubscribe_by_name(
-        &mut self,
+        &self,
         event_type: TypeId,
         handler_name: &str,
     ) -> domain::Result<bool> {
@@ -227,13 +227,13 @@ impl EventSubscriber for InMemoryEventBus {
             let removed_count = initial_len - event_handlers.len();
 
             if removed_count > 0 {
-                // TODO: Use proper logging
+
                 eprintln!(
                     "Unsubscribed {} handler(s) named '{}' from event type",
                     removed_count, handler_name
                 );
 
-                // If no handlers left for this type, remove the entry
+
                 if event_handlers.is_empty() {
                     handlers.remove(&event_type);
                 }
@@ -260,12 +260,12 @@ mod tests {
     use tokio::sync::Notify;
     use std::sync::Arc;
 
-    // Improved test handler that counts invocations and signals completion
+
     struct TestEventHandler {
         name: String,
         counter: Arc<AtomicUsize>,
         event_type: TypeId,
-        // Signal when handler has been called
+
         notify: Arc<Notify>,
     }
 
@@ -311,7 +311,7 @@ mod tests {
         }
 
         fn name(&self) -> &'static str {
-            // FIXED: No memory leak - store name as static in test
+
             match self.name.as_str() {
                 "Handler1" => "Handler1",
                 "Handler2" => "Handler2",
@@ -360,7 +360,7 @@ mod tests {
 
         bus.publish(Box::new(task_created));
 
-        // FIXED: Wait for handler completion instead of arbitrary sleep
+
         tokio::time::timeout(Duration::from_millis(100), notify.notified())
             .await
             .expect("Handler should complete within 100ms");
@@ -403,7 +403,7 @@ mod tests {
 
         bus.publish(Box::new(task_created));
 
-        // Wait for both handlers
+
         let (r1, r2) = tokio::join!(
             tokio::time::timeout(Duration::from_millis(100), notify1.notified()),
             tokio::time::timeout(Duration::from_millis(100), notify2.notified())
@@ -427,7 +427,7 @@ mod tests {
 
         assert_eq!(bus.handler_count(), 1);
 
-        // Publish first event - handler should be called
+
         let task1 = TaskCreated::new(
             TaskId::new(),
             "Task 1".to_string(),
@@ -453,14 +453,14 @@ mod tests {
 
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
 
-        // Unsubscribe the handler
+
         let removed = bus
             .unsubscribe_by_name(TypeId::of::<TaskCreated>(), "RemovableHandler")
             .unwrap();
         assert!(removed);
         assert_eq!(bus.handler_count(), 0);
 
-        // Publish second event - handler should NOT be called
+
         let task2 = TaskCreated::new(
             TaskId::new(),
             "Task 2".to_string(),
@@ -480,10 +480,10 @@ mod tests {
 
         bus.publish(Box::new(task2));
 
-        // Small delay to ensure no handler runs
+
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // Count should still be 1
+
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 
@@ -497,7 +497,7 @@ mod tests {
 
         assert_eq!(bus.handler_count(), 1);
 
-        // Create another handler with same name to test unsubscribe
+
         let handler_to_remove = TestEventHandler::new("TestHandler", Arc::new(AtomicUsize::new(0)));
         bus.unsubscribe(Box::new(handler_to_remove)).unwrap();
 
@@ -517,7 +517,7 @@ mod tests {
 
         assert_eq!(bus.handler_count(), 2);
 
-        // Clear all handlers for TaskCreated
+
         bus.clear_handlers_for_type(TypeId::of::<TaskCreated>())
             .unwrap();
 
@@ -542,10 +542,10 @@ mod tests {
 
         bus.publish(Box::new(task_created));
 
-        // Small delay to ensure no handler runs
+
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // No handlers should have been called
+
         assert_eq!(call_count.load(Ordering::SeqCst), 0);
     }
 
@@ -564,7 +564,7 @@ mod tests {
         assert!(handlers.contains(&"Handler1".to_string()));
         assert!(handlers.contains(&"Handler2".to_string()));
 
-        // Also test listing handler IDs
+
         let ids = bus.list_handler_ids_for_type(TypeId::of::<TaskCreated>());
         assert_eq!(ids.len(), 2);
     }
@@ -574,7 +574,7 @@ mod tests {
         let mut bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
 
-        // Use a simple handler without notify for batch test
+
         let handler = TestEventHandler::new("BatchHandler", Arc::clone(&call_count));
         bus.subscribe(Box::new(handler)).unwrap();
 
@@ -601,7 +601,7 @@ mod tests {
 
         bus.publish_batch(events);
 
-        // Give handlers time to process
+
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         assert_eq!(call_count.load(Ordering::SeqCst), 3);
@@ -611,7 +611,7 @@ mod tests {
     fn should_handle_duplicate_handler_names() {
         let mut bus = InMemoryEventBus::new();
 
-        // Register two handlers with the same name
+
         let handler1 = TestEventHandler::new("Handler1", Arc::new(AtomicUsize::new(0)));
         let handler2 = TestEventHandler::new("Handler1", Arc::new(AtomicUsize::new(0)));
 
@@ -620,7 +620,7 @@ mod tests {
 
         assert_eq!(bus.handler_count(), 2);
 
-        // Both should have the same name but different IDs
+
         let names = bus.list_handlers_for_type(TypeId::of::<TaskCreated>());
         assert_eq!(names.len(), 2);
         assert!(names.iter().all(|n| n == "Handler1"));
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn should_handle_no_runtime_gracefully() {
-        // This test runs without tokio runtime
+
         let bus = InMemoryEventBus::new();
 
         let task_created = TaskCreated::new(
@@ -652,7 +652,7 @@ mod tests {
             1,
         );
 
-        // Should not panic, just log warning
+
         bus.publish(Box::new(task_created));
     }
 }

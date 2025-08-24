@@ -24,10 +24,8 @@ pub async fn reset_timer_session(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    // Get current state to find active task
     let current_state = timer_service.get_state().await?;
     
-    // Get the active task for context
     let task = if let Some(entity_id_str) = current_state.active_entity_id() {
         if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
             task_repo.get_by_id(task_id).await?

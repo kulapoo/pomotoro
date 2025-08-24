@@ -128,7 +128,6 @@ pub async fn complete_task_session(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Return the updated task
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
 
@@ -147,7 +146,6 @@ pub async fn reset_task_sessions(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Return the updated task
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
 

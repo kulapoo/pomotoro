@@ -8,13 +8,11 @@ use std::time::Duration;
 async fn test_e2e_task_creation_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let test_repo = TaskTestRepository::empty();
 
-    // Create a new task
     let new_task = TaskBuilder::new("E2E Test Task".to_string(), 3)
         .with_description("End-to-end test task".to_string())
         .with_tags(vec!["e2e".to_string(), "test".to_string()])
         .build();
 
-    // Create the task
     test_repo.create(new_task.clone()).await?;
 
     // Verify task was created
@@ -34,7 +32,6 @@ async fn test_e2e_task_creation_workflow() -> Result<(), Box<dyn std::error::Err
 async fn test_e2e_task_completion_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let test_repo = TaskTestRepository::empty();
 
-    // Create a task with 2 sessions
     let mut task = TaskBuilder::new("Completion Test".to_string(), 2)
         .with_tags(vec!["completion".to_string()])
         .build();
@@ -105,7 +102,6 @@ async fn test_e2e_task_selection_workflow() -> Result<(), Box<dyn std::error::Er
 async fn test_e2e_task_switching_workflow() -> Result<(), Box<dyn std::error::Error>> {
     let timer_context = TimerTestContext::new();
 
-    // Create tasks
     let work_task = TaskBuilder::new("Work Project".to_string(), 4)
         .with_tags(vec!["work".to_string()])
         .build();

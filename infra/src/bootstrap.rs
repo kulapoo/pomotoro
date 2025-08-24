@@ -2,7 +2,7 @@ use std::sync::Arc;
 use domain::EventPublisher;
 use tokio::sync::Mutex;
 
-use crate::adapters::{events::{mem_event_bus::EventPublisherArc, app_lifecycle}, task::InMemoryTaskRepository, InMemoryEventBus, InMemoryConfigRepository};
+use crate::adapters::{events::{app_lifecycle, mem_event_bus::EventPublisherArc, EventSubscriber}, task::{InMemoryTaskRepository, register_task_handlers}, timer::event_handlers::register_timer_handlers, InMemoryConfigRepository, InMemoryEventBus};
 use tauri::AppHandle;
 
 use crate::adapters::{
@@ -41,11 +41,23 @@ impl From<BootstrapError> for String {
     }
 }
 
+pub fn register_handlers(event_bus: Arc<dyn EventSubscriber + Send + Sync>, app_handle: AppHandle) -> Result<(), BootstrapError> {
+    let err_fn = |e: domain::Error| BootstrapError::EventSystem(e.to_string());
+    register_timer_handlers(event_bus.clone(), app_handle.clone())
+        .map_err(err_fn)?;
+    register_task_handlers(event_bus, app_handle)
+        .map_err(err_fn)?;
+    Ok(())
+}
+
 pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapError> {
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::with_default_task());
     let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> = Arc::new(InMemoryConfigRepository::default());
 
-    let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> = Arc::new(InMemoryEventBus::new());
+    let event_bus = Arc::new(InMemoryEventBus::new());
+    let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> = event_bus.clone();
+
+    register_handlers(event_bus.clone(), app_handle.clone())?;
 
     let audio_service = Arc::new(
         RodioAudioService::new().map_err(|e| BootstrapError::AudioInit(e.to_string()))?
@@ -69,7 +81,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry, BootstrapEr
         Some(100),
         chrono::Utc::now(),
     );
-    
+
     event_publisher.publish(Box::new(app_started));
 
     let ctx = AppRegistry {

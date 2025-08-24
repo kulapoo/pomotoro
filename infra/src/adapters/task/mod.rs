@@ -5,15 +5,18 @@
 //! - In-memory task repository
 //! - Task cycling service
 //! - Task DTOs for persistence
+//! - Event handlers for task domain events
 
 pub mod task_dto;
 pub mod config_dto;
 pub mod file_repo;
 pub mod memory_repo;
 pub mod cycling_srv;
+pub mod event_handlers;
 
 pub use task_dto::{TaskDto, TaskAudioConfigDto};
 pub use config_dto::TaskConfigDto;
 pub use file_repo::FileTaskRepository;
 pub use memory_repo::{InMemoryTaskRepository, TaskRepositoryArc};
 pub use cycling_srv::StandardTaskCyclerService;
+pub use event_handlers::{register_task_handlers, unregister_task_handlers};

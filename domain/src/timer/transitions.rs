@@ -1,24 +1,17 @@
 use super::{Phase, Error, Result};
 use super::state_machine::TimerState;
 
-/// Result of a state transition
 #[derive(Debug, Clone)]
 pub struct TransitionResult {
-    /// The new state after transition
     pub new_state: TimerState,
-    /// The phase that was completed (if applicable)
     pub completed_phase: Option<Phase>,
-    /// Whether a work session was completed
     pub work_session_completed: bool,
-    /// Whether a full pomodoro cycle was completed
     pub cycle_completed: bool,
 }
 
-/// State transition logic for the timer state machine
 pub struct StateTransitions;
 
 impl StateTransitions {
-    /// Start the timer from idle state
     pub fn start(state: TimerState) -> Result<TransitionResult> {
         match state {
             TimerState::Idle { configuration, session_count, active_entity } => {
@@ -48,7 +41,6 @@ impl StateTransitions {
         }
     }
     
-    /// Pause the timer
     pub fn pause(state: TimerState) -> Result<TransitionResult> {
         match state {
             TimerState::Working { remaining_seconds, .. } |
@@ -65,7 +57,6 @@ impl StateTransitions {
                 })
             }
             TimerState::Paused { .. } => {
-                // Already paused, no-op
                 Ok(TransitionResult {
                     new_state: state,
                     completed_phase: None,
@@ -80,7 +71,6 @@ impl StateTransitions {
         }
     }
     
-    /// Resume from paused state
     pub fn resume(state: TimerState) -> Result<TransitionResult> {
         match state {
             TimerState::Paused { paused_from, .. } => {
@@ -98,15 +88,12 @@ impl StateTransitions {
         }
     }
     
-    /// Reset the timer to idle
     pub fn reset(state: TimerState) -> Result<TransitionResult> {
         let configuration = state.configuration().clone();
         let active_entity = state.active_entity().map(|s| s.to_string());
         let session_count = match &state {
-            // Preserve session count when resetting from break
             TimerState::ShortBreak { session_count, .. } |
             TimerState::LongBreak { session_count, .. } => *session_count,
-            // Reset session count for other states
             _ => 0,
         };
         
@@ -122,17 +109,14 @@ impl StateTransitions {
         })
     }
     
-    /// Transition to the next phase when current phase completes
     pub fn complete_phase(state: TimerState) -> Result<TransitionResult> {
         match state {
             TimerState::Working { configuration, session_count, active_entity, entity_session_count, .. } => {
                 let new_session_count = session_count + 1;
                 let new_entity_session_count = entity_session_count + 1;
                 
-                // Determine next phase based on session count
                 let sessions_until_long = configuration.sessions_until_long_break as u32;
                 let (next_state, cycle_completed) = if new_session_count % sessions_until_long == 0 {
-                    // Time for long break
                     let remaining_seconds = configuration.get_phase_duration_seconds(Phase::LongBreak);
                     (
                         TimerState::LongBreak {
@@ -145,7 +129,6 @@ impl StateTransitions {
                         true,
                     )
                 } else {
-                    // Time for short break
                     let remaining_seconds = configuration.get_phase_duration_seconds(Phase::ShortBreak);
                     (
                         TimerState::ShortBreak {
@@ -167,7 +150,6 @@ impl StateTransitions {
                 })
             }
             TimerState::ShortBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
-                // Return to work
                 let remaining_seconds = configuration.get_phase_duration_seconds(Phase::Work);
                 
                 Ok(TransitionResult {
@@ -176,7 +158,7 @@ impl StateTransitions {
                         configuration,
                         session_count,
                         active_entity,
-                        entity_session_count, // Preserve entity sessions when returning from break
+                        entity_session_count,
                     },
                     completed_phase: Some(Phase::ShortBreak),
                     work_session_completed: false,
@@ -184,7 +166,6 @@ impl StateTransitions {
                 })
             }
             TimerState::LongBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
-                // Return to work, potentially reset session count
                 let remaining_seconds = configuration.get_phase_duration_seconds(Phase::Work);
                 let reset_sessions = session_count >= configuration.sessions_until_long_break as u32;
                 
@@ -194,7 +175,7 @@ impl StateTransitions {
                         configuration,
                         session_count: if reset_sessions { 0 } else { session_count },
                         active_entity,
-                        entity_session_count, // Preserve entity sessions when returning from break
+                        entity_session_count,
                     },
                     completed_phase: Some(Phase::LongBreak),
                     work_session_completed: false,
@@ -208,17 +189,14 @@ impl StateTransitions {
         }
     }
     
-    /// Skip the current phase and move to the next
     pub fn skip_phase(state: TimerState) -> Result<TransitionResult> {
         match state {
             TimerState::Working { .. } |
             TimerState::ShortBreak { .. } |
             TimerState::LongBreak { .. } => {
-                // Skipping is like completing with 0 time remaining
                 Self::complete_phase(state)
             }
             TimerState::Paused { paused_from, .. } => {
-                // Unpause and then skip
                 Self::skip_phase(*paused_from)
             }
             TimerState::Idle { .. } => Err(Error::InvalidStateTransition {
@@ -228,7 +206,6 @@ impl StateTransitions {
         }
     }
     
-    /// Process a timer tick (decrement time)
     pub fn tick(mut state: TimerState) -> Result<(TimerState, bool)> {
         let phase_complete = match &mut state {
             TimerState::Working { remaining_seconds, .. } |
@@ -247,7 +224,6 @@ impl StateTransitions {
         Ok((state, phase_complete))
     }
     
-    /// Switch the active entity (only allowed in idle state)
     pub fn switch_entity(state: TimerState, new_entity: Option<String>) -> Result<TransitionResult> {
         match state {
             TimerState::Idle { configuration, session_count, .. } => {
@@ -269,7 +245,6 @@ impl StateTransitions {
         }
     }
     
-    /// Check if a transition is valid from the current state
     pub fn can_transition(from: &TimerState, transition: TransitionType) -> bool {
         match (from, transition) {
             (TimerState::Idle { active_entity, .. }, TransitionType::Start) => active_entity.is_some(),
@@ -300,7 +275,6 @@ impl StateTransitions {
     }
 }
 
-/// Types of transitions that can be performed
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TransitionType {
     Start,

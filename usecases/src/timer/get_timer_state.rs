@@ -19,10 +19,8 @@ use std::sync::Arc;
 pub async fn get_timer_state(
     timer_service: &Arc<dyn TimerService + Send + Sync>,
 ) -> Result<TimerState> {
-    // Load any persisted state first
     timer_service.load_state().await?;
 
-    // Return current state
     timer_service.get_state().await
 }
 

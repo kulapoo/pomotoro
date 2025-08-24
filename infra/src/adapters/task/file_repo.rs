@@ -181,10 +181,8 @@ mod tests {
         let task = Task::new("Test Task".to_string(), 4).unwrap();
         let task_id = task.id;
 
-        // Create and save task
         repo.create(task.clone()).await.unwrap();
 
-        // Load and verify task
         let loaded_task = repo.get_by_id(task_id).await.unwrap().unwrap();
         assert_eq!(loaded_task.name, "Test Task");
         assert_eq!(loaded_task.max_sessions, 4);
