@@ -19,7 +19,6 @@ impl TimerPageState {
     pub fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
 
-        // Initial load of timer state
         Effect::new(move |_| {
             spawn_local(async move {
                 let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
@@ -28,8 +27,6 @@ impl TimerPageState {
                 }
             });
         });
-
-        // Setup event listeners
         setup_timer_events(set_timer_state);
         setup_phase_complete_events();
 

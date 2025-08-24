@@ -1,5 +1,4 @@
 use leptos::prelude::*;
-// Temporarily using regular <a> tags until router is working
 
 #[component]
 pub fn Navigation() -> impl IntoView {

@@ -14,7 +14,6 @@ pub fn Sidebar(
     #[prop(optional)] is_collapsed: Option<ReadSignal<bool>>,
     #[prop(optional)] set_is_collapsed: Option<WriteSignal<bool>>,
 ) -> impl IntoView {
-    // Use provided state or create local state
     let (collapsed, set_collapsed) = if let (Some(collapsed), Some(set_collapsed)) = (is_collapsed, set_is_collapsed) {
         (collapsed, set_collapsed)
     } else {
@@ -29,15 +28,12 @@ pub fn Sidebar(
     view! {
         <div class={move || format!("sidebar {}", if collapsed.get() { "collapsed" } else { "" })}>
             <div class="sidebar-content">
-                // App brand/logo section
                 <div class="app-brand">
                     <div class="bull-icon">"🐂"</div>
                     <span class="app-brand-text">"Pomotoro"</span>
                 </div>
 
-                // Navigation items
                 <nav class="nav-menu">
-                    // Timer section
                     <div 
                         class={move || format!(
                             "nav-item {}", 
@@ -49,7 +45,6 @@ pub fn Sidebar(
                         <span class="nav-item-text">"Timer"</span>
                     </div>
 
-                    // Tasks section
                     <div 
                         class={move || format!(
                             "nav-item {}", 
@@ -61,7 +56,6 @@ pub fn Sidebar(
                         <span class="nav-item-text">"Tasks Directory"</span>
                     </div>
 
-                    // Settings section
                     <div 
                         class={move || format!(
                             "nav-item {}", 
@@ -75,7 +69,6 @@ pub fn Sidebar(
                 </nav>
             </div>
 
-            // Toggle button
             <button 
                 class="sidebar-toggle"
                 on:click=toggle_sidebar

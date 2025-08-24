@@ -57,7 +57,6 @@ impl DefaultCyclingService {
             }
         }
 
-        // Return first task if no current task or current task not found
         tasks.first()
     }
 

@@ -18,7 +18,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
     
     view! {
         <div>
-            // Task creation form
             <Show when=move || show_creation_form.get()>
                 {move || {
                     let task_resource = task_resource_signal.get_value();
@@ -33,7 +32,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                 }}
             </Show>
             
-            // Task list
             <div>
                 {move || {
                     let task_resource = task_resource_signal.get_value();
@@ -43,7 +41,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                     
                     view! {
                         <>
-                            // Show empty state if no tasks
                             <Show when=move || tasks.is_empty() && !show_creation_form.get()>
                                 <div class="task-item">
                                     <div style="text-align: center; opacity: 0.7;">
@@ -52,7 +49,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                 </div>
                             </Show>
 
-                            // Render existing tasks
                             <For
                                 each=move || tasks_clone.clone()
                                 key=|task| task.id
@@ -85,16 +81,14 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                                 });
                                             }
                                         >
-                                            // Task header
-                                            <div class="task-header">
+                                                            <div class="task-header">
                                                 <h3>{task.name.clone()}</h3>
                                                 <span class="task-status">
                                                     {if is_active { "Active" } else { "Pending" }}
                                                 </span>
                                             </div>
 
-                                            // Task description
-                                            {task.description.clone().map(|desc| {
+                                                            {task.description.clone().map(|desc| {
                                                 if !desc.is_empty() {
                                                     view! {
                                                         <p style="opacity: 0.8; margin: 10px 0;">{desc}</p>
@@ -104,8 +98,7 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                                 }
                                             })}
 
-                                            // Task meta with progress
-                                            <div class="task-meta">
+                                                            <div class="task-meta">
                                                 <div class="pomodoro-progress">
                                                     <span class="progress-text">
                                                         {format!("{} of {} pomodoros completed", task.current_sessions, task.max_sessions)}
@@ -126,7 +119,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                 }
                             />
 
-                            // Add new task button (always show)
                             <div class="task-item">
                                 <div style="text-align: center;">
                                     <button 

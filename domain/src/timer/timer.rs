@@ -58,7 +58,7 @@ impl Timer {
         }
 
         let result = StateTransitions::start(self.state.clone())?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn pause(&mut self) -> Result<()> {
@@ -70,7 +70,7 @@ impl Timer {
         }
 
         let result = StateTransitions::pause(self.state.clone())?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn resume(&mut self) -> Result<()> {
@@ -82,12 +82,12 @@ impl Timer {
         }
 
         let result = StateTransitions::resume(self.state.clone())?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn reset(&mut self) -> Result<()> {
         let result = StateTransitions::reset(self.state.clone())?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn skip_phase(&mut self) -> Result<()> {
@@ -99,7 +99,7 @@ impl Timer {
         }
 
         let result = StateTransitions::skip_phase(self.state.clone())?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn tick(&mut self) -> Result<bool> {
@@ -120,7 +120,7 @@ impl Timer {
 
         if phase_complete {
             let result = StateTransitions::complete_phase(self.state.clone())?;
-            self.apply_transition(result)?;
+            self.publish_events(result)?;
         }
 
         Ok(phase_complete)
@@ -135,7 +135,7 @@ impl Timer {
         }
 
         let result = StateTransitions::switch_entity(self.state.clone(), entity_id)?;
-        self.apply_transition(result)
+        self.publish_events(result)
     }
 
     pub fn update_configuration(&mut self, configuration: TimerConfiguration) -> Result<()> {
@@ -261,169 +261,12 @@ impl Timer {
         self.state.is_idle()
     }
 
-    fn apply_transition(&mut self, result: TransitionResult) -> Result<()> {
-        let old_state = self.state.clone();
-        self.state = result.new_state.clone();
+    fn publish_events(&mut self, result: TransitionResult) -> Result<()> {
+        self.state = result.new_state;
 
         if let Some(publisher) = &self.event_publisher {
-            match (&old_state, &self.state) {
-                (TimerState::Idle { .. }, TimerState::Working { .. }) => {
-                    let event = Started::new(
-                        self.state.active_entity_id(),
-                        Phase::Work,
-                        self.state.configuration().work_duration.as_secs() as u32,
-                        1,
-                    );
-                    publisher.publish(Box::new(event));
-
-                    let work_event = WorkSessionStarted::new(
-                        self.state.active_entity_id(),
-                        self.state.configuration().work_duration.as_secs() as u32,
-                        self.state.session_count(),
-                        1,
-                        1,
-                    );
-                    publisher.publish(Box::new(work_event));
-                }
-                (_, TimerState::Paused { .. }) => {
-                    let phase = self.get_current_phase();
-                    let event = Paused::new(
-                        self.state.active_entity_id(),
-                        phase,
-                        self.state.remaining_seconds(),
-                        1,
-                    );
-                    publisher.publish(Box::new(event));
-                }
-                (TimerState::Paused { .. }, _)
-                    if !matches!(self.state, TimerState::Idle { .. }) =>
-                {
-                    let phase = self.get_current_phase();
-                    let event = Started::new(
-                        self.state.active_entity_id(),
-                        phase,
-                        self.state.remaining_seconds(),
-                        1,
-                    );
-                    publisher.publish(Box::new(event));
-                }
-                (_, TimerState::Idle { .. }) => {
-                    let event = Reset::new(self.state.active_entity_id(), Phase::Work, 1);
-                    publisher.publish(Box::new(event));
-                }
-                (TimerState::Working { .. }, TimerState::ShortBreak { .. })
-                | (TimerState::Working { .. }, TimerState::LongBreak { .. }) => {
-                    let to_phase = if matches!(self.state, TimerState::ShortBreak { .. }) {
-                        Phase::ShortBreak
-                    } else {
-                        Phase::LongBreak
-                    };
-
-                    if result.completed_phase.is_some() {
-                        let event = PhaseCompleted::new(
-                            self.state.active_entity_id(),
-                            Phase::Work,
-                            to_phase,
-                            self.state.session_count(),
-                            self.state.session_count(),
-                            1,
-                        );
-                        publisher.publish(Box::new(event));
-                    } else {
-                        let event = PhaseSkipped::new(
-                            self.state.active_entity_id(),
-                            Phase::Work,
-                            to_phase,
-                            1,
-                        );
-                        publisher.publish(Box::new(event));
-                    }
-
-                    if result.work_session_completed {
-                        let work_complete = WorkSessionCompleted::new(
-                            self.state.active_entity_id(),
-                            self.state.configuration().work_duration.as_secs() as u32,
-                            self.state.session_count(),
-                            1,
-                            1,
-                        );
-                        publisher.publish(Box::new(work_complete));
-                    }
-
-                    let duration = if to_phase == Phase::ShortBreak {
-                        self.state.configuration().short_break_duration.as_secs() as u32
-                    } else {
-                        self.state.configuration().long_break_duration.as_secs() as u32
-                    };
-                    let break_event = BreakSessionStarted::new(
-                        self.state.active_entity_id(),
-                        to_phase,
-                        duration,
-                        1,
-                    );
-                    publisher.publish(Box::new(break_event));
-                }
-                (TimerState::ShortBreak { .. }, TimerState::Working { .. })
-                | (TimerState::LongBreak { .. }, TimerState::Working { .. }) => {
-                    let from_phase = if matches!(old_state, TimerState::ShortBreak { .. }) {
-                        Phase::ShortBreak
-                    } else {
-                        Phase::LongBreak
-                    };
-
-                    if result.completed_phase.is_some() {
-                        let event = PhaseCompleted::new(
-                            self.state.active_entity_id(),
-                            from_phase,
-                            Phase::Work,
-                            self.state.session_count(),
-                            self.state.session_count(),
-                            1,
-                        );
-                        publisher.publish(Box::new(event));
-                    } else {
-                        let event = PhaseSkipped::new(
-                            self.state.active_entity_id(),
-                            from_phase,
-                            Phase::Work,
-                            1,
-                        );
-                        publisher.publish(Box::new(event));
-                    }
-
-                    let duration = if from_phase == Phase::ShortBreak {
-                        self.state.configuration().short_break_duration.as_secs() as u32
-                    } else {
-                        self.state.configuration().long_break_duration.as_secs() as u32
-                    };
-                    let break_complete = BreakSessionCompleted::new(
-                        self.state.active_entity_id(),
-                        from_phase,
-                        duration,
-                        1,
-                    );
-                    publisher.publish(Box::new(break_complete));
-
-                    let work_event = WorkSessionStarted::new(
-                        self.state.active_entity_id(),
-                        self.state.configuration().work_duration.as_secs() as u32,
-                        self.state.session_count(),
-                        1,
-                        1,
-                    );
-                    publisher.publish(Box::new(work_event));
-                }
-                _ => {}
-            }
-
-            if old_state.active_entity_id() != self.state.active_entity_id() {
-                let event = ActiveTaskSwitched::new(
-                    old_state.active_entity_id(),
-                    self.state.active_entity_id(),
-                    self.get_current_phase(),
-                    1,
-                );
-                publisher.publish(Box::new(event));
+            for event in result.events {
+                publisher.publish(event);
             }
         }
 

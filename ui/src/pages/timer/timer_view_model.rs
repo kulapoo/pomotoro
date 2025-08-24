@@ -1,10 +1,8 @@
 use domain::{TimerState, Phase};
 
-/// View model for timer presentation logic
 pub struct TimerViewModel;
 
 impl TimerViewModel {
-    /// Get human-readable phase name
     pub fn get_phase_name(state: &TimerState) -> &'static str {
         match state {
             TimerState::Idle { .. } => "Idle",
@@ -22,7 +20,6 @@ impl TimerViewModel {
         }
     }
     
-    /// Format remaining time as MM:SS
     pub fn format_time(state: &TimerState) -> String {
         let seconds = state.remaining_seconds();
         let minutes = seconds / 60;
@@ -30,7 +27,6 @@ impl TimerViewModel {
         format!("{:02}:{:02}", minutes, secs)
     }
     
-    /// Get progress percentage (0.0 to 100.0)
     pub fn get_progress_percentage(state: &TimerState) -> f64 {
         let remaining = state.remaining_seconds();
         let total = match state {
@@ -57,20 +53,18 @@ impl TimerViewModel {
         }
     }
     
-    /// Get session display string
     pub fn get_session_display(state: &TimerState) -> String {
         let session_count = state.session_count();
         let sessions_until_long_break = state.configuration().sessions_until_long_break as u32;
         format!("Session {}/{}", session_count % sessions_until_long_break + 1, sessions_until_long_break)
     }
     
-    /// Helper to get current phase from state
     fn get_current_phase(state: &TimerState) -> Phase {
         match state {
             TimerState::Working { .. } => Phase::Work,
             TimerState::ShortBreak { .. } => Phase::ShortBreak,
             TimerState::LongBreak { .. } => Phase::LongBreak,
-            TimerState::Idle { .. } => Phase::Work, // Default to work
+            TimerState::Idle { .. } => Phase::Work,
             TimerState::Paused { paused_from, .. } => Self::get_current_phase(paused_from),
         }
     }

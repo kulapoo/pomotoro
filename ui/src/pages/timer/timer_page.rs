@@ -10,7 +10,6 @@ pub fn TimerPage() -> impl IntoView {
     
     view! {
         <div class="timer-section">
-            // Current Task Context Box
             <div class="current-task">
                 <div class="task-label">"Current Task"</div>
                 <div class="task-title">{move || {
@@ -20,19 +19,15 @@ pub fn TimerPage() -> impl IntoView {
                 <div class="task-progress">{move || TimerViewModel::get_session_display(&page_state.timer_state.get())}</div>
             </div>
             
-            // Timer label
             <div class="timer-label">{move || TimerViewModel::get_phase_name(&page_state.timer_state.get())}</div>
             
-            // Progress ring
             <CircularProgress
                 progress=Signal::derive(move || TimerViewModel::get_progress_percentage(&page_state.timer_state.get()))
                 phase=Signal::derive(move || page_state.timer_state.get().phase())
             />
             
-            // Timer display
             <div class="timer-display">{move || TimerViewModel::format_time(&page_state.timer_state.get())}</div>
             
-            // Timer controls
             <div class="timer-controls">
                 <TimerControls
                     timer_state=page_state.timer_state

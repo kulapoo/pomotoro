@@ -120,7 +120,6 @@ impl TaskRepository for InMemoryTaskRepository {
             message: format!("Lock error: {e}") 
         })?;
         
-        // Check if this is the default task and prevent deletion
         if let Some(task) = tasks.get(&id) {
             if task.name == "Focus Session" && 
                task.description == Some("Default pomodoro task for focused work".to_string()) {

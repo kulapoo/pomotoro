@@ -73,32 +73,27 @@ pub fn SettingsPage() -> impl IntoView {
     let (success_message, set_success_message) = signal::<Option<String>>(None);
     let (_active_tab, _set_active_tab) = signal("general");
 
-    // Timer settings signals
     let (work_minutes, set_work_minutes) = signal(25u32);
     let (short_break_minutes, set_short_break_minutes) = signal(5u32);
     let (long_break_minutes, set_long_break_minutes) = signal(15u32);
     let (sessions_until_long_break, set_sessions_until_long_break) = signal(4u8);
     let (enable_screen_blocking, set_enable_screen_blocking) = signal(false);
     
-    // Audio settings signals
     let (volume, set_volume) = signal(0.7f32);
     let (muted, set_muted) = signal(false);
     let (enable_background_audio, set_enable_background_audio) = signal(false);
 
-    // General settings signals
     let (max_sessions_default, set_max_sessions_default) = signal(4u8);
     let (auto_start_breaks, set_auto_start_breaks) = signal(true);
     let (auto_start_work_after_break, set_auto_start_work_after_break) = signal(false);
     let (minimize_to_tray, set_minimize_to_tray) = signal(true);
     let (start_minimized, set_start_minimized) = signal(false);
 
-    // Notification settings signals
     let (enable_desktop_notifications, set_enable_desktop_notifications) = signal(true);
     let (show_phase_transition_notifications, set_show_phase_transition_notifications) = signal(true);
     let (show_task_completion_notifications, set_show_task_completion_notifications) = signal(true);
     let (auto_dismiss_delay_seconds, set_auto_dismiss_delay_seconds) = signal(5u32);
 
-    // UI settings signals
     let (theme, set_theme) = signal("System".to_string());
     let (show_seconds_in_display, set_show_seconds_in_display) = signal(true);
     let (always_on_top, set_always_on_top) = signal(false);
@@ -106,12 +101,10 @@ pub fn SettingsPage() -> impl IntoView {
     let (show_task_list_sidebar, set_show_task_list_sidebar) = signal(true);
     let (animate_progress, set_animate_progress) = signal(true);
 
-    // Load configuration on mount
     Effect::new(move |_| {
         load_global_config(set_config, set_loading, set_error_message);
     });
 
-    // Update signals when config loads
     Effect::new(move |_| {
         if let Some(config_data) = config.get() {
             set_work_minutes.set((config_data.default_task_config.work_duration.secs / 60) as u32);
@@ -236,7 +229,6 @@ pub fn SettingsPage() -> impl IntoView {
         <div class="settings-section">
             <h1 class="section-title">"Settings"</h1>
 
-            // Status messages
             <Show when=move || loading.get()>
                 <div class="setting-group" style="text-align: center;">
                     <p>"Loading settings..."</p>
@@ -255,7 +247,6 @@ pub fn SettingsPage() -> impl IntoView {
                 </div>
             </Show>
 
-            // Timer Configuration
             <div class="setting-group">
                 <div class="setting-label">"Focus Duration (minutes)"</div>
                 <input
@@ -304,7 +295,6 @@ pub fn SettingsPage() -> impl IntoView {
                 />
             </div>
 
-            // Notifications
             <div class="setting-group">
                 <div class="setting-label">"Sound Notifications"</div>
                 <label style="display: flex; align-items: center; gap: 10px;">
@@ -329,7 +319,6 @@ pub fn SettingsPage() -> impl IntoView {
                 </label>
             </div>
 
-            // Action buttons
             <div class="setting-group" style="display: flex; gap: 20px; justify-content: center;">
                 <button 
                     class="btn btn-secondary"

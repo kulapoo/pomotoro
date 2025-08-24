@@ -41,7 +41,6 @@ pub fn ScreenBlockerProvider(
     let (blocking_message, set_blocking_message) = signal("Focus Time".to_string());
     let (is_disabled, set_is_disabled) = signal(false);
     
-    // Listen for ESC key to disable blocking
     Effect::new(move |_| {
         let handle_keydown = leptos::callback::Callback::new(move |event: web_sys::KeyboardEvent| {
             if event.key() == "Escape" && is_blocking.get() {

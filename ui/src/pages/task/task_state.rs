@@ -27,7 +27,6 @@ impl TaskResource {
         let set_active_task_clone = set_active_task;
         
         spawn_local(async move {
-            // Load all tasks
             web_sys::console::log_1(&"Loading all tasks...".into());
             let result = invoke(events::task::GET_ALL, JsValue::NULL).await;
             match from_value::<Vec<Task>>(result) {
@@ -40,12 +39,10 @@ impl TaskResource {
                 }
             }
             
-            // Load timer state and active task
             web_sys::console::log_1(&"Loading timer state...".into());
             let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
             match from_value::<TimerState>(result) {
                 Ok(timer_state) => {
-                    // If there's an active task ID, fetch the actual task
                     if let Some(entity_id_str) = timer_state.active_entity_id() {
                         if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
                             let task_args = to_value(&task_id).unwrap();
@@ -82,7 +79,6 @@ impl TaskResource {
         
         match from_value::<TimerState>(result) {
             Ok(timer_state) => {
-                // If there's an active task ID, find the corresponding task
                 if let Some(entity_id_str) = timer_state.active_entity_id() {
                     if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
                         let tasks = self.tasks.get();
@@ -122,7 +118,6 @@ impl TaskResource {
             match from_value::<TimerState>(result) {
                 Ok(timer_state) => {
                     web_sys::console::log_1(&"Refetched timer state".into());
-                    // If there's an active task ID, find the corresponding task
                     if let Some(entity_id_str) = timer_state.active_entity_id() {
                         if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
                             let tasks = tasks.get_untracked();

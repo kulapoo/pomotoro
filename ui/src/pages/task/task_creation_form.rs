@@ -73,7 +73,6 @@ pub fn TaskCreationForm(
                     web_sys::console::log_1(&format!("Creating task with request: {:?}", &request.name).into());
                     let result = invoke(events::task::CREATE, args).await;
                     
-                    // Try parsing as Task directly first (Tauri success case)
                     match serde_wasm_bindgen::from_value::<domain::Task>(result.clone()) {
                         Ok(task) => {
                             web_sys::console::log_1(&format!("Task created successfully: {}", task.name).into());
@@ -81,7 +80,6 @@ pub fn TaskCreationForm(
                             on_close.run(());
                         }
                         Err(_) => {
-                            // Try parsing as error string (Tauri error case)
                             match serde_wasm_bindgen::from_value::<String>(result) {
                                 Ok(error) => {
                                     web_sys::console::error_1(&format!("Task creation failed: {error}").into());
@@ -105,11 +103,9 @@ pub fn TaskCreationForm(
         spawn_local(async move {
             web_sys::console::log_1(&"Testing backend connection...".into());
             
-            // Test 1: Get all tasks
             let result = invoke(events::task::GET_ALL, JsValue::NULL).await;
             web_sys::console::log_1(&format!("GET_ALL result: {result:?}").into());
             
-            // Test 2: Simple task creation with minimal data
             let simple_request = CreateTaskRequest {
                 name: "Test Task".to_string(),
                 description: None,

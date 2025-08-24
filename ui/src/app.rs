@@ -10,11 +10,9 @@ use crate::components::{Sidebar, NavigationSection};
 pub fn App() -> impl IntoView {
     let config_resource = ConfigResource::new();
     let task_resource = TaskResource::new();
-    
-    // Navigation state management
+
     let (current_section, set_current_section) = signal(NavigationSection::Timer);
 
-    // Render content based on current section
     let render_content = move || {
         match current_section.get() {
             NavigationSection::Timer => view! { <TimerPage /> }.into_any(),
@@ -27,13 +25,11 @@ pub fn App() -> impl IntoView {
         <Provider value=config_resource>
             <Provider value=task_resource>
                 <div class="min-h-screen" style="display: flex;">
-                    // Sidebar navigation
-                    <Sidebar 
+                    <Sidebar
                         current_section=current_section
                         set_current_section=set_current_section
                     />
-                    
-                    // Main content area
+
                     <main class="main-content">
                         <div class="content-area">
                             {render_content}

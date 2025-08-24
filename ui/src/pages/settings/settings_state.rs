@@ -11,7 +11,6 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-// Tauri command wrappers for config management
 pub async fn get_global_config() -> std::result::Result<Config, String> {
     let result = invoke(events::config::GET_GLOBAL, JsValue::NULL).await;
 
@@ -100,7 +99,6 @@ pub async fn reset_global_config_to_defaults() -> std::result::Result<Config, St
         .map_err(|e| format!("Failed to reset config: {e}"))
 }
 
-// Config signals - reactive config state
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct ConfigResource {
@@ -112,7 +110,6 @@ impl ConfigResource {
     pub fn new() -> Self {
         let (config, set_config) = signal(None::<Config>);
 
-        // Load initial config
         let set_config_clone = set_config;
         spawn_local(async move {
             if let Ok(initial_config) = get_global_config().await {

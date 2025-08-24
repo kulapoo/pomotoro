@@ -19,12 +19,10 @@ pub async fn set_default_task(
         .await?
         .ok_or_else(|| Error::TaskNotFound { id: cmd.task_id.clone() })?;
     
-    // Check if task is already default
     if task.is_default() {
         return Ok(task);
     }
     
-    // Get current default task and unset it
     if let Some(mut current_default) = task_repo.get_default_task().await? {
         current_default.unset_as_default();
         task_repo.update(current_default.clone()).await?;

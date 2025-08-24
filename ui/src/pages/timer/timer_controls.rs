@@ -51,7 +51,6 @@ pub fn TimerControls(
 
     view! {
         <>
-            // Primary Start/Pause button
             <button
                 class="btn btn-primary"
                 on:click=start_pause_timer
@@ -62,7 +61,6 @@ pub fn TimerControls(
                 }}
             </button>
 
-            // Secondary Reset button
             <button
                 class="btn btn-secondary"
                 on:click=reset_timer
@@ -70,7 +68,6 @@ pub fn TimerControls(
                 "Reset"
             </button>
 
-            // Secondary Skip button
             <button
                 class="btn btn-secondary"
                 on:click=skip_phase
