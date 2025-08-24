@@ -6,3 +6,4 @@ ai_contexts
 !.claude
 !CLAUDE.md
 /tmp
+/infra/dist/
