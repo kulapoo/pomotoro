@@ -3,7 +3,8 @@ use leptos::task::spawn_local;
 use serde_wasm_bindgen::to_value;
 use domain::*;
 use domain::event_names;
-use crate::shared::{invoke_command, invoke_command_no_args, ViewModel};
+
+use crate::utils::{invoke_command, invoke_command_no_args, ViewModel};
 
 pub struct SettingsViewModel {
     config: ReadSignal<Option<Config>>,

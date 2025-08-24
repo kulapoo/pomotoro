@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use crate::components::circular_progress::CircularProgress;
 use crate::pages::timer::TimerViewModel;
-use crate::shared::ViewModel;
+use crate::utils::ViewModel;
 
 #[component]
 #[allow(dead_code)]
@@ -9,7 +9,7 @@ pub fn TimerDisplay(
     vm: StoredValue<TimerViewModel>
 ) -> impl IntoView {
     let timer_state = vm.with_value(|v| v.state());
-    
+
     view! {
         <div class="mb-8">
             <h2 class="timer-label">

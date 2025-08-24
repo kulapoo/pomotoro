@@ -1,8 +1,9 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use serde_wasm_bindgen;
 use domain::{TimerState, TimerStatus, Phase, event_names};
-use crate::store::{setup_timer_events, setup_phase_complete_events};
-use crate::shared::{invoke_command_no_args, ViewModel};
+
+use crate::utils::{invoke_command_no_args, setup_phase_complete_events, setup_timer_events, ViewModel};
 
 pub struct TimerViewModel {
     timer_state: ReadSignal<TimerState>,

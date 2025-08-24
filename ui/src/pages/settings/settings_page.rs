@@ -1,15 +1,15 @@
 use leptos::prelude::*;
 use crate::pages::settings::SettingsViewModel;
-use crate::shared::ViewModel;
+use crate::utils::ViewModel;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     let vm = StoredValue::new(SettingsViewModel::new());
-    
+
     view! {
         <div class="settings-section">
             <h1 class="section-title">"Settings"</h1>
-            
+
             {move || {
                 vm.with_value(|v| v.get_config()).map(|config| {
                     // Extract values to avoid move issues
@@ -21,15 +21,15 @@ pub fn SettingsPage() -> impl IntoView {
                     let sound_notif = config.notification.enable_sound_notifications;
                     let volume = config.audio.volume;
                     let theme = config.appearance.theme.clone();
-                    
+
                     view! {
                         <div class="settings-container">
                             <div class="setting-group">
                                 <h3>"General Settings"</h3>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=auto_start_breaks
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -46,8 +46,8 @@ pub fn SettingsPage() -> impl IntoView {
                                 </div>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=auto_start_work
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -64,8 +64,8 @@ pub fn SettingsPage() -> impl IntoView {
                                 </div>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=minimize_tray
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -82,8 +82,8 @@ pub fn SettingsPage() -> impl IntoView {
                                 </div>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=start_min
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -99,13 +99,13 @@ pub fn SettingsPage() -> impl IntoView {
                                     </label>
                                 </div>
                             </div>
-                            
+
                             <div class="setting-group">
                                 <h3>"Notifications"</h3>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=desktop_notif
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -122,8 +122,8 @@ pub fn SettingsPage() -> impl IntoView {
                                 </div>
                                 <div class="setting-item">
                                     <label>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked=sound_notif
                                             on:change=move |ev| {
                                                 let checked = event_target_checked(&ev);
@@ -139,15 +139,15 @@ pub fn SettingsPage() -> impl IntoView {
                                     </label>
                                 </div>
                             </div>
-                            
+
                             <div class="setting-group">
                                 <h3>"Audio"</h3>
                                 <div class="setting-item">
                                     <label>"Volume"</label>
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="100" 
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
                                         value=(volume * 100.0) as i32
                                         on:change=move |ev| {
                                             let value = event_target_value(&ev).parse::<f32>().unwrap_or(50.0) / 100.0;
@@ -161,7 +161,7 @@ pub fn SettingsPage() -> impl IntoView {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div class="setting-group">
                                 <h3>"Appearance"</h3>
                                 <div class="setting-item">
@@ -187,9 +187,9 @@ pub fn SettingsPage() -> impl IntoView {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="setting-group">
-                                <button 
+                                <button
                                     class="btn btn-secondary"
                                     on:click=move |_| {
                                         vm.with_value(|v| v.reset_to_defaults());

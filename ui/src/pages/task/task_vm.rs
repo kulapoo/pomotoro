@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{to_value, from_value};
 use domain::{Task, TaskId, TimerState, event_names};
-use crate::shared::{invoke_command, invoke_command_no_args, ViewModel};
+use crate::utils::{invoke_command, invoke_command_no_args, ViewModel};
 
 pub struct TasksViewModel {
     tasks: ReadSignal<Vec<Task>>,

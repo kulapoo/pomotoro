@@ -1,8 +1,9 @@
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
-use crate::store::{setup_timer_events, setup_phase_complete_events};
 use domain::{TimerState, event_names};
+
+use crate::utils::{setup_phase_complete_events, setup_timer_events};
 
 #[wasm_bindgen]
 extern "C" {

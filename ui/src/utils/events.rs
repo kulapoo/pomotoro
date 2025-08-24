@@ -1,15 +1,34 @@
+use wasm_bindgen::prelude::*;
+use domain::{event_names, TimerState, TimerTick};
+use event_names::ui_listeners::timer as timer_event_names;
+use leptos::prelude::WriteSignal;
+
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen;
 
-use domain::{event_names::timer::TICK, TimerState, TimerTick};
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
     async fn listen(event: &str, callback: &Closure<dyn Fn(JsValue)>) -> JsValue;
 }
+
+
+
+pub async fn invoke_command(command: &str, args: JsValue) -> Result<JsValue, JsValue> {
+    Ok(invoke(command, args).await)
+}
+
+pub async fn invoke_command_no_args(command: &str) -> Result<JsValue, JsValue> {
+    Ok(invoke(command, JsValue::NULL).await)
+}
+
 
 pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
     spawn_local(async move {
@@ -23,11 +42,13 @@ pub fn setup_timer_events(set_timer_state: WriteSignal<TimerState>) {
             }
         });
 
-        listen(TICK, &callback).await;
+        listen(timer_event_names::TICK, &callback).await;
 
         callback.forget();
     });
 }
 
+
 pub fn setup_phase_complete_events() {
+    // Implement phase complete events
 }
