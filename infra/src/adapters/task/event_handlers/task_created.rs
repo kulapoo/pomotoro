@@ -24,7 +24,7 @@ impl EventHandler for TaskCreatedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_created = event.as_any().downcast_ref::<domain::TaskCreated>();
 
-        self.app_handle.emit(domain::events::task::LIST_UPDATED, task_created)
+        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_created)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task created event: {e}")
             })?;

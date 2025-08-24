@@ -1,38 +1,35 @@
 use leptos::prelude::*;
-use crate::pages::timer::TimerControls;
-use crate::pages::timer::timer_state::TimerPageState;
-use crate::pages::timer::timer_view_model::TimerViewModel;
+use crate::pages::timer::{TimerControls, TimerViewModel};
+use crate::shared::ViewModel;
 use crate::components::CircularProgress;
 
 #[component]
 pub fn TimerPage() -> impl IntoView {
-    let page_state = TimerPageState::new();
+    let vm = StoredValue::new(TimerViewModel::new());
+    let timer_state = vm.with_value(|v| v.state());
     
     view! {
         <div class="timer-section">
             <div class="current-task">
                 <div class="task-label">"Current Task"</div>
                 <div class="task-title">{move || {
-                    let state = page_state.timer_state.get();
+                    let state = timer_state.get();
                     state.active_entity_id().map(|_| "Active Task".to_string()).unwrap_or_else(|| "No active task".to_string())
                 }}</div>
-                <div class="task-progress">{move || TimerViewModel::get_session_display(&page_state.timer_state.get())}</div>
+                <div class="task-progress">{move || vm.with_value(|v| v.get_session_display())}</div>
             </div>
             
-            <div class="timer-label">{move || TimerViewModel::get_phase_name(&page_state.timer_state.get())}</div>
+            <div class="timer-label">{move || vm.with_value(|v| v.get_phase_name())}</div>
             
             <CircularProgress
-                progress=Signal::derive(move || TimerViewModel::get_progress_percentage(&page_state.timer_state.get()))
-                phase=Signal::derive(move || page_state.timer_state.get().phase())
+                progress=Signal::derive(move || vm.with_value(|v| v.get_progress_percentage()))
+                phase=Signal::derive(move || timer_state.get().phase())
             />
             
-            <div class="timer-display">{move || TimerViewModel::format_time(&page_state.timer_state.get())}</div>
+            <div class="timer-display">{move || vm.with_value(|v| v.format_time())}</div>
             
             <div class="timer-controls">
-                <TimerControls
-                    timer_state=page_state.timer_state
-                    set_timer_state=page_state.set_timer_state
-                />
+                <TimerControls vm=vm />
             </div>
         </div>
     }

@@ -24,7 +24,7 @@ impl EventHandler for AutomaticTaskCyclingCompletedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_cycling = event.as_any().downcast_ref::<domain::AutomaticTaskCyclingCompleted>();
 
-        self.app_handle.emit(domain::events::task::ACTIVE_CHANGED, task_cycling)
+        self.app_handle.emit(domain::event_names::task::ACTIVE_CHANGED, task_cycling)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit automatic task cycling completed event: {e}")
             })?;

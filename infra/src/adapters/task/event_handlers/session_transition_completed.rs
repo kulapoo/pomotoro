@@ -24,7 +24,7 @@ impl EventHandler for SessionTransitionCompletedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let session_transition = event.as_any().downcast_ref::<domain::SessionTransitionCompleted>();
 
-        self.app_handle.emit(domain::events::task::PROGRESS_UPDATED, session_transition)
+        self.app_handle.emit(domain::event_names::task::PROGRESS_UPDATED, session_transition)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit session transition completed event: {e}")
             })?;

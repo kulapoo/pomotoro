@@ -24,7 +24,7 @@ impl EventHandler for TaskSwitchWorkflowCompletedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_switch = event.as_any().downcast_ref::<domain::TaskSwitchWorkflowCompleted>();
 
-        self.app_handle.emit(domain::events::task::ACTIVE_CHANGED, task_switch)
+        self.app_handle.emit(domain::event_names::task::ACTIVE_CHANGED, task_switch)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task switch workflow completed event: {e}")
             })?;

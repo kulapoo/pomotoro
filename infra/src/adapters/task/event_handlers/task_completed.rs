@@ -24,7 +24,7 @@ impl EventHandler for TaskCompletedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_completed = event.as_any().downcast_ref::<domain::TaskCompleted>();
 
-        self.app_handle.emit(domain::events::task::LIST_UPDATED, task_completed)
+        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_completed)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task completed event: {e}")
             })?;

@@ -1,16 +1,10 @@
 use leptos::prelude::*;
-use leptos::context::Provider;
 
-use crate::pages::settings::ConfigResource;
-use crate::pages::task::TaskResource;
 use crate::pages::{TimerPage, TaskPage, SettingsPage};
 use crate::components::{Sidebar, NavigationSection};
 
 #[component]
 pub fn App() -> impl IntoView {
-    let config_resource = ConfigResource::new();
-    let task_resource = TaskResource::new();
-
     let (current_section, set_current_section) = signal(NavigationSection::Timer);
 
     let render_content = move || {
@@ -22,21 +16,17 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <Provider value=config_resource>
-            <Provider value=task_resource>
-                <div class="min-h-screen" style="display: flex;">
-                    <Sidebar
-                        current_section=current_section
-                        set_current_section=set_current_section
-                    />
+        <div class="min-h-screen" style="display: flex;">
+            <Sidebar
+                current_section=current_section
+                set_current_section=set_current_section
+            />
 
-                    <main class="main-content">
-                        <div class="content-area">
-                            {render_content}
-                        </div>
-                    </main>
+            <main class="main-content">
+                <div class="content-area">
+                    {render_content}
                 </div>
-            </Provider>
-        </Provider>
+            </main>
+        </div>
     }
 }

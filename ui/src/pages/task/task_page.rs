@@ -1,15 +1,15 @@
 use leptos::prelude::*;
-use crate::pages::task::TaskList;
-use super::TaskResource;
+use crate::pages::task::{TaskList, TasksViewModel};
+use crate::shared::ViewModel;
 
 #[component]
 pub fn TaskPage() -> impl IntoView {
-    let task_resource = expect_context::<TaskResource>();
+    let vm = StoredValue::new(TasksViewModel::new());
     
     view! {
         <div class="tasks-section">
             <h1 class="section-title">"Tasks Directory"</h1>
-            <TaskList task_resource=task_resource />
+            <TaskList vm=vm />
         </div>
     }
 }

@@ -1,31 +1,19 @@
 use leptos::prelude::*;
 use leptos::callback::Callback;
-use leptos::task::spawn_local;
-use wasm_bindgen::prelude::*;
-use super::TaskResource;
-use crate::pages::task::TaskCreationForm;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
-}
+use crate::pages::task::{TaskCreationForm, TasksViewModel};
 
 #[component]
-pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
-    let (show_creation_form, set_show_creation_form) = signal(false);
-    let task_resource_signal = StoredValue::new(task_resource);
+pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
     
     view! {
         <div>
-            <Show when=move || show_creation_form.get()>
+            <Show when=move || vm.with_value(|v| v.is_creating_task())>
                 {move || {
-                    let task_resource = task_resource_signal.get_value();
                     view! {
                         <div class="setting-group">
                             <TaskCreationForm 
-                                task_resource=task_resource
-                                on_close=Callback::new(move |_| set_show_creation_form.set(false))
+                                vm=vm
+                                on_close=Callback::new(move |_| vm.with_value(|v| v.set_creating_task(false)))
                             />
                         </div>
                     }
@@ -34,14 +22,17 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
             
             <div>
                 {move || {
-                    let task_resource = task_resource_signal.get_value();
-                    let tasks = task_resource.tasks.get();
-                    let active_task_id = task_resource.active_task.get().map(|t| t.id);
+                    let (tasks, active_task_id) = vm.with_value(|v| {
+                        let tasks = v.get_tasks();
+                        let active_task = v.get_active_task();
+                        let active_task_id = active_task.as_ref().map(|t| t.id);
+                        (tasks, active_task_id)
+                    });
                     let tasks_clone = tasks.clone();
                     
                     view! {
                         <>
-                            <Show when=move || tasks.is_empty() && !show_creation_form.get()>
+                            <Show when=move || tasks.is_empty() && !vm.with_value(|v| v.is_creating_task())>
                                 <div class="task-item">
                                     <div style="text-align: center; opacity: 0.7;">
                                         <p>"No tasks yet. Create your first task to get started!"</p>
@@ -55,7 +46,6 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                 children=move |task| {
                                     let task_id = task.id;
                                     let is_active = active_task_id == Some(task_id);
-                                    let task_resource_for_click = task_resource_signal.get_value();
                                     
                                     let progress_percentage = if task.max_sessions > 0 {
                                         (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
@@ -73,12 +63,7 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                         <div 
                                             class=task_classes
                                             on:click=move |_| {
-                                                let task_resource = task_resource_for_click.clone();
-                                                spawn_local(async move {
-                                                    if let Err(e) = task_resource.switch_task(task_id).await {
-                                                        web_sys::console::error_1(&format!("Failed to switch task: {e}").into());
-                                                    }
-                                                });
+                                                vm.with_value(|v| v.switch_active_task(task_id));
                                             }
                                         >
                                                             <div class="task-header">
@@ -123,7 +108,7 @@ pub fn TaskList(task_resource: TaskResource) -> impl IntoView {
                                 <div style="text-align: center;">
                                     <button 
                                         class="btn btn-secondary"
-                                        on:click=move |_| set_show_creation_form.update(|show| *show = !*show)
+                                        on:click=move |_| vm.with_value(|v| v.set_creating_task(true))
                                     >
                                         "Add New Task"
                                     </button>

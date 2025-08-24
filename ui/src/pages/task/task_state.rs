@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
-use domain::{Task, TaskId, TimerState, events};
+use domain::{Task, TaskId, TimerState, event_names};
 
 #[wasm_bindgen]
 extern "C" {
@@ -25,10 +25,10 @@ impl TaskResource {
 
         let set_tasks_clone = set_tasks;
         let set_active_task_clone = set_active_task;
-        
+
         spawn_local(async move {
             web_sys::console::log_1(&"Loading all tasks...".into());
-            let result = invoke(events::task::GET_ALL, JsValue::NULL).await;
+            let result = invoke(event_names::task::GET_ALL, JsValue::NULL).await;
             match from_value::<Vec<Task>>(result) {
                 Ok(task_list) => {
                     web_sys::console::log_1(&format!("Loaded {} tasks", task_list.len()).into());
@@ -38,15 +38,15 @@ impl TaskResource {
                     web_sys::console::error_1(&format!("Failed to load tasks: {e}").into());
                 }
             }
-            
+
             web_sys::console::log_1(&"Loading timer state...".into());
-            let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+            let result = invoke(event_names::timer::GET_STATE, JsValue::NULL).await;
             match from_value::<TimerState>(result) {
                 Ok(timer_state) => {
                     if let Some(entity_id_str) = timer_state.active_entity_id() {
                         if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
                             let task_args = to_value(&task_id).unwrap();
-                            let task_result = invoke(events::task::GET, task_args).await;
+                            let task_result = invoke(event_names::task::GET, task_args).await;
                             match from_value::<Task>(task_result) {
                                 Ok(task) => {
                                     web_sys::console::log_1(&format!("Active task: {}", &task.name).into());
@@ -75,8 +75,8 @@ impl TaskResource {
 
     pub async fn switch_task(&self, task_id: TaskId) -> Result<(), String> {
         let args = to_value(&task_id).map_err(|e| e.to_string())?;
-        let result = invoke(events::timer::SWITCH_ACTIVE_TASK, args).await;
-        
+        let result = invoke(event_names::timer::SWITCH_ACTIVE_TASK, args).await;
+
         match from_value::<TimerState>(result) {
             Ok(timer_state) => {
                 if let Some(entity_id_str) = timer_state.active_entity_id() {
@@ -100,10 +100,10 @@ impl TaskResource {
         let tasks = self.tasks;
         let set_tasks = self.set_tasks;
         let set_active_task = self.set_active_task;
-        
+
         spawn_local(async move {
             web_sys::console::log_1(&"Refetching tasks...".into());
-            let result = invoke(events::task::GET_ALL, JsValue::NULL).await;
+            let result = invoke(event_names::task::GET_ALL, JsValue::NULL).await;
             match from_value::<Vec<Task>>(result) {
                 Ok(task_list) => {
                     web_sys::console::log_1(&format!("Refetched {} tasks", task_list.len()).into());
@@ -113,8 +113,8 @@ impl TaskResource {
                     web_sys::console::error_1(&format!("Failed to refetch tasks: {e}").into());
                 }
             }
-            
-            let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+
+            let result = invoke(event_names::timer::GET_STATE, JsValue::NULL).await;
             match from_value::<TimerState>(result) {
                 Ok(timer_state) => {
                     web_sys::console::log_1(&"Refetched timer state".into());

@@ -24,7 +24,7 @@ impl EventHandler for TaskSessionCompletedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_session_completed = event.as_any().downcast_ref::<domain::TaskSessionCompleted>();
 
-        self.app_handle.emit(domain::events::task::PROGRESS_UPDATED, task_session_completed)
+        self.app_handle.emit(domain::event_names::task::PROGRESS_UPDATED, task_session_completed)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task session completed event: {e}")
             })?;

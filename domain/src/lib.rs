@@ -5,7 +5,7 @@ pub mod task;
 pub mod timer;
 pub mod config;
 pub mod audio;
-pub mod events;
+pub mod event_names;
 
 pub use shared_kernel::{
     Event, EventPublisher, NoOpEventPublisher,

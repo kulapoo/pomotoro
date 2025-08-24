@@ -48,7 +48,8 @@
       "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{reset_timer_session,skip_timer_phase,start_timer_session}.rs)",
       "Bash(if ! grep -q \"use domain::.*TaskId\" \"$file\")",
       "Bash(then)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 use crate::store::{setup_timer_events, setup_phase_complete_events};
-use domain::{TimerState, events};
+use domain::{TimerState, event_names};
 
 #[wasm_bindgen]
 extern "C" {
@@ -21,7 +21,7 @@ impl TimerPageState {
 
         Effect::new(move |_| {
             spawn_local(async move {
-                let result = invoke(events::timer::GET_STATE, JsValue::NULL).await;
+                let result = invoke(event_names::timer::GET_STATE, JsValue::NULL).await;
                 if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
                     set_timer_state.set(state);
                 }

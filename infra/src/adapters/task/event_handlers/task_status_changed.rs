@@ -24,7 +24,7 @@ impl EventHandler for TaskStatusChangedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_status_changed = event.as_any().downcast_ref::<domain::TaskStatusChanged>();
 
-        self.app_handle.emit(domain::events::task::LIST_UPDATED, task_status_changed)
+        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_status_changed)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task status changed event: {e}")
             })?;

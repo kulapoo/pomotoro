@@ -24,7 +24,7 @@ impl EventHandler for TimerStartedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let timer_started = event.as_any().downcast_ref::<domain::TimerStarted>();
 
-        self.app_handle.emit(domain::events::ui::app::APP_STARTED, timer_started)
+        self.app_handle.emit(domain::event_names::ui_listeners::app::APP_STARTED, timer_started)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}")
             })?;

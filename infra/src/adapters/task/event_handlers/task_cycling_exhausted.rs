@@ -24,7 +24,7 @@ impl EventHandler for TaskCyclingExhaustedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_exhausted = event.as_any().downcast_ref::<domain::TaskCyclingExhausted>();
 
-        self.app_handle.emit(domain::events::task::LIST_UPDATED, task_exhausted)
+        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_exhausted)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task cycling exhausted event: {e}")
             })?;
