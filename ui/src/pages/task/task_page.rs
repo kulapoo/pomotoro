@@ -7,8 +7,10 @@ pub fn TaskPage() -> impl IntoView {
     let vm = StoredValue::new(TasksViewModel::new());
 
     view! {
-        <div class="tasks-section">
-            <h1 class="section-title">"Tasks Directory"</h1>
+        <div class="tasks-container">
+            <div class="tasks-header">
+                <h2 class="tasks-title">"My Tasks"</h2>
+            </div>
             <TaskList vm=vm />
         </div>
     }

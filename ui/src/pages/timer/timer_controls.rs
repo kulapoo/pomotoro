@@ -36,7 +36,7 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
                 class="btn btn-secondary"
                 on:click=skip_action
             >
-                "Skip Task"
+                "SKIP"
             </button>
         </>
     }

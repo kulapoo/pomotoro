@@ -6,21 +6,29 @@ use crate::pages::task::{TaskCreationForm, TasksViewModel};
 pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
     
     view! {
-        <div>
-            <Show when=move || vm.with_value(|v| v.is_creating_task())>
-                {move || {
-                    view! {
-                        <div class="setting-group">
+        <>
+            <div class="add-task-form">
+                <Show when=move || vm.with_value(|v| v.is_creating_task())>
+                    {move || {
+                        view! {
                             <TaskCreationForm 
                                 vm=vm
                                 on_close=Callback::new(move |_| vm.with_value(|v| v.set_creating_task(false)))
                             />
-                        </div>
-                    }
-                }}
-            </Show>
+                        }
+                    }}
+                </Show>
+                <Show when=move || !vm.with_value(|v| v.is_creating_task())>
+                    <button 
+                        class="btn btn-primary"
+                        on:click=move |_| vm.with_value(|v| v.set_creating_task(true))
+                    >
+                        "ADD"
+                    </button>
+                </Show>
+            </div>
             
-            <div>
+            <ul class="task-list" id="taskList">
                 {move || {
                     let (tasks, active_task_id) = vm.with_value(|v| {
                         let tasks = v.get_tasks();
@@ -33,11 +41,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     view! {
                         <>
                             <Show when=move || tasks.is_empty() && !vm.with_value(|v| v.is_creating_task())>
-                                <div class="task-item">
-                                    <div style="text-align: center; opacity: 0.7;">
-                                        <p>"No tasks yet. Create your first task to get started!"</p>
-                                    </div>
-                                </div>
+                                <p style="text-align: center; opacity: 0.7; padding: 20px;">"No tasks yet. Create your first task to get started!"</p>
                             </Show>
 
                             <For
@@ -60,7 +64,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                     };
                                     
                                     view! {
-                                        <div 
+                                        <li 
                                             class=task_classes
                                             on:click=move |_| {
                                                 vm.with_value(|v| v.switch_active_task(task_id));
@@ -99,25 +103,14 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                                     {if is_active { "Currently Active" } else { "Select Task" }}
                                                 </button>
                                             </div>
-                                        </div>
+                                        </li>
                                     }
                                 }
                             />
-
-                            <div class="task-item">
-                                <div style="text-align: center;">
-                                    <button 
-                                        class="btn btn-secondary"
-                                        on:click=move |_| vm.with_value(|v| v.set_creating_task(true))
-                                    >
-                                        "Add New Task"
-                                    </button>
-                                </div>
-                            </div>
                         </>
                     }
                 }}
-            </div>
-        </div>
+            </ul>
+        </>
     }
 }

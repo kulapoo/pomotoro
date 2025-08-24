@@ -171,4 +171,10 @@ impl SettingsViewModel {
     pub fn refetch_config(&self) {
         self.load_config();
     }
+
+    pub fn save_settings(&self) {
+        if let Some(config) = self.config.get() {
+            self.save_config(config);
+        }
+    }
 }

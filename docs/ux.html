@@ -170,6 +170,43 @@
             text-align: center;
         }
 
+        .current-task-display {
+            background: linear-gradient(135deg, var(--secondary), #3DBDB6);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: inline-block;
+            box-shadow: 0 5px 20px rgba(78, 205, 196, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .task-selector {
+            margin-bottom: 20px;
+        }
+
+        .task-selector select {
+            padding: 10px 20px;
+            border: 2px solid var(--light);
+            border-radius: 25px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: var(--transition);
+            min-width: 200px;
+        }
+
+        .task-selector select:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+
         .timer-display {
             font-size: 5rem;
             font-weight: 300;
@@ -247,6 +284,30 @@
             box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
         }
 
+        .pomodoro-stats {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--light);
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--dark);
+            opacity: 0.7;
+        }
+
         /* Tasks Page */
         .tasks-container {
             background: rgba(255, 255, 255, 0.95);
@@ -303,7 +364,7 @@
             justify-content: space-between;
             align-items: center;
             transition: var(--transition);
-            cursor: pointer;
+            position: relative;
         }
 
         .task-item:hover {
@@ -313,12 +374,67 @@
 
         .task-item.completed {
             opacity: 0.6;
+        }
+
+        .task-item.completed .task-text {
             text-decoration: line-through;
+        }
+
+        .task-item.default {
+            background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+            border: 2px solid var(--secondary);
+        }
+
+        .task-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .task-item.completed .task-checkbox {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .task-item.completed .task-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 0.8rem;
         }
 
         .task-text {
             flex: 1;
             color: var(--dark);
+        }
+
+        .task-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--dark);
+            opacity: 0.7;
+        }
+
+        .task-pomodoros {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
         }
 
         .task-actions {
@@ -345,6 +461,25 @@
 
         .task-btn.edit {
             color: var(--secondary);
+        }
+
+        .task-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .task-btn:disabled:hover {
+            transform: scale(1);
+        }
+
+        .default-badge {
+            background: var(--secondary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 10px;
         }
 
         /* Settings Page */
@@ -422,6 +557,11 @@
             .timer-display {
                 font-size: 3rem;
             }
+
+            .pomodoro-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
         }
 
         /* Scrollbar */
@@ -472,6 +612,14 @@
         <!-- Timer Page -->
         <div class="page active" id="timer-page">
             <div class="timer-container">
+                <div class="current-task-display" id="currentTaskDisplay">
+                    Working on: General Tasks
+                </div>
+                <div class="task-selector">
+                    <select id="taskSelect" onchange="selectTask()">
+                        <!-- Tasks will be populated here -->
+                    </select>
+                </div>
                 <div class="timer-label" id="timerLabel">Focus Time</div>
                 <div class="timer-display" id="timerDisplay">25:00</div>
                 <div class="timer-controls">
@@ -484,6 +632,16 @@
                     <div class="dot"></div>
                     <div class="dot"></div>
                     <div class="dot"></div>
+                </div>
+                <div class="pomodoro-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayPomodoros">0</div>
+                        <div class="stat-label">Today's Pomodoros</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="taskPomodoros">0</div>
+                        <div class="stat-label">Task Pomodoros</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -534,322 +692,5 @@
             </div>
         </div>
     </main>
-
-    <script>
-        // Timer State
-        let timerState = {
-            isRunning: false,
-            timeLeft: 25 * 60,
-            currentSession: 'focus',
-            completedSessions: 0,
-            interval: null
-        };
-
-        // Settings
-        let settings = {
-            focusDuration: 25,
-            shortBreakDuration: 5,
-            longBreakDuration: 15,
-            sessionsUntilLong: 4,
-            autoStartBreaks: false,
-            autoStartFocus: false
-        };
-
-        // Tasks
-        let tasks = [];
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSettings();
-            loadTasks();
-            updateTimerDisplay();
-        });
-
-        // Sidebar Toggle
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-        }
-
-        // Page Navigation
-        function showPage(pageName) {
-            // Update nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.target.closest('.nav-item').classList.add('active');
-
-            // Show selected page
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-            document.getElementById(`${pageName}-page`).classList.add('active');
-        }
-
-        // Timer Functions
-        function toggleTimer() {
-            if (timerState.isRunning) {
-                pauseTimer();
-            } else {
-                startTimer();
-            }
-        }
-
-        function startTimer() {
-            timerState.isRunning = true;
-            document.getElementById('startBtn').textContent = 'PAUSE';
-
-            timerState.interval = setInterval(() => {
-                timerState.timeLeft--;
-                updateTimerDisplay();
-
-                if (timerState.timeLeft <= 0) {
-                    completeSession();
-                }
-            }, 1000);
-        }
-
-        function pauseTimer() {
-            timerState.isRunning = false;
-            document.getElementById('startBtn').textContent = 'START';
-            clearInterval(timerState.interval);
-        }
-
-        function resetTimer() {
-            pauseTimer();
-            timerState.timeLeft = getSessionDuration() * 60;
-            updateTimerDisplay();
-        }
-
-        function skipSession() {
-            completeSession();
-        }
-
-        function completeSession() {
-            pauseTimer();
-            playNotification();
-
-            if (timerState.currentSession === 'focus') {
-                timerState.completedSessions++;
-                updateSessionDots();
-
-                if (timerState.completedSessions % settings.sessionsUntilLong === 0) {
-                    switchToSession('longBreak');
-                } else {
-                    switchToSession('shortBreak');
-                }
-
-                if (settings.autoStartBreaks) {
-                    setTimeout(startTimer, 1000);
-                }
-            } else {
-                switchToSession('focus');
-                if (settings.autoStartFocus) {
-                    setTimeout(startTimer, 1000);
-                }
-            }
-        }
-
-        function switchToSession(sessionType) {
-            timerState.currentSession = sessionType;
-            const label = document.getElementById('timerLabel');
-
-            switch(sessionType) {
-                case 'focus':
-                    label.textContent = 'Focus Time';
-                    timerState.timeLeft = settings.focusDuration * 60;
-                    break;
-                case 'shortBreak':
-                    label.textContent = 'Short Break';
-                    timerState.timeLeft = settings.shortBreakDuration * 60;
-                    break;
-                case 'longBreak':
-                    label.textContent = 'Long Break';
-                    timerState.timeLeft = settings.longBreakDuration * 60;
-                    break;
-            }
-
-            updateTimerDisplay();
-        }
-
-        function getSessionDuration() {
-            switch(timerState.currentSession) {
-                case 'focus': return settings.focusDuration;
-                case 'shortBreak': return settings.shortBreakDuration;
-                case 'longBreak': return settings.longBreakDuration;
-                default: return settings.focusDuration;
-            }
-        }
-
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timerState.timeLeft / 60);
-            const seconds = timerState.timeLeft % 60;
-            document.getElementById('timerDisplay').textContent =
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function updateSessionDots() {
-            const dots = document.querySelectorAll('.dot');
-            const sessionsInCycle = timerState.completedSessions % settings.sessionsUntilLong;
-
-            dots.forEach((dot, index) => {
-                if (index < sessionsInCycle) {
-                    dot.classList.add('completed');
-                } else {
-                    dot.classList.remove('completed');
-                }
-            });
-        }
-
-        function playNotification() {
-            // Create a simple beep sound
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        }
-
-        // Task Functions
-        function addTask() {
-            const input = document.getElementById('taskInput');
-            const taskText = input.value.trim();
-
-            if (taskText) {
-                const task = {
-                    id: Date.now(),
-                    text: taskText,
-                    completed: false
-                };
-
-                tasks.push(task);
-                saveTasks();
-                renderTasks();
-                input.value = '';
-            }
-        }
-
-        function toggleTask(id) {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                task.completed = !task.completed;
-                saveTasks();
-                renderTasks();
-            }
-        }
-
-        function editTask(id) {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                const newText = prompt('Edit task:', task.text);
-                if (newText && newText.trim()) {
-                    task.text = newText.trim();
-                    saveTasks();
-                    renderTasks();
-                }
-            }
-        }
-
-        function deleteTask(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveTasks();
-            renderTasks();
-        }
-
-        function renderTasks() {
-            const taskList = document.getElementById('taskList');
-            taskList.innerHTML = '';
-
-            tasks.forEach(task => {
-                const li = document.createElement('li');
-                li.className = `task-item ${task.completed ? 'completed' : ''}`;
-                li.innerHTML = `
-                    <span class="task-text" onclick="toggleTask(${task.id})">${task.text}</span>
-                    <div class="task-actions">
-                        <button class="task-btn edit" onclick="editTask(${task.id})">✏️</button>
-                        <button class="task-btn delete" onclick="deleteTask(${task.id})">🗑️</button>
-                    </div>
-                `;
-                taskList.appendChild(li);
-            });
-        }
-
-        function saveTasks() {
-            localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
-        }
-
-        function loadTasks() {
-            const saved = localStorage.getItem('pomodoroTasks');
-            if (saved) {
-                tasks = JSON.parse(saved);
-                renderTasks();
-            }
-        }
-
-        // Settings Functions
-        function saveSettings() {
-            settings.focusDuration = parseInt(document.getElementById('focusDuration').value);
-            settings.shortBreakDuration = parseInt(document.getElementById('shortBreakDuration').value);
-            settings.longBreakDuration = parseInt(document.getElementById('longBreakDuration').value);
-            settings.sessionsUntilLong = parseInt(document.getElementById('sessionsUntilLong').value);
-            settings.autoStartBreaks = document.getElementById('autoStartBreaks').checked;
-            settings.autoStartFocus = document.getElementById('autoStartFocus').checked;
-
-            localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
-
-            // Reset timer with new settings if not running
-            if (!timerState.isRunning) {
-                resetTimer();
-            }
-
-            // Update session dots
-            const dotsContainer = document.getElementById('sessionDots');
-            dotsContainer.innerHTML = '';
-            for (let i = 0; i < settings.sessionsUntilLong; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'dot';
-                dotsContainer.appendChild(dot);
-            }
-            updateSessionDots();
-
-            alert('Settings saved successfully!');
-        }
-
-        function loadSettings() {
-            const saved = localStorage.getItem('pomodoroSettings');
-            if (saved) {
-                settings = JSON.parse(saved);
-                document.getElementById('focusDuration').value = settings.focusDuration;
-                document.getElementById('shortBreakDuration').value = settings.shortBreakDuration;
-                document.getElementById('longBreakDuration').value = settings.longBreakDuration;
-                document.getElementById('sessionsUntilLong').value = settings.sessionsUntilLong;
-                document.getElementById('autoStartBreaks').checked = settings.autoStartBreaks;
-                document.getElementById('autoStartFocus').checked = settings.autoStartFocus;
-            }
-
-            // Initialize timer with settings
-            timerState.timeLeft = settings.focusDuration * 60;
-            updateTimerDisplay();
-        }
-
-        // Handle Enter key for task input
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.id === 'taskInput') {
-                addTask();
-            }
-        });
-    </script>
 </body>
 </html>

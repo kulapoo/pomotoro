@@ -49,7 +49,9 @@
       "Bash(if ! grep -q \"use domain::.*TaskId\" \"$file\")",
       "Bash(then)",
       "Bash(fi)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(just dev:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

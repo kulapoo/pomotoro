@@ -170,4 +170,21 @@ impl TimerViewModel {
             TimerState::Paused { paused_from, .. } => Self::get_current_phase_static(paused_from),
         }
     }
+
+    pub fn get_sessions_completed(&self) -> usize {
+        let state = self.timer_state.get();
+        (state.session_count() % state.configuration().sessions_until_long_break as u32) as usize
+    }
+
+    pub fn get_today_pomodoros(&self) -> u32 {
+        // This would typically come from a stats service, for now return session count
+        let state = self.timer_state.get();
+        state.session_count()
+    }
+
+    pub fn get_task_pomodoros(&self) -> u32 {
+        // This would typically track pomodoros for the active task
+        // For now, return a default value
+        0
+    }
 }

@@ -26,55 +26,43 @@ pub fn Sidebar(
     };
 
     view! {
-        <div class={move || format!("sidebar {}", if collapsed.get() { "collapsed" } else { "" })}>
-            <div class="sidebar-content">
-                <div class="app-brand">
-                    <div class="bull-icon">"🐂"</div>
-                    <span class="app-brand-text">"Pomotoro"</span>
-                </div>
-
-                <nav class="nav-menu">
-                    <div 
-                        class={move || format!(
-                            "nav-item {}", 
-                            if current_section.get() == NavigationSection::Timer { "active" } else { "" }
-                        )}
-                        on:click=move |_| set_current_section.set(NavigationSection::Timer)
-                    >
-                        <div class="nav-item-icon">"⏱️"</div>
-                        <span class="nav-item-text">"Timer"</span>
-                    </div>
-
-                    <div 
-                        class={move || format!(
-                            "nav-item {}", 
-                            if current_section.get() == NavigationSection::Tasks { "active" } else { "" }
-                        )}
-                        on:click=move |_| set_current_section.set(NavigationSection::Tasks)
-                    >
-                        <div class="nav-item-icon">"📋"</div>
-                        <span class="nav-item-text">"Tasks Directory"</span>
-                    </div>
-
-                    <div 
-                        class={move || format!(
-                            "nav-item {}", 
-                            if current_section.get() == NavigationSection::Settings { "active" } else { "" }
-                        )}
-                        on:click=move |_| set_current_section.set(NavigationSection::Settings)
-                    >
-                        <div class="nav-item-icon">"⚙️"</div>
-                        <span class="nav-item-text">"Settings"</span>
-                    </div>
-                </nav>
+        <nav class={move || format!("sidebar {}", if collapsed.get() { "collapsed" } else { "" })} id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">"Pomodoro"</span>
+                <button class="toggle-btn" on:click=toggle_sidebar>"☰"</button>
             </div>
-
-            <button 
-                class="sidebar-toggle"
-                on:click=toggle_sidebar
-            >
-                {if collapsed.get() { "→" } else { "←" }}
-            </button>
-        </div>
+            <ul class="nav-menu">
+                <li 
+                    class={move || format!(
+                        "nav-item {}", 
+                        if current_section.get() == NavigationSection::Timer { "active" } else { "" }
+                    )}
+                    on:click=move |_| set_current_section.set(NavigationSection::Timer)
+                >
+                    <span class="nav-icon">"⏱️"</span>
+                    <span class="nav-text">"Timer"</span>
+                </li>
+                <li 
+                    class={move || format!(
+                        "nav-item {}", 
+                        if current_section.get() == NavigationSection::Tasks { "active" } else { "" }
+                    )}
+                    on:click=move |_| set_current_section.set(NavigationSection::Tasks)
+                >
+                    <span class="nav-icon">"📝"</span>
+                    <span class="nav-text">"Tasks"</span>
+                </li>
+                <li 
+                    class={move || format!(
+                        "nav-item {}", 
+                        if current_section.get() == NavigationSection::Settings { "active" } else { "" }
+                    )}
+                    on:click=move |_| set_current_section.set(NavigationSection::Settings)
+                >
+                    <span class="nav-icon">"⚙️"</span>
+                    <span class="nav-text">"Settings"</span>
+                </li>
+            </ul>
+        </nav>
     }
 }

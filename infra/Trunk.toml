@@ -1,0 +1,9 @@
+[build]
+target = "../ui/index.html"
+
+[watch]
+ignore = ["../infra"]
+
+[serve]
+port = 1420
+open = false
