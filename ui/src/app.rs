@@ -23,15 +23,7 @@ pub fn App() -> impl IntoView {
             />
 
             <main class="main-content" id="mainContent">
-                <div class="page active" id={move || {
-                    match current_section.get() {
-                        NavigationSection::Timer => "timer-page",
-                        NavigationSection::Tasks => "tasks-page",
-                        NavigationSection::Settings => "settings-page",
-                    }
-                }}>
-                    {render_content}
-                </div>
+                {render_content}
             </main>
         </>
     }

@@ -131,29 +131,20 @@ body {
 
 /* Main Content */
 .main-content {
-  margin-left: var(--sidebar-width);
-  flex: 1;
-  transition: var(--transition);
-  padding: 20px;
+  position: fixed;
+  left: var(--sidebar-width);
+  right: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  transition: var(--transition);
+  padding: 40px;
 }
 
-.main-content.expanded {
-  margin-left: var(--sidebar-width-collapsed);
-}
-
-.page {
-  display: none;
-  animation: fadeIn 0.5s;
-  width: 100%;
-  max-width: 600px;
-}
-
-.page.active {
-  display: block;
+.sidebar.collapsed ~ .main-content {
+  left: var(--sidebar-width-collapsed);
 }
 
 @keyframes fadeIn {
@@ -169,6 +160,10 @@ body {
   padding: 40px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   text-align: center;
+  animation: fadeIn 0.5s;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .current-task-display {
@@ -298,6 +293,10 @@ body {
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   max-height: 80vh;
   overflow-y: auto;
+  animation: fadeIn 0.5s;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .tasks-header {
@@ -446,6 +445,10 @@ body {
   border-radius: 30px;
   padding: 40px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: fadeIn 0.5s;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .settings-title {
@@ -522,7 +525,7 @@ body {
   }
 
   .main-content {
-    margin-left: var(--sidebar-width-collapsed);
+    left: var(--sidebar-width-collapsed);
   }
 
   .timer-display {
