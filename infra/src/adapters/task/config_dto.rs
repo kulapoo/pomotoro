@@ -43,7 +43,7 @@ impl From<TaskConfig> for TaskConfigDto {
 
 impl TryFrom<TaskConfigDto> for TaskDefaults {
     type Error = domain::Error;
-    
+
     fn try_from(dto: TaskConfigDto) -> Result<Self> {
         TaskDefaults::new(
             dto.work_duration,
@@ -58,7 +58,7 @@ impl TryFrom<TaskConfigDto> for TaskDefaults {
 
 impl TryFrom<TaskConfigDto> for TaskConfig {
     type Error = domain::Error;
-    
+
     fn try_from(dto: TaskConfigDto) -> Result<Self> {
         TaskConfig::new(
             dto.work_duration,
@@ -75,15 +75,15 @@ mod duration_serde {
     use std::time::Duration;
 
     pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
-    where 
-        S: Serializer 
+    where
+        S: Serializer
     {
         serializer.serialize_u64(duration.as_secs())
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-    where 
-        D: Deserializer<'de> 
+    where
+        D: Deserializer<'de>
     {
         let secs = u64::deserialize(deserializer)?;
         Ok(Duration::from_secs(secs))

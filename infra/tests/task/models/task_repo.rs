@@ -1,5 +1,5 @@
 use infra::adapters::InMemoryTaskRepository;
-use domain::{Task, TaskBuilder, TaskRepository, TaskStatus, Error as TaskError};
+use domain::{Error as TaskError, Task, TaskBuilder, TaskDefaults, TaskRepository, TaskStatus};
 use domain::TaskId;
 use std::sync::Arc;
 
@@ -16,8 +16,9 @@ impl TaskTestRepository {
 
 
     pub fn with_default_task() -> Self {
+        let task_defaults = TaskDefaults::default();
         Self {
-            inner: Arc::new(InMemoryTaskRepository::with_default_task()),
+            inner: Arc::new(InMemoryTaskRepository::with_default_task(&task_defaults)),
         }
     }
 

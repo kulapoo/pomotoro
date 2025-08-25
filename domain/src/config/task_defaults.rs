@@ -23,7 +23,7 @@ impl Default for TaskDefaults {
             long_break_duration: Duration::from_secs(15 * 60),
             sessions_until_long_break: 4,
             enable_screen_blocking: false,
-            max_sessions_default: 1,
+            max_sessions_default: 4,
         }
     }
 }
@@ -40,7 +40,7 @@ impl TaskDefaults {
         Self::validate_durations(&work_duration, &short_break_duration, &long_break_duration)?;
         Self::validate_session_count(sessions_until_long_break)?;
         Self::validate_max_sessions(max_sessions_default)?;
-        
+
         Ok(Self {
             work_duration,
             short_break_duration,
@@ -55,13 +55,13 @@ impl TaskDefaults {
         let work_duration = Duration::from_secs((work_minutes * 60) as u64);
         let short_break_duration = Duration::from_secs((short_break_minutes * 60) as u64);
         let long_break_duration = Duration::from_secs((long_break_minutes * 60) as u64);
-        
+
         Self::validate_durations(&work_duration, &short_break_duration, &long_break_duration)?;
-        
+
         self.work_duration = work_duration;
         self.short_break_duration = short_break_duration;
         self.long_break_duration = long_break_duration;
-        
+
         Ok(())
     }
 
@@ -81,22 +81,22 @@ impl TaskDefaults {
                 duration: work.as_secs() as u32,
             });
         }
-        
+
         if short_break.as_secs() < 30 || short_break.as_secs() > 1800 {
             return Err(Error::InvalidDuration {
                 duration: short_break.as_secs() as u32,
             });
         }
-        
+
         if long_break.as_secs() < 300 || long_break.as_secs() > 3600 {
             return Err(Error::InvalidDuration {
                 duration: long_break.as_secs() as u32,
             });
         }
-        
+
         Ok(())
     }
-    
+
     fn validate_session_count(count: u8) -> Result<()> {
         if count == 0 || count > 10 {
             return Err(Error::InvalidSessionCount { count });

@@ -33,6 +33,7 @@ pub async fn start_timer(
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
+    println!("Starting timer... INFR");
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 

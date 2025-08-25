@@ -10,9 +10,10 @@ pub struct TimerTestContext {
 
 impl TimerTestContext {
     pub fn new() -> Self {
+        let task_defaults = domain::TaskDefaults::default();
         Self {
             timer_service: Arc::new(TimerService::new()),
-            task_repo: Arc::new(InMemoryTaskRepository::with_default_task()),
+            task_repo: Arc::new(InMemoryTaskRepository::with_default_task(&task_defaults)),
         }
     }
 
