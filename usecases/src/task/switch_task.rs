@@ -24,16 +24,16 @@ pub async fn switch_task(
         });
     }
 
-    let task_id = TaskId::from_string(&cmd.task_id).map_err(|_| Error::TaskNotFound {
-        id: cmd.task_id.clone(),
-    })?;
-
-    let task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or_else(|| Error::TaskNotFound {
+    let task_id =
+        TaskId::from_string(&cmd.task_id).map_err(|_| Error::TaskNotFound {
             id: cmd.task_id.clone(),
         })?;
+
+    let task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+        Error::TaskNotFound {
+            id: cmd.task_id.clone(),
+        }
+    })?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
@@ -45,15 +45,16 @@ pub async fn switch_task(
     // Use state transitions to switch task and update configuration
     let result = domain::timer::transitions::StateTransitions::switch_entity(
         timer_state.clone(),
-        Some(task_id.to_string())
+        Some(task_id.to_string()),
     )?;
     *timer_state = result.new_state;
-    
+
     // Timer configuration update needs to be done through the Timer aggregate
     // For now, we'll just keep the updated state from the switch_task operation
     // The configuration was already applied when we called StateTransitions::switch_entity
 
-    let from_task_id = timer_state.active_entity_id()
+    let from_task_id = timer_state
+        .active_entity_id()
         .and_then(|id_str| TaskId::from_string(&id_str).ok());
     let switch_event = TaskSwitchWorkflowCompleted::new(
         from_task_id,
@@ -77,7 +78,8 @@ pub async fn switch_to_next_task(
         });
     }
 
-    let current_task_id = timer_state.active_entity_id()
+    let current_task_id = timer_state
+        .active_entity_id()
         .and_then(|id_str| TaskId::from_string(&id_str).ok());
 
     let next_task = cycling_service
@@ -87,12 +89,13 @@ pub async fn switch_to_next_task(
     if let Some(task) = next_task {
         let _timer_config = task_config_to_timer_config(&task.config)?;
         // Use state transitions to switch task and update configuration
-        let result = domain::timer::transitions::StateTransitions::switch_entity(
-            timer_state.clone(),
-            Some(task.id.to_string())
-        )?;
+        let result =
+            domain::timer::transitions::StateTransitions::switch_entity(
+                timer_state.clone(),
+                Some(task.id.to_string()),
+            )?;
         *timer_state = result.new_state;
-        
+
         // Then update the configuration
         // Timer configuration update handled during task switch
         // The timer_config has already been incorporated into the state
@@ -106,7 +109,9 @@ pub async fn switch_to_next_task(
 mod tests {
     use super::*;
     use domain::{InMemoryTaskRepository, TestTaskCyclingService};
-    use domain::{NoOpEventPublisher, Task, TaskCyclingStrategy, TimerConfiguration};
+    use domain::{
+        NoOpEventPublisher, Task, TaskCyclingStrategy, TimerConfiguration,
+    };
 
     async fn setup() -> (
         Arc<dyn TaskRepository + Send + Sync>,
@@ -116,10 +121,13 @@ mod tests {
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> =
             Arc::new(InMemoryTaskRepository::new());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(
-            TestTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
-        );
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> =
+            Arc::new(NoOpEventPublisher);
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> =
+            Arc::new(TestTaskCyclingService::new(
+                task_repo.clone(),
+                TaskCyclingStrategy::RoundRobin,
+            ));
 
         let task1 = Task::new("Task 1".to_string(), 4).unwrap();
         let task2 = Task::new("Task 2".to_string(), 3).unwrap();
@@ -139,7 +147,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_switch_to_specific_task() {
-        let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
+        let (task_repo, event_publisher, cycling_service, tasks) =
+            setup().await;
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
@@ -160,13 +169,17 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(timer_state.active_entity_id(), Some(tasks[1].id.to_string()));
+        assert_eq!(
+            timer_state.active_entity_id(),
+            Some(tasks[1].id.to_string())
+        );
         // Task session count is reset when switching tasks
     }
 
     #[tokio::test]
     async fn should_fail_to_switch_while_running() {
-        let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
+        let (task_repo, event_publisher, cycling_service, tasks) =
+            setup().await;
         // Create Working state to simulate running
         let mut timer_state = TimerState::Working {
             remaining_seconds: 1500,
@@ -194,7 +207,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_switch_to_nonexistent_task() {
-        let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
+        let (task_repo, event_publisher, cycling_service, tasks) =
+            setup().await;
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
@@ -219,7 +233,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_switch_to_completed_task() {
-        let (task_repo, event_publisher, cycling_service, tasks) = setup().await;
+        let (task_repo, event_publisher, cycling_service, tasks) =
+            setup().await;
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
@@ -227,7 +242,8 @@ mod tests {
         };
 
         // Create and complete a task
-        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let mut completed_task =
+            Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
 
@@ -249,7 +265,8 @@ mod tests {
 
     #[tokio::test]
     async fn should_switch_to_next_task() {
-        let (task_repo, _event_publisher, cycling_service, tasks) = setup().await;
+        let (task_repo, _event_publisher, cycling_service, tasks) =
+            setup().await;
         let mut timer_state = TimerState::Idle {
             configuration: TimerConfiguration::default(),
             session_count: 0,
@@ -265,23 +282,31 @@ mod tests {
 
         // Debug: Get the updated tasks from the repository to see what IDs they have
         let active_tasks = task_repo.get_active_tasks().await.unwrap();
-        
-        let next_task_id = switch_to_next_task(&mut timer_state, &cycling_service)
-            .await
-            .unwrap();
+
+        let next_task_id =
+            switch_to_next_task(&mut timer_state, &cycling_service)
+                .await
+                .unwrap();
 
         assert!(next_task_id.is_some());
-        assert_ne!(timer_state.active_entity_id(), Some(tasks[0].id.to_string()));
-        
+        assert_ne!(
+            timer_state.active_entity_id(),
+            Some(tasks[0].id.to_string())
+        );
+
         // Check against active tasks from repository instead of original tasks
-        assert!(active_tasks
-            .iter()
-            .any(|t| Some(t.id.to_string()) == timer_state.active_entity_id()));
+        assert!(
+            active_tasks
+                .iter()
+                .any(|t| Some(t.id.to_string())
+                    == timer_state.active_entity_id())
+        );
     }
 
     #[tokio::test]
     async fn should_fail_to_switch_to_next_while_running() {
-        let (_task_repo, _event_publisher, cycling_service, tasks) = setup().await;
+        let (_task_repo, _event_publisher, cycling_service, tasks) =
+            setup().await;
         // Create Working state to simulate running
         let mut timer_state = TimerState::Working {
             remaining_seconds: 1500,
@@ -291,7 +316,8 @@ mod tests {
             entity_session_count: 0,
         };
 
-        let result = switch_to_next_task(&mut timer_state, &cycling_service).await;
+        let result =
+            switch_to_next_task(&mut timer_state, &cycling_service).await;
 
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
     }
@@ -312,9 +338,10 @@ mod tests {
             active_entity: None,
         };
 
-        let next_task_id = switch_to_next_task(&mut timer_state, &cycling_service)
-            .await
-            .unwrap();
+        let next_task_id =
+            switch_to_next_task(&mut timer_state, &cycling_service)
+                .await
+                .unwrap();
 
         assert!(next_task_id.is_none() || next_task_id.is_some());
     }

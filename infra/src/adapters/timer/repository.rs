@@ -1,4 +1,4 @@
-use domain::{TimerState, Result as DomainResult, Error};
+use domain::{Error, Result as DomainResult, TimerState};
 use std::path::PathBuf;
 
 /// Repository for persisting timer state to file system
@@ -34,41 +34,49 @@ impl FileTimerStateRepository {
 
     /// Save timer state to persistent storage
     pub async fn save_state(&self, state: &TimerState) -> DomainResult<()> {
-        let state_path = self.get_state_file_path().await
+        let state_path = self
+            .get_state_file_path()
+            .await
             .map_err(|e| Error::RepositoryError { message: e })?;
 
-        let json = serde_json::to_string_pretty(state)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to serialize state: {e}") 
-            })?;
+        let json = serde_json::to_string_pretty(state).map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to serialize state: {e}"),
+            }
+        })?;
 
-        tokio::fs::write(state_path, json)
-            .await
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to write state file: {e}") 
-            })?;
+        tokio::fs::write(state_path, json).await.map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to write state file: {e}"),
+            }
+        })?;
 
         Ok(())
     }
 
     /// Load timer state from persistent storage
     pub async fn load_state(&self) -> DomainResult<Option<TimerState>> {
-        let state_path = self.get_state_file_path().await
+        let state_path = self
+            .get_state_file_path()
+            .await
             .map_err(|e| Error::RepositoryError { message: e })?;
 
         if !state_path.exists() {
             return Ok(None);
         }
 
-        let json = tokio::fs::read_to_string(state_path)
-            .await
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to read state file: {e}") 
+        let json =
+            tokio::fs::read_to_string(state_path).await.map_err(|e| {
+                Error::RepositoryError {
+                    message: format!("Failed to read state file: {e}"),
+                }
             })?;
 
-        let saved_state: TimerState = serde_json::from_str(&json)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to deserialize state: {e}") 
+        let saved_state: TimerState =
+            serde_json::from_str(&json).map_err(|e| {
+                Error::RepositoryError {
+                    message: format!("Failed to deserialize state: {e}"),
+                }
             })?;
 
         Ok(Some(saved_state))

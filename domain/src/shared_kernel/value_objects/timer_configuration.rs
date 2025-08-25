@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-use crate::{Error, Result, Phase, duration_serde};
+use crate::{Error, Phase, Result, duration_serde};
 
 /// Timer configuration value object for timing-related settings.
 ///
@@ -28,10 +28,10 @@ pub struct TimerConfiguration {
 impl Default for TimerConfiguration {
     fn default() -> Self {
         Self {
-            work_duration: Duration::from_secs(25 * 60),        // 25 minutes
-            short_break_duration: Duration::from_secs(5 * 60),  // 5 minutes
-            long_break_duration: Duration::from_secs(15 * 60),  // 15 minutes
-            sessions_until_long_break: 4,                       // Traditional pomodoro
+            work_duration: Duration::from_secs(25 * 60), // 25 minutes
+            short_break_duration: Duration::from_secs(5 * 60), // 5 minutes
+            long_break_duration: Duration::from_secs(15 * 60), // 15 minutes
+            sessions_until_long_break: 4,                // Traditional pomodoro
         }
     }
 }
@@ -50,7 +50,7 @@ impl TimerConfiguration {
             long_break_duration,
             sessions_until_long_break,
         };
-        
+
         config.validate()?;
         Ok(config)
     }
@@ -78,7 +78,7 @@ impl TimerConfiguration {
                 duration: work_secs as u32,
             });
         }
-        
+
         // Short break duration: 30 seconds - 30 minutes
         let short_break_secs = self.short_break_duration.as_secs();
         if !(30..=1800).contains(&short_break_secs) {
@@ -86,7 +86,7 @@ impl TimerConfiguration {
                 duration: short_break_secs as u32,
             });
         }
-        
+
         // Long break duration: 5-60 minutes
         let long_break_secs = self.long_break_duration.as_secs();
         if !(300..=3600).contains(&long_break_secs) {
@@ -94,23 +94,25 @@ impl TimerConfiguration {
                 duration: long_break_secs as u32,
             });
         }
-        
+
         // Sessions until long break: 1-10
-        if self.sessions_until_long_break == 0 || self.sessions_until_long_break > 10 {
+        if self.sessions_until_long_break == 0
+            || self.sessions_until_long_break > 10
+        {
             return Err(Error::InvalidSessionCount {
                 count: self.sessions_until_long_break,
             });
         }
-        
+
         Ok(())
     }
 
     /// Create a timer configuration optimized for focused work.
     pub fn focused_work() -> Self {
         Self {
-            work_duration: Duration::from_secs(50 * 60),    // 50 minutes
+            work_duration: Duration::from_secs(50 * 60), // 50 minutes
             short_break_duration: Duration::from_secs(10 * 60), // 10 minutes
-            long_break_duration: Duration::from_secs(30 * 60),  // 30 minutes
+            long_break_duration: Duration::from_secs(30 * 60), // 30 minutes
             sessions_until_long_break: 2,
         }
     }
@@ -118,9 +120,9 @@ impl TimerConfiguration {
     /// Create a timer configuration optimized for quick tasks.
     pub fn quick_tasks() -> Self {
         Self {
-            work_duration: Duration::from_secs(15 * 60),    // 15 minutes
-            short_break_duration: Duration::from_secs(3 * 60),  // 3 minutes
-            long_break_duration: Duration::from_secs(10 * 60),  // 10 minutes
+            work_duration: Duration::from_secs(15 * 60), // 15 minutes
+            short_break_duration: Duration::from_secs(3 * 60), // 3 minutes
+            long_break_duration: Duration::from_secs(10 * 60), // 10 minutes
             sessions_until_long_break: 6,
         }
     }
@@ -166,17 +168,32 @@ mod tests {
     #[test]
     fn should_get_phase_duration() {
         let config = TimerConfiguration::default();
-        assert_eq!(config.get_phase_duration(Phase::Work), Duration::from_secs(25 * 60));
-        assert_eq!(config.get_phase_duration(Phase::ShortBreak), Duration::from_secs(5 * 60));
-        assert_eq!(config.get_phase_duration(Phase::LongBreak), Duration::from_secs(15 * 60));
+        assert_eq!(
+            config.get_phase_duration(Phase::Work),
+            Duration::from_secs(25 * 60)
+        );
+        assert_eq!(
+            config.get_phase_duration(Phase::ShortBreak),
+            Duration::from_secs(5 * 60)
+        );
+        assert_eq!(
+            config.get_phase_duration(Phase::LongBreak),
+            Duration::from_secs(15 * 60)
+        );
     }
 
     #[test]
     fn should_get_phase_duration_seconds() {
         let config = TimerConfiguration::default();
         assert_eq!(config.get_phase_duration_seconds(Phase::Work), 25 * 60);
-        assert_eq!(config.get_phase_duration_seconds(Phase::ShortBreak), 5 * 60);
-        assert_eq!(config.get_phase_duration_seconds(Phase::LongBreak), 15 * 60);
+        assert_eq!(
+            config.get_phase_duration_seconds(Phase::ShortBreak),
+            5 * 60
+        );
+        assert_eq!(
+            config.get_phase_duration_seconds(Phase::LongBreak),
+            15 * 60
+        );
     }
 
     #[test]
@@ -199,7 +216,8 @@ mod tests {
     fn should_serialize_and_deserialize() {
         let config = TimerConfiguration::default();
         let serialized = serde_json::to_string(&config).unwrap();
-        let deserialized: TimerConfiguration = serde_json::from_str(&serialized).unwrap();
+        let deserialized: TimerConfiguration =
+            serde_json::from_str(&serialized).unwrap();
         assert_eq!(config, deserialized);
     }
 }

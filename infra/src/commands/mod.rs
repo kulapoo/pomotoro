@@ -23,12 +23,12 @@
 //! - `config_cmd`: Configuration management request handlers
 //! - `audio_cmd`: Audio system request handlers
 
+pub mod audio_cmd;
+pub mod config_cmd;
 pub mod task_cmd;
 pub mod timer_cmd;
-pub mod config_cmd;
-pub mod audio_cmd;
 
+pub use audio_cmd::*;
+pub use config_cmd::*;
 pub use task_cmd::*;
 pub use timer_cmd::*;
-pub use config_cmd::*;
-pub use audio_cmd::*;

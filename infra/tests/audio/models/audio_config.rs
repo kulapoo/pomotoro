@@ -11,12 +11,18 @@ impl AudioConfigBuilder {
         }
     }
 
-    pub fn with_work_notification_sound(mut self, sound: Option<String>) -> Self {
+    pub fn with_work_notification_sound(
+        mut self,
+        sound: Option<String>,
+    ) -> Self {
         self.config.work_notification_sound = sound;
         self
     }
 
-    pub fn with_break_notification_sound(mut self, sound: Option<String>) -> Self {
+    pub fn with_break_notification_sound(
+        mut self,
+        sound: Option<String>,
+    ) -> Self {
         self.config.break_notification_sound = sound;
         self
     }
@@ -47,8 +53,10 @@ impl AudioConfigBuilder {
     }
 
     pub fn with_custom_sounds(mut self) -> Self {
-        self.config.work_notification_sound = Some("custom-work-sound".to_string());
-        self.config.break_notification_sound = Some("custom-break-sound".to_string());
+        self.config.work_notification_sound =
+            Some("custom-work-sound".to_string());
+        self.config.break_notification_sound =
+            Some("custom-break-sound".to_string());
         self.config.background_sound = Some("custom-background".to_string());
         self.config.volume = 0.6;
         self.config.enable_background_audio = true;
@@ -70,7 +78,6 @@ impl Default for AudioConfigBuilder {
 pub struct AudioTestAssertions;
 
 impl AudioTestAssertions {
-
     pub fn assert_is_muted(config: &AudioConfig) {
         assert!(config.muted);
     }

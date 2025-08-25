@@ -1,6 +1,8 @@
 use crate::task::models::TaskTestRepository;
-use crate::timer::models::{TimerStateBuilder, TimerTestService, TimerTestAssertions};
-use domain::{Phase, TimerStatus, TaskRepository, timer::TimerService};
+use crate::timer::models::{
+    TimerStateBuilder, TimerTestAssertions, TimerTestService,
+};
+use domain::{Phase, TaskRepository, TimerStatus, timer::TimerService};
 
 #[tokio::test]
 async fn test_timer_initial_state() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,12 +15,13 @@ async fn test_timer_initial_state() -> Result<(), Box<dyn std::error::Error>> {
     TimerTestAssertions::assert_session_count(&state, 0);
     assert_eq!(state.session_count(), 0);
     assert_eq!(state.remaining_seconds(), 25 * 60);
-    
+
     Ok(())
 }
 
 #[tokio::test]
-async fn test_timer_start_stop_cycle() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_timer_start_stop_cycle() -> Result<(), Box<dyn std::error::Error>>
+{
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::with_default_task();
 
@@ -31,13 +34,16 @@ async fn test_timer_start_stop_cycle() -> Result<(), Box<dyn std::error::Error>>
     let running_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_running(&running_state);
     TimerTestAssertions::assert_is_work_phase(&running_state);
-    TimerTestAssertions::assert_has_active_task(&running_state, default_task.id);
+    TimerTestAssertions::assert_has_active_task(
+        &running_state,
+        default_task.id,
+    );
 
     timer_service.stop_timer().await.unwrap();
 
     let stopped_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_stopped(&stopped_state);
-    
+
     Ok(())
 }
 
@@ -65,7 +71,10 @@ async fn test_timer_pause_resume() -> Result<(), Box<dyn std::error::Error>> {
 
     let resumed_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_running(&resumed_state);
-    assert_eq!(resumed_state.remaining_seconds(), paused_state.remaining_seconds());
+    assert_eq!(
+        resumed_state.remaining_seconds(),
+        paused_state.remaining_seconds()
+    );
     Ok(())
 }
 
@@ -81,7 +90,10 @@ async fn test_timer_reset_phase() -> Result<(), Box<dyn std::error::Error>> {
     timer_service.start_work_session().await.unwrap();
 
     timer_service.wait_for_seconds(1).await;
-    timer_service.reset_current_phase(Some(default_task)).await.unwrap();
+    timer_service
+        .reset_current_phase(Some(default_task))
+        .await
+        .unwrap();
 
     let reset_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_work_phase(&reset_state);
@@ -114,7 +126,8 @@ async fn test_timer_phase_skipping() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tokio::test]
-async fn test_timer_state_consistency() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_timer_state_consistency() -> Result<(), Box<dyn std::error::Error>>
+{
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::with_default_task();
 
@@ -129,11 +142,17 @@ async fn test_timer_state_consistency() -> Result<(), Box<dyn std::error::Error>
 
     let running_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_running(&running_state);
-    TimerTestAssertions::assert_has_active_task(&running_state, default_task.id);
+    TimerTestAssertions::assert_has_active_task(
+        &running_state,
+        default_task.id,
+    );
 
     let current_state = timer_service.get_state().await?;
     TimerTestAssertions::assert_is_running(&current_state);
-    TimerTestAssertions::assert_has_active_task(&current_state, default_task.id);
+    TimerTestAssertions::assert_has_active_task(
+        &current_state,
+        default_task.id,
+    );
     Ok(())
 }
 
@@ -194,7 +213,8 @@ fn test_basic_timer_types() {
 // MVP 2.0 Multi-Task and Cycling Features
 
 #[tokio::test]
-async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_multi_task_session_management()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
@@ -205,7 +225,8 @@ async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::
     let long_task_id = task_ids[2]; // 8 sessions
 
     let quick_task = task_repo.get_by_id(quick_task_id).await.unwrap().unwrap();
-    let medium_task = task_repo.get_by_id(medium_task_id).await.unwrap().unwrap();
+    let medium_task =
+        task_repo.get_by_id(medium_task_id).await.unwrap().unwrap();
     let long_task = task_repo.get_by_id(long_task_id).await.unwrap().unwrap();
 
     // Start with quick task
@@ -224,7 +245,10 @@ async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::
     timer_service.setup_with_task(&medium_task).await;
     let state_with_medium = timer_service.get_state().await?;
     assert_eq!(state_with_medium.entity_session_count(), 0); // Fresh start for medium task
-    TimerTestAssertions::assert_has_active_task(&state_with_medium, medium_task_id);
+    TimerTestAssertions::assert_has_active_task(
+        &state_with_medium,
+        medium_task_id,
+    );
 
     // Complete one session of medium task
     // Start a work session and complete it
@@ -245,7 +269,8 @@ async fn test_multi_task_session_management() -> Result<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_task_cycling_workflow() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_task_cycling_workflow() -> Result<(), Box<dyn std::error::Error>>
+{
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
@@ -253,7 +278,8 @@ async fn test_task_cycling_workflow() -> Result<(), Box<dyn std::error::Error>> 
     let task_ids = task_repo.seed_with_test_data().await.unwrap();
     let tasks: Vec<_> = {
         let mut tasks = Vec::new();
-        for task_id in &task_ids[0..3] { // First 3 tasks
+        for task_id in &task_ids[0..3] {
+            // First 3 tasks
             let task = task_repo.get_by_id(*task_id).await.unwrap().unwrap();
             tasks.push(task);
         }
@@ -270,29 +296,37 @@ async fn test_task_cycling_workflow() -> Result<(), Box<dyn std::error::Error>> 
     // Switch to next task manually (cycling logic would be in application layer)
     timer_service.setup_with_task(&tasks[1]).await;
     let state_after_switch1 = timer_service.get_state().await?;
-    TimerTestAssertions::assert_has_active_task(&state_after_switch1, tasks[1].id);
+    TimerTestAssertions::assert_has_active_task(
+        &state_after_switch1,
+        tasks[1].id,
+    );
 
     // Switch to third task
     timer_service.setup_with_task(&tasks[2]).await;
     let state_after_switch2 = timer_service.get_state().await?;
-    TimerTestAssertions::assert_has_active_task(&state_after_switch2, tasks[2].id);
+    TimerTestAssertions::assert_has_active_task(
+        &state_after_switch2,
+        tasks[2].id,
+    );
 
     // Switch back to first task (simulating wrap around)
     timer_service.setup_with_task(&tasks[0]).await;
     let state_after_wrap = timer_service.get_state().await?;
     TimerTestAssertions::assert_has_active_task(&state_after_wrap, tasks[0].id);
-    
+
     Ok(())
 }
 
 #[tokio::test]
-async fn test_automatic_task_progression() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_automatic_task_progression()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
     // Create task with limit of 2 sessions
-    let mut task = crate::task::models::TaskBuilder::new("Limited Task".to_string(), 2)
-        .build();
+    let mut task =
+        crate::task::models::TaskBuilder::new("Limited Task".to_string(), 2)
+            .build();
     task_repo.create(task.clone()).await.unwrap();
 
     timer_service.setup_with_task(&task).await;
@@ -330,24 +364,31 @@ async fn test_automatic_task_progression() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_task_specific_timer_configuration() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_task_specific_timer_configuration()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::empty();
 
     // Create task with custom timing configuration (MVP2 feature)
-    use domain::{TaskConfig, TaskBuilder as DomainTaskBuilder};
+    use domain::{TaskBuilder as DomainTaskBuilder, TaskConfig};
     use std::time::Duration;
 
-    let custom_task = DomainTaskBuilder::with_name_and_sessions("Custom Timer Task".to_string(), 3)
-        .with_config(TaskConfig::new(
+    let custom_task = DomainTaskBuilder::with_name_and_sessions(
+        "Custom Timer Task".to_string(),
+        3,
+    )
+    .with_config(
+        TaskConfig::new(
             Duration::from_secs(45 * 60), // 45 min work sessions
             Duration::from_secs(10 * 60), // 10 min short breaks
             Duration::from_secs(25 * 60), // 25 min long breaks
             2,                            // Long break every 2 sessions
             false,                        // No screen blocking
-        ).unwrap())
-        .build()
-        .unwrap();
+        )
+        .unwrap(),
+    )
+    .build()
+    .unwrap();
 
     task_repo.create(custom_task.clone()).await.unwrap();
 
@@ -376,19 +417,26 @@ async fn test_task_specific_timer_configuration() -> Result<(), Box<dyn std::err
     let long_break_state = timer_service.get_state().await?;
     assert_eq!(long_break_state.phase(), Phase::LongBreak);
     assert_eq!(long_break_state.remaining_seconds(), 25 * 60); // Custom 25-min long break
-    
+
     Ok(())
 }
 
 #[tokio::test]
-async fn test_skip_completed_tasks_in_cycle() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_skip_completed_tasks_in_cycle()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
     // Create tasks with different completion states
-    let task1 = crate::task::models::TaskBuilder::new("Active Task".to_string(), 3).build();
-    let mut task2 = crate::task::models::TaskBuilder::new("Completed Task".to_string(), 1).build();
-    let task3 = crate::task::models::TaskBuilder::new("Another Active".to_string(), 2).build();
+    let task1 =
+        crate::task::models::TaskBuilder::new("Active Task".to_string(), 3)
+            .build();
+    let mut task2 =
+        crate::task::models::TaskBuilder::new("Completed Task".to_string(), 1)
+            .build();
+    let task3 =
+        crate::task::models::TaskBuilder::new("Another Active".to_string(), 2)
+            .build();
 
     // Complete task2
     task2.increment_session().unwrap();
@@ -418,7 +466,8 @@ async fn test_skip_completed_tasks_in_cycle() -> Result<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_manual_task_switching_during_session() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_manual_task_switching_during_session()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
@@ -432,19 +481,20 @@ async fn test_manual_task_switching_during_session() -> Result<(), Box<dyn std::
 
     // Wait a bit
     timer_service.wait_for_seconds(1).await;
-    let _remaining_before_switch = timer_service.get_state().await?.remaining_seconds();
+    let _remaining_before_switch =
+        timer_service.get_state().await?.remaining_seconds();
 
     // Cannot switch tasks while timer is running - must stop first
     // This is correct domain behavior
     timer_service.stop_timer().await?;
-    
+
     // Now switch to task2
     timer_service.setup_with_task(&task2).await;
 
     let state_after_switch = timer_service.get_state().await?;
     TimerTestAssertions::assert_has_active_task(&state_after_switch, task2.id);
     TimerTestAssertions::assert_is_stopped(&state_after_switch);
-    
+
     // Start a new session with task2
     timer_service.start_work_session().await.unwrap();
     let state_running = timer_service.get_state().await?;
@@ -454,14 +504,21 @@ async fn test_manual_task_switching_during_session() -> Result<(), Box<dyn std::
 }
 
 #[tokio::test]
-async fn test_session_tracking_across_multiple_tasks() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_session_tracking_across_multiple_tasks()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_service = TimerTestService::new();
     let task_repo = TaskTestRepository::new();
 
     // Create fresh tasks for this test instead of using completed task from seed data
-    let task1 = crate::task::models::TaskBuilder::new("Session Task 1".to_string(), 3).build();
-    let task2 = crate::task::models::TaskBuilder::new("Session Task 2".to_string(), 3).build();
-    let task3 = crate::task::models::TaskBuilder::new("Session Task 3".to_string(), 3).build();
+    let task1 =
+        crate::task::models::TaskBuilder::new("Session Task 1".to_string(), 3)
+            .build();
+    let task2 =
+        crate::task::models::TaskBuilder::new("Session Task 2".to_string(), 3)
+            .build();
+    let task3 =
+        crate::task::models::TaskBuilder::new("Session Task 3".to_string(), 3)
+            .build();
 
     task_repo.create(task1.clone()).await.unwrap();
     task_repo.create(task2.clone()).await.unwrap();

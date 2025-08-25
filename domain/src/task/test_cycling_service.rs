@@ -1,5 +1,10 @@
+use super::{
+    Task,
+    cycling_service::{CyclerService, CyclingStrategy, DefaultCyclingService},
+    id::Id,
+    repository::Repository,
+};
 use crate::Result;
-use super::{Task, id::Id, repository::Repository, cycling_service::{CyclerService, DefaultCyclingService, CyclingStrategy}};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -25,10 +30,14 @@ impl TestCyclingService {
 
 #[async_trait]
 impl CyclerService for TestCyclingService {
-    async fn get_next_task(&self, current_task_id: Option<Id>) -> Result<Option<Task>> {
+    async fn get_next_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>> {
         let tasks = self.task_repo.get_active_tasks().await?;
-        let available_tasks = self.domain_service.filter_available_tasks(&tasks);
-        
+        let available_tasks =
+            self.domain_service.filter_available_tasks(&tasks);
+
         if let Some(next_task) = self.domain_service.apply_cycling_strategy(
             &self.strategy,
             &available_tasks,
@@ -51,7 +60,8 @@ impl CyclerService for TestCyclingService {
 
     async fn get_active_task_queue(&self) -> Result<Vec<Task>> {
         let tasks = self.task_repo.get_active_tasks().await?;
-        let available_tasks = self.domain_service.filter_available_tasks(&tasks);
+        let available_tasks =
+            self.domain_service.filter_available_tasks(&tasks);
         Ok(available_tasks)
     }
 

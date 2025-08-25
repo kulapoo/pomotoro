@@ -1,8 +1,8 @@
-use std::any::TypeId;
+use crate::adapters::EventHandler;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use std::any::TypeId;
 use tauri::{AppHandle, Emitter};
-use crate::adapters::EventHandler;
 
 pub struct TaskStatusChangedHandler {
     app_handle: AppHandle,
@@ -16,17 +16,20 @@ impl TaskStatusChangedHandler {
 
 #[async_trait]
 impl EventHandler for TaskStatusChangedHandler {
-
     fn subscribes_to(&self) -> TypeId {
         TypeId::of::<domain::TaskStatusChanged>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let task_status_changed = event.as_any().downcast_ref::<domain::TaskStatusChanged>();
+        let task_status_changed =
+            event.as_any().downcast_ref::<domain::TaskStatusChanged>();
 
-        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_status_changed)
+        self.app_handle
+            .emit(domain::event_names::task::LIST_UPDATED, task_status_changed)
             .map_err(|e| domain::Error::EventPublishingError {
-                message: format!("Failed to emit task status changed event: {e}")
+                message: format!(
+                    "Failed to emit task status changed event: {e}"
+                ),
             })?;
         Ok(())
     }

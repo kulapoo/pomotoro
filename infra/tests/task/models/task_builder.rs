@@ -6,7 +6,8 @@ pub struct TaskBuilder {
 
 impl TaskBuilder {
     pub fn new(name: String, max_sessions: u8) -> Self {
-        let task = Task::new(name, max_sessions).expect("Failed to create task in test");
+        let task = Task::new(name, max_sessions)
+            .expect("Failed to create task in test");
         Self { task }
     }
 

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::{
-    DefaultTaskCyclingService as DomainTaskCyclingService, Result, Task, TaskCyclerService,
-    TaskCyclingStrategy, TaskId, TaskRepository,
+    DefaultTaskCyclingService as DomainTaskCyclingService, Result, Task,
+    TaskCyclerService, TaskCyclingStrategy, TaskId, TaskRepository,
 };
 use std::sync::Arc;
 
@@ -33,7 +33,10 @@ impl StandardTaskCyclerService {
 
 #[async_trait]
 impl TaskCyclerService for StandardTaskCyclerService {
-    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
+    async fn get_next_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
         let available_tasks = self.get_available_tasks().await?;
 
         let next_task = self.domain_service.apply_cycling_strategy(
@@ -45,7 +48,10 @@ impl TaskCyclerService for StandardTaskCyclerService {
         Ok(next_task.cloned())
     }
 
-    async fn validate_task_switch(&self, task_id: TaskId) -> Result<Option<Task>> {
+    async fn validate_task_switch(
+        &self,
+        task_id: TaskId,
+    ) -> Result<Option<Task>> {
         let task = self.task_repository.get_by_id(task_id).await?;
 
         if let Some(ref task) = task {
@@ -70,7 +76,7 @@ impl TaskCyclerService for StandardTaskCyclerService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::{TaskDefaults, Error};
+    use domain::{Error, TaskDefaults};
     use std::collections::HashMap;
     use std::sync::Mutex;
 
@@ -129,7 +135,10 @@ mod tests {
             Ok(vec![]) // Simplified for tests
         }
 
-        async fn get_by_status(&self, status: domain::TaskStatus) -> Result<Vec<Task>> {
+        async fn get_by_status(
+            &self,
+            status: domain::TaskStatus,
+        ) -> Result<Vec<Task>> {
             Ok(self
                 .tasks
                 .lock()
@@ -145,22 +154,34 @@ mod tests {
         }
 
         async fn get_default_task(&self) -> Result<Option<Task>> {
-            Ok(self.tasks.lock().unwrap().values().find(|task| task.default).cloned())
+            Ok(self
+                .tasks
+                .lock()
+                .unwrap()
+                .values()
+                .find(|task| task.default)
+                .cloned())
         }
     }
 
-    async fn setup_service() -> (StandardTaskCyclerService, Arc<TestTaskRepository>) {
+    async fn setup_service()
+    -> (StandardTaskCyclerService, Arc<TestTaskRepository>) {
         let task_repo = Arc::new(TestTaskRepository::new());
-        let service =
-            StandardTaskCyclerService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin);
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
         (service, task_repo)
     }
 
     async fn create_test_tasks(repo: &TestTaskRepository) -> Vec<Task> {
         let defaults = TaskDefaults::default();
-        let task1 = Task::new_with_defaults("Task 1".to_string(), 4, &defaults).unwrap();
-        let task2 = Task::new_with_defaults("Task 2".to_string(), 3, &defaults).unwrap();
-        let task3 = Task::new_with_defaults("Task 3".to_string(), 2, &defaults).unwrap();
+        let task1 = Task::new_with_defaults("Task 1".to_string(), 4, &defaults)
+            .unwrap();
+        let task2 = Task::new_with_defaults("Task 2".to_string(), 3, &defaults)
+            .unwrap();
+        let task3 = Task::new_with_defaults("Task 3".to_string(), 2, &defaults)
+            .unwrap();
 
         repo.create(task1.clone()).await.unwrap();
         repo.create(task2.clone()).await.unwrap();
@@ -220,7 +241,9 @@ mod tests {
     async fn should_fail_to_switch_to_completed_task() {
         let (service, repo) = setup_service().await;
         let defaults = TaskDefaults::default();
-        let mut task = Task::new_with_defaults("Completed Task".to_string(), 1, &defaults).unwrap();
+        let mut task =
+            Task::new_with_defaults("Completed Task".to_string(), 1, &defaults)
+                .unwrap();
         task.increment_session().unwrap(); // Complete the task
         let task_id = task.id;
         repo.create(task).await.unwrap();
@@ -274,8 +297,10 @@ mod tests {
     #[tokio::test]
     async fn should_handle_manual_cycling_strategy() {
         let task_repo = Arc::new(TestTaskRepository::new());
-        let service =
-            StandardTaskCyclerService::new(task_repo.clone(), TaskCyclingStrategy::Manual);
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::Manual,
+        );
 
         let tasks = create_test_tasks(&task_repo).await;
 

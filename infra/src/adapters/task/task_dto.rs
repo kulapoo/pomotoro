@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use domain::{Task, TaskId, TaskStatus, Result};
 use super::config_dto::TaskConfigDto;
+use chrono::{DateTime, Utc};
+use domain::{Result, Task, TaskId, TaskStatus};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskAudioConfigDto {
@@ -40,11 +40,17 @@ impl From<Task> for TaskDto {
             tags: task.tags,
             config: TaskConfigDto::from(task.config),
             audio_config: TaskAudioConfigDto {
-                work_notification_sound: task.audio_config.work_notification_sound,
-                break_notification_sound: task.audio_config.break_notification_sound,
+                work_notification_sound: task
+                    .audio_config
+                    .work_notification_sound,
+                break_notification_sound: task
+                    .audio_config
+                    .break_notification_sound,
                 background_sound: task.audio_config.background_sound,
                 volume: task.audio_config.volume,
-                enable_background_audio: task.audio_config.enable_background_audio,
+                enable_background_audio: task
+                    .audio_config
+                    .enable_background_audio,
                 muted: task.audio_config.muted,
             },
             created_at: task.created_at,
@@ -62,17 +68,18 @@ impl From<Task> for TaskDto {
 
 impl TryFrom<TaskDto> for Task {
     type Error = domain::Error;
-    
+
     fn try_from(dto: TaskDto) -> Result<Self> {
-        use domain::{TaskConfig, AudioConfig, Error};
-        
-        let task_id = TaskId::from_string(&dto.id)
-            .map_err(|_| Error::ConfigurationError { 
-                message: format!("Invalid task ID: {}", dto.id) 
-            })?;
-        
+        use domain::{AudioConfig, Error, TaskConfig};
+
+        let task_id = TaskId::from_string(&dto.id).map_err(|_| {
+            Error::ConfigurationError {
+                message: format!("Invalid task ID: {}", dto.id),
+            }
+        })?;
+
         let task_config = TaskConfig::try_from(dto.config)?;
-        
+
         let audio_config = AudioConfig {
             work_notification_sound: dto.audio_config.work_notification_sound,
             break_notification_sound: dto.audio_config.break_notification_sound,
@@ -81,17 +88,19 @@ impl TryFrom<TaskDto> for Task {
             enable_background_audio: dto.audio_config.enable_background_audio,
             muted: dto.audio_config.muted,
         };
-        
+
         let status = match dto.status.as_str() {
             "Active" => TaskStatus::Active,
             "Queued" => TaskStatus::Queued,
             "Paused" => TaskStatus::Paused,
             "Completed" => TaskStatus::Completed,
-            _ => return Err(Error::ConfigurationError { 
-                message: format!("Invalid task status: {}", dto.status) 
-            }),
+            _ => {
+                return Err(Error::ConfigurationError {
+                    message: format!("Invalid task status: {}", dto.status),
+                });
+            }
         };
-        
+
         Ok(Task {
             id: task_id,
             name: dto.name,

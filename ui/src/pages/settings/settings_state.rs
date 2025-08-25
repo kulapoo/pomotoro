@@ -1,9 +1,9 @@
+use domain::event_names;
+use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
-use domain::*;
-use domain::event_names;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,7 +19,9 @@ pub async fn get_global_config() -> std::result::Result<Config, String> {
 }
 
 #[allow(dead_code)]
-pub async fn save_global_config(config: Config) -> std::result::Result<(), String> {
+pub async fn save_global_config(
+    config: Config,
+) -> std::result::Result<(), String> {
     let args = to_value(&config)
         .map_err(|e| format!("Failed to serialize config: {e}"))?;
 
@@ -30,7 +32,9 @@ pub async fn save_global_config(config: Config) -> std::result::Result<(), Strin
 }
 
 #[allow(dead_code)]
-pub async fn update_general(general: GeneralConfig) -> std::result::Result<Config, String> {
+pub async fn update_general(
+    general: GeneralConfig,
+) -> std::result::Result<Config, String> {
     let args = to_value(&general)
         .map_err(|e| format!("Failed to serialize general Config: {e}"))?;
 
@@ -41,9 +45,12 @@ pub async fn update_general(general: GeneralConfig) -> std::result::Result<Confi
 }
 
 #[allow(dead_code)]
-pub async fn update_notification_preferences(preferences: NotificationConfig) -> std::result::Result<Config, String> {
-    let args = to_value(&preferences)
-        .map_err(|e| format!("Failed to serialize notification preferences: {e}"))?;
+pub async fn update_notification_preferences(
+    preferences: NotificationConfig,
+) -> std::result::Result<Config, String> {
+    let args = to_value(&preferences).map_err(|e| {
+        format!("Failed to serialize notification preferences: {e}")
+    })?;
 
     let result = invoke(event_names::config::UPDATE_NOTIFICATIONS, args).await;
 
@@ -52,7 +59,9 @@ pub async fn update_notification_preferences(preferences: NotificationConfig) ->
 }
 
 #[allow(dead_code)]
-pub async fn update_appearance(appearance: AppearanceConfig) -> std::result::Result<Config, String> {
+pub async fn update_appearance(
+    appearance: AppearanceConfig,
+) -> std::result::Result<Config, String> {
     let args = to_value(&appearance)
         .map_err(|e| format!("Failed to serialize appearance: {e}"))?;
 
@@ -63,7 +72,9 @@ pub async fn update_appearance(appearance: AppearanceConfig) -> std::result::Res
 }
 
 #[allow(dead_code)]
-pub async fn update_audio_config(audio_config: AudioConfig) -> std::result::Result<Config, String> {
+pub async fn update_audio_config(
+    audio_config: AudioConfig,
+) -> std::result::Result<Config, String> {
     let args = to_value(&audio_config)
         .map_err(|e| format!("Failed to serialize audio config: {e}"))?;
 
@@ -83,7 +94,8 @@ pub async fn update_default_timings(
         "workMinutes": work_minutes,
         "shortBreakMinutes": short_break_minutes,
         "longBreakMinutes": long_break_minutes,
-    })).map_err(|e| format!("Failed to serialize timing args: {e}"))?;
+    }))
+    .map_err(|e| format!("Failed to serialize timing args: {e}"))?;
 
     let result = invoke(event_names::config::UPDATE_TIMINGS, args).await;
 
@@ -92,8 +104,10 @@ pub async fn update_default_timings(
 }
 
 #[allow(dead_code)]
-pub async fn reset_global_config_to_defaults() -> std::result::Result<Config, String> {
-    let result = invoke(event_names::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
+pub async fn reset_global_config_to_defaults()
+-> std::result::Result<Config, String> {
+    let result =
+        invoke(event_names::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to reset config: {e}"))
@@ -121,7 +135,10 @@ impl ConfigResource {
     }
 
     #[allow(dead_code)]
-    pub async fn update_and_refetch<F, R>(&self, update_fn: F) -> std::result::Result<(), String>
+    pub async fn update_and_refetch<F, R>(
+        &self,
+        update_fn: F,
+    ) -> std::result::Result<(), String>
     where
         F: FnOnce() -> R + 'static,
         R: std::future::Future<Output = std::result::Result<Config, String>>,
@@ -141,4 +158,3 @@ impl ConfigResource {
         });
     }
 }
-

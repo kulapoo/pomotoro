@@ -1,6 +1,6 @@
-use std::time::Duration;
-use infra::adapters::ConfigBuilder;
 use domain::{NotificationPosition, TaskCyclingBehavior, Theme};
+use infra::adapters::ConfigBuilder;
+use std::time::Duration;
 
 fn main() {
     // Example of using the ConfigBuilder with flat setters
@@ -30,5 +30,8 @@ fn main() {
     println!("Task work duration: {:?}", builder.get_task_work_duration());
     println!("Audio volume: {}", builder.get_audio_volume());
     println!("Appearance theme: {:?}", builder.get_appearance_theme());
-    println!("General auto start breaks: {}", builder.get_general_auto_start_breaks());
+    println!(
+        "General auto start breaks: {}",
+        builder.get_general_auto_start_breaks()
+    );
 }

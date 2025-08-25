@@ -28,7 +28,9 @@ impl Default for AudioConfig {
 impl AudioConfig {
     pub fn validate(&self) -> Result<()> {
         if self.volume < 0.0 || self.volume > 1.0 {
-            return Err(Error::InvalidVolume { volume: self.volume });
+            return Err(Error::InvalidVolume {
+                volume: self.volume,
+            });
         }
         Ok(())
     }

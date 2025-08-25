@@ -1,5 +1,7 @@
 use domain::timer::TimerService;
-use domain::{Error, EventPublisher, Result, TaskId, TaskRepository, timer::Started};
+use domain::{
+    Error, EventPublisher, Result, TaskId, TaskRepository, timer::Started,
+};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -32,8 +34,10 @@ pub async fn start_timer_session(
     cmd: StartTimerSessionCmd,
 ) -> Result<()> {
     let task = if let Some(task_id_str) = cmd.task_id {
-        let task_id = TaskId::from_string(&task_id_str).map_err(|_| Error::TaskNotFound {
-            id: task_id_str.clone(),
+        let task_id = TaskId::from_string(&task_id_str).map_err(|_| {
+            Error::TaskNotFound {
+                id: task_id_str.clone(),
+            }
         })?;
 
         let task = task_repo
@@ -88,7 +92,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use domain::InMemoryTaskRepository;
-    use domain::{Task, TimerState, TimerStatus, TimerConfiguration, Phase};
+    use domain::{Phase, Task, TimerConfiguration, TimerState, TimerStatus};
     use std::sync::{Arc, RwLock};
 
     struct MockTimerService {
@@ -105,13 +109,22 @@ mod tests {
 
     #[async_trait]
     impl TimerService for MockTimerService {
-        async fn start_timer(&self, _task: Option<&domain::Task>) -> Result<()> {
+        async fn start_timer(
+            &self,
+            _task: Option<&domain::Task>,
+        ) -> Result<()> {
             let mut state = self.state.write().unwrap();
             // Mock implementation: transition to Working state
-            if let TimerState::Idle { configuration, session_count, active_entity } = state.clone() {
+            if let TimerState::Idle {
+                configuration,
+                session_count,
+                active_entity,
+            } = state.clone()
+            {
                 if active_entity.is_some() {
                     *state = TimerState::Working {
-                        remaining_seconds: configuration.get_phase_duration_seconds(domain::Phase::Work),
+                        remaining_seconds: configuration
+                            .get_phase_duration_seconds(domain::Phase::Work),
                         configuration,
                         session_count,
                         active_entity,
@@ -138,9 +151,15 @@ mod tests {
         async fn toggle_pause(&self) -> Result<TimerStatus> {
             let mut state = self.state.write().unwrap();
             match state.clone() {
-                TimerState::Working { remaining_seconds, .. } |
-                TimerState::ShortBreak { remaining_seconds, .. } |
-                TimerState::LongBreak { remaining_seconds, .. } => {
+                TimerState::Working {
+                    remaining_seconds, ..
+                }
+                | TimerState::ShortBreak {
+                    remaining_seconds, ..
+                }
+                | TimerState::LongBreak {
+                    remaining_seconds, ..
+                } => {
                     // Pause the timer
                     *state = TimerState::Paused {
                         paused_from: Box::new(state.clone()),
@@ -157,7 +176,10 @@ mod tests {
             }
         }
 
-        async fn reset_current_phase(&self, task: Option<&domain::Task>) -> Result<()> {
+        async fn reset_current_phase(
+            &self,
+            task: Option<&domain::Task>,
+        ) -> Result<()> {
             let mut state = self.state.write().unwrap();
             // Reset to a new work phase
             *state = TimerState::Working {
@@ -177,14 +199,14 @@ mod tests {
             let mut state = self.state.write().unwrap();
             let old_phase = state.phase();
             let task_id = task.map(|t| t.id().to_string());
-            
+
             // Transition to next phase based on current phase
             let new_phase = match old_phase {
                 Phase::Work => Phase::ShortBreak,
                 Phase::ShortBreak => Phase::Work,
                 Phase::LongBreak => Phase::Work,
             };
-            
+
             *state = match new_phase {
                 Phase::Work => TimerState::Working {
                     remaining_seconds: 1500,
@@ -208,7 +230,7 @@ mod tests {
                     entity_session_count: 0,
                 },
             };
-            
+
             Ok((old_phase, new_phase))
         }
 
@@ -216,10 +238,19 @@ mod tests {
             Ok(self.state.read().unwrap().clone())
         }
 
-        async fn switch_task(&self, task_id: TaskId, _task: Option<&domain::Task>) -> Result<()> {
+        async fn switch_task(
+            &self,
+            task_id: TaskId,
+            _task: Option<&domain::Task>,
+        ) -> Result<()> {
             let mut state = self.state.write().unwrap();
             // Mock implementation: only allow task switch when idle
-            if let TimerState::Idle { configuration, session_count, .. } = state.clone() {
+            if let TimerState::Idle {
+                configuration,
+                session_count,
+                ..
+            } = state.clone()
+            {
                 *state = TimerState::Idle {
                     configuration,
                     session_count,
@@ -240,7 +271,8 @@ mod tests {
         Arc<dyn EventPublisher + Send + Sync>,
         Task,
     ) {
-        let timer_service: Arc<dyn TimerService + Send + Sync> = Arc::new(MockTimerService::new());
+        let timer_service: Arc<dyn TimerService + Send + Sync> =
+            Arc::new(MockTimerService::new());
         let task_repo: Arc<dyn TaskRepository + Send + Sync> =
             Arc::new(InMemoryTaskRepository::new());
         let event_publisher: Arc<dyn EventPublisher + Send + Sync> =
@@ -295,7 +327,13 @@ mod tests {
 
         let cmd = StartTimerSessionCmd { task_id: None };
 
-        let result = start_timer_session(&timer_service, &task_repo, &event_publisher, cmd).await;
+        let result = start_timer_session(
+            &timer_service,
+            &task_repo,
+            &event_publisher,
+            cmd,
+        )
+        .await;
         assert!(matches!(result, Err(Error::InvalidStateTransition { .. })));
     }
 
@@ -307,7 +345,13 @@ mod tests {
             task_id: Some("nonexistent-id".to_string()),
         };
 
-        let result = start_timer_session(&timer_service, &task_repo, &event_publisher, cmd).await;
+        let result = start_timer_session(
+            &timer_service,
+            &task_repo,
+            &event_publisher,
+            cmd,
+        )
+        .await;
         assert!(matches!(result, Err(Error::TaskNotFound { .. })));
     }
 
@@ -315,7 +359,8 @@ mod tests {
     async fn should_fail_with_completed_task() {
         let (timer_service, task_repo, event_publisher, _) = setup().await;
 
-        let mut completed_task = Task::new("Completed Task".to_string(), 1).unwrap();
+        let mut completed_task =
+            Task::new("Completed Task".to_string(), 1).unwrap();
         completed_task.increment_session().unwrap();
         task_repo.create(completed_task.clone()).await.unwrap();
 
@@ -323,7 +368,13 @@ mod tests {
             task_id: Some(completed_task.id.to_string()),
         };
 
-        let result = start_timer_session(&timer_service, &task_repo, &event_publisher, cmd).await;
+        let result = start_timer_session(
+            &timer_service,
+            &task_repo,
+            &event_publisher,
+            cmd,
+        )
+        .await;
         assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
     }
 
@@ -359,15 +410,21 @@ mod tests {
         async fn should_publish_timer_started_event() {
             let (timer_service, task_repo, mock_publisher, task) =
                 setup_with_mock_publisher().await;
-            let event_publisher = create_event_publisher(mock_publisher.clone());
+            let event_publisher =
+                create_event_publisher(mock_publisher.clone());
 
             let cmd = StartTimerSessionCmd {
                 task_id: Some(task.id.to_string()),
             };
 
-            start_timer_session(&timer_service, &task_repo, &event_publisher, cmd)
-                .await
-                .unwrap();
+            start_timer_session(
+                &timer_service,
+                &task_repo,
+                &event_publisher,
+                cmd,
+            )
+            .await
+            .unwrap();
 
             // Verify Started event was published
             assert_eq!(mock_publisher.event_count(), 1);
@@ -377,15 +434,22 @@ mod tests {
 
         #[tokio::test]
         async fn should_not_publish_event_on_failure() {
-            let (timer_service, task_repo, mock_publisher, _) = setup_with_mock_publisher().await;
-            let event_publisher = create_event_publisher(mock_publisher.clone());
+            let (timer_service, task_repo, mock_publisher, _) =
+                setup_with_mock_publisher().await;
+            let event_publisher =
+                create_event_publisher(mock_publisher.clone());
 
             let cmd = StartTimerSessionCmd {
                 task_id: Some("nonexistent-id".to_string()),
             };
 
-            let result =
-                start_timer_session(&timer_service, &task_repo, &event_publisher, cmd).await;
+            let result = start_timer_session(
+                &timer_service,
+                &task_repo,
+                &event_publisher,
+                cmd,
+            )
+            .await;
             assert!(result.is_err());
 
             // Verify no events were published on failure
@@ -396,7 +460,8 @@ mod tests {
         async fn should_publish_event_with_correct_sequence() {
             let (timer_service, task_repo, mock_publisher, task) =
                 setup_with_mock_publisher().await;
-            let event_publisher = create_event_publisher(mock_publisher.clone());
+            let event_publisher =
+                create_event_publisher(mock_publisher.clone());
 
             // Start timer, then stop it, then start again to test event sequence
             let cmd = StartTimerSessionCmd {
@@ -404,21 +469,33 @@ mod tests {
             };
 
             // First start
-            start_timer_session(&timer_service, &task_repo, &event_publisher, cmd.clone())
-                .await
-                .unwrap();
+            start_timer_session(
+                &timer_service,
+                &task_repo,
+                &event_publisher,
+                cmd.clone(),
+            )
+            .await
+            .unwrap();
 
             // Stop timer to allow second start
             timer_service.stop_timer().await.unwrap();
 
             // Second start
-            start_timer_session(&timer_service, &task_repo, &event_publisher, cmd)
-                .await
-                .unwrap();
+            start_timer_session(
+                &timer_service,
+                &task_repo,
+                &event_publisher,
+                cmd,
+            )
+            .await
+            .unwrap();
 
             // Verify event sequence
             assert_eq!(mock_publisher.event_count(), 2);
-            assert!(mock_publisher.verify_event_sequence(&["Started", "Started"]));
+            assert!(
+                mock_publisher.verify_event_sequence(&["Started", "Started"])
+            );
         }
     }
 }

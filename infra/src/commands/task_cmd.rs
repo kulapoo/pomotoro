@@ -1,7 +1,9 @@
+use crate::adapters::{
+    TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
+};
+use domain::{AudioConfig, Task, TaskConfig, TaskId};
 use tauri::State;
-use domain::{Task, TaskId, TaskConfig, AudioConfig};
 use usecases::task::*;
-use crate::adapters::{events::mem_event_bus::EventPublisherArc, TaskRepositoryArc};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {
@@ -60,7 +62,11 @@ pub async fn get_task(
 pub async fn get_all_tasks(
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
-    let query = GetTasksQuery { tags: None, status: None, active_only: false };
+    let query = GetTasksQuery {
+        tags: None,
+        status: None,
+        active_only: false,
+    };
     usecases::task::get_tasks(&task_repo, query)
         .await
         .map_err(|e| e.to_string())
@@ -70,7 +76,8 @@ pub async fn get_all_tasks(
 pub async fn get_active_tasks(
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
-    task_repo.get_active_tasks()
+    task_repo
+        .get_active_tasks()
         .await
         .map_err(|e| e.to_string())
 }
@@ -113,7 +120,8 @@ pub async fn get_tasks_by_tags(
     tags: Vec<String>,
     task_repo: State<'_, TaskRepositoryArc>,
 ) -> Result<Vec<Task>, String> {
-    task_repo.get_by_tags(&tags)
+    task_repo
+        .get_by_tags(&tags)
         .await
         .map_err(|e| e.to_string())
 }
@@ -124,14 +132,19 @@ pub async fn complete_task_session(
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Task, String> {
-    let _result = usecases::task::complete_session(&task_repo, &event_publisher, &task_id)
-        .await
-        .map_err(|e| e.to_string())?;
+    let _result = usecases::task::complete_session(
+        &task_repo,
+        &event_publisher,
+        &task_id,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
 
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
 
-    task_repo.get_by_id(task_id)
+    task_repo
+        .get_by_id(task_id)
         .await
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Task not found".to_string())
@@ -149,7 +162,8 @@ pub async fn reset_task_sessions(
     let task_id = domain::TaskId::from_string(&task_id)
         .map_err(|_| "Invalid task ID".to_string())?;
 
-    task_repo.get_by_id(task_id)
+    task_repo
+        .get_by_id(task_id)
         .await
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Task not found".to_string())

@@ -1,12 +1,15 @@
-use crate::{Error, Result};
 use super::{Task, id::Id};
+use crate::{Error, Result};
 use async_trait::async_trait;
 
 /// Domain contract for task cycling operations
 /// Concrete implementations belong in infrastructure layer
 #[async_trait]
 pub trait CyclerService: Send + Sync {
-    async fn get_next_task(&self, current_task_id: Option<Id>) -> Result<Option<Task>>;
+    async fn get_next_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>>;
     async fn validate_task_switch(&self, task_id: Id) -> Result<Option<Task>>;
     async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
     async fn cycle_to_next_active_task(
@@ -51,7 +54,9 @@ impl DefaultCyclingService {
 
         if let Some(current_id) = current_task_id {
             // Find current task position and get next one
-            if let Some(current_pos) = tasks.iter().position(|t| t.id == current_id) {
+            if let Some(current_pos) =
+                tasks.iter().position(|t| t.id == current_id)
+            {
                 let next_pos = (current_pos + 1) % tasks.len();
                 return Some(&tasks[next_pos]);
             }
@@ -110,9 +115,12 @@ mod tests {
     fn create_test_tasks() -> Vec<Task> {
         let defaults = TaskDefaults::default();
         vec![
-            Task::new_with_defaults("Task 1".to_string(), 4, &defaults).unwrap(),
-            Task::new_with_defaults("Task 2".to_string(), 3, &defaults).unwrap(),
-            Task::new_with_defaults("Task 3".to_string(), 2, &defaults).unwrap(),
+            Task::new_with_defaults("Task 1".to_string(), 4, &defaults)
+                .unwrap(),
+            Task::new_with_defaults("Task 2".to_string(), 3, &defaults)
+                .unwrap(),
+            Task::new_with_defaults("Task 3".to_string(), 2, &defaults)
+                .unwrap(),
         ]
     }
 
@@ -122,7 +130,8 @@ mod tests {
         let tasks = create_test_tasks();
 
         // First call with no current task should return first task
-        let first_task = service.find_next_task_round_robin(&tasks, None).unwrap();
+        let first_task =
+            service.find_next_task_round_robin(&tasks, None).unwrap();
         assert_eq!(first_task.name, "Task 1");
 
         // Next call should return second task

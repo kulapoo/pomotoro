@@ -75,7 +75,12 @@ mod tests {
 
     #[test]
     fn should_serialize_timer_tick_event() {
-        let event = Tick::new(Some(uuid::Uuid::new_v4().to_string()), Phase::ShortBreak, 300, 2);
+        let event = Tick::new(
+            Some(uuid::Uuid::new_v4().to_string()),
+            Phase::ShortBreak,
+            300,
+            2,
+        );
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Tick = serde_json::from_str(&serialized).unwrap();

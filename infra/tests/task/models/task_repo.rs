@@ -1,6 +1,9 @@
-use infra::adapters::InMemoryTaskRepository;
-use domain::{Error as TaskError, Task, TaskBuilder, TaskDefaults, TaskRepository, TaskStatus};
 use domain::TaskId;
+use domain::{
+    Error as TaskError, Task, TaskBuilder, TaskDefaults, TaskRepository,
+    TaskStatus,
+};
+use infra::adapters::InMemoryTaskRepository;
 use std::sync::Arc;
 
 pub struct TaskTestRepository {
@@ -14,11 +17,12 @@ impl TaskTestRepository {
         }
     }
 
-
     pub fn with_default_task() -> Self {
         let task_defaults = TaskDefaults::default();
         Self {
-            inner: Arc::new(InMemoryTaskRepository::with_default_task(&task_defaults)),
+            inner: Arc::new(InMemoryTaskRepository::with_default_task(
+                &task_defaults,
+            )),
         }
     }
 
@@ -28,21 +32,25 @@ impl TaskTestRepository {
         }
     }
 
-    pub async fn seed_with_test_data(&self) -> Result<Vec<TaskId>, Box<dyn std::error::Error>> {
+    pub async fn seed_with_test_data(
+        &self,
+    ) -> Result<Vec<TaskId>, Box<dyn std::error::Error>> {
         let mut task_ids = Vec::new();
 
-        let work_task = TaskBuilder::with_name_and_sessions("Work Project".to_string(), 4)
-            .with_tags(vec!["work".to_string(), "project".to_string()])
-            .with_description("Important work project".to_string())
-            .build()?;
+        let work_task =
+            TaskBuilder::with_name_and_sessions("Work Project".to_string(), 4)
+                .with_tags(vec!["work".to_string(), "project".to_string()])
+                .with_description("Important work project".to_string())
+                .build()?;
 
         self.create(work_task.clone()).await?;
 
         task_ids.push(work_task.id);
 
-        let study_task = TaskBuilder::with_name_and_sessions("Study Session".to_string(), 3)
-            .with_tags(vec!["study".to_string(), "learning".to_string()])
-            .build()?;
+        let study_task =
+            TaskBuilder::with_name_and_sessions("Study Session".to_string(), 3)
+                .with_tags(vec!["study".to_string(), "learning".to_string()])
+                .build()?;
 
         self.create(study_task.clone()).await?;
 
@@ -80,7 +88,10 @@ impl TaskRepository for TaskTestRepository {
         self.inner.delete(id).await
     }
 
-    async fn get_by_tags(&self, tags: &[String]) -> Result<Vec<Task>, TaskError> {
+    async fn get_by_tags(
+        &self,
+        tags: &[String],
+    ) -> Result<Vec<Task>, TaskError> {
         self.inner.get_by_tags(tags).await
     }
 
@@ -88,7 +99,10 @@ impl TaskRepository for TaskTestRepository {
         self.inner.get_active_tasks().await
     }
 
-    async fn get_by_status(&self, status: TaskStatus) -> Result<Vec<Task>, TaskError> {
+    async fn get_by_status(
+        &self,
+        status: TaskStatus,
+    ) -> Result<Vec<Task>, TaskError> {
         self.inner.get_by_status(status).await
     }
 

@@ -1,21 +1,20 @@
-use leptos::prelude::*;
 use crate::pages::timer::TimerViewModel;
+use leptos::prelude::*;
 
 #[component]
 pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
-    
     let start_pause_action = move |_| {
         vm.with_value(|v| v.start_pause_timer());
     };
-    
+
     let reset_action = move |_| {
         vm.with_value(|v| v.reset_timer());
     };
-    
+
     let skip_action = move |_| {
         vm.with_value(|v| v.skip_phase());
     };
-    
+
     view! {
         <>
             <button

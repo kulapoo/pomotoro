@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{ConfigRepository, Config, Result};
+use domain::{Config, ConfigRepository, Result};
 use std::sync::{Arc, RwLock};
 
 #[derive(Default)]
@@ -67,7 +67,7 @@ mod tests {
         let repo = InMemoryConfigRepository::new();
         let mut config = Config::default();
         config.general.start_minimized = true;
-        
+
         repo.save_config(&config).await.unwrap();
         let reset_config = repo.reset_to_defaults().await.unwrap();
 
@@ -89,11 +89,11 @@ mod tests {
     #[tokio::test]
     async fn should_check_config_existence() {
         let repo = InMemoryConfigRepository::new();
-        
+
         assert!(!repo.config_exists().await.unwrap());
-        
+
         repo.save_config(&Config::default()).await.unwrap();
-        
+
         assert!(repo.config_exists().await.unwrap());
     }
 }

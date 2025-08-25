@@ -1,8 +1,10 @@
+use chrono::{DateTime, Duration as ChronoDuration, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, Duration as ChronoDuration, TimeZone};
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub struct Timestamp(DateTime<Utc>);
 
 impl Timestamp {
@@ -145,7 +147,12 @@ mod tests {
     fn should_create_timestamp_now() {
         let ts = Timestamp::now();
         let now = Utc::now();
-        assert!((ts.duration_since(&Timestamp::from_datetime(now)).num_milliseconds()).abs() < 1000);
+        assert!(
+            (ts.duration_since(&Timestamp::from_datetime(now))
+                .num_milliseconds())
+            .abs()
+                < 1000
+        );
     }
 
     #[test]
@@ -174,7 +181,7 @@ mod tests {
     fn should_compare_timestamps() {
         let ts1 = Timestamp::now();
         let ts2 = ts1.add_seconds(1);
-        
+
         assert!(ts1.is_before(&ts2));
         assert!(ts2.is_after(&ts1));
         assert_eq!(ts2.duration_since(&ts1).num_seconds(), 1);
@@ -184,7 +191,7 @@ mod tests {
     fn should_format_timestamps() {
         let dt = Utc.with_ymd_and_hms(2022, 1, 1, 12, 0, 0).unwrap();
         let ts = Timestamp::from_datetime(dt);
-        
+
         assert_eq!(ts.format_iso8601(), "2022-01-01T12:00:00+00:00");
         assert_eq!(ts.format_human_readable(), "2022-01-01 12:00:00 UTC");
     }
@@ -194,7 +201,7 @@ mod tests {
         let start = Timestamp::now();
         let end = start.add_hours(1);
         let range = TimestampRange::new(start.clone(), end.clone());
-        
+
         let middle = start.add_minutes(30);
         assert!(range.contains(&middle));
         assert_eq!(range.duration().num_hours(), 1);
@@ -204,13 +211,13 @@ mod tests {
     fn should_detect_overlapping_ranges() {
         let range1 = TimestampRange::new(
             Timestamp::now(),
-            Timestamp::now().add_hours(2)
+            Timestamp::now().add_hours(2),
         );
         let range2 = TimestampRange::new(
             Timestamp::now().add_hours(1),
-            Timestamp::now().add_hours(3)
+            Timestamp::now().add_hours(3),
         );
-        
+
         assert!(range1.overlaps(&range2));
         assert!(range2.overlaps(&range1));
     }
@@ -219,13 +226,13 @@ mod tests {
     fn should_merge_overlapping_ranges() {
         let range1 = TimestampRange::new(
             Timestamp::now(),
-            Timestamp::now().add_hours(2)
+            Timestamp::now().add_hours(2),
         );
         let range2 = TimestampRange::new(
             Timestamp::now().add_hours(1),
-            Timestamp::now().add_hours(3)
+            Timestamp::now().add_hours(3),
         );
-        
+
         let merged = range1.merge(&range2).unwrap();
         assert_eq!(merged.duration().num_hours(), 3);
     }

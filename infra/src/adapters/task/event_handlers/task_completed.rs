@@ -1,8 +1,8 @@
-use std::any::TypeId;
+use crate::adapters::EventHandler;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use std::any::TypeId;
 use tauri::{AppHandle, Emitter};
-use crate::adapters::EventHandler;
 
 pub struct TaskCompletedHandler {
     app_handle: AppHandle,
@@ -16,17 +16,18 @@ impl TaskCompletedHandler {
 
 #[async_trait]
 impl EventHandler for TaskCompletedHandler {
-
     fn subscribes_to(&self) -> TypeId {
         TypeId::of::<domain::TaskCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let task_completed = event.as_any().downcast_ref::<domain::TaskCompleted>();
+        let task_completed =
+            event.as_any().downcast_ref::<domain::TaskCompleted>();
 
-        self.app_handle.emit(domain::event_names::task::LIST_UPDATED, task_completed)
+        self.app_handle
+            .emit(domain::event_names::task::LIST_UPDATED, task_completed)
             .map_err(|e| domain::Error::EventPublishingError {
-                message: format!("Failed to emit task completed event: {e}")
+                message: format!("Failed to emit task completed event: {e}"),
             })?;
         Ok(())
     }

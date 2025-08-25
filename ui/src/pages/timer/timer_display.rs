@@ -1,13 +1,11 @@
-use leptos::prelude::*;
 use crate::components::circular_progress::CircularProgress;
 use crate::pages::timer::TimerViewModel;
 use crate::utils::ViewModel;
+use leptos::prelude::*;
 
 #[component]
 #[allow(dead_code)]
-pub fn TimerDisplay(
-    vm: StoredValue<TimerViewModel>
-) -> impl IntoView {
+pub fn TimerDisplay(vm: StoredValue<TimerViewModel>) -> impl IntoView {
     let timer_state = vm.with_value(|v| v.state());
 
     view! {

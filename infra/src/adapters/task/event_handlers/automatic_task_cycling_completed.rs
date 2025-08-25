@@ -1,8 +1,8 @@
-use std::any::TypeId;
+use crate::adapters::EventHandler;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use std::any::TypeId;
 use tauri::{AppHandle, Emitter};
-use crate::adapters::EventHandler;
 
 pub struct AutomaticTaskCyclingCompletedHandler {
     app_handle: AppHandle,
@@ -16,17 +16,21 @@ impl AutomaticTaskCyclingCompletedHandler {
 
 #[async_trait]
 impl EventHandler for AutomaticTaskCyclingCompletedHandler {
-
     fn subscribes_to(&self) -> TypeId {
         TypeId::of::<domain::AutomaticTaskCyclingCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let task_cycling = event.as_any().downcast_ref::<domain::AutomaticTaskCyclingCompleted>();
+        let task_cycling = event
+            .as_any()
+            .downcast_ref::<domain::AutomaticTaskCyclingCompleted>();
 
-        self.app_handle.emit(domain::event_names::task::ACTIVE_CHANGED, task_cycling)
+        self.app_handle
+            .emit(domain::event_names::task::ACTIVE_CHANGED, task_cycling)
             .map_err(|e| domain::Error::EventPublishingError {
-                message: format!("Failed to emit automatic task cycling completed event: {e}")
+                message: format!(
+                    "Failed to emit automatic task cycling completed event: {e}"
+                ),
             })?;
         Ok(())
     }

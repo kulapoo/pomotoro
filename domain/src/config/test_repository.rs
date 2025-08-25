@@ -1,6 +1,9 @@
+use crate::{
+    Result,
+    config::{Config, ConfigRepository},
+};
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
-use crate::{Result, config::{Config, ConfigRepository}};
 
 /// In-memory config repository for testing purposes
 #[derive(Debug)]

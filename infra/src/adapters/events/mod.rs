@@ -5,13 +5,12 @@
 //! - Event registrar trait for handler lifecycle management
 //! - Factory functions for creating event publishers
 
-pub mod mem_event_bus;
-pub mod audio_events;
 pub mod app_lifecycle;
-mod event_subscriber;
+pub mod audio_events;
 mod event_handler;
+mod event_subscriber;
+pub mod mem_event_bus;
 
-pub use mem_event_bus::InMemoryEventBus;
-pub use event_subscriber::EventSubscriber;
 pub use event_handler::EventHandler;
-
+pub use event_subscriber::EventSubscriber;
+pub use mem_event_bus::InMemoryEventBus;

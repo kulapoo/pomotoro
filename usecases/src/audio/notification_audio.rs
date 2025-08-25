@@ -1,7 +1,7 @@
-use domain::{AudioCategory, PlaybackHandle, Result, Error};
+use super::manage_library::{AudioLibraryService, get_assets_by_category};
 use super::play_audio::{PlayAudioCmd, play_audio};
 use domain::AudioService;
-use super::manage_library::{AudioLibraryService, get_assets_by_category};
+use domain::{AudioCategory, Error, PlaybackHandle, Result};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -31,10 +31,16 @@ pub enum NotificationType {
 impl NotificationType {
     pub fn to_asset_category(&self) -> AudioCategory {
         match self {
-            NotificationType::SessionCompleted => AudioCategory::NotificationSound,
-            NotificationType::BreakCompleted => AudioCategory::NotificationSound,
+            NotificationType::SessionCompleted => {
+                AudioCategory::NotificationSound
+            }
+            NotificationType::BreakCompleted => {
+                AudioCategory::NotificationSound
+            }
             NotificationType::TaskCompleted => AudioCategory::NotificationSound,
-            NotificationType::PhaseTransition => AudioCategory::NotificationSound,
+            NotificationType::PhaseTransition => {
+                AudioCategory::NotificationSound
+            }
             NotificationType::Warning => AudioCategory::NotificationSound,
             NotificationType::Success => AudioCategory::NotificationSound,
         }
@@ -61,7 +67,9 @@ pub async fn play_notification_sound(
 
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError {
-            message: format!("Volume must be between 0.0 and 1.0, got {volume}")
+            message: format!(
+                "Volume must be between 0.0 and 1.0, got {volume}"
+            ),
         });
     }
 
@@ -71,7 +79,8 @@ pub async fn play_notification_sound(
     let asset_id = if assets.is_empty() {
         cmd.notification_type.default_asset_id().to_string()
     } else {
-        assets.iter()
+        assets
+            .iter()
             .find(|asset| asset.id == cmd.notification_type.default_asset_id())
             .map(|asset| asset.id.clone())
             .unwrap_or_else(|| assets[0].id.clone())
@@ -96,7 +105,9 @@ pub async fn play_background_audio(
 
     if !(0.0..=1.0).contains(&volume) {
         return Err(Error::ConfigurationError {
-            message: format!("Volume must be between 0.0 and 1.0, got {volume}")
+            message: format!(
+                "Volume must be between 0.0 and 1.0, got {volume}"
+            ),
         });
     }
 
@@ -104,7 +115,10 @@ pub async fn play_background_audio(
 
     if assets.is_empty() {
         return Err(Error::ConfigurationError {
-            message: format!("No audio assets found for category: {:?}", cmd.category),
+            message: format!(
+                "No audio assets found for category: {:?}",
+                cmd.category
+            ),
         });
     }
 
@@ -113,7 +127,10 @@ pub async fn play_background_audio(
             specific_id
         } else {
             return Err(Error::ConfigurationError {
-                message: format!("Asset '{}' not found in category '{:?}'", specific_id, cmd.category),
+                message: format!(
+                    "Asset '{}' not found in category '{:?}'",
+                    specific_id, cmd.category
+                ),
             });
         }
     } else {
@@ -154,10 +171,10 @@ pub async fn stop_background_audio(
 
 #[cfg(test)]
 mod tests {
+    use super::super::manage_library::AudioLibraryService;
     use super::*;
     use domain::AudioService;
-    use super::super::manage_library::AudioLibraryService;
-    use domain::{AudioLibrary, AudioAsset, PlaybackHandle, PlaybackRequest};
+    use domain::{AudioAsset, AudioLibrary, PlaybackHandle, PlaybackRequest};
     use std::collections::HashMap;
 
     struct MockAudioService {
@@ -173,7 +190,10 @@ mod tests {
     }
 
     impl AudioService for MockAudioService {
-        fn play_audio(&mut self, request: PlaybackRequest) -> Result<PlaybackHandle> {
+        fn play_audio(
+            &mut self,
+            request: PlaybackRequest,
+        ) -> Result<PlaybackHandle> {
             let handle = PlaybackHandle {
                 id: format!("test-{}", uuid::Uuid::new_v4()),
                 asset_id: request.asset_id,
@@ -221,7 +241,9 @@ mod tests {
         }
 
         fn get_active_playbacks(&self) -> Result<Vec<PlaybackHandle>> {
-            Ok(self.playbacks.values()
+            Ok(self
+                .playbacks
+                .values()
                 .filter(|h| h.is_playing)
                 .cloned()
                 .collect())
@@ -272,8 +294,13 @@ mod tests {
             Ok(self.library.get_asset(asset_id).cloned())
         }
 
-        fn get_assets_by_category(&self, category: AudioCategory) -> Result<Vec<AudioAsset>> {
-            Ok(self.library.assets
+        fn get_assets_by_category(
+            &self,
+            category: AudioCategory,
+        ) -> Result<Vec<AudioAsset>> {
+            Ok(self
+                .library
+                .assets
                 .values()
                 .filter(|asset| asset.category == category)
                 .cloned()
@@ -287,15 +314,21 @@ mod tests {
 
     #[tokio::test]
     async fn should_play_notification_sound() {
-        let audio_service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
-        let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new_with_notification_assets()));
+        let audio_service: Arc<Mutex<dyn AudioService>> =
+            Arc::new(Mutex::new(MockAudioService::new()));
+        let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(
+            Mutex::new(MockLibraryService::new_with_notification_assets()),
+        );
 
         let cmd = PlayNotificationSoundCmd {
             notification_type: NotificationType::SessionCompleted,
             volume: Some(0.8),
         };
 
-        let handle = play_notification_sound(&audio_service, &library_service, cmd).await.unwrap();
+        let handle =
+            play_notification_sound(&audio_service, &library_service, cmd)
+                .await
+                .unwrap();
 
         assert_eq!(handle.asset_id, "session-complete-bell");
         assert_eq!(handle.volume, 0.8);
@@ -305,15 +338,20 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_invalid_volume() {
-        let audio_service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
-        let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new_with_notification_assets()));
+        let audio_service: Arc<Mutex<dyn AudioService>> =
+            Arc::new(Mutex::new(MockAudioService::new()));
+        let library_service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(
+            Mutex::new(MockLibraryService::new_with_notification_assets()),
+        );
 
         let cmd = PlayNotificationSoundCmd {
             notification_type: NotificationType::SessionCompleted,
             volume: Some(1.5),
         };
 
-        let result = play_notification_sound(&audio_service, &library_service, cmd).await;
+        let result =
+            play_notification_sound(&audio_service, &library_service, cmd)
+                .await;
         assert!(result.is_err());
     }
 }

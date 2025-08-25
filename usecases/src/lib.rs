@@ -19,16 +19,15 @@
 //! - Domain events are published after successful operations
 //! - Error handling follows domain error types
 
+pub mod audio;
+pub mod config;
 pub mod task;
 pub mod timer;
-pub mod config;
-pub mod audio;
 
+pub use audio::*;
+pub use config::*;
 pub use task::*;
 pub use timer::{
-    start_session, StartSessionCmd, pause_session, resume_session,
-    reset_session, reset_full_session, complete_timer_session,
-    SessionCompleted
+    SessionCompleted, StartSessionCmd, complete_timer_session, pause_session,
+    reset_full_session, reset_session, resume_session, start_session,
 };
-pub use config::*;
-pub use audio::*;

@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::fs;
-use std::io::Write;
-use domain::{Task, TaskId, TaskStatus, TaskRepository, Result, Error};
 use super::task_dto::TaskDto;
 use async_trait::async_trait;
+use domain::{Error, Result, Task, TaskId, TaskRepository, TaskStatus};
 use serde_json;
+use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
+use std::path::PathBuf;
 
 /// File-based task repository that demonstrates proper DTO usage
 /// This shows how infrastructure layer should handle serialization
@@ -25,21 +25,24 @@ impl FileTaskRepository {
             return Ok(HashMap::new());
         }
 
-        let content = fs::read_to_string(&self.tasks_file)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to read tasks file: {e}") 
-            })?;
+        let content = fs::read_to_string(&self.tasks_file).map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to read tasks file: {e}"),
+            }
+        })?;
 
-        let task_dtos: Vec<TaskDto> = serde_json::from_str(&content)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to deserialize tasks: {e}") 
+        let task_dtos: Vec<TaskDto> =
+            serde_json::from_str(&content).map_err(|e| {
+                Error::RepositoryError {
+                    message: format!("Failed to deserialize tasks: {e}"),
+                }
             })?;
 
         let mut tasks = HashMap::new();
         for dto in task_dtos {
-            let task = Task::try_from(dto)
-                .map_err(|e| Error::RepositoryError { 
-                    message: format!("Failed to convert DTO to Task: {e:?}") 
+            let task =
+                Task::try_from(dto).map_err(|e| Error::RepositoryError {
+                    message: format!("Failed to convert DTO to Task: {e:?}"),
                 })?;
             tasks.insert(task.id, task);
         }
@@ -54,25 +57,28 @@ impl FileTaskRepository {
             .map(|task| TaskDto::from(task.clone()))
             .collect();
 
-        let content = serde_json::to_string_pretty(&task_dtos)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to serialize tasks: {e}") 
+        let content =
+            serde_json::to_string_pretty(&task_dtos).map_err(|e| {
+                Error::RepositoryError {
+                    message: format!("Failed to serialize tasks: {e}"),
+                }
             })?;
 
-        let mut file = fs::File::create(&self.tasks_file)
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to create tasks file: {e}") 
-            })?;
+        let mut file = fs::File::create(&self.tasks_file).map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to create tasks file: {e}"),
+            }
+        })?;
 
-        file.write_all(content.as_bytes())
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to write tasks file: {e}") 
-            })?;
+        file.write_all(content.as_bytes()).map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to write tasks file: {e}"),
+            }
+        })?;
 
-        file.sync_all()
-            .map_err(|e| Error::RepositoryError { 
-                message: format!("Failed to sync tasks file: {e}") 
-            })?;
+        file.sync_all().map_err(|e| Error::RepositoryError {
+            message: format!("Failed to sync tasks file: {e}"),
+        })?;
 
         Ok(())
     }
@@ -82,13 +88,13 @@ impl FileTaskRepository {
 impl TaskRepository for FileTaskRepository {
     async fn create(&self, task: Task) -> Result<()> {
         let mut tasks = self.load_tasks()?;
-        
+
         if tasks.contains_key(&task.id) {
-            return Err(Error::TaskNotFound { 
-                id: task.id.to_string() 
+            return Err(Error::TaskNotFound {
+                id: task.id.to_string(),
             });
         }
-        
+
         tasks.insert(task.id, task);
         self.save_tasks(&tasks)?;
         Ok(())
@@ -110,20 +116,22 @@ impl TaskRepository for FileTaskRepository {
         let tasks = self.load_tasks()?;
         Ok(tasks
             .values()
-            .filter(|task| matches!(task.status, TaskStatus::Active | TaskStatus::Queued))
+            .filter(|task| {
+                matches!(task.status, TaskStatus::Active | TaskStatus::Queued)
+            })
             .cloned()
             .collect())
     }
 
     async fn update(&self, task: Task) -> Result<()> {
         let mut tasks = self.load_tasks()?;
-        
+
         if !tasks.contains_key(&task.id) {
-            return Err(Error::TaskNotFound { 
-                id: task.id.to_string() 
+            return Err(Error::TaskNotFound {
+                id: task.id.to_string(),
             });
         }
-        
+
         tasks.insert(task.id, task);
         self.save_tasks(&tasks)?;
         Ok(())
@@ -195,17 +203,18 @@ mod tests {
         assert!(file_content.contains("work_duration"));
     }
 
-    #[tokio::test] 
+    #[tokio::test]
     async fn should_handle_dto_conversion_errors() {
         let temp_dir = tempdir().unwrap();
         let tasks_file = temp_dir.path().join("invalid_tasks.json");
-        
+
         // Write invalid DTO to file
-        fs::write(&tasks_file, r#"[{"id": "invalid-id", "name": ""}]"#).unwrap();
-        
+        fs::write(&tasks_file, r#"[{"id": "invalid-id", "name": ""}]"#)
+            .unwrap();
+
         let repo = FileTaskRepository::new(tasks_file);
         let result = repo.get_all().await;
-        
+
         // Should handle DTO conversion errors gracefully
         assert!(result.is_err());
     }

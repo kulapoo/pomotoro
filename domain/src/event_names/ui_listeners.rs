@@ -1,4 +1,3 @@
-
 pub mod timer {
     pub const TICK: &str = "timer:tick";
     pub const STATUS_CHANGED: &str = "timer:status_changed";

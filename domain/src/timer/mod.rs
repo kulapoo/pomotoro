@@ -1,18 +1,27 @@
 pub mod error;
+pub mod events;
+pub mod service;
 pub mod state_machine;
 pub mod timer;
 pub mod transitions;
-pub mod events;
-pub mod service;
 
 // Re-export core types
 pub use error::{Error, Result};
-pub use timer::Timer;
-pub use state_machine::TimerState;
-pub use transitions::{TransitionResult, StateTransitions, TransitionType};
 pub use service::TimerService;
+pub use state_machine::TimerState;
+pub use timer::Timer;
+pub use transitions::{StateTransitions, TransitionResult, TransitionType};
 // Timer-specific value objects
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Hash)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    Hash,
+)]
 pub enum Phase {
     Work,
     ShortBreak,
@@ -29,7 +38,16 @@ impl Phase {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Hash)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    Hash,
+)]
 pub enum Status {
     Idle,
     Running,
@@ -39,7 +57,7 @@ pub enum Status {
 
 // Re-export events
 pub use events::{
-    Started, Paused, Reset, Tick, PhaseCompleted, PhaseSkipped,
-    StatusChanged, ActiveTaskSwitched, SessionStarted, BreakSessionStarted,
-    BreakSessionCompleted, WorkSessionStarted, WorkSessionCompleted, SessionFlowReset,
+    ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted, Paused,
+    PhaseCompleted, PhaseSkipped, Reset, SessionFlowReset, SessionStarted,
+    Started, StatusChanged, Tick, WorkSessionCompleted, WorkSessionStarted,
 };

@@ -1,7 +1,9 @@
-use domain::{TaskConfig, TimerConfiguration, Result};
+use domain::{Result, TaskConfig, TimerConfiguration};
 
 /// Convert TaskConfig to TimerConfiguration
-pub fn task_config_to_timer_config(task_config: &TaskConfig) -> Result<TimerConfiguration> {
+pub fn task_config_to_timer_config(
+    task_config: &TaskConfig,
+) -> Result<TimerConfiguration> {
     TimerConfiguration::new(
         task_config.work_duration(),
         task_config.short_break_duration(),

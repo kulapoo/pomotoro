@@ -1,6 +1,6 @@
-use std::time::Duration;
-use domain::{TaskCyclingBehavior, NotificationPosition, Theme};
 use domain::Config;
+use domain::{NotificationPosition, TaskCyclingBehavior, Theme};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct ConfigBuilder {
@@ -69,7 +69,10 @@ impl ConfigBuilder {
     }
 
     // Audio Config flat setters/getters
-    pub fn audio_work_notification_sound(mut self, sound: Option<String>) -> Self {
+    pub fn audio_work_notification_sound(
+        mut self,
+        sound: Option<String>,
+    ) -> Self {
         self.config.audio.work_notification_sound = sound;
         self
     }
@@ -78,7 +81,10 @@ impl ConfigBuilder {
         &self.config.audio.work_notification_sound
     }
 
-    pub fn audio_break_notification_sound(mut self, sound: Option<String>) -> Self {
+    pub fn audio_break_notification_sound(
+        mut self,
+        sound: Option<String>,
+    ) -> Self {
         self.config.audio.break_notification_sound = sound;
         self
     }
@@ -124,7 +130,10 @@ impl ConfigBuilder {
     }
 
     // General flat setters/getters
-    pub fn general_task_cycling_behavior(mut self, behavior: TaskCyclingBehavior) -> Self {
+    pub fn general_task_cycling_behavior(
+        mut self,
+        behavior: TaskCyclingBehavior,
+    ) -> Self {
         self.config.general.task_cycling_behavior = behavior;
         self
     }
@@ -151,7 +160,10 @@ impl ConfigBuilder {
         self.config.general.auto_start_breaks
     }
 
-    pub fn general_auto_start_work_after_break(mut self, auto_start: bool) -> Self {
+    pub fn general_auto_start_work_after_break(
+        mut self,
+        auto_start: bool,
+    ) -> Self {
         self.config.general.auto_start_work_after_break = auto_start;
         self
     }
@@ -179,7 +191,10 @@ impl ConfigBuilder {
     }
 
     // Notification Preferences flat setters/getters
-    pub fn notification_enable_desktop_notifications(mut self, enable: bool) -> Self {
+    pub fn notification_enable_desktop_notifications(
+        mut self,
+        enable: bool,
+    ) -> Self {
         self.config.notification.enable_desktop_notifications = enable;
         self
     }
@@ -188,7 +203,10 @@ impl ConfigBuilder {
         self.config.notification.enable_desktop_notifications
     }
 
-    pub fn notification_enable_sound_notifications(mut self, enable: bool) -> Self {
+    pub fn notification_enable_sound_notifications(
+        mut self,
+        enable: bool,
+    ) -> Self {
         self.config.notification.enable_sound_notifications = enable;
         self
     }
@@ -197,7 +215,10 @@ impl ConfigBuilder {
         self.config.notification.enable_sound_notifications
     }
 
-    pub fn notification_show_phase_transition_notifications(mut self, show: bool) -> Self {
+    pub fn notification_show_phase_transition_notifications(
+        mut self,
+        show: bool,
+    ) -> Self {
         self.config.notification.show_phase_transition_notifications = show;
         self
     }
@@ -206,7 +227,10 @@ impl ConfigBuilder {
         self.config.notification.show_phase_transition_notifications
     }
 
-    pub fn notification_show_task_completion_notifications(mut self, show: bool) -> Self {
+    pub fn notification_show_task_completion_notifications(
+        mut self,
+        show: bool,
+    ) -> Self {
         self.config.notification.show_task_completion_notifications = show;
         self
     }
@@ -215,7 +239,10 @@ impl ConfigBuilder {
         self.config.notification.show_task_completion_notifications
     }
 
-    pub fn notification_position(mut self, position: NotificationPosition) -> Self {
+    pub fn notification_position(
+        mut self,
+        position: NotificationPosition,
+    ) -> Self {
         self.config.notification.notification_position = position;
         self
     }
@@ -224,7 +251,10 @@ impl ConfigBuilder {
         self.config.notification.notification_position.clone()
     }
 
-    pub fn notification_auto_dismiss_delay_seconds(mut self, delay: u32) -> Self {
+    pub fn notification_auto_dismiss_delay_seconds(
+        mut self,
+        delay: u32,
+    ) -> Self {
         self.config.notification.auto_dismiss_delay_seconds = delay;
         self
     }

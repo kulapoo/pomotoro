@@ -22,11 +22,16 @@ impl EventHandler for TimerStatusChangedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(status_changed) = event.as_any().downcast_ref::<TimerStatusChanged>() {
+        if let Some(status_changed) =
+            event.as_any().downcast_ref::<TimerStatusChanged>()
+        {
             self.app_handle
                 .emit("timer:status_changed", status_changed.clone())
                 .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to emit timer status changed event: {}", e),
+                    message: format!(
+                        "Failed to emit timer status changed event: {}",
+                        e
+                    ),
                 })?;
         }
         Ok(())

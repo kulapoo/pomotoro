@@ -1,4 +1,3 @@
-
 pub mod timer {
     // User Commands
     pub const START: &str = "start_timer";
@@ -7,7 +6,7 @@ pub mod timer {
     pub const SKIP_PHASE: &str = "skip_phase";
     pub const GET_STATE: &str = "get_timer_state";
     pub const SWITCH_ACTIVE_TASK: &str = "switch_active_task";
-    
+
     // Business Events
     pub const UPDATE_STATE: &str = "timer_state_updated";
     pub const PHASE_COMPLETE: &str = "phase_completed";
@@ -26,7 +25,7 @@ pub mod task {
     pub const GET_ALL: &str = "get_all_tasks";
     pub const COMPLETE_SESSION: &str = "complete_task_session";
     pub const RESET_SESSIONS: &str = "reset_task_sessions";
-    
+
     // Business Events
     pub const TASK_CREATED: &str = "task_created";
     pub const TASK_UPDATED: &str = "task_updated";
@@ -45,7 +44,7 @@ pub mod config {
     pub const UPDATE_AUDIO: &str = "update_audio_config";
     pub const UPDATE_TIMINGS: &str = "update_timing_config";
     pub const RESET_TO_DEFAULTS: &str = "reset_config_to_defaults";
-    
+
     // Business Events
     pub const CONFIG_UPDATED: &str = "config_updated";
     pub const CONFIG_RESET: &str = "config_reset";

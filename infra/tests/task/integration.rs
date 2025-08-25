@@ -1,5 +1,8 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
-use domain::{TaskStatus, TaskRepository, TaskConfig, AudioConfig, TaskBuilder as DomainTaskBuilder};
+use domain::{
+    AudioConfig, TaskBuilder as DomainTaskBuilder, TaskConfig, TaskRepository,
+    TaskStatus,
+};
 use std::time::Duration;
 
 #[tokio::test]
@@ -40,7 +43,8 @@ async fn test_task_crud_operations() {
     assert_eq!(all_tasks.len(), 1);
 
     // Test get by tags
-    let work_tasks = test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
+    let work_tasks =
+        test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
     assert_eq!(work_tasks.len(), 1);
     assert_eq!(work_tasks[0].name, "Custom Task");
 
@@ -49,7 +53,8 @@ async fn test_task_crud_operations() {
     updated_task.name = "Updated Task".to_string();
     test_repo.update(updated_task.clone()).await.unwrap();
 
-    let retrieved_updated = test_repo.get_by_id(custom_task.id).await.unwrap().unwrap();
+    let retrieved_updated =
+        test_repo.get_by_id(custom_task.id).await.unwrap().unwrap();
     assert_eq!(retrieved_updated.name, "Updated Task");
 
     // Test delete
@@ -65,9 +70,8 @@ async fn test_task_crud_operations() {
 async fn test_task_session_completion() {
     let test_repo = TaskTestRepository::empty();
 
-    let mut task = TaskBuilder::new("Limited Task".to_string(), 2)
-        .build();
-    
+    let mut task = TaskBuilder::new("Limited Task".to_string(), 2).build();
+
     test_repo.create(task.clone()).await.unwrap();
 
     // Complete first session
@@ -90,16 +94,16 @@ async fn test_task_session_completion() {
 #[tokio::test]
 async fn test_task_filtering_by_status() {
     let test_repo = TaskTestRepository::empty();
-    
+
     // Create tasks with different statuses
     let active_task = TaskBuilder::new("Active Task".to_string(), 2)
         .with_status(TaskStatus::Active)
         .build();
-    
+
     let queued_task = TaskBuilder::new("Queued Task".to_string(), 3)
         .with_status(TaskStatus::Queued)
         .build();
-    
+
     let completed_task = TaskBuilder::new("Completed Task".to_string(), 1)
         .completed()
         .build();
@@ -112,13 +116,15 @@ async fn test_task_filtering_by_status() {
     let all_tasks = test_repo.get_all().await.unwrap();
     assert_eq!(all_tasks.len(), 3);
 
-    let active_tasks: Vec<_> = all_tasks.iter()
+    let active_tasks: Vec<_> = all_tasks
+        .iter()
         .filter(|t| t.status == TaskStatus::Active)
         .collect();
     assert_eq!(active_tasks.len(), 1);
     assert_eq!(active_tasks[0].name, "Active Task");
 
-    let completed_tasks: Vec<_> = all_tasks.iter()
+    let completed_tasks: Vec<_> = all_tasks
+        .iter()
         .filter(|t| t.status == TaskStatus::Completed)
         .collect();
     assert_eq!(completed_tasks.len(), 1);
@@ -146,17 +152,25 @@ async fn test_task_tag_filtering() {
     test_repo.create(mixed_task).await.unwrap();
 
     // Test single tag filtering
-    let work_tasks = test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
+    let work_tasks =
+        test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
     assert_eq!(work_tasks.len(), 2);
 
-    let study_tags = test_repo.get_by_tags(&["study".to_string()]).await.unwrap();
+    let study_tags =
+        test_repo.get_by_tags(&["study".to_string()]).await.unwrap();
     assert_eq!(study_tags.len(), 1);
 
-    let learning_tasks = test_repo.get_by_tags(&["learning".to_string()]).await.unwrap();
+    let learning_tasks = test_repo
+        .get_by_tags(&["learning".to_string()])
+        .await
+        .unwrap();
     assert_eq!(learning_tasks.len(), 2);
 
     // Test multiple tag filtering (should find tasks that have ANY of the tags)
-    let multiple_tags = test_repo.get_by_tags(&["urgent".to_string(), "learning".to_string()]).await.unwrap();
+    let multiple_tags = test_repo
+        .get_by_tags(&["urgent".to_string(), "learning".to_string()])
+        .await
+        .unwrap();
     assert_eq!(multiple_tags.len(), 3); // All tasks have at least one of these tags
 }
 
@@ -164,8 +178,7 @@ async fn test_task_tag_filtering() {
 async fn test_task_session_limits() {
     let test_repo = TaskTestRepository::empty();
 
-    let mut task = TaskBuilder::new("Limited Task".to_string(), 1)
-        .build();
+    let mut task = TaskBuilder::new("Limited Task".to_string(), 1).build();
 
     test_repo.create(task.clone()).await.unwrap();
 
@@ -188,13 +201,16 @@ async fn test_task_session_limits() {
 async fn test_default_task_non_deletable() {
     let test_repo = TaskTestRepository::with_default_task();
     let tasks = test_repo.get_all().await.unwrap();
-    
+
     let default_task = &tasks[0];
-    
+
     // Test that default task cannot be deleted (per MVP2 spec)
     let delete_result = test_repo.delete(default_task.id).await.unwrap();
-    assert!(!delete_result, "Default 'Focus Session' task should not be deletable");
-    
+    assert!(
+        !delete_result,
+        "Default 'Focus Session' task should not be deletable"
+    );
+
     // Verify it still exists
     let remaining_tasks = test_repo.get_all().await.unwrap();
     assert_eq!(remaining_tasks.len(), 1);
@@ -204,42 +220,56 @@ async fn test_default_task_non_deletable() {
 #[tokio::test]
 async fn test_predefined_tag_system() {
     let test_repo = TaskTestRepository::empty();
-    
+
     // Test MVP2 predefined tags: work, personal, learning, health
     let work_task = TaskBuilder::new("Code Review".to_string(), 3)
         .with_tags(vec!["work".to_string(), "development".to_string()])
         .build();
-    
+
     let personal_task = TaskBuilder::new("Meditation".to_string(), 1)
-        .with_tags(vec!["personal".to_string(), "health".to_string(), "mindfulness".to_string()])
+        .with_tags(vec![
+            "personal".to_string(),
+            "health".to_string(),
+            "mindfulness".to_string(),
+        ])
         .build();
-    
+
     let learning_task = TaskBuilder::new("Rust Tutorial".to_string(), 4)
         .with_tags(vec!["learning".to_string(), "programming".to_string()])
         .build();
-    
+
     let health_task = TaskBuilder::new("Workout".to_string(), 2)
         .with_tags(vec!["health".to_string(), "fitness".to_string()])
         .build();
-    
+
     test_repo.create(work_task).await.unwrap();
     test_repo.create(personal_task).await.unwrap();
     test_repo.create(learning_task).await.unwrap();
     test_repo.create(health_task).await.unwrap();
-    
+
     // Test filtering by MVP2 predefined tags
-    let work_tasks = test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
+    let work_tasks =
+        test_repo.get_by_tags(&["work".to_string()]).await.unwrap();
     assert_eq!(work_tasks.len(), 1);
     assert_eq!(work_tasks[0].name, "Code Review");
-    
-    let health_tasks = test_repo.get_by_tags(&["health".to_string()]).await.unwrap();
+
+    let health_tasks = test_repo
+        .get_by_tags(&["health".to_string()])
+        .await
+        .unwrap();
     assert_eq!(health_tasks.len(), 2); // Both meditation and workout
-    
-    let learning_tasks = test_repo.get_by_tags(&["learning".to_string()]).await.unwrap();
+
+    let learning_tasks = test_repo
+        .get_by_tags(&["learning".to_string()])
+        .await
+        .unwrap();
     assert_eq!(learning_tasks.len(), 1);
     assert_eq!(learning_tasks[0].name, "Rust Tutorial");
-    
-    let personal_tasks = test_repo.get_by_tags(&["personal".to_string()]).await.unwrap();
+
+    let personal_tasks = test_repo
+        .get_by_tags(&["personal".to_string()])
+        .await
+        .unwrap();
     assert_eq!(personal_tasks.len(), 1);
     assert_eq!(personal_tasks[0].name, "Meditation");
 }
@@ -247,88 +277,114 @@ async fn test_predefined_tag_system() {
 #[tokio::test]
 async fn test_task_with_custom_configuration() {
     let test_repo = TaskTestRepository::empty();
-    
+
     // Test task with custom timing configuration (MVP2 feature)
-    let custom_task = DomainTaskBuilder::with_name_and_sessions("Deep Focus Work".to_string(), 6)
-        .with_description("Long-form focused work requiring extended sessions".to_string())
-        .with_tags(vec!["work".to_string(), "deep-focus".to_string()])
-        .with_config(TaskConfig::new(
+    let custom_task = DomainTaskBuilder::with_name_and_sessions(
+        "Deep Focus Work".to_string(),
+        6,
+    )
+    .with_description(
+        "Long-form focused work requiring extended sessions".to_string(),
+    )
+    .with_tags(vec!["work".to_string(), "deep-focus".to_string()])
+    .with_config(
+        TaskConfig::new(
             Duration::from_secs(45 * 60), // 45 min work sessions
             Duration::from_secs(10 * 60), // 10 min short breaks
             Duration::from_secs(25 * 60), // 25 min long breaks
             3,                            // Long break every 3 sessions
             true,                         // Enable screen blocking
-        ).unwrap())
-        .with_audio_config(AudioConfig {
-            volume: 0.4,
-            enable_background_audio: true,
-            background_sound: Some("binaural-focus".to_string()),
-            work_notification_sound: Some("subtle-chime".to_string()),
-            break_notification_sound: Some("gentle-bell".to_string()),
-            muted: false,
-        })
-        .build()
-        .unwrap();
-    
+        )
+        .unwrap(),
+    )
+    .with_audio_config(AudioConfig {
+        volume: 0.4,
+        enable_background_audio: true,
+        background_sound: Some("binaural-focus".to_string()),
+        work_notification_sound: Some("subtle-chime".to_string()),
+        break_notification_sound: Some("gentle-bell".to_string()),
+        muted: false,
+    })
+    .build()
+    .unwrap();
+
     test_repo.create(custom_task.clone()).await.unwrap();
-    
+
     let retrieved = test_repo.get_by_id(custom_task.id).await.unwrap().unwrap();
-    
+
     // Verify custom configuration
     assert_eq!(retrieved.name, "Deep Focus Work");
     assert_eq!(retrieved.max_sessions, 6);
-    assert_eq!(retrieved.description, Some("Long-form focused work requiring extended sessions".to_string()));
+    assert_eq!(
+        retrieved.description,
+        Some("Long-form focused work requiring extended sessions".to_string())
+    );
     assert_eq!(retrieved.config.work_duration, Duration::from_secs(45 * 60));
-    assert_eq!(retrieved.config.short_break_duration, Duration::from_secs(10 * 60));
-    assert_eq!(retrieved.config.long_break_duration, Duration::from_secs(25 * 60));
+    assert_eq!(
+        retrieved.config.short_break_duration,
+        Duration::from_secs(10 * 60)
+    );
+    assert_eq!(
+        retrieved.config.long_break_duration,
+        Duration::from_secs(25 * 60)
+    );
     assert_eq!(retrieved.config.sessions_until_long_break, 3);
     assert!(retrieved.config.enable_screen_blocking);
-    
+
     // Verify audio configuration
     assert_eq!(retrieved.audio_config.volume, 0.4);
     assert!(retrieved.audio_config.enable_background_audio);
-    assert_eq!(retrieved.audio_config.background_sound, Some("binaural-focus".to_string()));
+    assert_eq!(
+        retrieved.audio_config.background_sound,
+        Some("binaural-focus".to_string())
+    );
 }
 
 #[tokio::test]
 async fn test_independent_session_tracking() {
     let test_repo = TaskTestRepository::empty();
-    
+
     // Create multiple tasks with different session limits
-    let mut short_task = TaskBuilder::new("Quick Review".to_string(), 1).build();
-    let mut medium_task = TaskBuilder::new("Feature Development".to_string(), 3).build();
-    let mut long_task = TaskBuilder::new("Research Project".to_string(), 8).build();
-    
+    let mut short_task =
+        TaskBuilder::new("Quick Review".to_string(), 1).build();
+    let mut medium_task =
+        TaskBuilder::new("Feature Development".to_string(), 3).build();
+    let mut long_task =
+        TaskBuilder::new("Research Project".to_string(), 8).build();
+
     test_repo.create(short_task.clone()).await.unwrap();
     test_repo.create(medium_task.clone()).await.unwrap();
     test_repo.create(long_task.clone()).await.unwrap();
-    
+
     // Complete short task entirely
     short_task.increment_session().unwrap();
     test_repo.update(short_task.clone()).await.unwrap();
-    
+
     // Partially complete medium task
     medium_task.increment_session().unwrap();
     test_repo.update(medium_task.clone()).await.unwrap();
-    
+
     // Partially complete long task
     long_task.increment_session().unwrap();
     long_task.increment_session().unwrap();
     test_repo.update(long_task.clone()).await.unwrap();
-    
+
     // Verify independent tracking
-    let updated_short = test_repo.get_by_id(short_task.id).await.unwrap().unwrap();
-    let updated_medium = test_repo.get_by_id(medium_task.id).await.unwrap().unwrap();
-    let updated_long = test_repo.get_by_id(long_task.id).await.unwrap().unwrap();
-    
+    let updated_short =
+        test_repo.get_by_id(short_task.id).await.unwrap().unwrap();
+    let updated_medium =
+        test_repo.get_by_id(medium_task.id).await.unwrap().unwrap();
+    let updated_long =
+        test_repo.get_by_id(long_task.id).await.unwrap().unwrap();
+
     assert_eq!(updated_short.current_sessions, 1);
     assert_eq!(updated_short.status, TaskStatus::Completed);
     assert_eq!(updated_short.get_progress_ratio(), 1.0);
-    
+
     assert_eq!(updated_medium.current_sessions, 1);
     assert_eq!(updated_medium.status, TaskStatus::Queued);
     assert!((updated_medium.get_progress_ratio() - 0.333).abs() < 0.01);
-    
+
     assert_eq!(updated_long.current_sessions, 2);
     assert_eq!(updated_long.status, TaskStatus::Queued);
     assert_eq!(updated_long.get_progress_ratio(), 0.25);
@@ -338,30 +394,30 @@ async fn test_independent_session_tracking() {
 #[tokio::test]
 async fn test_task_completion_workflow() {
     let test_repo = TaskTestRepository::empty();
-    
+
     let mut task = TaskBuilder::new("Completion Test".to_string(), 3)
         .with_tags(vec!["test".to_string()])
         .build();
-    
+
     test_repo.create(task.clone()).await.unwrap();
-    
+
     // Verify initial state
     assert_eq!(task.status, TaskStatus::Queued);
     assert_eq!(task.get_remaining_sessions(), 3);
     assert!(!task.is_completed());
     assert!(task.completed_at.is_none());
-    
+
     // Complete sessions one by one
     task.increment_session().unwrap();
     assert_eq!(task.current_sessions, 1);
     assert_eq!(task.status, TaskStatus::Queued);
     assert!(!task.is_completed());
-    
+
     task.increment_session().unwrap();
     assert_eq!(task.current_sessions, 2);
     assert_eq!(task.status, TaskStatus::Queued);
     assert!(!task.is_completed());
-    
+
     // Final session should auto-complete
     task.increment_session().unwrap();
     assert_eq!(task.current_sessions, 3);
@@ -369,7 +425,7 @@ async fn test_task_completion_workflow() {
     assert!(task.is_completed());
     assert!(task.completed_at.is_some());
     assert_eq!(task.get_remaining_sessions(), 0);
-    
+
     // Cannot increment beyond completion
     let over_limit_result = task.increment_session();
     assert!(over_limit_result.is_err());
@@ -378,34 +434,34 @@ async fn test_task_completion_workflow() {
 #[tokio::test]
 async fn test_task_status_transitions() {
     let test_repo = TaskTestRepository::empty();
-    
+
     let mut task = TaskBuilder::new("Status Test".to_string(), 2).build();
     test_repo.create(task.clone()).await.unwrap();
-    
+
     // Default status should be Queued
     assert_eq!(task.status, TaskStatus::Queued);
-    
+
     // Test activate
     task.activate().unwrap();
     assert_eq!(task.status, TaskStatus::Active);
-    
+
     // Test pause
     task.pause().unwrap();
     assert_eq!(task.status, TaskStatus::Paused);
-    
+
     // Test reactivate
     task.activate().unwrap();
     assert_eq!(task.status, TaskStatus::Active);
-    
+
     // Test queue
     task.queue().unwrap();
     assert_eq!(task.status, TaskStatus::Queued);
-    
+
     // Complete the task
     task.increment_session().unwrap();
     task.increment_session().unwrap();
     assert_eq!(task.status, TaskStatus::Completed);
-    
+
     // Cannot change status of completed task
     assert!(task.activate().is_err());
     assert!(task.pause().is_err());

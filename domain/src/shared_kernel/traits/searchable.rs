@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::Result;
+use async_trait::async_trait;
 
 #[derive(Default)]
 pub struct SearchCriteria {
@@ -9,7 +9,6 @@ pub struct SearchCriteria {
     pub limit: Option<usize>,
     pub offset: Option<usize>,
 }
-
 
 impl SearchCriteria {
     pub fn new() -> Self {

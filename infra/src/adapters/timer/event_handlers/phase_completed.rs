@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{Event, Result, PhaseCompleted};
+use domain::{Event, PhaseCompleted, Result};
 use std::any::TypeId;
 use tauri::Emitter;
 
@@ -22,11 +22,16 @@ impl EventHandler for PhaseCompletedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(phase_completed) = event.as_any().downcast_ref::<PhaseCompleted>() {
+        if let Some(phase_completed) =
+            event.as_any().downcast_ref::<PhaseCompleted>()
+        {
             self.app_handle
                 .emit("timer:phase_completed", phase_completed.clone())
                 .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to emit phase completed event: {}", e),
+                    message: format!(
+                        "Failed to emit phase completed event: {}",
+                        e
+                    ),
                 })?;
         }
         Ok(())

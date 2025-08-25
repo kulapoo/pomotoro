@@ -1,18 +1,17 @@
 use leptos::prelude::*;
 
-use crate::pages::{TimerPage, TaskPage, SettingsPage};
-use crate::components::{Sidebar, NavigationSection};
+use crate::components::{NavigationSection, Sidebar};
+use crate::pages::{SettingsPage, TaskPage, TimerPage};
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (current_section, set_current_section) = signal(NavigationSection::Timer);
+    let (current_section, set_current_section) =
+        signal(NavigationSection::Timer);
 
-    let render_content = move || {
-        match current_section.get() {
-            NavigationSection::Timer => view! { <TimerPage /> }.into_any(),
-            NavigationSection::Tasks => view! { <TaskPage /> }.into_any(),
-            NavigationSection::Settings => view! { <SettingsPage /> }.into_any(),
-        }
+    let render_content = move || match current_section.get() {
+        NavigationSection::Timer => view! { <TimerPage /> }.into_any(),
+        NavigationSection::Tasks => view! { <TaskPage /> }.into_any(),
+        NavigationSection::Settings => view! { <SettingsPage /> }.into_any(),
     };
 
     view! {

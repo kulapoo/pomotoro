@@ -1,6 +1,6 @@
-use async_trait::async_trait;
-use crate::Result;
 use super::config::Config;
+use crate::Result;
+use async_trait::async_trait;
 
 #[async_trait]
 pub trait ConfigRepository: Send + Sync {

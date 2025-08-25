@@ -1,17 +1,16 @@
-use leptos::prelude::*;
-use leptos::callback::Callback;
 use crate::pages::task::{TaskCreationForm, TasksViewModel};
+use leptos::callback::Callback;
+use leptos::prelude::*;
 
 #[component]
 pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
-    
     view! {
         <>
             <div class="add-task-form">
                 <Show when=move || vm.with_value(|v| v.is_creating_task())>
                     {move || {
                         view! {
-                            <TaskCreationForm 
+                            <TaskCreationForm
                                 vm=vm
                                 on_close=Callback::new(move |_| vm.with_value(|v| v.set_creating_task(false)))
                             />
@@ -19,7 +18,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     }}
                 </Show>
                 <Show when=move || !vm.with_value(|v| v.is_creating_task())>
-                    <button 
+                    <button
                         class="btn btn-primary"
                         on:click=move |_| vm.with_value(|v| v.set_creating_task(true))
                     >
@@ -27,7 +26,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     </button>
                 </Show>
             </div>
-            
+
             <ul class="task-list" id="taskList">
                 {move || {
                     let (tasks, active_task_id) = vm.with_value(|v| {
@@ -37,7 +36,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                         (tasks, active_task_id)
                     });
                     let tasks_clone = tasks.clone();
-                    
+
                     view! {
                         <>
                             <Show when=move || tasks.is_empty() && !vm.with_value(|v| v.is_creating_task())>
@@ -50,21 +49,21 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                 children=move |task| {
                                     let task_id = task.id;
                                     let is_active = active_task_id == Some(task_id);
-                                    
+
                                     let progress_percentage = if task.max_sessions > 0 {
                                         (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
                                     } else {
                                         0.0
                                     };
-                                    
+
                                     let task_classes = if is_active {
                                         "task-item active-task"
                                     } else {
                                         "task-item"
                                     };
-                                    
+
                                     view! {
-                                        <li 
+                                        <li
                                             class=task_classes
                                             on:click=move |_| {
                                                 vm.with_value(|v| v.switch_active_task(task_id));
@@ -93,7 +92,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                                         {format!("{} of {} pomodoros completed", task.current_sessions, task.max_sessions)}
                                                     </span>
                                                     <div class="progress-bar">
-                                                        <div 
+                                                        <div
                                                             class="progress-fill"
                                                             style=format!("width: {}%", progress_percentage)
                                                         ></div>

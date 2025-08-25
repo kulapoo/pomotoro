@@ -13,7 +13,8 @@ impl Default for TestContext {
 
 impl TestContext {
     pub fn new() -> Self {
-        let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
+        let temp_dir =
+            tempfile::tempdir().expect("Failed to create temp directory");
         Self {
             _temp_dir: temp_dir,
         }

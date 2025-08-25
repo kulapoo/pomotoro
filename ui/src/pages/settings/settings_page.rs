@@ -1,6 +1,6 @@
-use leptos::prelude::*;
 use crate::pages::settings::SettingsViewModel;
 use crate::utils::ViewModel;
+use leptos::prelude::*;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
@@ -68,7 +68,7 @@ pub fn SettingsPage() -> impl IntoView {
                                     }
                                 />
                             </div>
-                            <button 
+                            <button
                                 class="btn btn-primary save-settings-btn"
                                 on:click=move |_| {
                                     vm.with_value(|v| v.save_settings());

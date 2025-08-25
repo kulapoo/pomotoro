@@ -2,8 +2,8 @@
 
 mod app;
 mod components;
-mod utils;
 mod pages;
+mod utils;
 
 use app::*;
 use leptos::prelude::*;

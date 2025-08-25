@@ -8,9 +8,9 @@ use tokio::time::interval;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::timer::repository::FileTimerStateRepository;
 use domain::{
-    Task, Phase, TaskId, TimerStatus, TimerConfiguration,
+    Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
+    TimerState, TimerStatus,
     timer::{Timer, TimerService as DomainTimerService},
-    Result as DomainResult, TimerState,
 };
 
 pub struct TimerService {
@@ -42,9 +42,9 @@ impl TimerService {
         event_publisher: EventPublisherArc,
         app_handle: Option<AppHandle>,
     ) -> Self {
-        let state_repository = app_handle.as_ref().map(|_handle|
-            Arc::new(FileTimerStateRepository::new())
-        );
+        let state_repository = app_handle
+            .as_ref()
+            .map(|_handle| Arc::new(FileTimerStateRepository::new()));
 
         let timer = Timer::new(TimerConfiguration::default())
             .with_event_publisher(Box::new(event_publisher.clone()));
@@ -70,7 +70,6 @@ impl TimerService {
         }
     }
 
-
     pub async fn save_state(&self) -> DomainResult<()> {
         if let Some(repo) = &self.state_repository {
             let state = self.timer.lock().await.state().clone();
@@ -79,7 +78,10 @@ impl TimerService {
         Ok(())
     }
 
-    async fn start_timer_internal(&self, task: Option<Task>) -> Result<(), String> {
+    async fn start_timer_internal(
+        &self,
+        task: Option<Task>,
+    ) -> Result<(), String> {
         if let Some(ref task) = task {
             let timer_config = TimerConfiguration::new(
                 task.config.work_duration(),
@@ -89,14 +91,14 @@ impl TimerService {
             )
             .map_err(|e| e.to_string())?;
 
-            self.timer.lock().await
+            self.timer
+                .lock()
+                .await
                 .update_configuration(timer_config)
                 .map_err(|e| e.to_string())?;
         }
 
-        self.timer.lock().await
-            .start()
-            .map_err(|e| e.to_string())?;
+        self.timer.lock().await.start().map_err(|e| e.to_string())?;
 
         {
             let mut cancel_guard = self.cancel_handle.lock().await;
@@ -141,7 +143,6 @@ impl TimerService {
 
         Ok(())
     }
-
 }
 
 // Implement the async trait for domain compatibility
@@ -165,7 +166,11 @@ impl DomainTimerService for TimerService {
         Ok(())
     }
 
-    async fn switch_task(&self, task_id: TaskId, task: Option<&Task>) -> DomainResult<()> {
+    async fn switch_task(
+        &self,
+        task_id: TaskId,
+        task: Option<&Task>,
+    ) -> DomainResult<()> {
         let mut timer = self.timer.lock().await;
 
         timer.set_active_entity(Some(task_id.to_string()))?;
@@ -237,7 +242,9 @@ impl DomainTimerService for TimerService {
                             let _phase_complete = match timer.tick() {
                                 Ok(complete) => complete,
                                 Err(e) => {
-                                    eprintln!("Timer tick error during resume: {e}");
+                                    eprintln!(
+                                        "Timer tick error during resume: {e}"
+                                    );
                                     false
                                 }
                             };
@@ -263,13 +270,19 @@ impl DomainTimerService for TimerService {
         Ok(new_status)
     }
 
-    async fn reset_current_phase(&self, _task: Option<&Task>) -> DomainResult<()> {
+    async fn reset_current_phase(
+        &self,
+        _task: Option<&Task>,
+    ) -> DomainResult<()> {
         self.timer.lock().await.reset()?;
         self.save_state().await.ok();
         Ok(())
     }
 
-    async fn skip_to_next_phase(&self, _task: Option<&Task>) -> DomainResult<(Phase, Phase)> {
+    async fn skip_to_next_phase(
+        &self,
+        _task: Option<&Task>,
+    ) -> DomainResult<(Phase, Phase)> {
         let mut timer = self.timer.lock().await;
         let old_phase = timer.state().phase();
         timer.skip_phase()?;

@@ -1,11 +1,11 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
 use crate::timer::models::TimerTestContext;
-use domain::{TaskStatus, TaskRepository, timer::TimerService};
+use domain::{TaskRepository, TaskStatus, timer::TimerService};
 use std::time::Duration;
 
-
 #[tokio::test]
-async fn test_e2e_task_creation_workflow() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_e2e_task_creation_workflow()
+-> Result<(), Box<dyn std::error::Error>> {
     let test_repo = TaskTestRepository::empty();
 
     let new_task = TaskBuilder::new("E2E Test Task".to_string(), 3)
@@ -29,7 +29,8 @@ async fn test_e2e_task_creation_workflow() -> Result<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_e2e_task_completion_workflow() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_e2e_task_completion_workflow()
+-> Result<(), Box<dyn std::error::Error>> {
     let test_repo = TaskTestRepository::empty();
 
     let mut task = TaskBuilder::new("Completion Test".to_string(), 2)
@@ -58,7 +59,8 @@ async fn test_e2e_task_completion_workflow() -> Result<(), Box<dyn std::error::E
 }
 
 #[tokio::test]
-async fn test_e2e_task_selection_workflow() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_e2e_task_selection_workflow()
+-> Result<(), Box<dyn std::error::Error>> {
     let test_repo = TaskTestRepository::empty();
 
     // Create multiple tasks
@@ -89,7 +91,8 @@ async fn test_e2e_task_selection_workflow() -> Result<(), Box<dyn std::error::Er
     assert_eq!(work_tasks.len(), 1);
     assert_eq!(work_tasks[0].name, "Work Task");
 
-    let active_tasks: Vec<_> = all_tasks.iter()
+    let active_tasks: Vec<_> = all_tasks
+        .iter()
         .filter(|t| t.status == TaskStatus::Active)
         .collect();
     assert_eq!(active_tasks.len(), 1);
@@ -99,7 +102,8 @@ async fn test_e2e_task_selection_workflow() -> Result<(), Box<dyn std::error::Er
 }
 
 #[tokio::test]
-async fn test_e2e_task_switching_workflow() -> Result<(), Box<dyn std::error::Error>> {
+async fn test_e2e_task_switching_workflow()
+-> Result<(), Box<dyn std::error::Error>> {
     let timer_context = TimerTestContext::new();
 
     let work_task = TaskBuilder::new("Work Project".to_string(), 4)
@@ -114,12 +118,18 @@ async fn test_e2e_task_switching_workflow() -> Result<(), Box<dyn std::error::Er
     timer_context.task_repo.create(study_task.clone()).await?;
 
     // Start with work task
-    timer_context.timer_service.switch_task(work_task.id, Some(&work_task)).await?;
+    timer_context
+        .timer_service
+        .switch_task(work_task.id, Some(&work_task))
+        .await?;
     let state1 = timer_context.timer_service.get_state().await?;
     assert_eq!(state1.active_entity_id(), Some(work_task.id.to_string()));
 
     // Switch to study task
-    timer_context.timer_service.switch_task(study_task.id, Some(&study_task)).await?;
+    timer_context
+        .timer_service
+        .switch_task(study_task.id, Some(&study_task))
+        .await?;
     let state2 = timer_context.timer_service.get_state().await?;
     assert_eq!(state2.active_entity_id(), Some(study_task.id.to_string()));
 
@@ -139,7 +149,10 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     let mut task_ids = Vec::new();
     for i in 0..100 {
         let task = TaskBuilder::new(format!("Performance Task {i}"), 1)
-            .with_tags(vec!["performance".to_string(), format!("batch_{}", i / 10)])
+            .with_tags(vec![
+                "performance".to_string(),
+                format!("batch_{}", i / 10),
+            ])
             .build();
 
         test_repo.create(task.clone()).await?;
@@ -147,7 +160,10 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let creation_time = start_time.elapsed();
-    assert!(creation_time < Duration::from_millis(1000), "Task creation took too long: {creation_time:?}");
+    assert!(
+        creation_time < Duration::from_millis(1000),
+        "Task creation took too long: {creation_time:?}"
+    );
 
     // Retrieve all tasks
     let retrieval_start = std::time::Instant::now();
@@ -155,15 +171,22 @@ async fn test_e2e_task_performance() -> Result<(), Box<dyn std::error::Error>> {
     let retrieval_time = retrieval_start.elapsed();
 
     assert_eq!(all_tasks.len(), 100);
-    assert!(retrieval_time < Duration::from_millis(100), "Task retrieval took too long: {retrieval_time:?}");
+    assert!(
+        retrieval_time < Duration::from_millis(100),
+        "Task retrieval took too long: {retrieval_time:?}"
+    );
 
     // Test filtering performance
     let filter_start = std::time::Instant::now();
-    let performance_tasks = test_repo.get_by_tags(&["performance".to_string()]).await?;
+    let performance_tasks =
+        test_repo.get_by_tags(&["performance".to_string()]).await?;
     let filter_time = filter_start.elapsed();
 
     assert_eq!(performance_tasks.len(), 100);
-    assert!(filter_time < Duration::from_millis(100), "Task filtering took too long: {filter_time:?}");
+    assert!(
+        filter_time < Duration::from_millis(100),
+        "Task filtering took too long: {filter_time:?}"
+    );
 
     Ok(())
 }

@@ -1,4 +1,7 @@
-use domain::{TaskRepository, EventPublisher, TaskSessionCompleted, TaskCompleted, Result, Error, TaskId};
+use domain::{
+    Error, EventPublisher, Result, TaskCompleted, TaskId, TaskRepository,
+    TaskSessionCompleted,
+};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -13,17 +16,16 @@ pub async fn complete_session(
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     task_id: &str,
 ) -> Result<SessionCompletionResult> {
-    let task_id = TaskId::from_string(task_id)
-        .map_err(|_| Error::TaskNotFound {
-            id: task_id.to_string()
+    let task_id =
+        TaskId::from_string(task_id).map_err(|_| Error::TaskNotFound {
+            id: task_id.to_string(),
         })?;
 
-    let mut task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or_else(|| Error::TaskNotFound {
-            id: task_id.to_string()
-        })?;
+    let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+        Error::TaskNotFound {
+            id: task_id.to_string(),
+        }
+    })?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
@@ -65,17 +67,16 @@ pub async fn can_complete_session(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     task_id: &str,
 ) -> Result<bool> {
-    let task_id = TaskId::from_string(task_id)
-        .map_err(|_| Error::TaskNotFound {
-            id: task_id.to_string()
+    let task_id =
+        TaskId::from_string(task_id).map_err(|_| Error::TaskNotFound {
+            id: task_id.to_string(),
         })?;
 
-    let task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or_else(|| Error::TaskNotFound {
-            id: task_id.to_string()
-        })?;
+    let task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+        Error::TaskNotFound {
+            id: task_id.to_string(),
+        }
+    })?;
 
     Ok(!task.is_completed())
 }
@@ -83,12 +84,17 @@ pub async fn can_complete_session(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::{Task, TaskId, NoOpEventPublisher};
     use domain::InMemoryTaskRepository;
+    use domain::{NoOpEventPublisher, Task, TaskId};
 
-    async fn setup() -> (Arc<dyn TaskRepository + Send + Sync>, Arc<dyn EventPublisher + Send + Sync>) {
-        let task_repo: Arc<dyn TaskRepository + Send + Sync> = Arc::new(InMemoryTaskRepository::new());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
+    async fn setup() -> (
+        Arc<dyn TaskRepository + Send + Sync>,
+        Arc<dyn EventPublisher + Send + Sync>,
+    ) {
+        let task_repo: Arc<dyn TaskRepository + Send + Sync> =
+            Arc::new(InMemoryTaskRepository::new());
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> =
+            Arc::new(NoOpEventPublisher);
         (task_repo, event_publisher)
     }
 
@@ -100,14 +106,19 @@ mod tests {
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
-        let result = complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
+        let result = complete_session(&task_repo, &event_publisher, &task_id)
+            .await
+            .unwrap();
 
         assert!(!result.task_completed);
         assert_eq!(result.sessions_completed, 1);
         assert_eq!(result.total_sessions, 3);
 
-        let updated_task = task_repo.get_by_id(TaskId::from_string(&task_id).unwrap())
-            .await.unwrap().unwrap();
+        let updated_task = task_repo
+            .get_by_id(TaskId::from_string(&task_id).unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(updated_task.current_sessions, 1);
     }
 
@@ -119,14 +130,19 @@ mod tests {
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
-        let result = complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
+        let result = complete_session(&task_repo, &event_publisher, &task_id)
+            .await
+            .unwrap();
 
         assert!(result.task_completed);
         assert_eq!(result.sessions_completed, 1);
         assert_eq!(result.total_sessions, 1);
 
-        let updated_task = task_repo.get_by_id(TaskId::from_string(&task_id).unwrap())
-            .await.unwrap().unwrap();
+        let updated_task = task_repo
+            .get_by_id(TaskId::from_string(&task_id).unwrap())
+            .await
+            .unwrap()
+            .unwrap();
         assert!(updated_task.is_completed());
     }
 
@@ -139,7 +155,8 @@ mod tests {
         let task_id = task.id.to_string();
         task_repo.create(task).await.unwrap();
 
-        let result = complete_session(&task_repo, &event_publisher, &task_id).await;
+        let result =
+            complete_session(&task_repo, &event_publisher, &task_id).await;
         assert!(matches!(result, Err(Error::TaskAlreadyCompleted)));
     }
 
@@ -153,8 +170,12 @@ mod tests {
 
         assert!(can_complete_session(&task_repo, &task_id).await.unwrap());
 
-        complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
-        complete_session(&task_repo, &event_publisher, &task_id).await.unwrap();
+        complete_session(&task_repo, &event_publisher, &task_id)
+            .await
+            .unwrap();
+        complete_session(&task_repo, &event_publisher, &task_id)
+            .await
+            .unwrap();
 
         assert!(!can_complete_session(&task_repo, &task_id).await.unwrap());
     }

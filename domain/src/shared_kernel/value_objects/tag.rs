@@ -1,6 +1,6 @@
+use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use crate::{Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Tag(String);
@@ -8,19 +8,25 @@ pub struct Tag(String);
 impl Tag {
     pub fn new(value: String) -> Result<Self> {
         let trimmed = value.trim().to_lowercase();
-        
+
         if trimmed.is_empty() {
             return Err(Error::InvalidTagFormat { tag: value });
         }
-        
+
         if trimmed.len() > 50 {
-            return Err(Error::TagTooLong { tag: value, max_length: 50 });
+            return Err(Error::TagTooLong {
+                tag: value,
+                max_length: 50,
+            });
         }
-        
-        if !trimmed.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+
+        if !trimmed
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        {
             return Err(Error::InvalidTagFormat { tag: value });
         }
-        
+
         Ok(Self(trimmed))
     }
 
@@ -204,7 +210,7 @@ mod tests {
         let mut collection = TagCollection::new();
         collection.add(Tag::work());
         collection.add(Tag::personal());
-        
+
         assert_eq!(collection.len(), 2);
         assert!(collection.contains(&Tag::work()));
     }
@@ -214,7 +220,7 @@ mod tests {
         let mut collection = TagCollection::new();
         collection.add(Tag::work());
         collection.add(Tag::work());
-        
+
         assert_eq!(collection.len(), 1);
     }
 
@@ -222,7 +228,7 @@ mod tests {
     fn should_remove_tags() {
         let mut collection = TagCollection::new();
         collection.add(Tag::work());
-        
+
         let removed = collection.remove(&Tag::work());
         assert!(removed);
         assert!(collection.is_empty());

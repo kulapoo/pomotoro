@@ -1,4 +1,4 @@
-use domain::{Config, TaskConfig, AudioConfig};
+use domain::{AudioConfig, Config, TaskConfig};
 use domain::{ConfigRepository, Result};
 use std::sync::RwLock;
 use std::time::Duration;
@@ -35,18 +35,30 @@ impl TestConfigRepository {
 #[async_trait::async_trait]
 impl ConfigRepository for TestConfigRepository {
     async fn get_config(&self) -> Result<Config> {
-        let config = self.config.read().map_err(|_| domain::Error::ConfigurationError { message: "Failed to read config".to_string() })?;
+        let config = self.config.read().map_err(|_| {
+            domain::Error::ConfigurationError {
+                message: "Failed to read config".to_string(),
+            }
+        })?;
         Ok(config.clone())
     }
 
     async fn save_config(&self, config: &Config) -> Result<()> {
-        let mut stored_config = self.config.write().map_err(|_| domain::Error::ConfigurationError { message: "Failed to write config".to_string() })?;
+        let mut stored_config = self.config.write().map_err(|_| {
+            domain::Error::ConfigurationError {
+                message: "Failed to write config".to_string(),
+            }
+        })?;
         *stored_config = config.clone();
         Ok(())
     }
 
     async fn reset_to_defaults(&self) -> Result<Config> {
-        let mut config = self.config.write().map_err(|_| domain::Error::ConfigurationError { message: "Failed to write config".to_string() })?;
+        let mut config = self.config.write().map_err(|_| {
+            domain::Error::ConfigurationError {
+                message: "Failed to write config".to_string(),
+            }
+        })?;
         *config = Config::default();
         Ok(config.clone())
     }
@@ -107,7 +119,6 @@ impl TestConfigBuilder {
         self
     }
 
-
     pub fn build(self) -> Config {
         self.config
     }
@@ -148,31 +159,70 @@ impl ConfigTestUtils {
     }
 
     pub fn assert_config_equals(actual: &Config, expected: &Config) {
-        assert_eq!(actual.task_defaults.work_duration, expected.task_defaults.work_duration);
-        assert_eq!(actual.task_defaults.short_break_duration, expected.task_defaults.short_break_duration);
-        assert_eq!(actual.task_defaults.long_break_duration, expected.task_defaults.long_break_duration);
-        assert_eq!(actual.task_defaults.sessions_until_long_break, expected.task_defaults.sessions_until_long_break);
-        assert_eq!(actual.task_defaults.enable_screen_blocking, expected.task_defaults.enable_screen_blocking);
+        assert_eq!(
+            actual.task_defaults.work_duration,
+            expected.task_defaults.work_duration
+        );
+        assert_eq!(
+            actual.task_defaults.short_break_duration,
+            expected.task_defaults.short_break_duration
+        );
+        assert_eq!(
+            actual.task_defaults.long_break_duration,
+            expected.task_defaults.long_break_duration
+        );
+        assert_eq!(
+            actual.task_defaults.sessions_until_long_break,
+            expected.task_defaults.sessions_until_long_break
+        );
+        assert_eq!(
+            actual.task_defaults.enable_screen_blocking,
+            expected.task_defaults.enable_screen_blocking
+        );
 
         assert_eq!(actual.audio.volume, expected.audio.volume);
-        assert_eq!(actual.audio.enable_background_audio, expected.audio.enable_background_audio);
+        assert_eq!(
+            actual.audio.enable_background_audio,
+            expected.audio.enable_background_audio
+        );
         assert_eq!(actual.audio.muted, expected.audio.muted);
     }
 
-    pub fn assert_task_config_equals(actual: &TaskConfig, expected: &TaskConfig) {
+    pub fn assert_task_config_equals(
+        actual: &TaskConfig,
+        expected: &TaskConfig,
+    ) {
         assert_eq!(actual.work_duration, expected.work_duration);
         assert_eq!(actual.short_break_duration, expected.short_break_duration);
         assert_eq!(actual.long_break_duration, expected.long_break_duration);
-        assert_eq!(actual.sessions_until_long_break, expected.sessions_until_long_break);
-        assert_eq!(actual.enable_screen_blocking, expected.enable_screen_blocking);
+        assert_eq!(
+            actual.sessions_until_long_break,
+            expected.sessions_until_long_break
+        );
+        assert_eq!(
+            actual.enable_screen_blocking,
+            expected.enable_screen_blocking
+        );
     }
 
-    pub fn assert_audio_config_equals(actual: &AudioConfig, expected: &AudioConfig) {
-        assert_eq!(actual.work_notification_sound, expected.work_notification_sound);
-        assert_eq!(actual.break_notification_sound, expected.break_notification_sound);
+    pub fn assert_audio_config_equals(
+        actual: &AudioConfig,
+        expected: &AudioConfig,
+    ) {
+        assert_eq!(
+            actual.work_notification_sound,
+            expected.work_notification_sound
+        );
+        assert_eq!(
+            actual.break_notification_sound,
+            expected.break_notification_sound
+        );
         assert_eq!(actual.background_sound, expected.background_sound);
         assert_eq!(actual.volume, expected.volume);
-        assert_eq!(actual.enable_background_audio, expected.enable_background_audio);
+        assert_eq!(
+            actual.enable_background_audio,
+            expected.enable_background_audio
+        );
         assert_eq!(actual.muted, expected.muted);
     }
 }

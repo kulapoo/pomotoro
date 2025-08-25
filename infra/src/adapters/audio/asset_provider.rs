@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use domain::{AudioAsset, AudioCategory, AudioLibrary};
+use std::path::PathBuf;
 
 pub struct DefaultAudioAssetProvider;
 
@@ -35,7 +35,9 @@ impl DefaultAudioAssetProvider {
             let asset = AudioAsset {
                 id: id.to_string(),
                 name: name.to_string(),
-                file_path: PathBuf::from(format!("assets/sounds/notifications/{id}.mp3")),
+                file_path: PathBuf::from(format!(
+                    "assets/sounds/notifications/{id}.mp3"
+                )),
                 category: AudioCategory::NotificationSound,
                 duration_ms: None,
             };
@@ -48,7 +50,9 @@ impl DefaultAudioAssetProvider {
             let asset = AudioAsset {
                 id: id.to_string(),
                 name: name.to_string(),
-                file_path: PathBuf::from(format!("assets/sounds/background/{id}.mp3")),
+                file_path: PathBuf::from(format!(
+                    "assets/sounds/background/{id}.mp3"
+                )),
                 category: AudioCategory::BackgroundAmbient,
                 duration_ms: None,
             };

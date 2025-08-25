@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{Event, Result, PhaseSkipped};
+use domain::{Event, PhaseSkipped, Result};
 use std::any::TypeId;
 use tauri::Emitter;
 
@@ -22,11 +22,16 @@ impl EventHandler for PhaseSkippedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(phase_skipped) = event.as_any().downcast_ref::<PhaseSkipped>() {
+        if let Some(phase_skipped) =
+            event.as_any().downcast_ref::<PhaseSkipped>()
+        {
             self.app_handle
                 .emit("timer:phase_skipped", phase_skipped.clone())
                 .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to emit phase skipped event: {}", e),
+                    message: format!(
+                        "Failed to emit phase skipped event: {}",
+                        e
+                    ),
                 })?;
         }
         Ok(())

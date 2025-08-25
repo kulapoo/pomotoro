@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::timer::Phase;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PhaseSkipped {

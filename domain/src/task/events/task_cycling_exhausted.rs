@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::task::id::Id;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CyclingExhausted {
@@ -11,7 +11,11 @@ pub struct CyclingExhausted {
 }
 
 impl CyclingExhausted {
-    pub fn new(current_task_id: Id, attempted_cycles: u32, version: u64) -> Self {
+    pub fn new(
+        current_task_id: Id,
+        attempted_cycles: u32,
+        version: u64,
+    ) -> Self {
         Self {
             current_task_id,
             attempted_cycles,

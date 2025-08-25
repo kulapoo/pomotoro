@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::{config::Config, id::Id, status::Status};
 use crate::{AudioConfig, Error, Result};
-use super::{id::Id, status::Status, config::Config};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -44,11 +44,13 @@ impl Task {
     ) -> Result<Self> {
         use super::builder::Builder;
 
-        Builder::with_name_and_sessions(name, max_sessions).build_with_defaults(defaults)
+        Builder::with_name_and_sessions(name, max_sessions)
+            .build_with_defaults(defaults)
     }
 
     pub fn is_completed(&self) -> bool {
-        self.current_sessions >= self.max_sessions || self.status == Status::Completed
+        self.current_sessions >= self.max_sessions
+            || self.status == Status::Completed
     }
 
     pub fn increment_session(&mut self) -> Result<()> {

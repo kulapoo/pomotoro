@@ -6,25 +6,40 @@ use tauri::AppHandle;
 use crate::adapters::events::EventSubscriber;
 
 use super::{
-    TaskCreatedHandler, TaskCompletedHandler, TaskUpdatedHandler,
-    TaskStatusChangedHandler, TaskSessionCompletedHandler,
-    SessionTransitionCompletedHandler, TaskSwitchWorkflowCompletedHandler,
-    AutomaticTaskCyclingCompletedHandler, TaskCyclingExhaustedHandler
+    AutomaticTaskCyclingCompletedHandler, SessionTransitionCompletedHandler,
+    TaskCompletedHandler, TaskCreatedHandler, TaskCyclingExhaustedHandler,
+    TaskSessionCompletedHandler, TaskStatusChangedHandler,
+    TaskSwitchWorkflowCompletedHandler, TaskUpdatedHandler,
 };
 
 pub fn register_task_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: AppHandle,
 ) -> Result<()> {
-    event_bus.subscribe(Box::new(TaskCreatedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskCompletedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskUpdatedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskStatusChangedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskSessionCompletedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(SessionTransitionCompletedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskSwitchWorkflowCompletedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(AutomaticTaskCyclingCompletedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TaskCyclingExhaustedHandler::new(app_handle.clone())))?;
+    event_bus
+        .subscribe(Box::new(TaskCreatedHandler::new(app_handle.clone())))?;
+    event_bus
+        .subscribe(Box::new(TaskCompletedHandler::new(app_handle.clone())))?;
+    event_bus
+        .subscribe(Box::new(TaskUpdatedHandler::new(app_handle.clone())))?;
+    event_bus.subscribe(Box::new(TaskStatusChangedHandler::new(
+        app_handle.clone(),
+    )))?;
+    event_bus.subscribe(Box::new(TaskSessionCompletedHandler::new(
+        app_handle.clone(),
+    )))?;
+    event_bus.subscribe(Box::new(SessionTransitionCompletedHandler::new(
+        app_handle.clone(),
+    )))?;
+    event_bus.subscribe(Box::new(TaskSwitchWorkflowCompletedHandler::new(
+        app_handle.clone(),
+    )))?;
+    event_bus.subscribe(Box::new(
+        AutomaticTaskCyclingCompletedHandler::new(app_handle.clone()),
+    ))?;
+    event_bus.subscribe(Box::new(TaskCyclingExhaustedHandler::new(
+        app_handle.clone(),
+    )))?;
 
     Ok(())
 }
@@ -35,12 +50,21 @@ pub fn unregister_task_handlers(
     event_bus.clear_handlers_for_type(TypeId::of::<TaskCreatedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TaskCompletedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TaskUpdatedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<TaskStatusChangedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<TaskSessionCompletedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<SessionTransitionCompletedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<TaskSwitchWorkflowCompletedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<AutomaticTaskCyclingCompletedHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<TaskCyclingExhaustedHandler>())?;
+    event_bus
+        .clear_handlers_for_type(TypeId::of::<TaskStatusChangedHandler>())?;
+    event_bus
+        .clear_handlers_for_type(TypeId::of::<TaskSessionCompletedHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<
+        SessionTransitionCompletedHandler,
+    >())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<
+        TaskSwitchWorkflowCompletedHandler,
+    >())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<
+        AutomaticTaskCyclingCompletedHandler,
+    >())?;
+    event_bus
+        .clear_handlers_for_type(TypeId::of::<TaskCyclingExhaustedHandler>())?;
 
     Ok(())
 }

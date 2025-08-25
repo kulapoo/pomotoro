@@ -1,17 +1,15 @@
-use tauri::{AppHandle, State};
-use std::sync::Arc;
-
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::{TaskRepositoryArc, TimerService};
-use domain::{TaskId, TimerState, Phase};
 use domain::timer::TimerService as DomainTimerService;
+use domain::{Phase, TaskId, TimerState};
+use std::sync::Arc;
+use tauri::{AppHandle, State};
+use tracing::{debug, error, info, warn};
 use usecases::timer::{
-    get_timer_state as app_get_timer_state,
-    start_timer_session, StartTimerSessionCmd,
-    pause_timer_session,
-    reset_timer_session,
-    skip_timer_phase,
-    switch_timer_task, SwitchTimerTaskCmd
+    StartTimerSessionCmd, SwitchTimerTaskCmd,
+    get_timer_state as app_get_timer_state, pause_timer_session,
+    reset_timer_session, skip_timer_phase, start_timer_session,
+    switch_timer_task,
 };
 
 #[tauri::command]
@@ -22,7 +20,8 @@ pub async fn get_timer_state(
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    app_get_timer_state(&timer_service_arc).await
+    app_get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -33,16 +32,30 @@ pub async fn start_timer(
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    println!("Starting timer... INFR");
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
     let cmd = StartTimerSessionCmd { task_id: None };
 
-    start_timer_session(&timer_service_arc, &task_repo, &event_publisher, cmd).await
-        .map_err(|e| e.to_string())?;
+    match start_timer_session(
+        &timer_service_arc,
+        &task_repo,
+        &event_publisher,
+        cmd,
+    )
+    .await
+    {
+        Ok(()) => {
+            info!("Starting timer session");
+        }
+        Err(e) => {
+            error!("Failed to start timer session: {}", e);
+            return Err(e.to_string());
+        }
+    }
 
-    app_get_timer_state(&timer_service_arc).await
+    app_get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -55,10 +68,12 @@ pub async fn pause_timer(
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    pause_timer_session(&timer_service_arc, &event_publisher).await
+    pause_timer_session(&timer_service_arc, &event_publisher)
+        .await
         .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(&timer_service_arc).await
+    app_get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -72,10 +87,12 @@ pub async fn reset_timer(
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    reset_timer_session(&timer_service_arc, &task_repo, &event_publisher).await
+    reset_timer_session(&timer_service_arc, &task_repo, &event_publisher)
+        .await
         .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(&timer_service_arc).await
+    app_get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())
 }
 
@@ -89,10 +106,13 @@ pub async fn skip_phase(
     let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
         Arc::new(timer_service.inner().clone());
 
-    let (old_phase, new_phase) = skip_timer_phase(&timer_service_arc, &task_repo, &event_publisher).await
-        .map_err(|e| e.to_string())?;
+    let (old_phase, new_phase) =
+        skip_timer_phase(&timer_service_arc, &task_repo, &event_publisher)
+            .await
+            .map_err(|e| e.to_string())?;
 
-    let state = usecases::timer::get_timer_state(&timer_service_arc).await
+    let state = usecases::timer::get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())?;
 
     Ok((old_phase, new_phase, state))
@@ -113,9 +133,11 @@ pub async fn switch_active_task(
         task_id: task_id.to_string(),
     };
 
-    switch_timer_task(&timer_service_arc, &task_repo, &event_publisher, cmd).await
+    switch_timer_task(&timer_service_arc, &task_repo, &event_publisher, cmd)
+        .await
         .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(&timer_service_arc).await
+    app_get_timer_state(&timer_service_arc)
+        .await
         .map_err(|e| e.to_string())
 }

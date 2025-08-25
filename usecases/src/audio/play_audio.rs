@@ -1,4 +1,4 @@
-use domain::{PlaybackRequest, PlaybackHandle, Result, Error, AudioService};
+use domain::{AudioService, Error, PlaybackHandle, PlaybackRequest, Result};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -20,14 +20,19 @@ pub async fn play_audio(
     cmd: PlayAudioCmd,
 ) -> Result<PlaybackHandle> {
     if !(0.0..=1.0).contains(&cmd.volume) {
-        return Err(Error::ConfigurationError { 
-            message: format!("Volume must be between 0.0 and 1.0, got {}", cmd.volume)
+        return Err(Error::ConfigurationError {
+            message: format!(
+                "Volume must be between 0.0 and 1.0, got {}",
+                cmd.volume
+            ),
         });
     }
 
-    let mut request = PlaybackRequest::new(cmd.asset_id, cmd.volume)
-        .map_err(|e| Error::ConfigurationError {
-            message: format!("Failed to create playback request: {e:?}"),
+    let mut request =
+        PlaybackRequest::new(cmd.asset_id, cmd.volume).map_err(|e| {
+            Error::ConfigurationError {
+                message: format!("Failed to create playback request: {e:?}"),
+            }
         })?;
 
     if cmd.looped {
@@ -84,8 +89,10 @@ pub async fn set_audio_volume(
     volume: f32,
 ) -> Result<()> {
     if !(0.0..=1.0).contains(&volume) {
-        return Err(Error::ConfigurationError { 
-            message: format!("Volume must be between 0.0 and 1.0, got {volume}")
+        return Err(Error::ConfigurationError {
+            message: format!(
+                "Volume must be between 0.0 and 1.0, got {volume}"
+            ),
         });
     }
 
@@ -113,7 +120,10 @@ mod tests {
     }
 
     impl AudioService for MockAudioService {
-        fn play_audio(&mut self, request: PlaybackRequest) -> Result<PlaybackHandle> {
+        fn play_audio(
+            &mut self,
+            request: PlaybackRequest,
+        ) -> Result<PlaybackHandle> {
             let handle = PlaybackHandle {
                 id: format!("test-{}", uuid::Uuid::new_v4()),
                 asset_id: request.asset_id,
@@ -161,7 +171,9 @@ mod tests {
         }
 
         fn get_active_playbacks(&self) -> Result<Vec<PlaybackHandle>> {
-            Ok(self.playbacks.values()
+            Ok(self
+                .playbacks
+                .values()
                 .filter(|h| h.is_playing)
                 .cloned()
                 .collect())
@@ -175,8 +187,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_play_audio_successfully() {
-        let service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
-        
+        let service: Arc<Mutex<dyn AudioService>> =
+            Arc::new(Mutex::new(MockAudioService::new()));
+
         let cmd = PlayAudioCmd {
             asset_id: "test-asset".to_string(),
             volume: 0.8,
@@ -185,7 +198,7 @@ mod tests {
         };
 
         let handle = play_audio(&service, cmd).await.unwrap();
-        
+
         assert_eq!(handle.asset_id, "test-asset");
         assert_eq!(handle.volume, 0.8);
         assert!(!handle.is_looped);
@@ -194,8 +207,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_invalid_volume() {
-        let service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
-        
+        let service: Arc<Mutex<dyn AudioService>> =
+            Arc::new(Mutex::new(MockAudioService::new()));
+
         let cmd = PlayAudioCmd {
             asset_id: "test-asset".to_string(),
             volume: 1.5,
@@ -209,8 +223,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_stop_audio_successfully() {
-        let service: Arc<Mutex<dyn AudioService>> = Arc::new(Mutex::new(MockAudioService::new()));
-        
+        let service: Arc<Mutex<dyn AudioService>> =
+            Arc::new(Mutex::new(MockAudioService::new()));
+
         let play_cmd = PlayAudioCmd {
             asset_id: "test-asset".to_string(),
             volume: 0.5,
@@ -218,7 +233,7 @@ mod tests {
             fade_in_ms: None,
         };
         let handle = play_audio(&service, play_cmd).await.unwrap();
-        
+
         let stop_cmd = StopAudioCmd {
             playback_id: handle.id,
         };

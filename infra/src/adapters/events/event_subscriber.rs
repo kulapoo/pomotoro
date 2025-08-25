@@ -16,5 +16,9 @@ pub trait EventSubscriber: Send + Sync {
         Ok(())
     }
 
-    fn unsubscribe_by_name(&self, event_type: TypeId, handler_name: &str) -> Result<bool>;
+    fn unsubscribe_by_name(
+        &self,
+        event_type: TypeId,
+        handler_name: &str,
+    ) -> Result<bool>;
 }

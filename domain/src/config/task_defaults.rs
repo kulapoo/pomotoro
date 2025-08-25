@@ -1,6 +1,6 @@
-use std::time::Duration;
-use serde::{Deserialize, Serialize};
 use crate::{Error, Result, duration_serde};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TaskDefaults {
@@ -37,7 +37,11 @@ impl TaskDefaults {
         enable_screen_blocking: bool,
         max_sessions_default: u8,
     ) -> Result<Self> {
-        Self::validate_durations(&work_duration, &short_break_duration, &long_break_duration)?;
+        Self::validate_durations(
+            &work_duration,
+            &short_break_duration,
+            &long_break_duration,
+        )?;
         Self::validate_session_count(sessions_until_long_break)?;
         Self::validate_max_sessions(max_sessions_default)?;
 
@@ -51,12 +55,23 @@ impl TaskDefaults {
         })
     }
 
-    pub fn update_timings(&mut self, work_minutes: u32, short_break_minutes: u32, long_break_minutes: u32) -> Result<()> {
+    pub fn update_timings(
+        &mut self,
+        work_minutes: u32,
+        short_break_minutes: u32,
+        long_break_minutes: u32,
+    ) -> Result<()> {
         let work_duration = Duration::from_secs((work_minutes * 60) as u64);
-        let short_break_duration = Duration::from_secs((short_break_minutes * 60) as u64);
-        let long_break_duration = Duration::from_secs((long_break_minutes * 60) as u64);
+        let short_break_duration =
+            Duration::from_secs((short_break_minutes * 60) as u64);
+        let long_break_duration =
+            Duration::from_secs((long_break_minutes * 60) as u64);
 
-        Self::validate_durations(&work_duration, &short_break_duration, &long_break_duration)?;
+        Self::validate_durations(
+            &work_duration,
+            &short_break_duration,
+            &long_break_duration,
+        )?;
 
         self.work_duration = work_duration;
         self.short_break_duration = short_break_duration;
@@ -65,7 +80,10 @@ impl TaskDefaults {
         Ok(())
     }
 
-    pub fn update_cycle_length(&mut self, sessions_until_long_break: u8) -> Result<()> {
+    pub fn update_cycle_length(
+        &mut self,
+        sessions_until_long_break: u8,
+    ) -> Result<()> {
         Self::validate_session_count(sessions_until_long_break)?;
         self.sessions_until_long_break = sessions_until_long_break;
         Ok(())

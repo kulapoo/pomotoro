@@ -17,9 +17,10 @@ mod tests {
     #[test]
     fn test_basic_task_creation() {
         let defaults = default_config();
-        let task = TaskBuilder::with_name_and_sessions("Test Task".to_string(), 3)
-            .build_with_defaults(&defaults)
-            .unwrap();
+        let task =
+            TaskBuilder::with_name_and_sessions("Test Task".to_string(), 3)
+                .build_with_defaults(&defaults)
+                .unwrap();
 
         assert_eq!(task.name, "Test Task");
         assert_eq!(task.max_sessions, 3);
@@ -43,7 +44,10 @@ mod tests {
 
         assert_eq!(task.name, "Fluent Task");
         assert_eq!(task.max_sessions, 2);
-        assert_eq!(task.description, Some("A task built with fluent interface".to_string()));
+        assert_eq!(
+            task.description,
+            Some("A task built with fluent interface".to_string())
+        );
         assert_eq!(task.tags, vec!["work", "urgent"]);
         assert_eq!(task.status, TaskStatus::Active);
     }
@@ -57,7 +61,10 @@ mod tests {
 
         assert_eq!(task.name, "Focus Session");
         assert_eq!(task.max_sessions, defaults.max_sessions_default);
-        assert_eq!(task.description, Some("Default pomodoro task for focused work".to_string()));
+        assert_eq!(
+            task.description,
+            Some("Default pomodoro task for focused work".to_string())
+        );
         assert_eq!(task.tags, vec!["focus"]);
         assert_eq!(task.status, TaskStatus::Active);
     }
@@ -83,11 +90,14 @@ mod tests {
     #[test]
     fn test_completed_task() {
         let defaults = default_config();
-        let task = TaskBuilder::with_name_and_sessions("Completed Task".to_string(), 2)
-            .current_sessions(2)
-            .completed()
-            .build_with_defaults(&defaults)
-            .unwrap();
+        let task = TaskBuilder::with_name_and_sessions(
+            "Completed Task".to_string(),
+            2,
+        )
+        .current_sessions(2)
+        .completed()
+        .build_with_defaults(&defaults)
+        .unwrap();
 
         assert_eq!(task.status, TaskStatus::Completed);
         assert!(task.completed_at.is_some());
@@ -97,14 +107,16 @@ mod tests {
     #[test]
     fn test_backward_compatibility() {
         let defaults = default_config();
-        
+
         // Test that existing constructors still work
-        let task1 = Task::new_with_defaults("Test Task".to_string(), 3, &defaults).unwrap();
+        let task1 =
+            Task::new_with_defaults("Test Task".to_string(), 3, &defaults)
+                .unwrap();
         let task2 = Task::new_default().unwrap();
 
         assert_eq!(task1.name, "Test Task");
         assert_eq!(task1.max_sessions, 3);
-        
+
         assert_eq!(task2.name, "Focus Session");
         assert_eq!(task2.max_sessions, 4); // Built-in default
     }
@@ -118,7 +130,10 @@ mod tests {
 
         assert!(task.is_default());
         assert_eq!(task.name, "Focus Session");
-        assert_eq!(task.description, Some("Default pomodoro task for focused work".to_string()));
+        assert_eq!(
+            task.description,
+            Some("Default pomodoro task for focused work".to_string())
+        );
         assert_eq!(task.tags, vec!["focus"]);
         assert_eq!(task.status, TaskStatus::Active);
     }
@@ -126,9 +141,10 @@ mod tests {
     #[test]
     fn test_regular_task_is_not_default() {
         let defaults = default_config();
-        let task = TaskBuilder::with_name_and_sessions("Regular Task".to_string(), 3)
-            .build_with_defaults(&defaults)
-            .unwrap();
+        let task =
+            TaskBuilder::with_name_and_sessions("Regular Task".to_string(), 3)
+                .build_with_defaults(&defaults)
+                .unwrap();
 
         assert!(!task.is_default());
         assert_eq!(task.name, "Regular Task");
@@ -137,12 +153,13 @@ mod tests {
     #[test]
     fn test_set_task_as_default() {
         let defaults = default_config();
-        let mut task = TaskBuilder::with_name_and_sessions("Test Task".to_string(), 3)
-            .build_with_defaults(&defaults)
-            .unwrap();
+        let mut task =
+            TaskBuilder::with_name_and_sessions("Test Task".to_string(), 3)
+                .build_with_defaults(&defaults)
+                .unwrap();
 
         assert!(!task.is_default());
-        
+
         task.set_as_default();
         assert!(task.is_default());
     }
@@ -155,7 +172,7 @@ mod tests {
             .unwrap();
 
         assert!(task.is_default());
-        
+
         task.unset_as_default();
         assert!(!task.is_default());
     }
@@ -163,10 +180,13 @@ mod tests {
     #[test]
     fn test_builder_with_default_flag() {
         let defaults = default_config();
-        let task = TaskBuilder::with_name_and_sessions("Custom Default".to_string(), 2)
-            .default(true)
-            .build_with_defaults(&defaults)
-            .unwrap();
+        let task = TaskBuilder::with_name_and_sessions(
+            "Custom Default".to_string(),
+            2,
+        )
+        .default(true)
+        .build_with_defaults(&defaults)
+        .unwrap();
 
         assert!(task.is_default());
         assert_eq!(task.name, "Custom Default");

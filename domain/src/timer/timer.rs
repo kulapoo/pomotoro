@@ -40,7 +40,10 @@ impl Timer {
         }
     }
 
-    pub fn with_event_publisher(mut self, publisher: Box<dyn EventPublisher>) -> Self {
+    pub fn with_event_publisher(
+        mut self,
+        publisher: Box<dyn EventPublisher>,
+    ) -> Self {
         self.event_publisher = Some(publisher);
         self
     }
@@ -50,7 +53,8 @@ impl Timer {
     }
 
     pub fn start(&mut self) -> Result<()> {
-        if !StateTransitions::can_transition(&self.state, TransitionType::Start) {
+        if !StateTransitions::can_transition(&self.state, TransitionType::Start)
+        {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
                 to: "Start".to_string(),
@@ -62,7 +66,8 @@ impl Timer {
     }
 
     pub fn pause(&mut self) -> Result<()> {
-        if !StateTransitions::can_transition(&self.state, TransitionType::Pause) {
+        if !StateTransitions::can_transition(&self.state, TransitionType::Pause)
+        {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
                 to: "Pause".to_string(),
@@ -74,7 +79,10 @@ impl Timer {
     }
 
     pub fn resume(&mut self) -> Result<()> {
-        if !StateTransitions::can_transition(&self.state, TransitionType::Resume) {
+        if !StateTransitions::can_transition(
+            &self.state,
+            TransitionType::Resume,
+        ) {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
                 to: "Resume".to_string(),
@@ -91,7 +99,8 @@ impl Timer {
     }
 
     pub fn skip_phase(&mut self) -> Result<()> {
-        if !StateTransitions::can_transition(&self.state, TransitionType::Skip) {
+        if !StateTransitions::can_transition(&self.state, TransitionType::Skip)
+        {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
                 to: "Skip".to_string(),
@@ -103,7 +112,8 @@ impl Timer {
     }
 
     pub fn tick(&mut self) -> Result<bool> {
-        let (new_state, phase_complete) = StateTransitions::tick(self.state.clone())?;
+        let (new_state, phase_complete) =
+            StateTransitions::tick(self.state.clone())?;
         let _old_state = self.state.clone();
         self.state = new_state.clone();
 
@@ -126,19 +136,29 @@ impl Timer {
         Ok(phase_complete)
     }
 
-    pub fn set_active_entity(&mut self, entity_id: Option<String>) -> Result<()> {
-        if !StateTransitions::can_transition(&self.state, TransitionType::SwitchTask) {
+    pub fn set_active_entity(
+        &mut self,
+        entity_id: Option<String>,
+    ) -> Result<()> {
+        if !StateTransitions::can_transition(
+            &self.state,
+            TransitionType::SwitchTask,
+        ) {
             return Err(Error::InvalidStateTransition {
                 from: self.get_state_name(),
                 to: "SetEntity".to_string(),
             });
         }
 
-        let result = StateTransitions::switch_entity(self.state.clone(), entity_id)?;
+        let result =
+            StateTransitions::switch_entity(self.state.clone(), entity_id)?;
         self.publish_events(result)
     }
 
-    pub fn update_configuration(&mut self, configuration: TimerConfiguration) -> Result<()> {
+    pub fn update_configuration(
+        &mut self,
+        configuration: TimerConfiguration,
+    ) -> Result<()> {
         match &self.state {
             TimerState::Idle {
                 session_count,
@@ -192,12 +212,14 @@ impl Timer {
             TimerState::Working { .. } => "Focus Time",
             TimerState::ShortBreak { .. } => "Short Break",
             TimerState::LongBreak { .. } => "Long Break",
-            TimerState::Paused { paused_from, .. } => match paused_from.as_ref() {
-                TimerState::Working { .. } => "Focus Time (Paused)",
-                TimerState::ShortBreak { .. } => "Short Break (Paused)",
-                TimerState::LongBreak { .. } => "Long Break (Paused)",
-                _ => "Paused",
-            },
+            TimerState::Paused { paused_from, .. } => {
+                match paused_from.as_ref() {
+                    TimerState::Working { .. } => "Focus Time (Paused)",
+                    TimerState::ShortBreak { .. } => "Short Break (Paused)",
+                    TimerState::LongBreak { .. } => "Long Break (Paused)",
+                    _ => "Paused",
+                }
+            }
         }
     }
 
@@ -209,7 +231,9 @@ impl Timer {
                 configuration,
                 ..
             } => {
-                let total = configuration.get_phase_duration_seconds(Phase::Work) as f64;
+                let total = configuration
+                    .get_phase_duration_seconds(Phase::Work)
+                    as f64;
                 let elapsed = total - *remaining_seconds as f64;
                 (elapsed / total * 100.0).clamp(0.0, 100.0)
             }
@@ -218,7 +242,9 @@ impl Timer {
                 configuration,
                 ..
             } => {
-                let total = configuration.get_phase_duration_seconds(Phase::ShortBreak) as f64;
+                let total = configuration
+                    .get_phase_duration_seconds(Phase::ShortBreak)
+                    as f64;
                 let elapsed = total - *remaining_seconds as f64;
                 (elapsed / total * 100.0).clamp(0.0, 100.0)
             }
@@ -227,7 +253,9 @@ impl Timer {
                 configuration,
                 ..
             } => {
-                let total = configuration.get_phase_duration_seconds(Phase::LongBreak) as f64;
+                let total = configuration
+                    .get_phase_duration_seconds(Phase::LongBreak)
+                    as f64;
                 let elapsed = total - *remaining_seconds as f64;
                 (elapsed / total * 100.0).clamp(0.0, 100.0)
             }
@@ -383,7 +411,8 @@ mod tests {
     fn should_publish_events() {
         let publisher = MockEventPublisher::new();
 
-        let mut timer = Timer::default().with_event_publisher(Box::new(publisher));
+        let mut timer =
+            Timer::default().with_event_publisher(Box::new(publisher));
 
         let entity_id = create_entity_id();
         timer.set_active_entity(Some(entity_id)).unwrap();

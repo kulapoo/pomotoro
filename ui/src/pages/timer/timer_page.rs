@@ -1,6 +1,6 @@
-use leptos::prelude::*;
 use crate::pages::timer::{TimerControls, TimerViewModel};
 use crate::utils::ViewModel;
+use leptos::prelude::*;
 
 #[component]
 pub fn TimerPage() -> impl IntoView {
@@ -15,14 +15,14 @@ pub fn TimerPage() -> impl IntoView {
                     state.active_entity_id().map(|_| "Active Task".to_string()).unwrap_or_else(|| "General Tasks".to_string())
                 }}
             </div>
-            
+
             <div class="timer-label" id="timerLabel">{move || vm.with_value(|v| v.get_phase_name())}</div>
             <div class="timer-display" id="timerDisplay">{move || vm.with_value(|v| v.format_time())}</div>
-            
+
             <div class="timer-controls">
                 <TimerControls vm=vm />
             </div>
-            
+
             <div class="session-dots" id="sessionDots">
                 {move || {
                     let sessions_completed = vm.with_value(|v| v.get_sessions_completed());
@@ -32,7 +32,7 @@ pub fn TimerPage() -> impl IntoView {
                     }).collect_view()
                 }}
             </div>
-            
+
             <div class="pomodoro-stats">
                 <div class="stat-item">
                     <div class="stat-value" id="todayPomodoros">{move || vm.with_value(|v| v.get_today_pomodoros())}</div>

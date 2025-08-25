@@ -15,10 +15,14 @@ impl TimerTestService {
     }
 
     pub async fn setup_with_task(&self, task: &Task) {
-        let _ = TimerServiceTrait::switch_task(&*self.service, task.id, Some(task)).await;
+        let _ =
+            TimerServiceTrait::switch_task(&*self.service, task.id, Some(task))
+                .await;
     }
 
-    pub async fn start_work_session(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn start_work_session(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Check current state and act accordingly
         let state = TimerServiceTrait::get_state(&*self.service).await?;
         if state.is_paused() {
@@ -30,7 +34,7 @@ impl TimerTestService {
         }
         Ok(())
     }
-    
+
     pub async fn resume_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
         let state = TimerServiceTrait::get_state(&*self.service).await?;
         if state.is_paused() {
@@ -53,7 +57,8 @@ impl TimerTestService {
         &self,
         task: Option<&Task>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let _ = TimerServiceTrait::reset_current_phase(&*self.service, task).await;
+        let _ =
+            TimerServiceTrait::reset_current_phase(&*self.service, task).await;
         Ok(())
     }
 
@@ -61,7 +66,8 @@ impl TimerTestService {
         &self,
         task: Option<&Task>,
     ) -> Result<(Phase, Phase), Box<dyn std::error::Error>> {
-        let result = TimerServiceTrait::skip_to_next_phase(&*self.service, task).await;
+        let result =
+            TimerServiceTrait::skip_to_next_phase(&*self.service, task).await;
         Ok(result?)
     }
 
@@ -69,12 +75,13 @@ impl TimerTestService {
         tokio::time::sleep(Duration::from_millis(seconds * 100)).await;
     }
 
-    pub async fn force_complete_session(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn force_complete_session(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Force complete the current session by transitioning to next phase
         TimerServiceTrait::skip_to_next_phase(&*self.service, None).await?;
         Ok(())
     }
-
 }
 
 impl std::ops::Deref for TimerTestService {

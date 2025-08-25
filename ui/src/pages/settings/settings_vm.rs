@@ -1,10 +1,10 @@
+use domain::event_names;
+use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::to_value;
-use domain::*;
-use domain::event_names;
 
-use crate::utils::{invoke_command, invoke_command_no_args, ViewModel};
+use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 
 pub struct SettingsViewModel {
     config: ReadSignal<Option<Config>>,
@@ -45,8 +45,12 @@ impl SettingsViewModel {
         let set_config = self.set_config;
 
         spawn_local(async move {
-            if let Ok(result) = invoke_command_no_args(event_names::config::GET_GLOBAL).await {
-                if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+            if let Ok(result) =
+                invoke_command_no_args(event_names::config::GET_GLOBAL).await
+            {
+                if let Ok(config) =
+                    serde_wasm_bindgen::from_value::<Config>(result)
+                {
                     set_config.set(Some(config));
                 }
             }
@@ -69,7 +73,9 @@ impl SettingsViewModel {
 
         spawn_local(async move {
             if let Ok(args) = to_value(&config) {
-                if let Ok(result) = invoke_command(event_names::config::SAVE_GLOBAL, args).await {
+                if let Ok(result) =
+                    invoke_command(event_names::config::SAVE_GLOBAL, args).await
+                {
                     if serde_wasm_bindgen::from_value::<()>(result).is_ok() {
                         set_config.set(Some(config));
                     }
@@ -87,8 +93,13 @@ impl SettingsViewModel {
 
         spawn_local(async move {
             if let Ok(args) = to_value(&general) {
-                if let Ok(result) = invoke_command(event_names::config::UPDATE_GENERAL, args).await {
-                    if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+                if let Ok(result) =
+                    invoke_command(event_names::config::UPDATE_GENERAL, args)
+                        .await
+                {
+                    if let Ok(config) =
+                        serde_wasm_bindgen::from_value::<Config>(result)
+                    {
                         set_config.set(Some(config));
                     }
                 }
@@ -105,8 +116,15 @@ impl SettingsViewModel {
 
         spawn_local(async move {
             if let Ok(args) = to_value(&notifications) {
-                if let Ok(result) = invoke_command(event_names::config::UPDATE_NOTIFICATIONS, args).await {
-                    if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+                if let Ok(result) = invoke_command(
+                    event_names::config::UPDATE_NOTIFICATIONS,
+                    args,
+                )
+                .await
+                {
+                    if let Ok(config) =
+                        serde_wasm_bindgen::from_value::<Config>(result)
+                    {
                         set_config.set(Some(config));
                     }
                 }
@@ -123,8 +141,13 @@ impl SettingsViewModel {
 
         spawn_local(async move {
             if let Ok(args) = to_value(&appearance) {
-                if let Ok(result) = invoke_command(event_names::config::UPDATE_APPEARANCE, args).await {
-                    if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+                if let Ok(result) =
+                    invoke_command(event_names::config::UPDATE_APPEARANCE, args)
+                        .await
+                {
+                    if let Ok(config) =
+                        serde_wasm_bindgen::from_value::<Config>(result)
+                    {
                         set_config.set(Some(config));
                     }
                 }
@@ -141,8 +164,13 @@ impl SettingsViewModel {
 
         spawn_local(async move {
             if let Ok(args) = to_value(&audio) {
-                if let Ok(result) = invoke_command(event_names::config::UPDATE_AUDIO, args).await {
-                    if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+                if let Ok(result) =
+                    invoke_command(event_names::config::UPDATE_AUDIO, args)
+                        .await
+                {
+                    if let Ok(config) =
+                        serde_wasm_bindgen::from_value::<Config>(result)
+                    {
                         set_config.set(Some(config));
                     }
                 }
@@ -151,7 +179,6 @@ impl SettingsViewModel {
         });
     }
 
-
     pub fn reset_to_defaults(&self) {
         let set_config = self.set_config;
         let set_is_saving = self.set_is_saving;
@@ -159,8 +186,13 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(result) = invoke_command_no_args(event_names::config::RESET_TO_DEFAULTS).await {
-                if let Ok(config) = serde_wasm_bindgen::from_value::<Config>(result) {
+            if let Ok(result) =
+                invoke_command_no_args(event_names::config::RESET_TO_DEFAULTS)
+                    .await
+            {
+                if let Ok(config) =
+                    serde_wasm_bindgen::from_value::<Config>(result)
+                {
                     set_config.set(Some(config));
                 }
             }

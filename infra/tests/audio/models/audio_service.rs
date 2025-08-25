@@ -1,7 +1,7 @@
+use domain::{AudioError, AudioLibrary, PlaybackHandle, PlaybackRequest};
+use infra::adapters::DefaultAudioAssetProvider;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use domain::{AudioLibrary, PlaybackRequest, PlaybackHandle, AudioError};
-use infra::adapters::DefaultAudioAssetProvider;
 
 pub struct MockAudioManager {
     library: AudioLibrary,
@@ -22,7 +22,8 @@ pub struct MockPlayback {
 impl MockAudioManager {
     pub fn new() -> Result<Self, AudioError> {
         Ok(Self {
-            library: DefaultAudioAssetProvider::create_library_with_default_assets(),
+            library:
+                DefaultAudioAssetProvider::create_library_with_default_assets(),
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
             playback_counter: Arc::new(Mutex::new(0)),
             asset_play_counts: Arc::new(Mutex::new(HashMap::new())),
@@ -33,7 +34,10 @@ impl MockAudioManager {
         &self.library
     }
 
-    pub fn play(&self, request: PlaybackRequest) -> Result<PlaybackHandle, AudioError> {
+    pub fn play(
+        &self,
+        request: PlaybackRequest,
+    ) -> Result<PlaybackHandle, AudioError> {
         let mut counter = self.playback_counter.lock().unwrap();
         *counter += 1;
         let handle_id = format!("mock_handle_{}", *counter);
@@ -93,7 +97,11 @@ impl MockAudioManager {
         Ok(())
     }
 
-    pub fn set_volume(&self, handle_id: &str, volume: f32) -> Result<(), AudioError> {
+    pub fn set_volume(
+        &self,
+        handle_id: &str,
+        volume: f32,
+    ) -> Result<(), AudioError> {
         let mut playbacks = self.active_playbacks.lock().unwrap();
         if let Some(playback) = playbacks.get_mut(handle_id) {
             playback.volume = volume;
@@ -101,7 +109,6 @@ impl MockAudioManager {
         }
         Ok(())
     }
-
 
     pub fn stop_all_playbacks(&self) {
         let mut playbacks = self.active_playbacks.lock().unwrap();
@@ -111,13 +118,21 @@ impl MockAudioManager {
         }
     }
 
-    pub fn play_notification(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle, AudioError> {
+    pub fn play_notification(
+        &self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle, AudioError> {
         let request = PlaybackRequest::new(asset_id.to_string(), volume)
             .map_err(|e| AudioError::PlaybackFailed(e.to_string()))?;
         self.play(request)
     }
 
-    pub fn play_background_audio(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle, AudioError> {
+    pub fn play_background_audio(
+        &self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle, AudioError> {
         let request = PlaybackRequest::new(asset_id.to_string(), volume)
             .map_err(|e| AudioError::PlaybackFailed(e.to_string()))?
             .with_loop()
@@ -137,7 +152,8 @@ impl MockAudioManager {
 
     pub fn cleanup_finished_playbacks(&self) {
         let mut playbacks = self.active_playbacks.lock().unwrap();
-        playbacks.retain(|_, playback| playback.is_playing || playback.is_paused);
+        playbacks
+            .retain(|_, playback| playback.is_playing || playback.is_paused);
     }
 
     pub fn get_playback_count(&self) -> usize {
@@ -157,12 +173,18 @@ impl MockAudioManager {
 
     pub fn is_playing(&self, handle_id: &str) -> bool {
         let playbacks = self.active_playbacks.lock().unwrap();
-        playbacks.get(handle_id).map(|p| p.is_playing).unwrap_or(false)
+        playbacks
+            .get(handle_id)
+            .map(|p| p.is_playing)
+            .unwrap_or(false)
     }
 
     pub fn is_paused(&self, handle_id: &str) -> bool {
         let playbacks = self.active_playbacks.lock().unwrap();
-        playbacks.get(handle_id).map(|p| p.is_paused).unwrap_or(false)
+        playbacks
+            .get(handle_id)
+            .map(|p| p.is_paused)
+            .unwrap_or(false)
     }
 
     pub fn get_playback_volume(&self, handle_id: &str) -> Option<f32> {

@@ -1,10 +1,10 @@
-use leptos::prelude::*;
 use domain::Phase;
+use leptos::prelude::*;
 
 #[component]
 pub fn CircularProgress(
     #[prop(into)] progress: Signal<f64>,
-    #[prop(into)] phase: Signal<Phase>
+    #[prop(into)] phase: Signal<Phase>,
 ) -> impl IntoView {
     let stroke_dasharray = 2.0 * std::f64::consts::PI * 90.0;
 

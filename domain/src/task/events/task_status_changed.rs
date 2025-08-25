@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::task::id::Id;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StatusChanged {
@@ -12,7 +12,12 @@ pub struct StatusChanged {
 }
 
 impl StatusChanged {
-    pub fn new(task_id: Id, old_status: String, new_status: String, version: u64) -> Self {
+    pub fn new(
+        task_id: Id,
+        old_status: String,
+        new_status: String,
+        version: u64,
+    ) -> Self {
         Self {
             task_id,
             old_status,

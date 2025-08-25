@@ -1,5 +1,5 @@
-use domain::{Phase, TimerStatus, TimerState, TimerConfiguration};
 use domain::TaskId;
+use domain::{Phase, TimerConfiguration, TimerState, TimerStatus};
 
 #[allow(dead_code)]
 pub struct TimerStateBuilder {
@@ -103,13 +103,15 @@ impl TimerStateBuilder {
                 active_entity: self.active_entity.map(|id| id.to_string()),
                 entity_session_count: self.entity_session_count,
             },
-            (TimerStatus::Running, Phase::ShortBreak) => TimerState::ShortBreak {
-                remaining_seconds: self.remaining_seconds,
-                configuration: self.configuration,
-                session_count: self.session_count,
-                active_entity: self.active_entity.map(|id| id.to_string()),
-                entity_session_count: self.entity_session_count,
-            },
+            (TimerStatus::Running, Phase::ShortBreak) => {
+                TimerState::ShortBreak {
+                    remaining_seconds: self.remaining_seconds,
+                    configuration: self.configuration,
+                    session_count: self.session_count,
+                    active_entity: self.active_entity.map(|id| id.to_string()),
+                    entity_session_count: self.entity_session_count,
+                }
+            }
             (TimerStatus::Running, Phase::LongBreak) => TimerState::LongBreak {
                 remaining_seconds: self.remaining_seconds,
                 configuration: self.configuration,
@@ -123,21 +125,27 @@ impl TimerStateBuilder {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        active_entity: self
+                            .active_entity
+                            .map(|id| id.to_string()),
                         entity_session_count: self.entity_session_count,
                     },
                     Phase::ShortBreak => TimerState::ShortBreak {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        active_entity: self
+                            .active_entity
+                            .map(|id| id.to_string()),
                         entity_session_count: self.entity_session_count,
                     },
                     Phase::LongBreak => TimerState::LongBreak {
                         remaining_seconds: self.remaining_seconds,
                         configuration: self.configuration.clone(),
                         session_count: self.session_count,
-                        active_entity: self.active_entity.map(|id| id.to_string()),
+                        active_entity: self
+                            .active_entity
+                            .map(|id| id.to_string()),
                         entity_session_count: self.entity_session_count,
                     },
                 };
@@ -164,7 +172,6 @@ impl Default for TimerStateBuilder {
 pub struct TimerTestAssertions;
 
 impl TimerTestAssertions {
-
     pub fn assert_is_running(state: &TimerState) {
         assert_eq!(state.status(), TimerStatus::Running);
     }
@@ -172,8 +179,10 @@ impl TimerTestAssertions {
     pub fn assert_is_stopped(state: &TimerState) {
         // Timer can be either Idle or Stopped when not running
         assert!(
-            state.status() == TimerStatus::Idle || state.status() == TimerStatus::Stopped,
-            "Expected Idle or Stopped, got {:?}", state.status()
+            state.status() == TimerStatus::Idle
+                || state.status() == TimerStatus::Stopped,
+            "Expected Idle or Stopped, got {:?}",
+            state.status()
         );
     }
 

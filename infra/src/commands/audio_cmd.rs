@@ -1,7 +1,9 @@
 use crate::adapters::RodioAudioService;
-use domain::{AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle, AudioService};
-use tauri::State;
+use domain::{
+    AudioAsset, AudioLibrary, AudioService, PlaybackHandle, PlaybackRequest,
+};
 use std::sync::Mutex;
+use tauri::State;
 
 type AudioServiceState<'a> = State<'a, Mutex<RodioAudioService>>;
 
@@ -37,7 +39,9 @@ pub async fn pause_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
     let service = audio_service.lock().map_err(|e| e.to_string())?;
-    service.pause_playback(&handle_id).map_err(|e| e.to_string())
+    service
+        .pause_playback(&handle_id)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -46,7 +50,9 @@ pub async fn resume_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
     let service = audio_service.lock().map_err(|e| e.to_string())?;
-    service.resume_playback(&handle_id).map_err(|e| e.to_string())
+    service
+        .resume_playback(&handle_id)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -56,7 +62,9 @@ pub async fn set_audio_volume(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
     let mut service = audio_service.lock().map_err(|e| e.to_string())?;
-    service.set_volume(&handle_id, volume).map_err(|e| e.to_string())
+    service
+        .set_volume(&handle_id, volume)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -83,7 +91,9 @@ pub async fn play_notification_sound(
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
     let service = audio_service.lock().map_err(|e| e.to_string())?;
-    service.play_notification(&asset_id, volume).map_err(|e| e.to_string())
+    service
+        .play_notification(&asset_id, volume)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -93,7 +103,9 @@ pub async fn play_background_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
     let service = audio_service.lock().map_err(|e| e.to_string())?;
-    service.play_background_audio(&asset_id, volume).map_err(|e| e.to_string())
+    service
+        .play_background_audio(&asset_id, volume)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -1,6 +1,6 @@
-use leptos::prelude::*;
-use leptos::callback::Callback;
 use crate::pages::task::TasksViewModel;
+use leptos::callback::Callback;
+use leptos::prelude::*;
 
 #[component]
 pub fn TaskCreationForm(
@@ -9,23 +9,28 @@ pub fn TaskCreationForm(
 ) -> impl IntoView {
     let (task_name, set_task_name) = signal(String::new());
     let (task_description, set_task_description) = signal(String::new());
-    
+
     let create_task = move |_| {
         let name = task_name.get();
         let description = task_description.get();
-        
+
         if name.trim().is_empty() {
             return;
         }
-        
-        vm.with_value(|v| v.create_task(name.trim().to_string(), description.trim().to_string()));
+
+        vm.with_value(|v| {
+            v.create_task(
+                name.trim().to_string(),
+                description.trim().to_string(),
+            )
+        });
         on_close.run(());
     };
 
     view! {
         <div class="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl p-4 mb-4">
             <h4 class="m-0 mb-4 text-base font-semibold text-gray-900 dark:text-white">"Create New Task"</h4>
-            
+
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Task Name"</label>
                 <input
@@ -38,7 +43,7 @@ pub fn TaskCreationForm(
                     }
                 />
             </div>
-            
+
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Description (Optional)"</label>
                 <textarea
@@ -50,7 +55,7 @@ pub fn TaskCreationForm(
                     }
                 ></textarea>
             </div>
-            
+
             <div class="flex gap-2 justify-end mt-4">
                 <button
                     class="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
@@ -59,7 +64,7 @@ pub fn TaskCreationForm(
                 >
                     "Create Task"
                 </button>
-                
+
                 <button
                     class="bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-500 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-gray-200 dark:hover:bg-slate-500"
                     on:click=move |_| on_close.run(())

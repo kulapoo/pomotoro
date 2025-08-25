@@ -1,7 +1,5 @@
 use leptos::prelude::{ReadSignal, WriteSignal};
 
-
-
 pub trait ViewModel {
     type State: Clone + 'static;
 
@@ -9,4 +7,3 @@ pub trait ViewModel {
     fn state(&self) -> ReadSignal<Self::State>;
     fn set_state(&self) -> WriteSignal<Self::State>;
 }
-

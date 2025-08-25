@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use infra::adapters::{TimerService, InMemoryTaskRepository};
 use domain::TaskRepository;
+use infra::adapters::{InMemoryTaskRepository, TimerService};
+use std::sync::Arc;
 
 /// Timer domain test context
 pub struct TimerTestContext {
@@ -13,8 +13,9 @@ impl TimerTestContext {
         let task_defaults = domain::TaskDefaults::default();
         Self {
             timer_service: Arc::new(TimerService::new()),
-            task_repo: Arc::new(InMemoryTaskRepository::with_default_task(&task_defaults)),
+            task_repo: Arc::new(InMemoryTaskRepository::with_default_task(
+                &task_defaults,
+            )),
         }
     }
-
 }

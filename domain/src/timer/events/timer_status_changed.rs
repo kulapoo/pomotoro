@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::timer::{Status, Phase};
+use crate::timer::{Phase, Status};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

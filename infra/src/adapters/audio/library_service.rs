@@ -1,6 +1,6 @@
-use domain::{AudioLibrary, AudioAsset, AudioCategory, Result, Error};
-use usecases::audio::manage_library::AudioLibraryService;
+use domain::{AudioAsset, AudioCategory, AudioLibrary, Error, Result};
 use std::sync::RwLock;
+use usecases::audio::manage_library::AudioLibraryService;
 
 pub struct InMemoryAudioLibraryService {
     library: RwLock<AudioLibrary>,
@@ -9,7 +9,7 @@ pub struct InMemoryAudioLibraryService {
 impl InMemoryAudioLibraryService {
     pub fn new() -> Self {
         let mut library = AudioLibrary::new();
-        
+
         // Add default notification sounds
         library.add_asset(AudioAsset {
             id: "session-complete-bell".to_string(),
@@ -18,7 +18,7 @@ impl InMemoryAudioLibraryService {
             category: AudioCategory::NotificationSound,
             duration_ms: Some(2000),
         });
-        
+
         library.add_asset(AudioAsset {
             id: "break-complete-chime".to_string(),
             name: "Break Complete Chime".to_string(),
@@ -26,7 +26,7 @@ impl InMemoryAudioLibraryService {
             category: AudioCategory::NotificationSound,
             duration_ms: Some(1500),
         });
-        
+
         library.add_asset(AudioAsset {
             id: "task-complete-success".to_string(),
             name: "Task Complete Success".to_string(),
@@ -34,7 +34,7 @@ impl InMemoryAudioLibraryService {
             category: AudioCategory::NotificationSound,
             duration_ms: Some(2500),
         });
-        
+
         library.add_asset(AudioAsset {
             id: "phase-transition-soft".to_string(),
             name: "Phase Transition".to_string(),
@@ -42,7 +42,7 @@ impl InMemoryAudioLibraryService {
             category: AudioCategory::NotificationSound,
             duration_ms: Some(1000),
         });
-        
+
         Self {
             library: RwLock::new(library),
         }
@@ -57,7 +57,9 @@ impl Default for InMemoryAudioLibraryService {
 
 impl AudioLibraryService for InMemoryAudioLibraryService {
     fn get_library(&self) -> Result<AudioLibrary> {
-        Ok(self.library.read()
+        Ok(self
+            .library
+            .read()
             .map_err(|e| Error::ConfigurationError {
                 message: format!("Failed to read library: {e}"),
             })?
@@ -65,7 +67,8 @@ impl AudioLibraryService for InMemoryAudioLibraryService {
     }
 
     fn add_asset(&mut self, asset: AudioAsset) -> Result<()> {
-        self.library.write()
+        self.library
+            .write()
             .map_err(|e| Error::ConfigurationError {
                 message: format!("Failed to write library: {e}"),
             })?
@@ -74,7 +77,9 @@ impl AudioLibraryService for InMemoryAudioLibraryService {
     }
 
     fn remove_asset(&mut self, asset_id: &str) -> Result<bool> {
-        Ok(self.library.write()
+        Ok(self
+            .library
+            .write()
             .map_err(|e| Error::ConfigurationError {
                 message: format!("Failed to write library: {e}"),
             })?
@@ -83,7 +88,9 @@ impl AudioLibraryService for InMemoryAudioLibraryService {
     }
 
     fn get_asset(&self, asset_id: &str) -> Result<Option<AudioAsset>> {
-        Ok(self.library.read()
+        Ok(self
+            .library
+            .read()
             .map_err(|e| Error::ConfigurationError {
                 message: format!("Failed to read library: {e}"),
             })?
@@ -91,8 +98,13 @@ impl AudioLibraryService for InMemoryAudioLibraryService {
             .cloned())
     }
 
-    fn get_assets_by_category(&self, category: AudioCategory) -> Result<Vec<AudioAsset>> {
-        Ok(self.library.read()
+    fn get_assets_by_category(
+        &self,
+        category: AudioCategory,
+    ) -> Result<Vec<AudioAsset>> {
+        Ok(self
+            .library
+            .read()
             .map_err(|e| Error::ConfigurationError {
                 message: format!("Failed to read library: {e}"),
             })?

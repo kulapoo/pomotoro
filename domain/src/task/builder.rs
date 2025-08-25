@@ -1,7 +1,7 @@
+use super::{config::Config, id::Id, status::Status};
+use crate::{AudioConfig, Error, Result, TaskDefaults};
 use chrono::{DateTime, Utc};
 use std::time::Duration;
-use crate::{AudioConfig, Error, Result, TaskDefaults};
-use super::{id::Id, status::Status, config::Config};
 
 // Default values for Builder - autonomous construction without external dependencies
 const DEFAULT_WORK_DURATION: Duration = Duration::from_secs(25 * 60);
@@ -55,9 +55,7 @@ impl Builder {
 
     /// Create a builder with name and max_sessions set (common pattern)
     pub fn with_name_and_sessions(name: String, max_sessions: u8) -> Self {
-        Self::new()
-            .name(name)
-            .max_sessions(max_sessions)
+        Self::new().name(name).max_sessions(max_sessions)
     }
 
     /// Create a builder for a default task
@@ -168,8 +166,7 @@ impl Builder {
 
     /// Mark the task as completed
     pub fn completed(self) -> Self {
-        self.status(Status::Completed)
-            .completed_at(Utc::now())
+        self.status(Status::Completed).completed_at(Utc::now())
     }
 
     /// Build the Task with centralized validation using built-in defaults
@@ -182,12 +179,16 @@ impl Builder {
 
         let max_sessions = self.max_sessions.unwrap_or(DEFAULT_MAX_SESSIONS);
         if max_sessions == 0 {
-            return Err(Error::InvalidSessionCount { count: max_sessions });
+            return Err(Error::InvalidSessionCount {
+                count: max_sessions,
+            });
         }
 
         let current_sessions = self.current_sessions.unwrap_or(0);
         if current_sessions > max_sessions {
-            return Err(Error::InvalidSessionCount { count: current_sessions });
+            return Err(Error::InvalidSessionCount {
+                count: current_sessions,
+            });
         }
 
         // Create or use provided config
@@ -239,21 +240,29 @@ impl Builder {
     }
 
     /// Build the Task with custom defaults (for configuration management)
-    pub fn build_with_defaults(self, defaults: &TaskDefaults) -> Result<super::Task> {
+    pub fn build_with_defaults(
+        self,
+        defaults: &TaskDefaults,
+    ) -> Result<super::Task> {
         // Validate required fields
         let name = self.name.ok_or(Error::EmptyTaskName)?;
         if name.trim().is_empty() {
             return Err(Error::EmptyTaskName);
         }
 
-        let max_sessions = self.max_sessions.unwrap_or(defaults.max_sessions_default);
+        let max_sessions =
+            self.max_sessions.unwrap_or(defaults.max_sessions_default);
         if max_sessions == 0 {
-            return Err(Error::InvalidSessionCount { count: max_sessions });
+            return Err(Error::InvalidSessionCount {
+                count: max_sessions,
+            });
         }
 
         let current_sessions = self.current_sessions.unwrap_or(0);
         if current_sessions > max_sessions {
-            return Err(Error::InvalidSessionCount { count: current_sessions });
+            return Err(Error::InvalidSessionCount {
+                count: current_sessions,
+            });
         }
 
         // Create or use provided config

@@ -1,10 +1,10 @@
-use domain::Config;
 use super::config_dto::ConfigDto;
-use std::sync::{Arc, RwLock};
-use std::path::PathBuf;
+use domain::Config;
 use serde_json;
 use std::fs;
 use std::io::{self, Write};
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
 
@@ -49,7 +49,6 @@ impl FileConfigRepo {
             cache: Arc::new(RwLock::new(None)),
         })
     }
-
 
     fn load_from_file(&self) -> Result<Config, ConfigError> {
         if !self.config_path.exists() {

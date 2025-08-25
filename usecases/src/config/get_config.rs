@@ -1,7 +1,9 @@
 use domain::{Config, ConfigRepository, Result};
 use std::sync::Arc;
 
-pub async fn get_config(config_repo: &Arc<dyn ConfigRepository + Send + Sync>) -> Result<Config> {
+pub async fn get_config(
+    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
+) -> Result<Config> {
     match config_repo.config_exists().await? {
         true => config_repo.get_config().await,
         false => {
@@ -11,7 +13,6 @@ pub async fn get_config(config_repo: &Arc<dyn ConfigRepository + Send + Sync>) -
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,6 @@
-use leptos::prelude::*;
 use crate::pages::task::{TaskList, TasksViewModel};
 use crate::utils::ViewModel;
+use leptos::prelude::*;
 
 #[component]
 pub fn TaskPage() -> impl IntoView {

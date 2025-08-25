@@ -1,4 +1,4 @@
-use domain::{AudioLibrary, AudioAsset, AudioCategory, Result, Error};
+use domain::{AudioAsset, AudioCategory, AudioLibrary, Error, Result};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -28,7 +28,10 @@ pub trait AudioLibraryService: Send + Sync {
     fn add_asset(&mut self, asset: AudioAsset) -> Result<()>;
     fn remove_asset(&mut self, asset_id: &str) -> Result<bool>;
     fn get_asset(&self, asset_id: &str) -> Result<Option<AudioAsset>>;
-    fn get_assets_by_category(&self, category: AudioCategory) -> Result<Vec<AudioAsset>>;
+    fn get_assets_by_category(
+        &self,
+        category: AudioCategory,
+    ) -> Result<Vec<AudioAsset>>;
     fn save_library(&self, library: &AudioLibrary) -> Result<()>;
 }
 
@@ -56,8 +59,11 @@ pub async fn add_audio_asset(
     cmd: AddAudioAssetCmd,
 ) -> Result<AudioAsset> {
     if !(0.0..=1.0).contains(&cmd.default_volume) {
-        return Err(Error::ConfigurationError { 
-            message: format!("Default volume must be between 0.0 and 1.0, got {}", cmd.default_volume)
+        return Err(Error::ConfigurationError {
+            message: format!(
+                "Default volume must be between 0.0 and 1.0, got {}",
+                cmd.default_volume
+            ),
         });
     }
 
@@ -157,8 +163,13 @@ mod tests {
             Ok(self.library.get_asset(asset_id).cloned())
         }
 
-        fn get_assets_by_category(&self, category: AudioCategory) -> Result<Vec<AudioAsset>> {
-            Ok(self.library.assets
+        fn get_assets_by_category(
+            &self,
+            category: AudioCategory,
+        ) -> Result<Vec<AudioAsset>> {
+            Ok(self
+                .library
+                .assets
                 .values()
                 .filter(|asset| asset.category == category)
                 .cloned()
@@ -174,10 +185,14 @@ mod tests {
     async fn should_add_audio_asset_successfully() {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.mp3");
-        File::create(&file_path).unwrap().write_all(b"fake audio data").unwrap();
+        File::create(&file_path)
+            .unwrap()
+            .write_all(b"fake audio data")
+            .unwrap();
 
-        let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
-        
+        let service: Arc<Mutex<dyn AudioLibraryService>> =
+            Arc::new(Mutex::new(MockLibraryService::new()));
+
         let cmd = AddAudioAssetCmd {
             id: "test-asset".to_string(),
             name: "Test Asset".to_string(),
@@ -188,7 +203,7 @@ mod tests {
         };
 
         let asset = add_audio_asset(&service, cmd).await.unwrap();
-        
+
         assert_eq!(asset.id, "test-asset");
         assert_eq!(asset.name, "Test Asset");
         assert_eq!(asset.category, AudioCategory::BackgroundAmbient);
@@ -200,8 +215,9 @@ mod tests {
         let file_path = temp_dir.path().join("test.mp3");
         File::create(&file_path).unwrap();
 
-        let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
-        
+        let service: Arc<Mutex<dyn AudioLibraryService>> =
+            Arc::new(Mutex::new(MockLibraryService::new()));
+
         let cmd = AddAudioAssetCmd {
             id: "test-asset".to_string(),
             name: "Test Asset".to_string(),
@@ -217,8 +233,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_with_nonexistent_file() {
-        let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
-        
+        let service: Arc<Mutex<dyn AudioLibraryService>> =
+            Arc::new(Mutex::new(MockLibraryService::new()));
+
         let cmd = AddAudioAssetCmd {
             id: "test-asset".to_string(),
             name: "Test Asset".to_string(),
@@ -234,8 +251,9 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_library_successfully() {
-        let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
-        
+        let service: Arc<Mutex<dyn AudioLibraryService>> =
+            Arc::new(Mutex::new(MockLibraryService::new()));
+
         let query = GetAudioLibraryQuery {
             category_filter: None,
         };
@@ -250,8 +268,9 @@ mod tests {
         let file_path = temp_dir.path().join("test.mp3");
         File::create(&file_path).unwrap();
 
-        let service: Arc<Mutex<dyn AudioLibraryService>> = Arc::new(Mutex::new(MockLibraryService::new()));
-        
+        let service: Arc<Mutex<dyn AudioLibraryService>> =
+            Arc::new(Mutex::new(MockLibraryService::new()));
+
         let add_cmd = AddAudioAssetCmd {
             id: "test-asset".to_string(),
             name: "Test Asset".to_string(),

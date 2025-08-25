@@ -31,7 +31,10 @@ pub async fn get_task_queue(
     query: TaskQueueQuery,
 ) -> Result<TaskQueueInfo> {
     let active_task_id = if let Some(id_str) = query.active_task_id {
-        Some(TaskId::from_string(&id_str).map_err(|_| Error::TaskNotFound { id: id_str })?)
+        Some(
+            TaskId::from_string(&id_str)
+                .map_err(|_| Error::TaskNotFound { id: id_str })?,
+        )
     } else {
         None
     };
@@ -73,7 +76,10 @@ pub async fn get_task_queue_with_priorities(
     active_task_id: Option<String>,
 ) -> Result<TaskQueueInfo> {
     let active_id = if let Some(id_str) = active_task_id {
-        Some(TaskId::from_string(&id_str).map_err(|_| Error::TaskNotFound { id: id_str })?)
+        Some(
+            TaskId::from_string(&id_str)
+                .map_err(|_| Error::TaskNotFound { id: id_str })?,
+        )
     } else {
         None
     };
@@ -138,8 +144,10 @@ pub async fn get_task_queue_summary(
         .filter(|t| t.status == TaskStatus::Paused)
         .count();
 
-    let total_sessions: u32 = all_tasks.iter().map(|t| t.max_sessions as u32).sum();
-    let completed_sessions: u32 = all_tasks.iter().map(|t| t.current_sessions as u32).sum();
+    let total_sessions: u32 =
+        all_tasks.iter().map(|t| t.max_sessions as u32).sum();
+    let completed_sessions: u32 =
+        all_tasks.iter().map(|t| t.current_sessions as u32).sum();
 
     Ok(TaskQueueSummary {
         total_tasks,
@@ -172,7 +180,8 @@ mod tests {
     use super::*;
     use domain::InMemoryTaskRepository;
     use domain::{
-        EventPublisher, NoOpEventPublisher, TaskCyclingStrategy, TestTaskCyclingService
+        EventPublisher, NoOpEventPublisher, TaskCyclingStrategy,
+        TestTaskCyclingService,
     };
 
     async fn setup() -> (
@@ -183,10 +192,13 @@ mod tests {
     ) {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> =
             Arc::new(InMemoryTaskRepository::new());
-        let event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(
-            TestTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
-        );
+        let event_publisher: Arc<dyn EventPublisher + Send + Sync> =
+            Arc::new(NoOpEventPublisher);
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> =
+            Arc::new(TestTaskCyclingService::new(
+                task_repo.clone(),
+                TaskCyclingStrategy::RoundRobin,
+            ));
 
         let task1 = Task::new("Task 1".to_string(), 4).unwrap();
         let task2 = Task::new("Task 2".to_string(), 3).unwrap();
@@ -250,7 +262,8 @@ mod tests {
     async fn should_get_active_task_queue_only() {
         let (_task_repo, _, cycling_service, _) = setup().await;
 
-        let active_tasks = get_active_task_queue(&cycling_service).await.unwrap();
+        let active_tasks =
+            get_active_task_queue(&cycling_service).await.unwrap();
 
         assert_eq!(active_tasks.len(), 2);
         assert!(active_tasks.iter().all(|t| !t.is_completed()));
@@ -260,10 +273,12 @@ mod tests {
     async fn should_get_task_queue_with_priorities() {
         let (_task_repo, _, cycling_service, tasks) = setup().await;
 
-        let queue_info =
-            get_task_queue_with_priorities(&cycling_service, Some(tasks[1].id.to_string()))
-                .await
-                .unwrap();
+        let queue_info = get_task_queue_with_priorities(
+            &cycling_service,
+            Some(tasks[1].id.to_string()),
+        )
+        .await
+        .unwrap();
 
         assert_eq!(queue_info.tasks[0].id, tasks[1].id);
         assert_eq!(queue_info.current_position, Some(0));
@@ -289,10 +304,13 @@ mod tests {
     async fn should_handle_empty_queue() {
         let task_repo: Arc<dyn TaskRepository + Send + Sync> =
             Arc::new(InMemoryTaskRepository::new());
-        let _event_publisher: Arc<dyn EventPublisher + Send + Sync> = Arc::new(NoOpEventPublisher);
-        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> = Arc::new(
-            TestTaskCyclingService::new(task_repo.clone(), TaskCyclingStrategy::RoundRobin),
-        );
+        let _event_publisher: Arc<dyn EventPublisher + Send + Sync> =
+            Arc::new(NoOpEventPublisher);
+        let cycling_service: Arc<dyn TaskCyclerService + Send + Sync> =
+            Arc::new(TestTaskCyclingService::new(
+                task_repo.clone(),
+                TaskCyclingStrategy::RoundRobin,
+            ));
 
         let query = TaskQueueQuery {
             include_completed: false,

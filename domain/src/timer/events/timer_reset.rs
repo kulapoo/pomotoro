@@ -12,7 +12,11 @@ pub struct Reset {
 }
 
 impl Reset {
-    pub fn new(active_entity_id: Option<String>, phase: Phase, version: u64) -> Self {
+    pub fn new(
+        active_entity_id: Option<String>,
+        phase: Phase,
+        version: u64,
+    ) -> Self {
         Self {
             active_entity_id,
             phase,
