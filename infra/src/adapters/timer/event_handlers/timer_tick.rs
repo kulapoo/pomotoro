@@ -27,7 +27,7 @@ impl EventHandler for TimerTickHandler {
             self.app_handle
                 .emit("timer:tick", timer_tick.clone())
                 .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to emit timer tick event: {}", e),
+                    message: format!("Failed to emit timer tick event: {e}"),
                 })?;
         }
         Ok(())

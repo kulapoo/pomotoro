@@ -140,7 +140,7 @@ impl TimerViewModel {
         let seconds = state.remaining_seconds();
         let minutes = seconds / 60;
         let secs = seconds % 60;
-        format!("{:02}:{:02}", minutes, secs)
+        format!("{minutes:02}:{secs:02}")
     }
 
     pub fn get_progress_percentage(&self) -> f64 {

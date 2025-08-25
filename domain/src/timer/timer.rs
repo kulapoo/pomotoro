@@ -7,21 +7,13 @@ use super::{
 use crate::{EventPublisher, TimerConfiguration};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Timer {
     state: TimerState,
     #[serde(skip)]
     event_publisher: Option<Box<dyn EventPublisher>>,
 }
 
-impl Default for Timer {
-    fn default() -> Self {
-        Self {
-            state: TimerState::default(),
-            event_publisher: None,
-        }
-    }
-}
 
 impl std::fmt::Debug for Timer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -203,7 +195,7 @@ impl Timer {
         let seconds = self.state.remaining_seconds();
         let minutes = seconds / 60;
         let secs = seconds % 60;
-        format!("{:02}:{:02}", minutes, secs)
+        format!("{minutes:02}:{secs:02}")
     }
 
     pub fn phase_name(&self) -> &'static str {
@@ -274,7 +266,7 @@ impl Timer {
             ((count - 1) % sessions_until_long) + 1
         };
 
-        format!("Session {}/{}", current_in_cycle, sessions_until_long)
+        format!("Session {current_in_cycle}/{sessions_until_long}")
     }
 
     pub fn is_running(&self) -> bool {

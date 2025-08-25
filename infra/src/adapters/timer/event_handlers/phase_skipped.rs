@@ -29,8 +29,7 @@ impl EventHandler for PhaseSkippedHandler {
                 .emit("timer:phase_skipped", phase_skipped.clone())
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
-                        "Failed to emit phase skipped event: {}",
-                        e
+                        "Failed to emit phase skipped event: {e}"
                     ),
                 })?;
         }

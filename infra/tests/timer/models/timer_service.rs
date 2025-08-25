@@ -35,14 +35,6 @@ impl TimerTestService {
         Ok(())
     }
 
-    pub async fn resume_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let state = TimerServiceTrait::get_state(&*self.service).await?;
-        if state.is_paused() {
-            TimerServiceTrait::toggle_pause(&*self.service).await?;
-        }
-        Ok(())
-    }
-
     pub async fn pause_timer(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.service.toggle_pause().await?;
         Ok(())

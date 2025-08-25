@@ -29,8 +29,7 @@ impl EventHandler for PhaseCompletedHandler {
                 .emit("timer:phase_completed", phase_completed.clone())
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
-                        "Failed to emit phase completed event: {}",
-                        e
+                        "Failed to emit phase completed event: {e}"
                     ),
                 })?;
         }

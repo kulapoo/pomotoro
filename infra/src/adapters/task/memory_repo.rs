@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use domain::config::task_defaults;
 use domain::{
     Error, Readable, Result, Task, TaskBuilder, TaskDefaults, TaskId,
     TaskRepository, TaskStatus, Writable,

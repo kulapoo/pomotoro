@@ -162,7 +162,7 @@ impl TasksViewModel {
             }
 
             let args = UpdateTaskArgs {
-                id: task_id.clone(),
+                id: task_id,
                 name,
                 description,
             };
@@ -192,9 +192,7 @@ impl TasksViewModel {
 
         spawn_local(async move {
             if let Ok(args_value) = to_value(&task_id) {
-                if let Ok(_) =
-                    invoke_command(event_names::task::DELETE, args_value).await
-                {
+                if (invoke_command(event_names::task::DELETE, args_value).await).is_ok() {
                     let mut current_tasks = tasks.get_untracked();
                     current_tasks.retain(|t| t.id != task_id);
                     set_tasks.set(current_tasks);

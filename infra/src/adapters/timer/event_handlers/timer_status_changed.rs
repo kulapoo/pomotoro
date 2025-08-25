@@ -29,8 +29,7 @@ impl EventHandler for TimerStatusChangedHandler {
                 .emit("timer:status_changed", status_changed.clone())
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
-                        "Failed to emit timer status changed event: {}",
-                        e
+                        "Failed to emit timer status changed event: {e}"
                     ),
                 })?;
         }

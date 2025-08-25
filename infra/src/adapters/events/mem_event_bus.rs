@@ -14,10 +14,11 @@ struct HandlerMetadata {
     /// Name of the handler (from EventHandler::name())
     name: String,
     /// The actual closure that executes the handler
-    handler_fn: Arc<dyn Fn(&dyn Event) + Send + Sync>,
+    handler_fn: EventHandlerFn,
 }
 
 type HandlersMap = HashMap<TypeId, Vec<HandlerMetadata>>;
+type EventHandlerFn = Arc<dyn Fn(&dyn Event) + Send + Sync>;
 
 pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}
 
@@ -156,8 +157,7 @@ impl EventSubscriber for InMemoryEventBus {
         let handler_arc = Arc::new(handler);
 
         eprintln!(
-            "Subscribing handler '{}' with ID {} for event type",
-            handler_name, handler_id
+            "Subscribing handler '{handler_name}' with ID {handler_id} for event type"
         );
 
         let handler_fn = Arc::new(move |event: &dyn Event| {
@@ -176,7 +176,7 @@ impl EventSubscriber for InMemoryEventBus {
 
             handle.spawn(async move {
                 if let Err(e) = handler_clone.handle(event_box).await {
-                    eprintln!("Event handler error: {}", e);
+                    eprintln!("Event handler error: {e}");
                 }
             });
         }) as Arc<dyn Fn(&dyn Event) + Send + Sync>;
@@ -207,7 +207,7 @@ impl EventSubscriber for InMemoryEventBus {
             handlers.remove(&event_type).map(|v| v.len()).unwrap_or(0);
 
         if removed_count > 0 {
-            eprintln!("Cleared {} handlers for event type", removed_count);
+            eprintln!("Cleared {removed_count} handlers for event type");
         }
 
         Ok(())
@@ -228,8 +228,7 @@ impl EventSubscriber for InMemoryEventBus {
 
             if removed_count > 0 {
                 eprintln!(
-                    "Unsubscribed {} handler(s) named '{}' from event type",
-                    removed_count, handler_name
+                    "Unsubscribed {removed_count} handler(s) named '{handler_name}' from event type"
                 );
 
                 if event_handlers.is_empty() {
@@ -288,15 +287,6 @@ mod tests {
                 notify,
             }
         }
-
-        async fn wait_for_call(&self, timeout_ms: u64) -> bool {
-            tokio::time::timeout(
-                Duration::from_millis(timeout_ms),
-                self.notify.notified(),
-            )
-            .await
-            .is_ok()
-        }
     }
 
     #[async_trait]
@@ -333,7 +323,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_subscribe_and_publish_events() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
         let notify = Arc::new(Notify::new());
 
@@ -375,7 +365,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_handle_multiple_handlers_for_same_event() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count1 = Arc::new(AtomicUsize::new(0));
         let call_count2 = Arc::new(AtomicUsize::new(0));
         let notify1 = Arc::new(Notify::new());
@@ -436,7 +426,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_unsubscribe_by_name() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
         let notify = Arc::new(Notify::new());
 
@@ -509,7 +499,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_unsubscribe_handler() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
 
         let handler =
@@ -527,7 +517,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_clear_handlers_for_type() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
 
         let handler =
@@ -571,7 +561,7 @@ mod tests {
 
     #[test]
     fn should_list_handlers_for_type() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
 
         let handler1 =
             TestEventHandler::new("Handler1", Arc::new(AtomicUsize::new(0)));
@@ -592,7 +582,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_handle_batch_publish() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
         let call_count = Arc::new(AtomicUsize::new(0));
 
         let handler =
@@ -629,7 +619,7 @@ mod tests {
 
     #[test]
     fn should_handle_duplicate_handler_names() {
-        let mut bus = InMemoryEventBus::new();
+        let bus = InMemoryEventBus::new();
 
         let handler1 =
             TestEventHandler::new("Handler1", Arc::new(AtomicUsize::new(0)));

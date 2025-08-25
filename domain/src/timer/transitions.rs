@@ -32,20 +32,21 @@ impl StateTransitions {
                 let entity_id = active_entity.clone();
                 let duration = configuration.work_duration.as_secs() as u32;
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-                events.push(Box::new(Started::new(
-                    entity_id.clone(),
-                    Phase::Work,
-                    duration,
-                    1,
-                )));
-                events.push(Box::new(WorkSessionStarted::new(
-                    entity_id,
-                    duration,
-                    session_count,
-                    1,
-                    1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    Box::new(Started::new(
+                        entity_id.clone(),
+                        Phase::Work,
+                        duration,
+                        1,
+                    )),
+                    Box::new(WorkSessionStarted::new(
+                        entity_id,
+                        duration,
+                        session_count,
+                        1,
+                        1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Working {
@@ -62,7 +63,7 @@ impl StateTransitions {
                 })
             }
             _ => Err(Error::InvalidStateTransition {
-                from: format!("{:?}", state),
+                from: format!("{state:?}"),
                 to: "Start".to_string(),
             }),
         }
@@ -82,13 +83,14 @@ impl StateTransitions {
                 let phase = Self::get_phase_from_state(&state);
                 let entity_id = state.active_entity_id();
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-                events.push(Box::new(Paused::new(
-                    entity_id,
-                    phase,
-                    remaining_seconds,
-                    1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    Box::new(Paused::new(
+                        entity_id,
+                        phase,
+                        remaining_seconds,
+                        1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Paused {
@@ -122,10 +124,11 @@ impl StateTransitions {
                 let entity_id = paused_from.active_entity_id();
                 let remaining = paused_from.remaining_seconds();
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-                events.push(Box::new(Started::new(
-                    entity_id, phase, remaining, 1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    Box::new(Started::new(
+                        entity_id, phase, remaining, 1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: *paused_from,
@@ -136,7 +139,7 @@ impl StateTransitions {
                 })
             }
             _ => Err(Error::InvalidStateTransition {
-                from: format!("{:?}", state),
+                from: format!("{state:?}"),
                 to: "Resume".to_string(),
             }),
         }
@@ -151,12 +154,13 @@ impl StateTransitions {
             _ => 0,
         };
 
-        let mut events: Vec<Box<dyn Event>> = Vec::new();
-        events.push(Box::new(Reset::new(
-            active_entity.clone(),
-            Phase::Work,
-            1,
-        )));
+        let events: Vec<Box<dyn Event>> = vec![
+            Box::new(Reset::new(
+                active_entity.clone(),
+                Phase::Work,
+                1,
+            )),
+        ];
 
         Ok(TransitionResult {
             new_state: TimerState::Idle {
@@ -227,34 +231,32 @@ impl StateTransitions {
                         )
                     };
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-
-                // Phase completed event
-                events.push(Box::new(PhaseCompleted::new(
-                    entity_id.clone(),
-                    Phase::Work,
-                    to_phase,
-                    new_session_count,
-                    new_session_count,
-                    1,
-                )));
-
-                // Work session completed
-                events.push(Box::new(WorkSessionCompleted::new(
-                    entity_id.clone(),
-                    work_duration,
-                    new_session_count,
-                    1,
-                    1,
-                )));
-
-                // Break session started
-                events.push(Box::new(BreakSessionStarted::new(
-                    entity_id,
-                    to_phase,
-                    break_duration,
-                    1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    // Phase completed event
+                    Box::new(PhaseCompleted::new(
+                        entity_id.clone(),
+                        Phase::Work,
+                        to_phase,
+                        new_session_count,
+                        new_session_count,
+                        1,
+                    )),
+                    // Work session completed
+                    Box::new(WorkSessionCompleted::new(
+                        entity_id.clone(),
+                        work_duration,
+                        new_session_count,
+                        1,
+                        1,
+                    )),
+                    // Break session started
+                    Box::new(BreakSessionStarted::new(
+                        entity_id,
+                        to_phase,
+                        break_duration,
+                        1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: next_state,
@@ -279,34 +281,32 @@ impl StateTransitions {
                 let work_duration =
                     configuration.work_duration.as_secs() as u32;
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-
-                // Phase completed
-                events.push(Box::new(PhaseCompleted::new(
-                    entity_id.clone(),
-                    Phase::ShortBreak,
-                    Phase::Work,
-                    session_count,
-                    session_count,
-                    1,
-                )));
-
-                // Break completed
-                events.push(Box::new(BreakSessionCompleted::new(
-                    entity_id.clone(),
-                    Phase::ShortBreak,
-                    break_duration,
-                    1,
-                )));
-
-                // Work session started
-                events.push(Box::new(WorkSessionStarted::new(
-                    entity_id,
-                    work_duration,
-                    session_count,
-                    1,
-                    1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    // Phase completed
+                    Box::new(PhaseCompleted::new(
+                        entity_id.clone(),
+                        Phase::ShortBreak,
+                        Phase::Work,
+                        session_count,
+                        session_count,
+                        1,
+                    )),
+                    // Break completed
+                    Box::new(BreakSessionCompleted::new(
+                        entity_id.clone(),
+                        Phase::ShortBreak,
+                        break_duration,
+                        1,
+                    )),
+                    // Work session started
+                    Box::new(WorkSessionStarted::new(
+                        entity_id,
+                        work_duration,
+                        session_count,
+                        1,
+                        1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Working {
@@ -339,34 +339,32 @@ impl StateTransitions {
                 let work_duration =
                     configuration.work_duration.as_secs() as u32;
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-
-                // Phase completed
-                events.push(Box::new(PhaseCompleted::new(
-                    entity_id.clone(),
-                    Phase::LongBreak,
-                    Phase::Work,
-                    session_count,
-                    session_count,
-                    1,
-                )));
-
-                // Break completed
-                events.push(Box::new(BreakSessionCompleted::new(
-                    entity_id.clone(),
-                    Phase::LongBreak,
-                    break_duration,
-                    1,
-                )));
-
-                // Work session started
-                events.push(Box::new(WorkSessionStarted::new(
-                    entity_id,
-                    work_duration,
-                    if reset_sessions { 0 } else { session_count },
-                    1,
-                    1,
-                )));
+                let events: Vec<Box<dyn Event>> = vec![
+                    // Phase completed
+                    Box::new(PhaseCompleted::new(
+                        entity_id.clone(),
+                        Phase::LongBreak,
+                        Phase::Work,
+                        session_count,
+                        session_count,
+                        1,
+                    )),
+                    // Break completed
+                    Box::new(BreakSessionCompleted::new(
+                        entity_id.clone(),
+                        Phase::LongBreak,
+                        break_duration,
+                        1,
+                    )),
+                    // Work session started
+                    Box::new(WorkSessionStarted::new(
+                        entity_id,
+                        work_duration,
+                        if reset_sessions { 0 } else { session_count },
+                        1,
+                        1,
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Working {
@@ -387,7 +385,7 @@ impl StateTransitions {
                 })
             }
             _ => Err(Error::InvalidStateTransition {
-                from: format!("{:?}", state),
+                from: format!("{state:?}"),
                 to: "CompletePhase".to_string(),
             }),
         }
@@ -467,17 +465,16 @@ impl StateTransitions {
                 let old_entity = state.active_entity_id();
                 let phase = Phase::Work; // Idle state is always in Work phase
 
-                let mut events: Vec<Box<dyn Event>> = Vec::new();
-
-                // Only add switch event if entity actually changed
-                if old_entity != new_entity {
-                    events.push(Box::new(ActiveTaskSwitched::new(
+                let events: Vec<Box<dyn Event>> = if old_entity != new_entity {
+                    vec![Box::new(ActiveTaskSwitched::new(
                         old_entity,
                         new_entity.clone(),
                         phase,
                         1,
-                    )));
-                }
+                    ))]
+                } else {
+                    vec![]
+                };
 
                 let configuration = state.configuration().clone();
                 let session_count = state.session_count();
@@ -495,7 +492,7 @@ impl StateTransitions {
                 })
             }
             _ => Err(Error::InvalidStateTransition {
-                from: format!("{:?}", state),
+                from: format!("{state:?}"),
                 to: "SwitchEntity".to_string(),
             }),
         }

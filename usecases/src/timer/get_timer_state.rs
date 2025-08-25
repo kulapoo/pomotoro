@@ -48,17 +48,6 @@ mod tests {
                 load_called: Arc::new(RwLock::new(false)),
             }
         }
-
-        fn new_with_task(task_id: TaskId) -> Self {
-            Self {
-                state: Arc::new(RwLock::new(TimerState::Idle {
-                    configuration: TimerConfiguration::default(),
-                    session_count: 0,
-                    active_entity: Some(task_id.to_string()),
-                })),
-                load_called: Arc::new(RwLock::new(false)),
-            }
-        }
     }
 
     #[async_trait]

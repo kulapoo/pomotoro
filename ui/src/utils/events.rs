@@ -5,7 +5,6 @@ use wasm_bindgen::prelude::*;
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen;
 
 #[wasm_bindgen]
 extern "C" {

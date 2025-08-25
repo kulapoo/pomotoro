@@ -4,7 +4,7 @@ use domain::timer::TimerService as DomainTimerService;
 use domain::{Phase, TaskId, TimerState};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 use usecases::timer::{
     StartTimerSessionCmd, SwitchTimerTaskCmd,
     get_timer_state as app_get_timer_state, pause_timer_session,
