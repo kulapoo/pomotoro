@@ -1,3 +1,4 @@
+use crate::components::{ErrorInfo, handle_command_error};
 use domain::{Phase, TimerState, TimerStatus, event_names};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -11,6 +12,8 @@ use crate::utils::{
 pub struct TimerViewModel {
     timer_state: ReadSignal<TimerState>,
     set_timer_state: WriteSignal<TimerState>,
+    error_state: ReadSignal<Option<ErrorInfo>>,
+    set_error_state: WriteSignal<Option<ErrorInfo>>,
 }
 
 impl ViewModel for TimerViewModel {
@@ -18,10 +21,13 @@ impl ViewModel for TimerViewModel {
 
     fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
+        let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
         let vm = Self {
             timer_state,
             set_timer_state,
+            error_state,
+            set_error_state,
         };
 
         vm.initialize();
@@ -38,8 +44,17 @@ impl ViewModel for TimerViewModel {
 }
 
 impl TimerViewModel {
+    pub fn error_state(&self) -> ReadSignal<Option<ErrorInfo>> {
+        self.error_state
+    }
+    
+    pub fn set_error_state(&self) -> WriteSignal<Option<ErrorInfo>> {
+        self.set_error_state
+    }
+
     fn initialize(&self) {
         let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
 
         Effect::new(move |_| {
             spawn_local(async move {
@@ -56,9 +71,9 @@ impl TimerViewModel {
                         }
                     }
                     Err(error) => {
-                        web_sys::console::error_1(
-                            &format!("Failed to get initial timer state: {:?}", error).into()
-                        );
+                        let error_str = format!("Failed to get initial timer state: {:?}", error);
+                        web_sys::console::error_1(&error_str.clone().into());
+                        handle_command_error(error_str, set_error_state);
                     }
                 }
             });
@@ -71,6 +86,7 @@ impl TimerViewModel {
     pub fn start_pause_timer(&self) {
         let current_state = self.timer_state.get_untracked();
         let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             let command = match current_state.status() {
@@ -91,11 +107,9 @@ impl TimerViewModel {
                     }
                 }
                 Err(error) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to execute {}: {:?}", command, error).into()
-                    );
-                    // You could also display this error in the UI
-                    // For now, just log it
+                    let error_str = format!("Failed to execute {}: {:?}", command, error);
+                    web_sys::console::error_1(&error_str.clone().into());
+                    handle_command_error(error_str, set_error_state);
                 }
             }
         });
@@ -103,6 +117,7 @@ impl TimerViewModel {
 
     pub fn reset_timer(&self) {
         let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             match invoke_command_no_args(event_names::timer::RESET).await {
@@ -118,9 +133,9 @@ impl TimerViewModel {
                     }
                 }
                 Err(error) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to reset timer: {:?}", error).into()
-                    );
+                    let error_str = format!("Failed to reset timer: {:?}", error);
+                    web_sys::console::error_1(&error_str.clone().into());
+                    handle_command_error(error_str, set_error_state);
                 }
             }
         });
@@ -128,6 +143,7 @@ impl TimerViewModel {
 
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             match invoke_command_no_args(event_names::timer::SKIP_PHASE).await {
@@ -143,9 +159,9 @@ impl TimerViewModel {
                     }
                 }
                 Err(error) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to skip phase: {:?}", error).into()
-                    );
+                    let error_str = format!("Failed to skip phase: {:?}", error);
+                    web_sys::console::error_1(&error_str.clone().into());
+                    handle_command_error(error_str, set_error_state);
                 }
             }
         });

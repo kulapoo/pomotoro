@@ -16,6 +16,11 @@
   --shadow: 0 10px 30px rgba(0,0,0,0.1);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
+  /* Error colors */
+  --error: #e74c3c;
+  --error-light: #ffebeb;
+  --error-dark: #c0392b;
+  
   /* Spacing variables */
   --sidebar-width: 250px;
   --sidebar-width-collapsed: 60px;
@@ -555,4 +560,126 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-dark);
+}
+
+/* Error Toast Styles */
+.error-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  min-width: 350px;
+  max-width: 500px;
+  background: var(--white);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(231, 76, 60, 0.3);
+  border-left: 4px solid var(--error);
+  animation: slideIn 0.3s ease-out;
+  z-index: 2000;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.error-toast-content {
+  padding: 15px 20px;
+}
+
+.error-toast-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.error-toast-icon {
+  font-size: 20px;
+}
+
+.error-toast-title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--error);
+}
+
+.error-toast-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.error-toast-close:hover {
+  background: var(--error-light);
+  color: var(--error);
+}
+
+.error-toast-body {
+  color: var(--dark);
+}
+
+.error-toast-message {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.error-toast-details {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.error-toast-details summary {
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #666;
+}
+
+.error-toast-details summary:hover {
+  color: var(--error);
+}
+
+.error-toast-context {
+  font-family: 'Courier New', monospace;
+  color: #666;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-toast-recovery {
+  background: var(--error-light);
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  font-size: 14px;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.error-toast-recovery strong {
+  color: var(--error-dark);
 }

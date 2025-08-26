@@ -1,3 +1,4 @@
+use crate::components::ErrorToast;
 use crate::pages::timer::{TimerControls, TimerViewModel};
 use crate::utils::ViewModel;
 use leptos::prelude::*;
@@ -6,8 +7,11 @@ use leptos::prelude::*;
 pub fn TimerPage() -> impl IntoView {
     let vm = StoredValue::new(TimerViewModel::new());
     let timer_state = vm.with_value(|v| v.state());
+    let error_state = vm.with_value(|v| v.error_state());
+    let set_error_state = vm.with_value(|v| v.set_error_state());
 
     view! {
+        <ErrorToast error_signal=error_state set_error=set_error_state />
         <div class="timer-container">
             <div class="current-task-display" id="currentTaskDisplay">
                 "Working on: "{move || {

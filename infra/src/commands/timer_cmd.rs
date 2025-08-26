@@ -24,7 +24,7 @@ pub async fn get_timer_state(
 
     app_get_timer_state(&timer_service_arc)
         .await
-        .context("Failed to get timer state")
+        .context("infra::commands::timer_cmd::get_timer_state - Failed to retrieve timer state")
         .map_err(|e| e.to_string())
 }
 
@@ -41,7 +41,7 @@ pub async fn start_timer(
     let task_id = app_get_timer_state(&timer_service_arc)
         .await
         .map(|s| s.active_entity_id())
-        .context("Failed to get active task ID")
+        .context("infra::commands::timer_cmd::start_timer - Failed to get active task ID")
         .map_err(|e| e.to_string())?;
     info!("Started timer, {} tae", task_id.clone().unwrap_or_default());
     let cmd = StartTimerSessionCmd { task_id };
@@ -53,14 +53,14 @@ pub async fn start_timer(
         cmd,
     )
     .await
-    .context("Failed to start timer session")
+    .context("infra::commands::timer_cmd::start_timer - Failed to execute start timer session")
     .map_err(|e| e.to_string())?;
 
 
 
     app_get_timer_state(&timer_service_arc)
         .await
-        .context("Failed to get updated timer state")
+        .context("infra::commands::timer_cmd - Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
@@ -74,12 +74,12 @@ pub async fn pause_timer(
 
     pause_timer_session(&timer_service_arc, &event_publisher)
         .await
-        .context("Failed to pause timer session")
+        .context("infra::commands::timer_cmd::pause_timer - Failed to toggle pause state")
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc)
         .await
-        .context("Failed to get updated timer state")
+        .context("infra::commands::timer_cmd - Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
@@ -94,12 +94,12 @@ pub async fn reset_timer(
 
     reset_timer_session(&timer_service_arc, &task_repo, &event_publisher)
         .await
-        .context("Failed to reset timer session")
+        .context("infra::commands::timer_cmd::reset_timer - Failed to reset current phase")
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc)
         .await
-        .context("Failed to get updated timer state")
+        .context("infra::commands::timer_cmd - Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
@@ -115,12 +115,12 @@ pub async fn skip_phase(
     let (old_phase, new_phase) =
         skip_timer_phase(&timer_service_arc, &task_repo, &event_publisher)
             .await
-            .context("Failed to skip timer phase")
+            .context("infra::commands::timer_cmd::skip_phase - Failed to skip to next phase")
             .map_err(|e| e.to_string())?;
 
     let state = usecases::timer::get_timer_state(&timer_service_arc)
         .await
-        .context("Failed to get updated timer state after phase skip")
+        .context("infra::commands::timer_cmd::skip_phase - Failed to get updated timer state")
         .map_err(|e| e.to_string())?;
 
     Ok((old_phase, new_phase, state))
