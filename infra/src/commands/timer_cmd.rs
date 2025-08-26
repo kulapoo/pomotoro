@@ -43,7 +43,7 @@ pub async fn start_timer(
         .map(|s| s.active_entity_id())
         .context("infra::commands::timer_cmd::start_timer - Failed to get active task ID")
         .map_err(|e| e.to_string())?;
-    info!("Started timer, {} tae", task_id.clone().unwrap_or_default());
+    info!("Started timer, {}", task_id.clone().unwrap_or_default());
     let cmd = StartTimerSessionCmd { task_id };
 
     start_timer_session(

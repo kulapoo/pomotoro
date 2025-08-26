@@ -11,7 +11,7 @@ uuid = { version = "1.18.0", features = ["v4", "serde", "js"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2.0.16"
 async-trait = "0.1.89"
-
+tracing = "0.1"
 # Async runtime (used in domain, usecases, infra)
 tokio = { version = "1.47.1", features = ["time", "sync", "rt-multi-thread", "test-util", "macros"] }
 
