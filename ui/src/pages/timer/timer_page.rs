@@ -2,6 +2,7 @@ use crate::components::ErrorToast;
 use crate::pages::timer::{TimerControls, TimerViewModel};
 use crate::utils::ViewModel;
 use leptos::prelude::*;
+use web_sys;
 
 #[component]
 pub fn TimerPage() -> impl IntoView {
@@ -9,6 +10,8 @@ pub fn TimerPage() -> impl IntoView {
     let timer_state = vm.with_value(|v| v.state());
     let error_state = vm.with_value(|v| v.error_state());
     let set_error_state = vm.with_value(|v| v.set_error_state());
+
+    web_sys::console::log_1(&format!("Timer state: {:?}", timer_state.get_untracked()).into());
 
     view! {
         <ErrorToast error_signal=error_state set_error=set_error_state />

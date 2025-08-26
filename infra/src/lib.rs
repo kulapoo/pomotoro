@@ -39,11 +39,21 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                let webview = app.get_webview_window("main").unwrap();
+                webview.open_devtools();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(10));
+                    webview.close_devtools();
+                });
+            }
+
             let app_registry =
-                tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
-                    .inspect_err(|e| {
-                        eprintln!("Failed to bootstrap app: {e}");
-                    })?;
+            tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
+                .inspect_err(|e| {
+                    eprintln!("Failed to bootstrap app: {e}");
+                })?;
 
             //  repositories
             app.manage(app_registry.config_repository.clone());

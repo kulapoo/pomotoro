@@ -1,13 +1,24 @@
 use crate::components::{ErrorInfo, handle_command_error};
-use domain::{Phase, TimerState, TimerStatus, event_names};
+use domain::{Phase, TimerState, TimerStatus, TimerTick, event_names};
+use domain::event_names::ui_listeners::timer as timer_event_names;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen;
+use wasm_bindgen::prelude::*;
+use js_sys;
 
 use crate::utils::{
-    ViewModel, invoke_command_no_args, setup_phase_complete_events,
-    setup_timer_events,
+    ViewModel, invoke_command_no_args
 };
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
+    async fn listen(
+        event: &str,
+        callback: &Closure<dyn Fn(JsValue)>,
+    ) -> JsValue;
+}
 
 pub struct TimerViewModel {
     timer_state: ReadSignal<TimerState>,
@@ -47,7 +58,7 @@ impl TimerViewModel {
     pub fn error_state(&self) -> ReadSignal<Option<ErrorInfo>> {
         self.error_state
     }
-    
+
     pub fn set_error_state(&self) -> WriteSignal<Option<ErrorInfo>> {
         self.set_error_state
     }
@@ -57,30 +68,87 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         Effect::new(move |_| {
-            spawn_local(async move {
-                match invoke_command_no_args(event_names::timer::GET_STATE).await {
-                    Ok(result) => {
-                        if let Ok(state) =
-                            serde_wasm_bindgen::from_value::<TimerState>(result)
-                        {
-                            set_timer_state.set(state);
-                        } else {
-                            web_sys::console::error_1(
-                                &"Failed to parse initial timer state".into()
-                            );
-                        }
-                    }
-                    Err(error) => {
-                        let error_str = format!("Failed to get initial timer state: {:?}", error);
-                        web_sys::console::error_1(&error_str.clone().into());
-                        handle_command_error(error_str, set_error_state);
+            Self::setup_initial_state(set_timer_state, set_error_state);
+            Self::setup_timer_tick_listener(set_timer_state);
+        });
+    }
+
+    fn setup_initial_state(
+        set_timer_state: WriteSignal<TimerState>,
+        set_error_state: WriteSignal<Option<ErrorInfo>>,
+    ) {
+        spawn_local(async move {
+            match invoke_command_no_args(event_names::timer::GET_STATE).await {
+                Ok(result) => {
+                    if let Ok(state) =
+                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                    {
+                        set_timer_state.set(state);
+                    } else {
+                        web_sys::console::error_1(
+                            &"Failed to parse initial timer state".into()
+                        );
                     }
                 }
-            });
+                Err(error) => {
+                    let error_str = format!("Failed to get initial timer state: {:?}", error);
+                    web_sys::console::error_1(&error_str.clone().into());
+                    handle_command_error(error_str, set_error_state);
+                }
+            }
         });
+    }
 
-        setup_timer_events(set_timer_state);
-        setup_phase_complete_events();
+    fn setup_timer_tick_listener(set_timer_state: WriteSignal<TimerState>) {
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                if let Ok(timer_tick) =
+                    serde_wasm_bindgen::from_value::<TimerTick>(payload)
+                {
+                    set_timer_state.update(|state| {
+                        // Update the timer state with the new remaining seconds
+                        // This ensures the UI stays in sync with the backend timer
+                        *state = match state {
+                            TimerState::Working { configuration, session_count, active_entity, entity_session_count, .. } => {
+                                TimerState::Working {
+                                    remaining_seconds: timer_tick.remaining_seconds,
+                                    configuration: configuration.clone(),
+                                    session_count: *session_count,
+                                    active_entity: active_entity.clone(),
+                                    entity_session_count: *entity_session_count,
+                                }
+                            }
+                            TimerState::ShortBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
+                                TimerState::ShortBreak {
+                                    remaining_seconds: timer_tick.remaining_seconds,
+                                    configuration: configuration.clone(),
+                                    session_count: *session_count,
+                                    active_entity: active_entity.clone(),
+                                    entity_session_count: *entity_session_count,
+                                }
+                            }
+                            TimerState::LongBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
+                                TimerState::LongBreak {
+                                    remaining_seconds: timer_tick.remaining_seconds,
+                                    configuration: configuration.clone(),
+                                    session_count: *session_count,
+                                    active_entity: active_entity.clone(),
+                                    entity_session_count: *entity_session_count,
+                                }
+                            }
+                            _ => state.clone(),
+                        };
+                    });
+                }
+            });
+
+            listen(timer_event_names::TICK, &callback).await;
+
+            callback.forget();
+        });
     }
 
     pub fn start_pause_timer(&self) {
@@ -276,5 +344,9 @@ impl TimerViewModel {
         // This would typically track pomodoros for the active task
         // For now, return a default value
         0
+    }
+
+    pub fn get_active_entity_id(&self) -> Option<String> {
+        self.timer_state.get().active_entity_id().map(|x| x.to_string())
     }
 }

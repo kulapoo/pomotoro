@@ -14,8 +14,9 @@
     "windows": [
       {
         "title": "pomotoro",
-        "width": 800,
-        "height": 600
+        "width": 1500,
+        "height": 1200,
+        "additionalBrowserArgs": "--auto-open-devtools-for-tabs --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ],
     "security": {
