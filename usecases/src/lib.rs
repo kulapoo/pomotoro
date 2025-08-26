@@ -27,7 +27,3 @@ pub mod timer;
 pub use audio::*;
 pub use config::*;
 pub use task::*;
-pub use timer::{
-    SessionCompleted, StartSessionCmd, complete_timer_session, pause_session,
-    reset_full_session, reset_session, resume_session, start_session,
-};
