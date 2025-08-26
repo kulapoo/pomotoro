@@ -216,13 +216,14 @@ impl TimerViewModel {
         spawn_local(async move {
             match invoke_command_no_args(event_names::timer::SKIP_PHASE).await {
                 Ok(result) => {
-                    if let Ok(state) =
-                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                    // skip_phase returns (Phase, Phase, TimerState) tuple
+                    if let Ok((_, _, state)) =
+                        serde_wasm_bindgen::from_value::<(Phase, Phase, TimerState)>(result)
                     {
                         set_timer_state.set(state);
                     } else {
                         web_sys::console::error_1(
-                            &"Failed to parse timer state from skip_phase".into()
+                            &"Failed to parse timer state tuple from skip_phase".into()
                         );
                     }
                 }
