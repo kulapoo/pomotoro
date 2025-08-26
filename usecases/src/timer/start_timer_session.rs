@@ -54,6 +54,7 @@ pub async fn start_timer_session(
         Some(task)
     } else {
         let current_state = timer_service.get_state().await?;
+
         if current_state.active_entity_id().is_none() {
             return Err(Error::InvalidStateTransition {
                 from: "no_active_task".to_string(),

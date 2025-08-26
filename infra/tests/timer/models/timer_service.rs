@@ -1,16 +1,16 @@
 use domain::{Phase, Task, timer::TimerService as TimerServiceTrait};
-use infra::adapters::TimerService;
+use infra::adapters::InMemoryTimerService;
 use std::sync::Arc;
 use std::time::Duration;
 
 pub struct TimerTestService {
-    service: Arc<TimerService>,
+    service: Arc<InMemoryTimerService>,
 }
 
 impl TimerTestService {
     pub fn new() -> Self {
         Self {
-            service: Arc::new(TimerService::new()),
+            service: Arc::new(InMemoryTimerService::new()),
         }
     }
 
@@ -77,7 +77,7 @@ impl TimerTestService {
 }
 
 impl std::ops::Deref for TimerTestService {
-    type Target = TimerService;
+    type Target = InMemoryTimerService;
 
     fn deref(&self) -> &Self::Target {
         &self.service

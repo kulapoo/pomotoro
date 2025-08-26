@@ -10,17 +10,17 @@ use crate::adapters::timer::repository::FileTimerStateRepository;
 use domain::{
     Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
     TimerState, TimerStatus,
-    timer::{Timer, TimerService as DomainTimerService},
+    timer::{Timer, TimerService},
 };
 
-pub struct TimerService {
+pub struct InMemoryTimerService {
     timer: Arc<Mutex<Timer>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     event_publisher: EventPublisherArc,
     state_repository: Option<Arc<FileTimerStateRepository>>,
 }
 
-impl Clone for TimerService {
+impl Clone for InMemoryTimerService {
     fn clone(&self) -> Self {
         Self {
             timer: Arc::clone(&self.timer),
@@ -31,13 +31,13 @@ impl Clone for TimerService {
     }
 }
 
-impl Default for TimerService {
+impl Default for InMemoryTimerService {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl TimerService {
+impl InMemoryTimerService {
     pub fn new_with_services(
         event_publisher: EventPublisherArc,
         app_handle: Option<AppHandle>,
@@ -147,7 +147,7 @@ impl TimerService {
 
 // Implement the async trait for domain compatibility
 #[async_trait]
-impl DomainTimerService for TimerService {
+impl TimerService for InMemoryTimerService {
     async fn get_state(&self) -> DomainResult<TimerState> {
         Ok(self.timer.lock().await.state().clone())
     }

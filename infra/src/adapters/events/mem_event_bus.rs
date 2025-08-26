@@ -18,6 +18,7 @@ struct HandlerMetadata {
 }
 
 type HandlersMap = HashMap<TypeId, Vec<HandlerMetadata>>;
+
 type EventHandlerFn = Arc<dyn Fn(&dyn Event) + Send + Sync>;
 
 pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}

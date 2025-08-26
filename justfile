@@ -2,7 +2,7 @@
 
 # Run development server
 dev:
-    cd infra && cargo tauri dev
+    cd infra && RUST_LOG=infra=info cargo tauri dev
 
 # Build for production
 build:

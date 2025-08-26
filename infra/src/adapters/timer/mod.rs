@@ -10,4 +10,4 @@ pub mod service;
 pub mod event_handlers;
 
 pub use repository::FileTimerStateRepository;
-pub use service::TimerService;
+pub use service::InMemoryTimerService;

@@ -41,7 +41,7 @@ pub use task::{
 };
 
 // Timer infrastructure
-pub use timer::TimerService;
+pub use timer::InMemoryTimerService;
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};

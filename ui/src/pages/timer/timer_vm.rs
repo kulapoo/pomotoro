@@ -43,13 +43,22 @@ impl TimerViewModel {
 
         Effect::new(move |_| {
             spawn_local(async move {
-                if let Ok(result) =
-                    invoke_command_no_args(event_names::timer::GET_STATE).await
-                {
-                    if let Ok(state) =
-                        serde_wasm_bindgen::from_value::<TimerState>(result)
-                    {
-                        set_timer_state.set(state);
+                match invoke_command_no_args(event_names::timer::GET_STATE).await {
+                    Ok(result) => {
+                        if let Ok(state) =
+                            serde_wasm_bindgen::from_value::<TimerState>(result)
+                        {
+                            set_timer_state.set(state);
+                        } else {
+                            web_sys::console::error_1(
+                                &"Failed to parse initial timer state".into()
+                            );
+                        }
+                    }
+                    Err(error) => {
+                        web_sys::console::error_1(
+                            &format!("Failed to get initial timer state: {:?}", error).into()
+                        );
                     }
                 }
             });
@@ -69,11 +78,24 @@ impl TimerViewModel {
                 _ => event_names::timer::START,
             };
 
-            if let Ok(result) = invoke_command_no_args(command).await {
-                if let Ok(state) =
-                    serde_wasm_bindgen::from_value::<TimerState>(result)
-                {
-                    set_timer_state.set(state);
+            match invoke_command_no_args(command).await {
+                Ok(result) => {
+                    if let Ok(state) =
+                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                    {
+                        set_timer_state.set(state);
+                    } else {
+                        web_sys::console::error_1(
+                            &format!("Failed to parse timer state from {}", command).into()
+                        );
+                    }
+                }
+                Err(error) => {
+                    web_sys::console::error_1(
+                        &format!("Failed to execute {}: {:?}", command, error).into()
+                    );
+                    // You could also display this error in the UI
+                    // For now, just log it
                 }
             }
         });
@@ -83,13 +105,22 @@ impl TimerViewModel {
         let set_timer_state = self.set_timer_state;
 
         spawn_local(async move {
-            if let Ok(result) =
-                invoke_command_no_args(event_names::timer::RESET).await
-            {
-                if let Ok(state) =
-                    serde_wasm_bindgen::from_value::<TimerState>(result)
-                {
-                    set_timer_state.set(state);
+            match invoke_command_no_args(event_names::timer::RESET).await {
+                Ok(result) => {
+                    if let Ok(state) =
+                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                    {
+                        set_timer_state.set(state);
+                    } else {
+                        web_sys::console::error_1(
+                            &"Failed to parse timer state from reset".into()
+                        );
+                    }
+                }
+                Err(error) => {
+                    web_sys::console::error_1(
+                        &format!("Failed to reset timer: {:?}", error).into()
+                    );
                 }
             }
         });
@@ -99,13 +130,22 @@ impl TimerViewModel {
         let set_timer_state = self.set_timer_state;
 
         spawn_local(async move {
-            if let Ok(result) =
-                invoke_command_no_args(event_names::timer::SKIP_PHASE).await
-            {
-                if let Ok(state) =
-                    serde_wasm_bindgen::from_value::<TimerState>(result)
-                {
-                    set_timer_state.set(state);
+            match invoke_command_no_args(event_names::timer::SKIP_PHASE).await {
+                Ok(result) => {
+                    if let Ok(state) =
+                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                    {
+                        set_timer_state.set(state);
+                    } else {
+                        web_sys::console::error_1(
+                            &"Failed to parse timer state from skip_phase".into()
+                        );
+                    }
+                }
+                Err(error) => {
+                    web_sys::console::error_1(
+                        &format!("Failed to skip phase: {:?}", error).into()
+                    );
                 }
             }
         });

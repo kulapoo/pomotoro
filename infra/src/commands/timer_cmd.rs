@@ -1,10 +1,11 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
-use crate::adapters::{TaskRepositoryArc, TimerService};
-use domain::timer::TimerService as DomainTimerService;
-use domain::{Phase, TaskId, TimerState};
+use crate::adapters::TaskRepositoryArc;
+use domain::{timer::TimerService, Phase, TaskId, TimerState};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
-use tracing::{error, info};
+use tracing::info;
+use anyhow::Context;
+
 use usecases::timer::{
     StartTimerSessionCmd, SwitchTimerTaskCmd,
     get_timer_state as app_get_timer_state, pause_timer_session,
@@ -12,107 +13,114 @@ use usecases::timer::{
     switch_timer_task,
 };
 
+type TimerServiceArc = Arc<dyn TimerService + Send + Sync>;
+
 #[tauri::command]
 pub async fn get_timer_state(
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc  = timer_service.inner().clone();
 
     app_get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get timer state")
         .map_err(|e| e.to_string())
 }
 
+
 #[tauri::command]
 pub async fn start_timer(
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc = timer_service.inner().clone();
 
-    let cmd = StartTimerSessionCmd { task_id: None };
+    let task_id = app_get_timer_state(&timer_service_arc)
+        .await
+        .map(|s| s.active_entity_id())
+        .context("Failed to get active task ID")
+        .map_err(|e| e.to_string())?;
+    info!("Started timer, {} tae", task_id.clone().unwrap_or_default());
+    let cmd = StartTimerSessionCmd { task_id };
 
-    match start_timer_session(
+    start_timer_session(
         &timer_service_arc,
         &task_repo,
         &event_publisher,
         cmd,
     )
     .await
-    {
-        Ok(()) => {
-            info!("Starting timer session");
-        }
-        Err(e) => {
-            error!("Failed to start timer session: {}", e);
-            return Err(e.to_string());
-        }
-    }
+    .context("Failed to start timer session")
+    .map_err(|e| e.to_string())?;
+
+
 
     app_get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn pause_timer(
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc = timer_service.inner().clone();
 
     pause_timer_session(&timer_service_arc, &event_publisher)
         .await
+        .context("Failed to pause timer session")
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn reset_timer(
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc = timer_service.inner().clone();
 
     reset_timer_session(&timer_service_arc, &task_repo, &event_publisher)
         .await
+        .context("Failed to reset timer session")
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get updated timer state")
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn skip_phase(
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<(Phase, Phase, TimerState), String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc = timer_service.inner().clone();
 
     let (old_phase, new_phase) =
         skip_timer_phase(&timer_service_arc, &task_repo, &event_publisher)
             .await
+            .context("Failed to skip timer phase")
             .map_err(|e| e.to_string())?;
 
     let state = usecases::timer::get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get updated timer state after phase skip")
         .map_err(|e| e.to_string())?;
 
     Ok((old_phase, new_phase, state))
@@ -121,13 +129,12 @@ pub async fn skip_phase(
 #[tauri::command]
 pub async fn switch_active_task(
     task_id: TaskId,
-    timer_service: State<'_, TimerService>,
+    timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc: Arc<dyn DomainTimerService + Send + Sync> =
-        Arc::new(timer_service.inner().clone());
+    let timer_service_arc = timer_service.inner().clone();
 
     let cmd = SwitchTimerTaskCmd {
         task_id: task_id.to_string(),
@@ -135,9 +142,11 @@ pub async fn switch_active_task(
 
     switch_timer_task(&timer_service_arc, &task_repo, &event_publisher, cmd)
         .await
+        .with_context(|| format!("Failed to switch to task {}", task_id))
         .map_err(|e| e.to_string())?;
 
     app_get_timer_state(&timer_service_arc)
         .await
+        .context("Failed to get updated timer state after task switch")
         .map_err(|e| e.to_string())
 }

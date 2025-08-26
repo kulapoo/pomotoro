@@ -55,10 +55,13 @@
       "Bash(for file in /home/jpt/src/oss/tools/pomotoro/usecases/src/timer/{reset_timer_session,skip_timer_phase,pause_timer_session,start_timer_session,switch_timer_task}.rs)",
       "Bash(do sed -i 's/use super::TimerService;/use domain::timer::TimerService;/' \"$file\")",
       "Bash(RUSTFLAGS=\"-D warnings\" cargo check --workspace)",
-      "Bash(RUSTFLAGS=\"-W unused_imports\" cargo check --workspace)"
+      "Bash(RUSTFLAGS=\"-W unused_imports\" cargo check --workspace)",
+      "WebFetch(domain:v2.tauri.app)",
+      "WebFetch(domain:tauri.app)",
+      "WebSearch"
     ],
     "deny": [],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "plan"
   },
   "hooks": {
     "PostToolUse": [
