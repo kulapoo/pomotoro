@@ -1,9 +1,9 @@
+use anyhow::{anyhow, Context, Result};
 use domain::EventPublisher;
-use tracing::info;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use usecases::get_config;
-use anyhow::{Context, Result};
+use tracing::info;
+use usecases::{get_config, timer::switch_timer_task};
 
 use crate::adapters::{
     InMemoryConfigRepository, InMemoryEventBus,
@@ -16,7 +16,7 @@ use crate::adapters::{
 use tauri::AppHandle;
 
 use crate::adapters::{
-    RodioAudioService, InMemoryTimerService as InMemoryTimerService, audio::InMemoryAudioLibraryService,
+    InMemoryTimerService, RodioAudioService, audio::InMemoryAudioLibraryService,
 };
 use domain::timer::TimerService;
 
@@ -31,7 +31,6 @@ pub struct AppRegistry {
         Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
 }
 
-
 pub fn register_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: AppHandle,
@@ -43,9 +42,7 @@ pub fn register_handlers(
     Ok(())
 }
 
-pub async fn bootstrap(
-    app_handle: AppHandle,
-) -> Result<AppRegistry> {
+pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> =
         Arc::new(InMemoryConfigRepository::default());
 
@@ -60,11 +57,15 @@ pub async fn bootstrap(
     let default_task = task_repository
         .get_default_task()
         .await
-        .context("Failed to get default task")?;
+        .context("Failed to get default task")?
+        .ok_or(anyhow!("No default task found"))?;
 
     info!("Bootstraping Pomotoro...");
 
-    info!("Default task defaults: {:?}", default_task.map(|t| t.description));
+    info!(
+        "Default task defaults: {:?}",
+        default_task.description
+    );
 
     let event_bus = Arc::new(InMemoryEventBus::new());
     let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> =
@@ -86,6 +87,15 @@ pub async fn bootstrap(
             event_publisher.clone(),
             Some(app_handle.clone()),
         ));
+
+    switch_timer_task(
+        &timer_service,
+        &task_repository,
+        &event_publisher,
+        switch_timer_task::SwitchTimerTaskCmd {
+            task_id: default_task.id.to_string()
+        },
+    ).await?;
 
     let app_started = app_lifecycle::AppStarted::new(
         1,
