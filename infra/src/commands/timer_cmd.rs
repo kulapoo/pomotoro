@@ -1,6 +1,6 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::TaskRepositoryArc;
-use domain::{timer::TimerService, Phase, TaskId, TimerState};
+use domain::{timer::TimerService, Phase, TaskId, TimerState, TimerStatus};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tracing::info;
@@ -38,25 +38,31 @@ pub async fn start_timer(
 ) -> Result<TimerState, String> {
     let timer_service_arc = timer_service.inner().clone();
 
-    let task_id = app_get_timer_state(&timer_service_arc)
+    let current_state = app_get_timer_state(&timer_service_arc)
         .await
-        .map(|s| s.active_entity_id())
-        .context("infra::commands::timer_cmd::start_timer - Failed to get active task ID")
+        .context("infra::commands::timer_cmd::start_timer - Failed to get current timer state")
         .map_err(|e| e.to_string())?;
-    info!("Started timer, {}", task_id.clone().unwrap_or_default());
-    let cmd = StartTimerSessionCmd { task_id };
 
-    start_timer_session(
-        &timer_service_arc,
-        &task_repo,
-        &event_publisher,
-        cmd,
-    )
-    .await
-    .context("infra::commands::timer_cmd::start_timer - Failed to execute start timer session")
-    .map_err(|e| e.to_string())?;
+    if current_state.status() == domain::TimerStatus::Paused {
+        pause_timer_session(&timer_service_arc, &event_publisher)
+            .await
+            .context("infra::commands::timer_cmd::start_timer - Failed to resume paused timer")
+            .map_err(|e| e.to_string())?;
+    } else {
+        let task_id = current_state.active_entity_id();
+        info!("Started timer, {}", task_id.clone().unwrap_or_default());
+        let cmd = StartTimerSessionCmd { task_id };
 
-
+        start_timer_session(
+            &timer_service_arc,
+            &task_repo,
+            &event_publisher,
+            cmd,
+        )
+        .await
+        .context("infra::commands::timer_cmd::start_timer - Failed to execute start timer session")
+        .map_err(|e| e.to_string())?;
+    }
 
     app_get_timer_state(&timer_service_arc)
         .await
