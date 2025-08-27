@@ -19,29 +19,31 @@
 //! - `audio/`: Audio domain infrastructure
 //! - `events/`: Event publishing infrastructure
 //! - `notifications`: System notification integration
+//! - `storage/`: File storage management
 
 pub mod audio;
 pub mod config;
 pub mod events;
 pub mod notifications;
+pub mod storage;
 pub mod task;
 pub mod timer;
 
 // Config infrastructure
 pub use config::{
     AppearanceConfigDto, AudioConfigDto, ConfigBuilder, ConfigDto, ConfigError,
-    ConfigRepo, ConfigRepository, FileConfigRepo, GeneralConfigDto,
+    ConfigRepo, ConfigRepository, FileConfigRepo, FileConfigRepository, GeneralConfigDto,
     InMemoryConfigRepository, NotificationConfigDto,
 };
 
 // Task infrastructure
 pub use task::{
     FileTaskRepository, InMemoryTaskRepository, StandardTaskCyclerService,
-    TaskAudioConfigDto, TaskConfigDto, TaskDto, TaskRepositoryArc,
+    TaskAudioConfigDto, TaskDto, TaskRepositoryArc,
 };
 
 // Timer infrastructure
-pub use timer::InMemoryTimerService;
+pub use timer::{FileTimerService, InMemoryTimerService};
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
@@ -50,4 +52,7 @@ pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
 pub use events::{EventHandler, InMemoryEventBus, audio_events};
 
 // Notifications infrastructure
-pub use notifications::send_phase_notification;
+pub use notifications::{NotificationService, register_notification_handlers};
+
+// Storage infrastructure
+pub use storage::{FileStorageService, StorageConfig, StorageLocation};

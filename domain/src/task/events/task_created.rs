@@ -1,5 +1,5 @@
 use crate::AudioConfig;
-use crate::task::{config::Config, id::Id};
+use crate::task::{id::Id, settings::TaskSettings};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +10,7 @@ pub struct Created {
     pub description: Option<String>,
     pub max_sessions: u8,
     pub tags: Vec<String>,
-    pub config: Config,
+    pub settings: TaskSettings,
     pub audio_config: AudioConfig,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
@@ -24,7 +24,7 @@ impl Created {
         description: Option<String>,
         max_sessions: u8,
         tags: Vec<String>,
-        config: Config,
+        settings: TaskSettings,
         audio_config: AudioConfig,
         version: u64,
     ) -> Self {
@@ -34,7 +34,7 @@ impl Created {
             description,
             max_sessions,
             tags,
-            config,
+            settings,
             audio_config,
             version,
             occurred_at: Utc::now(),

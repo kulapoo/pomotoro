@@ -1,14 +1,8 @@
-use super::{config::Config, id::Id, status::Status};
+use super::{id::Id, settings::TaskSettings, status::Status};
 use crate::{AudioConfig, Error, Result, TaskDefaults};
 use chrono::{DateTime, Utc};
-use std::time::Duration;
 
 // Default values for Builder - autonomous construction without external dependencies
-const DEFAULT_WORK_DURATION: Duration = Duration::from_secs(25 * 60);
-const DEFAULT_SHORT_BREAK_DURATION: Duration = Duration::from_secs(5 * 60);
-const DEFAULT_LONG_BREAK_DURATION: Duration = Duration::from_secs(15 * 60);
-const DEFAULT_SESSIONS_UNTIL_LONG_BREAK: u8 = 4;
-const DEFAULT_ENABLE_SCREEN_BLOCKING: bool = false;
 const DEFAULT_MAX_SESSIONS: u8 = 4;
 
 /// Builder for constructing Task instances with fluent interface and centralized validation
@@ -20,7 +14,7 @@ pub struct Builder {
     max_sessions: Option<u8>,
     current_sessions: Option<u8>,
     tags: Option<Vec<String>>,
-    config: Option<Config>,
+    settings: Option<TaskSettings>,
     audio_config: Option<AudioConfig>,
     created_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
@@ -44,7 +38,7 @@ impl Builder {
             max_sessions: None,
             current_sessions: None,
             tags: None,
-            config: None,
+            settings: None,
             audio_config: None,
             created_at: None,
             completed_at: None,
@@ -104,9 +98,21 @@ impl Builder {
         self
     }
 
-    /// Set the task configuration
-    pub fn config(mut self, config: Config) -> Self {
-        self.config = Some(config);
+    /// Set the task configuration by creating appropriate settings
+    pub fn config(mut self, config: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
+        let settings = TaskSettings {
+            use_global_settings: false,
+            custom_max_sessions: None,
+            custom_work_duration: Some(config),
+            custom_short_break_duration: Some(short_break),
+            custom_long_break_duration: Some(long_break),
+            custom_sessions_until_long_break: Some(sessions_until_long),
+            custom_enable_screen_blocking: Some(screen_blocking),
+            custom_audio_config: None,
+            custom_notification_config: None,
+        };
+        self.settings = Some(settings);
+        
         self
     }
 
@@ -129,8 +135,20 @@ impl Builder {
     }
 
     /// Set configuration with validation (builder method for fluent API)
-    pub fn with_config(mut self, config: Config) -> Self {
-        self.config = Some(config);
+    pub fn with_config(mut self, work_duration: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
+        let settings = TaskSettings {
+            use_global_settings: false,
+            custom_max_sessions: None,
+            custom_work_duration: Some(work_duration),
+            custom_short_break_duration: Some(short_break),
+            custom_long_break_duration: Some(long_break),
+            custom_sessions_until_long_break: Some(sessions_until_long),
+            custom_enable_screen_blocking: Some(screen_blocking),
+            custom_audio_config: None,
+            custom_notification_config: None,
+        };
+        self.settings = Some(settings);
+        
         self
     }
 
@@ -164,6 +182,12 @@ impl Builder {
         self
     }
 
+    /// Set the task settings
+    pub fn settings(mut self, settings: TaskSettings) -> Self {
+        self.settings = Some(settings);
+        self
+    }
+
     /// Mark the task as completed
     pub fn completed(self) -> Self {
         self.status(Status::Completed).completed_at(Utc::now())
@@ -191,18 +215,6 @@ impl Builder {
             });
         }
 
-        // Create or use provided config
-        let config = match self.config {
-            Some(config) => config,
-            None => Config::new(
-                DEFAULT_WORK_DURATION,
-                DEFAULT_SHORT_BREAK_DURATION,
-                DEFAULT_LONG_BREAK_DURATION,
-                DEFAULT_SESSIONS_UNTIL_LONG_BREAK,
-                DEFAULT_ENABLE_SCREEN_BLOCKING,
-            )?,
-        };
-
         // Validate audio config if provided
         let audio_config = self.audio_config.unwrap_or_default();
         audio_config.validate()?;
@@ -223,6 +235,19 @@ impl Builder {
             None
         };
 
+        // Provide default settings if none provided
+        let settings = self.settings.unwrap_or_else(|| TaskSettings {
+            use_global_settings: true,
+            custom_max_sessions: None,
+            custom_work_duration: None,
+            custom_short_break_duration: None,
+            custom_long_break_duration: None,
+            custom_sessions_until_long_break: None,
+            custom_enable_screen_blocking: None,
+            custom_audio_config: None,
+            custom_notification_config: None,
+        });
+
         Ok(super::Task {
             id: self.id.unwrap_or_default(),
             name: name.trim().to_string(),
@@ -230,7 +255,7 @@ impl Builder {
             max_sessions,
             current_sessions,
             tags: self.tags.unwrap_or_default(),
-            config,
+            settings,
             audio_config,
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,
@@ -265,17 +290,6 @@ impl Builder {
             });
         }
 
-        // Create or use provided config
-        let config = match self.config {
-            Some(config) => config,
-            None => Config::new(
-                defaults.work_duration,
-                defaults.short_break_duration,
-                defaults.long_break_duration,
-                defaults.sessions_until_long_break,
-                defaults.enable_screen_blocking,
-            )?,
-        };
 
         // Validate audio config if provided
         let audio_config = self.audio_config.unwrap_or_default();
@@ -297,6 +311,19 @@ impl Builder {
             None
         };
 
+        // Provide default settings if none provided
+        let settings = self.settings.unwrap_or_else(|| TaskSettings {
+            use_global_settings: false,
+            custom_max_sessions: Some(max_sessions),
+            custom_work_duration: Some(defaults.work_duration),
+            custom_short_break_duration: Some(defaults.short_break_duration),
+            custom_long_break_duration: Some(defaults.long_break_duration),
+            custom_sessions_until_long_break: Some(defaults.sessions_until_long_break),
+            custom_enable_screen_blocking: Some(defaults.enable_screen_blocking),
+            custom_audio_config: None,
+            custom_notification_config: None,
+        });
+
         Ok(super::Task {
             id: self.id.unwrap_or_default(),
             name: name.trim().to_string(),
@@ -304,7 +331,7 @@ impl Builder {
             max_sessions,
             current_sessions,
             tags: self.tags.unwrap_or_default(),
-            config,
+            settings,
             audio_config,
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,

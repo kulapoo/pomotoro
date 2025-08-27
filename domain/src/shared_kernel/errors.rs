@@ -46,6 +46,15 @@ pub enum Error {
 
     #[error("Event publishing error: {message}")]
     EventPublishingError { message: String },
+
+    #[error("Serialization error: {message}")]
+    SerializationError { message: String },
+
+    #[error("Deserialization error: {message}")]
+    DeserializationError { message: String },
+
+    #[error("IO error: {message}")]
+    IoError { message: String },
 }
 
 impl From<crate::AudioError> for Error {

@@ -113,4 +113,20 @@ impl TaskRepository for TaskTestRepository {
     async fn get_default_task(&self) -> Result<Option<Task>, TaskError> {
         self.inner.get_default_task().await
     }
+    
+    async fn search(&self, options: domain::task::repository::SearchOptions) -> Result<Vec<Task>, TaskError> {
+        self.inner.search(options).await
+    }
+    
+    async fn search_fuzzy(&self, query: &str) -> Result<Vec<Task>, TaskError> {
+        self.inner.search_fuzzy(query).await
+    }
+
+    async fn get_incomplete_tasks(&self) -> Result<Vec<Task>, TaskError> {
+        self.inner.get_incomplete_tasks().await
+    }
+
+    async fn get_completed_tasks(&self) -> Result<Vec<Task>, TaskError> {
+        self.inner.get_completed_tasks().await
+    }
 }

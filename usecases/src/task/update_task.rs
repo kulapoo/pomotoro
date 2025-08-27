@@ -1,8 +1,9 @@
 use domain::{
-    AudioConfig, Error, EventPublisher, Result, Task, TaskConfig, TaskId,
+    AudioConfig, Error, EventPublisher, Result, Task, TaskId,
     TaskRepository, TaskUpdated,
 };
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct UpdateTaskCmd {
@@ -11,7 +12,11 @@ pub struct UpdateTaskCmd {
     pub description: Option<String>,
     pub max_sessions: Option<u8>,
     pub tags: Option<Vec<String>>,
-    pub config: Option<TaskConfig>,
+    pub work_duration: Option<Duration>,
+    pub short_break_duration: Option<Duration>,
+    pub long_break_duration: Option<Duration>,
+    pub sessions_until_long_break: Option<u8>,
+    pub enable_screen_blocking: Option<bool>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -66,8 +71,19 @@ pub async fn update_task(
         task.tags = tags;
     }
 
-    if let Some(config) = cmd.config {
-        task.config = config;
+    // Update timer settings if any provided
+    if cmd.work_duration.is_some() || 
+       cmd.short_break_duration.is_some() || 
+       cmd.long_break_duration.is_some() ||
+       cmd.sessions_until_long_break.is_some() ||
+       cmd.enable_screen_blocking.is_some() {
+        task.settings.update_timer_settings(
+            cmd.work_duration,
+            cmd.short_break_duration,
+            cmd.long_break_duration,
+            cmd.sessions_until_long_break,
+            cmd.enable_screen_blocking,
+        )?;
     }
 
     if let Some(audio_config) = cmd.audio_config {
@@ -122,7 +138,11 @@ mod tests {
             description: None,
             max_sessions: None,
             tags: None,
-            config: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
             audio_config: None,
         };
 
@@ -145,7 +165,11 @@ mod tests {
             description: Some("New description".to_string()),
             max_sessions: Some(6),
             tags: Some(vec!["updated".to_string(), "test".to_string()]),
-            config: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
             audio_config: None,
         };
 
@@ -175,7 +199,11 @@ mod tests {
             description: None,
             max_sessions: None,
             tags: None,
-            config: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
             audio_config: None,
         };
 
@@ -198,7 +226,11 @@ mod tests {
             description: None,
             max_sessions: None,
             tags: None,
-            config: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
             audio_config: None,
         };
 
@@ -221,7 +253,11 @@ mod tests {
             description: None,
             max_sessions: Some(1),
             tags: None,
-            config: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
             audio_config: None,
         };
 

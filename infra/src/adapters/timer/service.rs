@@ -5,10 +5,11 @@ use tauri::AppHandle;
 use tokio::sync::Mutex;
 use tokio::time::interval;
 
+use crate::adapters::config::InMemoryConfigRepository;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::timer::repository::FileTimerStateRepository;
 use domain::{
-    Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
+    ConfigRepository, Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
     TimerState, TimerStatus,
     timer::{Timer, TimerService},
 };
@@ -18,6 +19,7 @@ pub struct InMemoryTimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     event_publisher: EventPublisherArc,
     state_repository: Option<Arc<FileTimerStateRepository>>,
+    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
 impl Clone for InMemoryTimerService {
@@ -27,6 +29,7 @@ impl Clone for InMemoryTimerService {
             cancel_handle: Arc::clone(&self.cancel_handle),
             event_publisher: Arc::clone(&self.event_publisher),
             state_repository: self.state_repository.as_ref().map(Arc::clone),
+            config_repository: Arc::clone(&self.config_repository),
         }
     }
 }
@@ -41,6 +44,7 @@ impl InMemoryTimerService {
     pub fn new_with_services(
         event_publisher: EventPublisherArc,
         app_handle: Option<AppHandle>,
+        config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
         let state_repository = app_handle
             .as_ref()
@@ -54,6 +58,7 @@ impl InMemoryTimerService {
             cancel_handle: Arc::new(Mutex::new(None)),
             event_publisher,
             state_repository,
+            config_repository,
         }
     }
 
@@ -61,12 +66,14 @@ impl InMemoryTimerService {
         let event_publisher = Arc::new(domain::NoOpEventPublisher);
         let timer = Timer::new(TimerConfiguration::default())
             .with_event_publisher(Box::new(event_publisher.clone()));
+        let config_repository = Arc::new(InMemoryConfigRepository::new());
 
         Self {
             timer: Arc::new(Mutex::new(timer)),
             cancel_handle: Arc::new(Mutex::new(None)),
             event_publisher,
             state_repository: None,
+            config_repository,
         }
     }
 
@@ -83,11 +90,16 @@ impl InMemoryTimerService {
         task: Option<Task>,
     ) -> Result<(), String> {
         if let Some(ref task) = task {
+            let config = self.config_repository.get_config().await
+                .map_err(|e| e.to_string())?;
+            
+            let effective_settings = task.get_effective_settings(&config.task_defaults);
+            
             let timer_config = TimerConfiguration::new(
-                task.config.work_duration(),
-                task.config.short_break_duration(),
-                task.config.long_break_duration(),
-                task.config.sessions_until_long_break(),
+                effective_settings.work_duration,
+                effective_settings.short_break_duration,
+                effective_settings.long_break_duration,
+                effective_settings.sessions_until_long_break,
             )
             .map_err(|e| e.to_string())?;
 
@@ -176,11 +188,14 @@ impl TimerService for InMemoryTimerService {
         timer.set_active_entity(Some(task_id.to_string()))?;
 
         if let Some(task) = task {
+            let config = self.config_repository.get_config().await?;
+            let effective_settings = task.get_effective_settings(&config.task_defaults);
+            
             let timer_config = TimerConfiguration::new(
-                task.config.work_duration(),
-                task.config.short_break_duration(),
-                task.config.long_break_duration(),
-                task.config.sessions_until_long_break(),
+                effective_settings.work_duration,
+                effective_settings.short_break_duration,
+                effective_settings.long_break_duration,
+                effective_settings.sessions_until_long_break,
             )?;
             timer.update_configuration(timer_config)?;
         }

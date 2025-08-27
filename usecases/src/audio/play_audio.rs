@@ -104,17 +104,28 @@ pub async fn set_audio_volume(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::PlaybackHandle;
+    use domain::{AudioAsset, AudioCategory, AudioLibrary, PlaybackHandle};
     use std::collections::HashMap;
 
     struct MockAudioService {
         playbacks: HashMap<String, PlaybackHandle>,
+        library: AudioLibrary,
     }
 
     impl MockAudioService {
         fn new() -> Self {
+            let mut library = AudioLibrary::new();
+            library.add_asset(AudioAsset {
+                id: "test-audio".to_string(),
+                name: "Test Audio".to_string(),
+                file_path: "/fake/path/audio.mp3".into(),
+                category: AudioCategory::BackgroundAmbient,
+                duration_ms: Some(5000),
+            });
+            
             Self {
                 playbacks: HashMap::new(),
+                library,
             }
         }
     }
@@ -182,6 +193,53 @@ mod tests {
         fn cleanup_finished(&mut self) -> Result<()> {
             self.playbacks.retain(|_, handle| handle.is_playing);
             Ok(())
+        }
+
+        fn get_library(&self) -> &AudioLibrary {
+            &self.library
+        }
+
+        fn play_notification(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+            let request = PlaybackRequest {
+                asset_id: asset_id.to_string(),
+                volume,
+                looped: false,
+                fade_in_ms: None,
+                fade_out_ms: None,
+            };
+            self.play_audio(request)
+        }
+
+        fn play_background_audio(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+            let request = PlaybackRequest {
+                asset_id: asset_id.to_string(),
+                volume,
+                looped: true,
+                fade_in_ms: Some(1000),
+                fade_out_ms: None,
+            };
+            self.play_audio(request)
+        }
+
+        fn stop_background_audio(&mut self) -> Result<()> {
+            let looped_ids: Vec<String> = self.playbacks
+                .values()
+                .filter(|h| h.is_looped && h.is_playing)
+                .map(|h| h.id.clone())
+                .collect();
+            
+            for id in looped_ids {
+                self.stop_audio(&id)?;
+            }
+            Ok(())
+        }
+
+        fn add_asset(&mut self, asset: AudioAsset) {
+            self.library.add_asset(asset);
+        }
+
+        fn remove_asset(&mut self, asset_id: &str) -> Option<AudioAsset> {
+            self.library.remove_asset(asset_id)
         }
     }
 

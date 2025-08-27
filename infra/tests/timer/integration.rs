@@ -370,7 +370,7 @@ async fn test_task_specific_timer_configuration()
     let task_repo = TaskTestRepository::empty();
 
     // Create task with custom timing configuration (MVP2 feature)
-    use domain::{TaskBuilder as DomainTaskBuilder, TaskConfig};
+    use domain::{TaskBuilder as DomainTaskBuilder};
     use std::time::Duration;
 
     let custom_task = DomainTaskBuilder::with_name_and_sessions(
@@ -378,14 +378,11 @@ async fn test_task_specific_timer_configuration()
         3,
     )
     .with_config(
-        TaskConfig::new(
-            Duration::from_secs(45 * 60), // 45 min work sessions
-            Duration::from_secs(10 * 60), // 10 min short breaks
-            Duration::from_secs(25 * 60), // 25 min long breaks
-            2,                            // Long break every 2 sessions
-            false,                        // No screen blocking
-        )
-        .unwrap(),
+        Duration::from_secs(45 * 60), // 45 min work sessions
+        Duration::from_secs(10 * 60), // 10 min short breaks
+        Duration::from_secs(25 * 60), // 25 min long breaks
+        2,                            // Long break every 2 sessions
+        false,                        // No screen blocking
     )
     .build()
     .unwrap();

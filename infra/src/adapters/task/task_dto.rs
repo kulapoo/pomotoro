@@ -1,7 +1,18 @@
-use super::config_dto::TaskConfigDto;
 use chrono::{DateTime, Utc};
-use domain::{Result, Task, TaskId, TaskStatus};
+use domain::{Result, Task, TaskId, TaskSettings, TaskStatus, NotificationConfig};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+/// Legacy config format for backward compatibility
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LegacyTaskConfigDto {
+    pub work_duration: u64, // seconds
+    pub short_break_duration: u64, // seconds
+    pub long_break_duration: u64, // seconds
+    pub sessions_until_long_break: u8,
+    pub enable_screen_blocking: bool,
+    pub max_sessions_default: u8,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskAudioConfigDto {
@@ -21,7 +32,10 @@ pub struct TaskDto {
     pub max_sessions: u8,
     pub current_sessions: u8,
     pub tags: Vec<String>,
-    pub config: TaskConfigDto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<TaskSettings>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<LegacyTaskConfigDto>, // For backward compatibility
     pub audio_config: TaskAudioConfigDto,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -38,7 +52,8 @@ impl From<Task> for TaskDto {
             max_sessions: task.max_sessions,
             current_sessions: task.current_sessions,
             tags: task.tags,
-            config: TaskConfigDto::from(task.config),
+            settings: Some(task.settings),
+            config: None, // Only used for backward compatibility during deserialization
             audio_config: TaskAudioConfigDto {
                 work_notification_sound: task
                     .audio_config
@@ -70,15 +85,13 @@ impl TryFrom<TaskDto> for Task {
     type Error = domain::Error;
 
     fn try_from(dto: TaskDto) -> Result<Self> {
-        use domain::{AudioConfig, Error, TaskConfig};
+        use domain::{AudioConfig, Error};
 
         let task_id = TaskId::from_string(&dto.id).map_err(|_| {
             Error::ConfigurationError {
                 message: format!("Invalid task ID: {}", dto.id),
             }
         })?;
-
-        let task_config = TaskConfig::try_from(dto.config)?;
 
         let audio_config = AudioConfig {
             work_notification_sound: dto.audio_config.work_notification_sound,
@@ -101,6 +114,28 @@ impl TryFrom<TaskDto> for Task {
             }
         };
 
+        // Handle backward compatibility: convert legacy config to TaskSettings
+        let settings = if let Some(settings) = dto.settings {
+            settings
+        } else if let Some(legacy_config) = dto.config {
+            // Convert legacy config to TaskSettings
+            TaskSettings::new_with_custom_settings(
+                dto.max_sessions,
+                Duration::from_secs(legacy_config.work_duration),
+                Duration::from_secs(legacy_config.short_break_duration),
+                Duration::from_secs(legacy_config.long_break_duration),
+                legacy_config.sessions_until_long_break,
+                legacy_config.enable_screen_blocking,
+                audio_config.clone(),
+                NotificationConfig::default(),
+            ).map_err(|e| Error::ConfigurationError {
+                message: format!("Failed to migrate legacy config: {}", e),
+            })?
+        } else {
+            // Neither settings nor config found, use defaults
+            TaskSettings::default()
+        };
+
         Ok(Task {
             id: task_id,
             name: dto.name,
@@ -108,7 +143,7 @@ impl TryFrom<TaskDto> for Task {
             max_sessions: dto.max_sessions,
             current_sessions: dto.current_sessions,
             tags: dto.tags,
-            config: task_config,
+            settings,
             audio_config,
             created_at: dto.created_at,
             completed_at: dto.completed_at,

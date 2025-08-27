@@ -1,4 +1,4 @@
-use super::{Task, id::Id, repository::Repository, status::Status};
+use super::{Task, id::Id, repository::{Repository, SearchOptions}, status::Status};
 use crate::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -92,6 +92,92 @@ impl Repository for InMemoryRepository {
     async fn get_default_task(&self) -> Result<Option<Task>> {
         let tasks = self.tasks.lock().unwrap();
         Ok(tasks.values().find(|task| task.default).cloned())
+    }
+
+    async fn search(&self, options: SearchOptions) -> Result<Vec<Task>> {
+        let tasks = self.tasks.lock().unwrap();
+        let mut results: Vec<Task> = tasks
+            .values()
+            .filter(|task| {
+                let criteria = &options.criteria;
+                let query_match = criteria.query.as_ref()
+                    .map_or(true, |q| task.name.to_lowercase().contains(&q.to_lowercase()));
+                let tags_match = criteria.tags.as_ref()
+                    .map_or(true, |tags| tags.iter().any(|tag| task.tags.contains(tag)));
+                let status_match = criteria.status.as_ref()
+                    .map_or(true, |s| format!("{:?}", task.status).to_lowercase() == s.to_lowercase());
+                
+                query_match && tags_match && status_match
+            })
+            .cloned()
+            .collect();
+
+        if let Some(sort_by) = &options.sort_by {
+            use super::repository::{SortBy, SortOrder};
+            results.sort_by(|a, b| {
+                let ordering = match sort_by {
+                    SortBy::Name => a.name.cmp(&b.name),
+                    SortBy::CreatedAt => a.created_at.cmp(&b.created_at),
+                    SortBy::SessionsCompleted => a.current_sessions.cmp(&b.current_sessions),
+                    SortBy::Status => {
+                        let a_ord = match a.status {
+                            Status::Active => 0,
+                            Status::Queued => 1,
+                            Status::Paused => 2,
+                            Status::Completed => 3,
+                        };
+                        let b_ord = match b.status {
+                            Status::Active => 0,
+                            Status::Queued => 1,
+                            Status::Paused => 2,
+                            Status::Completed => 3,
+                        };
+                        a_ord.cmp(&b_ord)
+                    }
+                };
+                match options.sort_order.as_ref().unwrap_or(&SortOrder::Ascending) {
+                    SortOrder::Ascending => ordering,
+                    SortOrder::Descending => ordering.reverse(),
+                }
+            });
+        }
+
+        Ok(results)
+    }
+
+    async fn search_fuzzy(&self, query: &str) -> Result<Vec<Task>> {
+        let tasks = self.tasks.lock().unwrap();
+        let query_lower = query.to_lowercase();
+        Ok(tasks
+            .values()
+            .filter(|task| {
+                task.name.to_lowercase().contains(&query_lower)
+                    || task.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+            })
+            .cloned()
+            .collect())
+    }
+
+    async fn get_incomplete_tasks(&self) -> Result<Vec<Task>> {
+        let tasks = self.tasks.lock().unwrap();
+        let mut incomplete: Vec<Task> = tasks
+            .values()
+            .filter(|task| !task.is_completed())
+            .cloned()
+            .collect();
+        incomplete.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(incomplete)
+    }
+
+    async fn get_completed_tasks(&self) -> Result<Vec<Task>> {
+        let tasks = self.tasks.lock().unwrap();
+        let mut completed: Vec<Task> = tasks
+            .values()
+            .filter(|task| task.is_completed())
+            .cloned()
+            .collect();
+        completed.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(completed)
     }
 }
 

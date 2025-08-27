@@ -1,4 +1,3 @@
-use crate::task::mappers::task_config_to_timer_config;
 use domain::{
     Error, EventPublisher, Result, TaskCyclerService, TaskId, TaskRepository,
     TaskSwitchWorkflowCompleted, TimerState, TimerStatus,
@@ -41,7 +40,6 @@ pub async fn switch_task(
 
     cycling_service.validate_task_switch(task_id).await?;
 
-    let _timer_config = task_config_to_timer_config(&task.config)?;
     // Use state transitions to switch task and update configuration
     let result = domain::timer::transitions::StateTransitions::switch_entity(
         timer_state.clone(),
@@ -87,7 +85,6 @@ pub async fn switch_to_next_task(
         .await?;
 
     if let Some(task) = next_task {
-        let _timer_config = task_config_to_timer_config(&task.config)?;
         // Use state transitions to switch task and update configuration
         let result =
             domain::timer::transitions::StateTransitions::switch_entity(

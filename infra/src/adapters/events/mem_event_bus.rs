@@ -242,6 +242,14 @@ impl EventSubscriber for InMemoryEventBus {
 
         Ok(false)
     }
+
+    fn unsubscribe(&self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
+        let event_type = handler.subscribes_to();
+        let handler_name = handler.name();
+        
+        self.unsubscribe_by_name(event_type, handler_name)?;
+        Ok(())
+    }
 }
 
 impl EventBus for InMemoryEventBus {}
@@ -252,7 +260,7 @@ pub type EventPublisherArc = Arc<dyn EventPublisher + Send + Sync>;
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use domain::{AudioConfig, Result, TaskConfig, TaskCreated, TaskId};
+    use domain::{AudioConfig, Result, TaskCreated, TaskId, TaskSettings};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -344,13 +352,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             1,
         );
@@ -394,13 +406,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             1,
         );
@@ -446,13 +462,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             1,
         );
@@ -480,13 +500,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             2,
         );
@@ -542,13 +566,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             1,
         );
@@ -598,13 +626,17 @@ mod tests {
                     None,
                     4,
                     vec![],
-                    TaskConfig {
-                        work_duration: Duration::from_secs(1500),
-                        short_break_duration: Duration::from_secs(300),
-                        long_break_duration: Duration::from_secs(900),
-                        sessions_until_long_break: 4,
-                        enable_screen_blocking: false,
-                    },
+                    TaskSettings::new_with_custom_settings(
+                        4,
+                        Duration::from_secs(1500),
+                        Duration::from_secs(300),
+                        Duration::from_secs(900),
+                        4,
+                        false,
+                        AudioConfig::default(),
+                        domain::NotificationConfig::default(),
+                    )
+                    .unwrap(),
                     AudioConfig::default(),
                     1,
                 )) as Box<dyn Event>
@@ -651,13 +683,17 @@ mod tests {
             None,
             4,
             vec![],
-            TaskConfig {
-                work_duration: Duration::from_secs(1500),
-                short_break_duration: Duration::from_secs(300),
-                long_break_duration: Duration::from_secs(900),
-                sessions_until_long_break: 4,
-                enable_screen_blocking: false,
-            },
+            TaskSettings::new_with_custom_settings(
+                4,
+                Duration::from_secs(1500),
+                Duration::from_secs(300),
+                Duration::from_secs(900),
+                4,
+                false,
+                AudioConfig::default(),
+                domain::NotificationConfig::default(),
+            )
+            .unwrap(),
             AudioConfig::default(),
             1,
         );

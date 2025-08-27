@@ -18,15 +18,15 @@ pub use shared_kernel::MockEventPublisher;
 
 pub use task::{
     AutomaticCyclingCompleted as AutomaticTaskCyclingCompleted,
-    Builder as TaskBuilder, Completed as TaskCompleted, Config as TaskConfig,
+    Builder as TaskBuilder, Completed as TaskCompleted,
     Created as TaskCreated, CyclerService as TaskCyclerService,
     CyclingExhausted as TaskCyclingExhausted,
     CyclingStrategy as TaskCyclingStrategy,
-    DefaultCyclingService as DefaultTaskCyclingService, Id as TaskId,
-    Marker as TaskMarker, Repository as TaskRepository,
+    DefaultCyclingService as DefaultTaskCyclingService, EffectiveSettings,
+    Id as TaskId, Marker as TaskMarker, Repository as TaskRepository,
     SessionCompleted as TaskSessionCompleted, SessionTransitionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
-    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task,
+    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskSettings,
     Updated as TaskUpdated,
 };
 

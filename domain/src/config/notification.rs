@@ -10,7 +10,7 @@ pub enum NotificationPosition {
     Center,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NotificationConfig {
     pub enable_desktop_notifications: bool,
     pub enable_sound_notifications: bool,

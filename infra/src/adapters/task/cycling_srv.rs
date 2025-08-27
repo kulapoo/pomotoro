@@ -29,6 +29,10 @@ impl StandardTaskCyclerService {
         let all_tasks = self.task_repository.get_active_tasks().await?;
         Ok(self.domain_service.filter_available_tasks(&all_tasks))
     }
+    
+    async fn get_incomplete_tasks(&self) -> Result<Vec<Task>> {
+        self.task_repository.get_incomplete_tasks().await
+    }
 }
 
 #[async_trait]
@@ -70,6 +74,60 @@ impl TaskCyclerService for StandardTaskCyclerService {
         current_task_id: Option<TaskId>,
     ) -> Result<Option<Task>> {
         self.get_next_task(current_task_id).await
+    }
+    
+    async fn get_previous_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
+        let available_tasks = self.get_available_tasks().await?;
+        
+        let prev_task = self.domain_service.find_previous_task_round_robin(
+            &available_tasks,
+            current_task_id,
+        );
+        
+        Ok(prev_task.cloned())
+    }
+    
+    async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>> {
+        self.get_incomplete_tasks().await
+    }
+    
+    async fn cycle_to_next_incomplete_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
+        let incomplete_tasks = self.get_incomplete_tasks().await?;
+        
+        let next_task = self.domain_service.find_next_task_round_robin(
+            &incomplete_tasks,
+            current_task_id,
+        );
+        
+        Ok(next_task.cloned())
+    }
+    
+    async fn cycle_to_previous_incomplete_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
+        let incomplete_tasks = self.get_incomplete_tasks().await?;
+        
+        let prev_task = self.domain_service.find_previous_task_round_robin(
+            &incomplete_tasks,
+            current_task_id,
+        );
+        
+        Ok(prev_task.cloned())
+    }
+    
+    async fn get_task_cycle_position(
+        &self,
+        task_id: TaskId,
+    ) -> Result<(usize, usize)> {
+        let all_tasks = self.task_repository.get_all().await?;
+        Ok(self.domain_service.find_task_cycle_position(&all_tasks, task_id))
     }
 }
 
@@ -161,6 +219,53 @@ mod tests {
                 .values()
                 .find(|task| task.default)
                 .cloned())
+        }
+        
+        async fn search(&self, options: domain::task::repository::SearchOptions) -> Result<Vec<Task>> {
+            let tasks = self.tasks.lock().unwrap();
+            let mut result: Vec<Task> = tasks.values().cloned().collect();
+            
+            if let Some(limit) = options.criteria.limit {
+                let offset = options.criteria.offset.unwrap_or(0);
+                result = result.into_iter().skip(offset).take(limit).collect();
+            }
+            
+            Ok(result)
+        }
+        
+        async fn search_fuzzy(&self, query: &str) -> Result<Vec<Task>> {
+            let tasks = self.tasks.lock().unwrap();
+            let query_lower = query.to_lowercase();
+            
+            Ok(tasks
+                .values()
+                .filter(|task| {
+                    task.name.to_lowercase().contains(&query_lower)
+                })
+                .cloned()
+                .collect())
+        }
+        
+        async fn get_incomplete_tasks(&self) -> Result<Vec<Task>> {
+            Ok(self
+                .tasks
+                .lock()
+                .unwrap()
+                .values()
+                .filter(|t| !t.is_completed())
+                .cloned()
+                .collect())
+        }
+        
+        async fn get_completed_tasks(&self) -> Result<Vec<Task>> {
+            Ok(self
+                .tasks
+                .lock()
+                .unwrap()
+                .values()
+                .filter(|t| t.is_completed())
+                .cloned()
+                .collect())
         }
     }
 
@@ -312,5 +417,141 @@ mod tests {
             .unwrap();
         assert_eq!(next_task.id, tasks[0].id);
         assert_eq!(next_task.name, "Task 1");
+    }
+
+    #[tokio::test]
+    async fn should_get_previous_task() {
+        let task_repo = Arc::new(TestTaskRepository::new());
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
+
+        let _tasks = create_test_tasks(&task_repo).await;
+
+        // Get all tasks to understand the actual order
+        let available_tasks = service.get_active_task_queue().await.unwrap();
+        assert_eq!(available_tasks.len(), 3);
+
+        // Starting from a task, get previous task
+        let first_task = &available_tasks[0];
+        let prev_task = service
+            .get_previous_task(Some(first_task.id))
+            .await
+            .unwrap()
+            .unwrap();
+        
+        // Should get a different task (cycling behavior)
+        assert_ne!(prev_task.id, first_task.id);
+        
+        // Should be one of the available tasks
+        assert!(available_tasks.iter().any(|t| t.id == prev_task.id));
+    }
+
+    #[tokio::test]
+    async fn should_get_incomplete_task_queue() {
+        let task_repo = Arc::new(TestTaskRepository::new());
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
+
+        let task1 = Task::new("Incomplete 1".to_string(), 4).unwrap();
+        let mut task2 = Task::new("Complete".to_string(), 1).unwrap();
+        task2.increment_session().unwrap();
+        let task3 = Task::new("Incomplete 2".to_string(), 2).unwrap();
+
+        task_repo.create(task1.clone()).await.unwrap();
+        task_repo.create(task2.clone()).await.unwrap();
+        task_repo.create(task3.clone()).await.unwrap();
+
+        let queue = service.get_incomplete_task_queue().await.unwrap();
+        assert_eq!(queue.len(), 2);
+        assert!(queue.iter().all(|t| !t.is_completed()));
+    }
+
+    #[tokio::test]
+    async fn should_cycle_to_next_incomplete_task() {
+        let task_repo = Arc::new(TestTaskRepository::new());
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
+
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let mut task2 = Task::new("Task 2".to_string(), 1).unwrap();
+        task2.increment_session().unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+
+        task_repo.create(task1.clone()).await.unwrap();
+        task_repo.create(task2.clone()).await.unwrap();
+        task_repo.create(task3.clone()).await.unwrap();
+
+        let next_task = service
+            .cycle_to_next_incomplete_task(Some(task1.id))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(next_task.name, "Task 3");
+    }
+
+    #[tokio::test]
+    async fn should_cycle_to_previous_incomplete_task() {
+        let task_repo = Arc::new(TestTaskRepository::new());
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
+
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let mut task2 = Task::new("Task 2".to_string(), 1).unwrap();
+        task2.increment_session().unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+
+        task_repo.create(task1.clone()).await.unwrap();
+        task_repo.create(task2.clone()).await.unwrap();
+        task_repo.create(task3.clone()).await.unwrap();
+
+        let prev_task = service
+            .cycle_to_previous_incomplete_task(Some(task3.id))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(prev_task.name, "Task 1");
+    }
+
+    #[tokio::test]
+    async fn should_get_task_cycle_position() {
+        let task_repo = Arc::new(TestTaskRepository::new());
+        let service = StandardTaskCyclerService::new(
+            task_repo.clone(),
+            TaskCyclingStrategy::RoundRobin,
+        );
+
+        let task1 = Task::new("Task 1".to_string(), 4).unwrap();
+        let mut task2 = Task::new("Task 2".to_string(), 1).unwrap();
+        task2.increment_session().unwrap();
+        let task3 = Task::new("Task 3".to_string(), 2).unwrap();
+
+        task_repo.create(task1.clone()).await.unwrap();
+        task_repo.create(task2.clone()).await.unwrap();
+        task_repo.create(task3.clone()).await.unwrap();
+
+        // Test that we get valid positions for incomplete tasks
+        let (position1, total1) = service.get_task_cycle_position(task1.id).await.unwrap();
+        assert!(position1 > 0 && position1 <= 2);
+        assert_eq!(total1, 2);
+
+        let (position3, total3) = service.get_task_cycle_position(task3.id).await.unwrap();
+        assert!(position3 > 0 && position3 <= 2);
+        assert_eq!(total3, 2);
+        
+        // Positions should be different
+        assert_ne!(position1, position3);
+        
+        // Test completed task has position 0
+        let (position2, total2) = service.get_task_cycle_position(task2.id).await.unwrap();
+        assert_eq!(position2, 0);
+        assert_eq!(total2, 2);
     }
 }

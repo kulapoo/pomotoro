@@ -71,4 +71,66 @@ impl CyclerService for TestCyclingService {
     ) -> Result<Option<Task>> {
         self.get_next_task(current_task_id).await
     }
+
+    async fn get_previous_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>> {
+        let tasks = self.task_repo.get_active_tasks().await?;
+        let available_tasks = self.domain_service.filter_available_tasks(&tasks);
+        
+        if let Some(prev_task) = self.domain_service.find_previous_task_round_robin(
+            &available_tasks,
+            current_task_id,
+        ) {
+            Ok(Some(prev_task.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>> {
+        let tasks = self.task_repo.get_incomplete_tasks().await?;
+        Ok(tasks)
+    }
+
+    async fn cycle_to_next_incomplete_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>> {
+        let tasks = self.task_repo.get_incomplete_tasks().await?;
+        
+        if let Some(next_task) = self.domain_service.find_next_task_round_robin(
+            &tasks,
+            current_task_id,
+        ) {
+            Ok(Some(next_task.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn cycle_to_previous_incomplete_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>> {
+        let tasks = self.task_repo.get_incomplete_tasks().await?;
+        
+        if let Some(prev_task) = self.domain_service.find_previous_task_round_robin(
+            &tasks,
+            current_task_id,
+        ) {
+            Ok(Some(prev_task.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn get_task_cycle_position(
+        &self,
+        task_id: Id,
+    ) -> Result<(usize, usize)> {
+        let tasks = self.task_repo.get_incomplete_tasks().await?;
+        Ok(self.domain_service.find_task_cycle_position(&tasks, task_id))
+    }
 }

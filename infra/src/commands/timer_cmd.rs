@@ -1,6 +1,6 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::TaskRepositoryArc;
-use domain::{timer::TimerService, Phase, TaskId, TimerState, TimerStatus};
+use domain::{timer::TimerService, Phase, TaskId, TimerState};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tracing::info;

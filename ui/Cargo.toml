@@ -14,7 +14,19 @@ leptos_router = { version = "0.8.3" }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-web-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "HtmlElement", 
+    "HtmlInputElement", 
+    "FileReader", 
+    "FileList", 
+    "File", 
+    "Blob", 
+    "Url", 
+    "Document",
+    "Window",
+    "Event",
+    "EventTarget"
+]}
 
 # UI components - using standard HTML with CSS styling
 

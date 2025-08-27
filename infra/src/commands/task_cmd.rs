@@ -1,10 +1,13 @@
 use crate::adapters::{
     TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
 };
-use domain::{AudioConfig, Task, TaskConfig, TaskId};
+use domain::{AudioConfig, Task, TaskId};
 use tauri::State;
 use usecases::task::*;
 use anyhow::{anyhow, Context};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {
@@ -12,7 +15,6 @@ pub struct CreateTaskRequest {
     pub description: Option<String>,
     pub max_sessions: u8,
     pub tags: Vec<String>,
-    pub config: Option<TaskConfig>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -23,7 +25,11 @@ pub struct UpdateTaskRequest {
     pub description: Option<String>,
     pub max_sessions: Option<u8>,
     pub tags: Option<Vec<String>>,
-    pub config: Option<TaskConfig>,
+    pub work_duration: Option<Duration>,
+    pub short_break_duration: Option<Duration>,
+    pub long_break_duration: Option<Duration>,
+    pub sessions_until_long_break: Option<u8>,
+    pub enable_screen_blocking: Option<bool>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -99,7 +105,11 @@ pub async fn update_task(
         description: request.description,
         max_sessions: request.max_sessions,
         tags: request.tags,
-        config: request.config,
+        work_duration: request.work_duration,
+        short_break_duration: request.short_break_duration,
+        long_break_duration: request.long_break_duration,
+        sessions_until_long_break: request.sessions_until_long_break,
+        enable_screen_blocking: request.enable_screen_blocking,
         audio_config: request.audio_config,
     };
 
@@ -182,5 +192,139 @@ pub async fn reset_task_sessions(
         .context("Failed to retrieve task after resetting sessions")
         .map_err(|e| e.to_string())?
         .ok_or_else(|| anyhow!("Task not found after resetting sessions"))
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchTasksRequest {
+    pub query: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub status: Option<String>,
+    pub sort_by: Option<String>,
+    pub sort_order: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[tauri::command]
+pub async fn search_tasks(
+    request: SearchTasksRequest,
+    task_repo: State<'_, TaskRepositoryArc>,
+) -> Result<Vec<Task>, String> {
+    let query = SearchTasksQuery {
+        query: request.query,
+        tags: request.tags,
+        status: request.status,
+        sort_by: request.sort_by,
+        sort_order: request.sort_order,
+        limit: request.limit,
+        offset: request.offset,
+    };
+    
+    usecases::task::search_tasks(&task_repo, query)
+        .await
+        .context("Failed to search tasks")
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn search_tasks_fuzzy(
+    query: String,
+    task_repo: State<'_, TaskRepositoryArc>,
+) -> Result<Vec<Task>, String> {
+    usecases::task::search_tasks_fuzzy(&task_repo, query)
+        .await
+        .context("Failed to perform fuzzy search")
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterTasksRequest {
+    pub status: String,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+#[tauri::command]
+pub async fn filter_tasks_by_status(
+    request: FilterTasksRequest,
+    task_repo: State<'_, TaskRepositoryArc>,
+) -> Result<Vec<Task>, String> {
+    let query = FilterTasksByStatusQuery {
+        status: request.status,
+        limit: request.limit,
+        offset: request.offset,
+    };
+    
+    usecases::task::filter_tasks_by_status(&task_repo, query)
+        .await
+        .context("Failed to filter tasks by status")
+        .map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CycleIncompleteTaskRequest {
+    pub current_task_id: Option<String>,
+    pub direction: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CycleIncompleteTaskResponse {
+    pub task: Option<Task>,
+    pub position: usize,
+    pub total_incomplete: usize,
+    pub has_more_tasks: bool,
+}
+
+#[tauri::command]
+pub async fn cycle_incomplete_task(
+    request: CycleIncompleteTaskRequest,
+    cycling_service: State<'_, Arc<dyn domain::TaskCyclerService + Send + Sync>>,
+) -> Result<CycleIncompleteTaskResponse, String> {
+    use usecases::task::cycle_incomplete_task::{CycleDirection, CycleIncompleteTaskQuery};
+    
+    let direction = match request.direction.as_str() {
+        "next" => CycleDirection::Next,
+        "previous" => CycleDirection::Previous,
+        _ => CycleDirection::Next,
+    };
+    
+    let query = CycleIncompleteTaskQuery {
+        current_task_id: request.current_task_id,
+        direction,
+    };
+    
+    let result = usecases::task::cycle_incomplete_task(&cycling_service, query)
+        .await
+        .context("Failed to cycle incomplete task")
+        .map_err(|e| e.to_string())?;
+    
+    Ok(CycleIncompleteTaskResponse {
+        task: result.task,
+        position: result.position,
+        total_incomplete: result.total_incomplete,
+        has_more_tasks: result.has_more_tasks,
+    })
+}
+
+#[tauri::command]
+pub async fn get_task_cycle_position(
+    task_id: String,
+    cycling_service: State<'_, Arc<dyn domain::TaskCyclerService + Send + Sync>>,
+) -> Result<(usize, usize), String> {
+    usecases::task::get_task_cycle_position(&cycling_service, task_id)
+        .await
+        .context("Failed to get task cycle position")
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_incomplete_tasks(
+    task_repo: State<'_, TaskRepositoryArc>,
+) -> Result<Vec<Task>, String> {
+    task_repo
+        .get_incomplete_tasks()
+        .await
+        .context("Failed to get incomplete tasks")
         .map_err(|e| e.to_string())
 }

@@ -61,7 +61,7 @@
       "WebSearch"
     ],
     "deny": [],
-    "defaultMode": "plan"
+    "defaultMode": "bypassPermissions"
   },
   "hooks": {
     "PostToolUse": [

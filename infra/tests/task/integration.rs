@@ -1,6 +1,6 @@
 use crate::task::models::{TaskBuilder, TaskTestRepository};
 use domain::{
-    AudioConfig, TaskBuilder as DomainTaskBuilder, TaskConfig, TaskRepository,
+    AudioConfig, TaskBuilder as DomainTaskBuilder, TaskRepository,
     TaskStatus,
 };
 use std::time::Duration;
@@ -288,14 +288,11 @@ async fn test_task_with_custom_configuration() {
     )
     .with_tags(vec!["work".to_string(), "deep-focus".to_string()])
     .with_config(
-        TaskConfig::new(
-            Duration::from_secs(45 * 60), // 45 min work sessions
-            Duration::from_secs(10 * 60), // 10 min short breaks
-            Duration::from_secs(25 * 60), // 25 min long breaks
-            3,                            // Long break every 3 sessions
-            true,                         // Enable screen blocking
-        )
-        .unwrap(),
+        Duration::from_secs(45 * 60), // 45 min work sessions
+        Duration::from_secs(10 * 60), // 10 min short breaks
+        Duration::from_secs(25 * 60), // 25 min long breaks
+        3,                            // Long break every 3 sessions
+        true,                         // Enable screen blocking
     )
     .with_audio_config(AudioConfig {
         volume: 0.4,
@@ -319,17 +316,17 @@ async fn test_task_with_custom_configuration() {
         retrieved.description,
         Some("Long-form focused work requiring extended sessions".to_string())
     );
-    assert_eq!(retrieved.config.work_duration, Duration::from_secs(45 * 60));
+    assert_eq!(retrieved.settings.custom_work_duration, Some(Duration::from_secs(45 * 60)));
     assert_eq!(
-        retrieved.config.short_break_duration,
-        Duration::from_secs(10 * 60)
+        retrieved.settings.custom_short_break_duration,
+        Some(Duration::from_secs(10 * 60))
     );
     assert_eq!(
-        retrieved.config.long_break_duration,
-        Duration::from_secs(25 * 60)
+        retrieved.settings.custom_long_break_duration,
+        Some(Duration::from_secs(25 * 60))
     );
-    assert_eq!(retrieved.config.sessions_until_long_break, 3);
-    assert!(retrieved.config.enable_screen_blocking);
+    assert_eq!(retrieved.settings.custom_sessions_until_long_break, Some(3));
+    assert_eq!(retrieved.settings.custom_enable_screen_blocking, Some(true));
 
     // Verify audio configuration
     assert_eq!(retrieved.audio_config.volume, 0.4);

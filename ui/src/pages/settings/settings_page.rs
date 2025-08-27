@@ -1,89 +1,980 @@
 use crate::pages::settings::SettingsViewModel;
 use crate::utils::ViewModel;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
+use domain::*;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     let vm = StoredValue::new(SettingsViewModel::new());
+    let (active_tab, set_active_tab) = signal("timer");
+    let (validation_errors, set_validation_errors) = signal(Vec::<String>::new());
+    let (success_message, set_success_message) = signal(None::<String>);
+
+    let handle_save = move |_| {
+        set_validation_errors.set(Vec::new());
+        set_success_message.set(None);
+        
+        vm.with_value(|v| {
+            if let Err(e) = v.save_settings() {
+                set_validation_errors.update(|errors| errors.push(e.to_string()));
+            } else {
+                set_success_message.set(Some("Settings saved successfully".to_string()));
+                spawn_local(async move {
+                    leptos::prelude::set_timeout(
+                        move || set_success_message.set(None),
+                        std::time::Duration::from_secs(3)
+                    );
+                });
+            }
+        });
+    };
+
+    let handle_reset = move |_| {
+        set_validation_errors.set(Vec::new());
+        set_success_message.set(None);
+        
+        vm.with_value(|v| {
+            v.reset_to_defaults();
+            set_success_message.set(Some("Settings reset to defaults".to_string()));
+            spawn_local(async move {
+                leptos::prelude::set_timeout(
+                    move || set_success_message.set(None),
+                    std::time::Duration::from_secs(3)
+                );
+            });
+        });
+    };
+
+    let handle_export = move |_| {
+        vm.with_value(|v| {
+            v.export_settings();
+            set_success_message.set(Some("Settings exported successfully".to_string()));
+            spawn_local(async move {
+                leptos::prelude::set_timeout(
+                    move || set_success_message.set(None),
+                    std::time::Duration::from_secs(3)
+                );
+            });
+        });
+    };
+
+    let handle_import = move |_| {
+        vm.with_value(|v| {
+            if let Err(e) = v.import_settings() {
+                set_validation_errors.update(|errors| errors.push(e.to_string()));
+            } else {
+                set_success_message.set(Some("Settings imported successfully".to_string()));
+                spawn_local(async move {
+                    leptos::prelude::set_timeout(
+                        move || set_success_message.set(None),
+                        std::time::Duration::from_secs(3)
+                    );
+                });
+            }
+        });
+    };
 
     view! {
         <div class="settings-container">
-            <h2 class="settings-title">"Settings"</h2>
+            <div class="settings-header">
+                <h2 class="settings-title">"Global Settings"</h2>
+                <div class="settings-actions">
+                    <button class="btn btn-secondary" on:click=handle_export>"Export"</button>
+                    <button class="btn btn-secondary" on:click=handle_import>"Import"</button>
+                    <button class="btn btn-secondary" on:click=handle_reset>"Reset to Defaults"</button>
+                </div>
+            </div>
 
-            {move || {
-                vm.with_value(|v| v.get_config()).map(|config| {
-                    // Extract values to avoid move issues
-                    let auto_start_breaks = config.general.auto_start_breaks;
-                    let auto_start_work = config.general.auto_start_work_after_break;
+            <Show when=move || !validation_errors.get().is_empty()>
+                <div class="settings-errors">
+                    <For
+                        each=move || validation_errors.get()
+                        key=|error| error.clone()
+                        children=move |error| view! {
+                            <div class="error-message">{error}</div>
+                        }
+                    />
+                </div>
+            </Show>
 
-                    view! {
-                        <>
-                            <div class="setting-group">
-                                <label class="setting-label">"Focus Duration (minutes)"</label>
-                                <input type="number" class="setting-input" id="focusDuration" value="25" min="1" max="60" />
-                            </div>
-                            <div class="setting-group">
-                                <label class="setting-label">"Short Break Duration (minutes)"</label>
-                                <input type="number" class="setting-input" id="shortBreakDuration" value="5" min="1" max="30" />
-                            </div>
-                            <div class="setting-group">
-                                <label class="setting-label">"Long Break Duration (minutes)"</label>
-                                <input type="number" class="setting-input" id="longBreakDuration" value="15" min="1" max="60" />
-                            </div>
-                            <div class="setting-group">
-                                <label class="setting-label">"Sessions Until Long Break"</label>
-                                <input type="number" class="setting-input" id="sessionsUntilLong" value="4" min="2" max="10" />
-                            </div>
-                            <div class="setting-group">
-                                <label class="setting-label">"Auto-start Breaks"</label>
-                                <input
-                                    type="checkbox"
-                                    checked=auto_start_breaks
-                                    id="autoStartBreaks"
-                                    on:change=move |ev| {
-                                        let checked = event_target_checked(&ev);
-                                        vm.with_value(|v| {
-                                            if let Some(mut cfg) = v.get_config() {
-                                                cfg.general.auto_start_breaks = checked;
-                                                v.update_general(cfg.general);
-                                            }
-                                        });
-                                    }
-                                />
-                            </div>
-                            <div class="setting-group">
-                                <label class="setting-label">"Auto-start Focus Sessions"</label>
-                                <input
-                                    type="checkbox"
-                                    checked=auto_start_work
-                                    id="autoStartFocus"
-                                    on:change=move |ev| {
-                                        let checked = event_target_checked(&ev);
-                                        vm.with_value(|v| {
-                                            if let Some(mut cfg) = v.get_config() {
-                                                cfg.general.auto_start_work_after_break = checked;
-                                                v.update_general(cfg.general);
-                                            }
-                                        });
-                                    }
-                                />
-                            </div>
-                            <button
-                                class="btn btn-primary save-settings-btn"
-                                on:click=move |_| {
-                                    vm.with_value(|v| v.save_settings());
+            <Show when=move || success_message.get().is_some()>
+                <div class="success-message">
+                    {move || success_message.get().unwrap_or_default()}
+                </div>
+            </Show>
+
+            <div class="settings-tabs">
+                <button
+                    class=move || if active_tab.get() == "timer" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("timer")
+                >
+                    "Timer"
+                </button>
+                <button
+                    class=move || if active_tab.get() == "notifications" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("notifications")
+                >
+                    "Notifications"
+                </button>
+                <button
+                    class=move || if active_tab.get() == "audio" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("audio")
+                >
+                    "Audio"
+                </button>
+                <button
+                    class=move || if active_tab.get() == "appearance" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("appearance")
+                >
+                    "Appearance"
+                </button>
+                <button
+                    class=move || if active_tab.get() == "general" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("general")
+                >
+                    "General"
+                </button>
+                <button
+                    class=move || if active_tab.get() == "storage" { "tab-button active" } else { "tab-button" }
+                    on:click=move |_| set_active_tab.set("storage")
+                >
+                    "Storage"
+                </button>
+            </div>
+
+            <div class="settings-content">
+                {move || {
+                    vm.with_value(|v| v.get_config()).map(|config| {
+                        match active_tab.get() {
+                            "timer" => view! { <TimerSettings config=config vm=vm /> }.into_any(),
+                            "notifications" => view! { <NotificationSettings config=config vm=vm /> }.into_any(),
+                            "audio" => view! { <AudioSettings config=config vm=vm /> }.into_any(),
+                            "appearance" => view! { <AppearanceSettings config=config vm=vm /> }.into_any(),
+                            "general" => view! { <GeneralSettings config=config vm=vm /> }.into_any(),
+                            "storage" => view! { <StorageSettings vm=vm /> }.into_any(),
+                            _ => view! { <TimerSettings config=config vm=vm /> }.into_any()
+                        }
+                    }).unwrap_or_else(|| {
+                        view! {
+                            <div class="settings-loading">"Loading settings..."</div>
+                        }.into_any()
+                    })
+                }}
+            </div>
+
+            <div class="settings-footer">
+                <button class="btn btn-cancel" on:click=move |_| {
+                    vm.with_value(|v| v.refetch_config());
+                    set_success_message.set(Some("Changes discarded".to_string()));
+                }>"Cancel"</button>
+                <button class="btn btn-primary" on:click=handle_save>"Save All Settings"</button>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn TimerSettings(
+    config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let work_minutes = (config.task_defaults.work_duration.as_secs() / 60) as u32;
+    let short_break_minutes = (config.task_defaults.short_break_duration.as_secs() / 60) as u32;
+    let long_break_minutes = (config.task_defaults.long_break_duration.as_secs() / 60) as u32;
+    let sessions_until_long = config.task_defaults.sessions_until_long_break;
+    let max_sessions = config.task_defaults.max_sessions_default;
+    let enable_screen_blocking = config.task_defaults.enable_screen_blocking;
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Timer Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-label">"Work Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=work_minutes
+                    min="1"
+                    max="60"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(25);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.task_defaults.work_duration = std::time::Duration::from_secs((value * 60) as u64);
+                                v.update_task_defaults(cfg.task_defaults);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of each work session"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Short Break Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=short_break_minutes
+                    min="1"
+                    max="30"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(5);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.task_defaults.short_break_duration = std::time::Duration::from_secs((value * 60) as u64);
+                                v.update_task_defaults(cfg.task_defaults);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of short breaks between work sessions"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Long Break Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=long_break_minutes
+                    min="5"
+                    max="60"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(15);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.task_defaults.long_break_duration = std::time::Duration::from_secs((value * 60) as u64);
+                                v.update_task_defaults(cfg.task_defaults);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of long breaks after completing a cycle"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Sessions Until Long Break"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=sessions_until_long
+                    min="2"
+                    max="10"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u8>().unwrap_or(4);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.task_defaults.sessions_until_long_break = value;
+                                v.update_task_defaults(cfg.task_defaults);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Number of work sessions before a long break"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Max Sessions Default"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=max_sessions
+                    min="1"
+                    max="10"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u8>().unwrap_or(4);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.task_defaults.max_sessions_default = value;
+                                v.update_task_defaults(cfg.task_defaults);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Default maximum number of sessions for new tasks"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=enable_screen_blocking
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.task_defaults.enable_screen_blocking = checked;
+                                    v.update_task_defaults(cfg.task_defaults);
                                 }
-                            >
-                                "SAVE SETTINGS"
-                            </button>
-                        </>
-                    }.into_any()
-                }).unwrap_or_else(|| {
-                    view! {
-                        <p>"Loading settings..."</p>
-                    }.into_any()
-                })
-            }}
+                            });
+                        }
+                    />
+                    <span>"Enable Screen Blocking During Breaks"</span>
+                </label>
+                <span class="setting-help">"Block screen access during break periods"</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn NotificationSettings(
+    config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let enable_desktop = config.notification.enable_desktop_notifications;
+    let enable_sound = config.notification.enable_sound_notifications;
+    let show_phase_transitions = config.notification.show_phase_transition_notifications;
+    let show_task_completions = config.notification.show_task_completion_notifications;
+    let auto_dismiss_delay = config.notification.auto_dismiss_delay_seconds;
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Notification Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=enable_desktop
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.notification.enable_desktop_notifications = checked;
+                                    v.update_notifications(cfg.notification);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Enable Desktop Notifications"</span>
+                </label>
+                <span class="setting-help">"Show system notifications for timer events"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=enable_sound
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.notification.enable_sound_notifications = checked;
+                                    v.update_notifications(cfg.notification);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Enable Sound Notifications"</span>
+                </label>
+                <span class="setting-help">"Play sounds for timer events"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=show_phase_transitions
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.notification.show_phase_transition_notifications = checked;
+                                    v.update_notifications(cfg.notification);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Show Phase Transition Notifications"</span>
+                </label>
+                <span class="setting-help">"Notify when switching between work and break phases"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=show_task_completions
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.notification.show_task_completion_notifications = checked;
+                                    v.update_notifications(cfg.notification);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Show Task Completion Notifications"</span>
+                </label>
+                <span class="setting-help">"Notify when tasks are completed"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Auto-Dismiss Delay (seconds)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=auto_dismiss_delay
+                    min="1"
+                    max="30"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(5);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.notification.auto_dismiss_delay_seconds = value;
+                                v.update_notifications(cfg.notification);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Time before notifications automatically close"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Notification Position"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let position = match value.as_str() {
+                            "TopLeft" => NotificationPosition::TopLeft,
+                            "TopRight" => NotificationPosition::TopRight,
+                            "BottomLeft" => NotificationPosition::BottomLeft,
+                            "BottomRight" => NotificationPosition::BottomRight,
+                            "Center" => NotificationPosition::Center,
+                            _ => NotificationPosition::TopRight,
+                        };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.notification.notification_position = position;
+                                v.update_notifications(cfg.notification);
+                            }
+                        });
+                    }
+                >
+                    <option value="TopRight" selected=matches!(config.notification.notification_position, NotificationPosition::TopRight)>"Top Right"</option>
+                    <option value="TopLeft" selected=matches!(config.notification.notification_position, NotificationPosition::TopLeft)>"Top Left"</option>
+                    <option value="BottomRight" selected=matches!(config.notification.notification_position, NotificationPosition::BottomRight)>"Bottom Right"</option>
+                    <option value="BottomLeft" selected=matches!(config.notification.notification_position, NotificationPosition::BottomLeft)>"Bottom Left"</option>
+                    <option value="Center" selected=matches!(config.notification.notification_position, NotificationPosition::Center)>"Center"</option>
+                </select>
+                <span class="setting-help">"Where notifications appear on screen"</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn AudioSettings(
+    config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let volume = (config.audio.volume * 100.0) as u32;
+    let enable_background = config.audio.enable_background_audio;
+    let muted = config.audio.muted;
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Audio Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=!muted
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.audio.muted = !checked;
+                                    v.update_audio(cfg.audio);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Enable Audio"</span>
+                </label>
+                <span class="setting-help">"Master audio toggle"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Volume"</label>
+                <div class="volume-control">
+                    <input
+                        type="range"
+                        class="setting-slider"
+                        value=volume
+                        min="0"
+                        max="100"
+                        on:input=move |ev| {
+                            let value = event_target_value(&ev).parse::<u32>().unwrap_or(70);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.audio.volume = (value as f32) / 100.0;
+                                    v.update_audio(cfg.audio);
+                                }
+                            });
+                        }
+                    />
+                    <span class="volume-value">{volume}"%"</span>
+                </div>
+                <span class="setting-help">"Master volume for all sounds"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=enable_background
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.audio.enable_background_audio = checked;
+                                    v.update_audio(cfg.audio);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Enable Background Audio"</span>
+                </label>
+                <span class="setting-help">"Play ambient sounds during work sessions"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Work Notification Sound"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let sound = if value.is_empty() { None } else { Some(value) };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.audio.work_notification_sound = sound;
+                                v.update_audio(cfg.audio);
+                            }
+                        });
+                    }
+                >
+                    <option value="" selected=config.audio.work_notification_sound.is_none()>"None"</option>
+                    <option value="bell.wav">"Bell"</option>
+                    <option value="chime.wav">"Chime"</option>
+                    <option value="gong.wav">"Gong"</option>
+                </select>
+                <button class="btn btn-small" on:click=move |_| {
+                    vm.with_value(|v| v.test_audio_preview("work"));
+                }>"Test"</button>
+                <span class="setting-help">"Sound played when work session ends"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Break Notification Sound"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let sound = if value.is_empty() { None } else { Some(value) };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.audio.break_notification_sound = sound;
+                                v.update_audio(cfg.audio);
+                            }
+                        });
+                    }
+                >
+                    <option value="" selected=config.audio.break_notification_sound.is_none()>"None"</option>
+                    <option value="bell.wav">"Bell"</option>
+                    <option value="chime.wav">"Chime"</option>
+                    <option value="gong.wav">"Gong"</option>
+                </select>
+                <button class="btn btn-small" on:click=move |_| {
+                    vm.with_value(|v| v.test_audio_preview("break"));
+                }>"Test"</button>
+                <span class="setting-help">"Sound played when break session ends"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Background Sound"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let sound = if value.is_empty() { None } else { Some(value) };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.audio.background_sound = sound;
+                                v.update_audio(cfg.audio);
+                            }
+                        });
+                    }
+                >
+                    <option value="" selected=config.audio.background_sound.is_none()>"None"</option>
+                    <option value="rain.wav">"Rain"</option>
+                    <option value="forest.wav">"Forest"</option>
+                    <option value="ocean.wav">"Ocean"</option>
+                    <option value="whitenoise.wav">"White Noise"</option>
+                </select>
+                <button class="btn btn-small" on:click=move |_| {
+                    vm.with_value(|v| v.test_audio_preview("background"));
+                }>"Test"</button>
+                <span class="setting-help">"Ambient sound during work sessions"</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn AppearanceSettings(
+    config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let show_seconds = config.appearance.show_seconds_in_display;
+    let always_on_top = config.appearance.always_on_top;
+    let compact_mode = config.appearance.compact_mode;
+    let show_sidebar = config.appearance.show_task_list_sidebar;
+    let animate_progress = config.appearance.animate_progress;
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Appearance Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-label">"Theme"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let theme = match value.as_str() {
+                            "Light" => Theme::Light,
+                            "Dark" => Theme::Dark,
+                            _ => Theme::System,
+                        };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.appearance.theme = theme;
+                                v.update_appearance(cfg.appearance);
+                            }
+                        });
+                    }
+                >
+                    <option value="System" selected=matches!(config.appearance.theme, Theme::System)>"System"</option>
+                    <option value="Light" selected=matches!(config.appearance.theme, Theme::Light)>"Light"</option>
+                    <option value="Dark" selected=matches!(config.appearance.theme, Theme::Dark)>"Dark"</option>
+                </select>
+                <span class="setting-help">"Application color scheme"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=show_seconds
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.appearance.show_seconds_in_display = checked;
+                                    v.update_appearance(cfg.appearance);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Show Seconds in Timer"</span>
+                </label>
+                <span class="setting-help">"Display seconds in the timer countdown"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=always_on_top
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.appearance.always_on_top = checked;
+                                    v.update_appearance(cfg.appearance);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Always On Top"</span>
+                </label>
+                <span class="setting-help">"Keep window above other applications"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=compact_mode
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.appearance.compact_mode = checked;
+                                    v.update_appearance(cfg.appearance);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Compact Mode"</span>
+                </label>
+                <span class="setting-help">"Use minimal interface layout"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=show_sidebar
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.appearance.show_task_list_sidebar = checked;
+                                    v.update_appearance(cfg.appearance);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Show Task List Sidebar"</span>
+                </label>
+                <span class="setting-help">"Display task list in sidebar"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=animate_progress
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.appearance.animate_progress = checked;
+                                    v.update_appearance(cfg.appearance);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Animate Progress"</span>
+                </label>
+                <span class="setting-help">"Show smooth animations for progress indicators"</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn GeneralSettings(
+    config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let auto_start_breaks = config.general.auto_start_breaks;
+    let auto_start_work = config.general.auto_start_work_after_break;
+    let minimize_to_tray = config.general.minimize_to_tray;
+    let start_minimized = config.general.start_minimized;
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"General Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-label">"Task Cycling Behavior"</label>
+                <select
+                    class="setting-select"
+                    on:change=move |ev| {
+                        let value = event_target_value(&ev);
+                        let behavior = match value.as_str() {
+                            "AutoAdvance" => TaskCyclingBehavior::AutoAdvance,
+                            "RoundRobin" => TaskCyclingBehavior::RoundRobin,
+                            _ => TaskCyclingBehavior::Manual,
+                        };
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.general.task_cycling_behavior = behavior;
+                                v.update_general(cfg.general);
+                            }
+                        });
+                    }
+                >
+                    <option value="Manual" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::Manual)>"Manual"</option>
+                    <option value="AutoAdvance" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::AutoAdvance)>"Auto Advance"</option>
+                    <option value="RoundRobin" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::RoundRobin)>"Round Robin"</option>
+                </select>
+                <span class="setting-help">"How tasks cycle after completion"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=auto_start_breaks
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.auto_start_breaks = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Auto-Start Breaks"</span>
+                </label>
+                <span class="setting-help">"Automatically start break sessions after work"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=auto_start_work
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.auto_start_work_after_break = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Auto-Start Work After Break"</span>
+                </label>
+                <span class="setting-help">"Automatically start work sessions after break"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=minimize_to_tray
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.minimize_to_tray = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Minimize to System Tray"</span>
+                </label>
+                <span class="setting-help">"Hide to system tray when minimized"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-checkbox">
+                    <input
+                        type="checkbox"
+                        checked=start_minimized
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.start_minimized = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span>"Start Minimized"</span>
+                </label>
+                <span class="setting-help">"Launch application minimized"</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn StorageSettings(
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let (storage_path, set_storage_path) = signal(String::from(""));
+    let (validation_error, set_validation_error) = signal(None::<String>);
+
+    Effect::new(move |_| {
+        vm.with_value(|v| {
+            let path = v.get_storage_path();
+            set_storage_path.set(path);
+        });
+    });
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Storage Settings"</h3>
+            
+            <div class="setting-group">
+                <label class="setting-label">"Data Directory"</label>
+                <div class="path-input-group">
+                    <input
+                        type="text"
+                        class="setting-input path-input"
+                        value=move || storage_path.get()
+                        on:input=move |ev| {
+                            let value = event_target_value(&ev);
+                            set_storage_path.set(value.clone());
+                            set_validation_error.set(None);
+                        }
+                    />
+                    <button class="btn btn-secondary" on:click=move |_| {
+                        vm.with_value(|v| {
+                            if let Some(path) = v.browse_for_directory() {
+                                set_storage_path.set(path);
+                                set_validation_error.set(None);
+                            }
+                        });
+                    }>"Browse"</button>
+                </div>
+                <span class="setting-help">"Location where all application data is stored"</span>
+                <Show when=move || validation_error.get().is_some()>
+                    <div class="validation-error">
+                        {move || validation_error.get().unwrap_or_default()}
+                    </div>
+                </Show>
+            </div>
+
+            <div class="setting-group">
+                <button class="btn btn-secondary" on:click=move |_| {
+                    let path = storage_path.get();
+                    vm.with_value(|v| {
+                        match v.validate_storage_path(&path) {
+                            Ok(_) => {
+                                v.update_storage_path(path);
+                                set_validation_error.set(None);
+                            },
+                            Err(e) => {
+                                set_validation_error.set(Some(e.to_string()));
+                            }
+                        }
+                    });
+                }>"Apply Storage Path"</button>
+                <span class="setting-help">"Change storage location (requires restart)"</span>
+            </div>
+
+            <div class="setting-group">
+                <button class="btn btn-secondary" on:click=move |_| {
+                    vm.with_value(|v| v.open_data_directory());
+                }>"Open Data Directory"</button>
+                <span class="setting-help">"Browse current data directory in file manager"</span>
+            </div>
+
+            <div class="setting-group">
+                <button class="btn btn-warning" on:click=move |_| {
+                    if leptos::prelude::window().confirm_with_message("This will delete all application data. Are you sure?").unwrap_or(false) {
+                        vm.with_value(|v| v.clear_all_data());
+                    }
+                }>"Clear All Data"</button>
+                <span class="setting-help">"Delete all tasks, settings, and history"</span>
+            </div>
         </div>
     }
 }

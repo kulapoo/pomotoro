@@ -1,9 +1,9 @@
 pub mod builder;
-pub mod config;
 pub mod cycling_service;
 pub mod events;
 pub mod id;
 pub mod repository;
+pub mod settings;
 pub mod status;
 mod task;
 #[cfg(test)]
@@ -15,7 +15,6 @@ pub mod test_repository;
 
 pub use self::task::Task;
 pub use builder::Builder;
-pub use config::Config;
 pub use cycling_service::{
     CyclerService, CyclingStrategy, DefaultCyclingService,
 };
@@ -26,4 +25,5 @@ pub use events::{
 };
 pub use id::{Id, Marker};
 pub use repository::Repository;
+pub use settings::{EffectiveSettings, TaskSettings};
 pub use status::Status;

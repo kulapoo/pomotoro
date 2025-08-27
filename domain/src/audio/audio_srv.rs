@@ -1,4 +1,5 @@
-use super::library::{PlaybackHandle, PlaybackRequest};
+use super::asset::AudioAsset;
+use super::library::{AudioLibrary, PlaybackHandle, PlaybackRequest};
 use crate::shared_kernel::Result;
 
 /// Domain service for audio playback operations
@@ -32,4 +33,22 @@ pub trait AudioService: Send + Sync {
 
     /// Clean up finished playbacks from internal state
     fn cleanup_finished(&mut self) -> Result<()>;
+
+    /// Get the audio library with available assets
+    fn get_library(&self) -> &AudioLibrary;
+
+    /// Play a notification sound
+    fn play_notification(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle>;
+
+    /// Play background audio (looped with fade-in)
+    fn play_background_audio(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle>;
+
+    /// Stop all background audio (looped audio)
+    fn stop_background_audio(&mut self) -> Result<()>;
+
+    /// Add a new audio asset to the library
+    fn add_asset(&mut self, asset: AudioAsset);
+
+    /// Remove an audio asset from the library
+    fn remove_asset(&mut self, asset_id: &str) -> Option<AudioAsset>;
 }

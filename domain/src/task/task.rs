@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{config::Config, id::Id, status::Status};
+use super::{id::Id, settings::TaskSettings, status::Status};
 use crate::{AudioConfig, Error, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub struct Task {
     pub max_sessions: u8,
     pub current_sessions: u8,
     pub tags: Vec<String>,
-    pub config: Config,
+    pub settings: TaskSettings,
     pub audio_config: AudioConfig,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -118,5 +118,41 @@ impl Task {
 
     pub fn unset_as_default(&mut self) {
         self.default = false;
+    }
+
+    pub fn with_default(mut self, default: bool) -> Self {
+        self.default = default;
+        self
+    }
+
+    pub fn get_settings(&self) -> &TaskSettings {
+        &self.settings
+    }
+
+    pub fn set_settings(&mut self, settings: TaskSettings) {
+        self.settings = settings;
+    }
+
+    pub fn reset_settings_to_global(&mut self) {
+        self.settings.reset_to_global();
+    }
+
+    pub fn has_custom_settings(&self) -> bool {
+        self.settings.has_custom_settings()
+    }
+
+    pub fn get_effective_settings(&self, defaults: &crate::TaskDefaults) -> super::settings::EffectiveSettings {
+        self.settings.merge_with_defaults(defaults)
+    }
+
+    pub fn get_effective_audio_config(&self, defaults: &crate::TaskDefaults) -> AudioConfig {
+        let effective = self.get_effective_settings(defaults);
+        effective.audio_config
+    }
+
+    pub fn get_effective_max_sessions(&self, defaults: &crate::TaskDefaults) -> u8 {
+        self.settings
+            .custom_max_sessions
+            .unwrap_or(defaults.max_sessions_default)
     }
 }

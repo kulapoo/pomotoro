@@ -16,6 +16,23 @@ pub trait CyclerService: Send + Sync {
         &self,
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>>;
+    async fn get_previous_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>>;
+    async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>>;
+    async fn cycle_to_next_incomplete_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>>;
+    async fn cycle_to_previous_incomplete_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>>;
+    async fn get_task_cycle_position(
+        &self,
+        task_id: Id,
+    ) -> Result<(usize, usize)>;
 }
 
 /// Domain value object for task cycling strategies
@@ -53,7 +70,6 @@ impl DefaultCyclingService {
         }
 
         if let Some(current_id) = current_task_id {
-            // Find current task position and get next one
             if let Some(current_pos) =
                 tasks.iter().position(|t| t.id == current_id)
             {
@@ -63,6 +79,31 @@ impl DefaultCyclingService {
         }
 
         tasks.first()
+    }
+
+    pub fn find_previous_task_round_robin<'a>(
+        &self,
+        tasks: &'a [Task],
+        current_task_id: Option<Id>,
+    ) -> Option<&'a Task> {
+        if tasks.is_empty() {
+            return None;
+        }
+
+        if let Some(current_id) = current_task_id {
+            if let Some(current_pos) =
+                tasks.iter().position(|t| t.id == current_id)
+            {
+                let prev_pos = if current_pos == 0 {
+                    tasks.len() - 1
+                } else {
+                    current_pos - 1
+                };
+                return Some(&tasks[prev_pos]);
+            }
+        }
+
+        tasks.last()
     }
 
     /// Pure domain logic: Filter available tasks
@@ -104,6 +145,23 @@ impl DefaultCyclingService {
             return Err(Error::TaskAlreadyCompleted);
         }
         Ok(())
+    }
+
+    pub fn find_task_cycle_position(
+        &self,
+        tasks: &[Task],
+        task_id: Id,
+    ) -> (usize, usize) {
+        let incomplete_tasks = self.filter_available_tasks(tasks);
+        let total = incomplete_tasks.len();
+        
+        let position = incomplete_tasks
+            .iter()
+            .position(|t| t.id == task_id)
+            .map(|p| p + 1)
+            .unwrap_or(0);
+        
+        (position, total)
     }
 }
 

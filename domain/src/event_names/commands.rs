@@ -25,6 +25,12 @@ pub mod task {
     pub const GET_ALL: &str = "get_all_tasks";
     pub const COMPLETE_SESSION: &str = "complete_task_session";
     pub const RESET_SESSIONS: &str = "reset_task_sessions";
+    pub const SEARCH: &str = "search_tasks";
+    pub const SEARCH_FUZZY: &str = "search_tasks_fuzzy";
+    pub const FILTER_BY_STATUS: &str = "filter_tasks_by_status";
+    pub const CYCLE_INCOMPLETE_TASK: &str = "cycle_incomplete_task";
+    pub const GET_TASK_CYCLE_POSITION: &str = "get_task_cycle_position";
+    pub const GET_INCOMPLETE_TASKS: &str = "get_incomplete_tasks";
 
     // Business Events
     pub const TASK_CREATED: &str = "task_created";
@@ -48,4 +54,18 @@ pub mod config {
     // Business Events
     pub const CONFIG_UPDATED: &str = "config_updated";
     pub const CONFIG_RESET: &str = "config_reset";
+}
+
+pub mod audio {
+    pub const TEST_PREVIEW: &str = "test_audio_preview";
+    pub const PLAY_NOTIFICATION: &str = "play_notification_sound";
+    pub const PLAY_BACKGROUND: &str = "play_background_audio";
+    pub const STOP_BACKGROUND: &str = "stop_background_audio";
+}
+
+pub mod storage {
+    pub const OPEN_DATA_DIR: &str = "open_data_directory";
+    pub const CLEAR_ALL_DATA: &str = "clear_all_data";
+    pub const VALIDATE_PATH: &str = "validate_storage_path";
+    pub const UPDATE_PATH: &str = "update_storage_path";
 }

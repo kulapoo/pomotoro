@@ -1,4 +1,4 @@
-use domain::{AudioConfig, Config, TaskConfig};
+use domain::{AudioConfig, Config, TaskSettings};
 use domain::{ConfigRepository, Result};
 use std::sync::RwLock;
 use std::time::Duration;
@@ -189,19 +189,19 @@ impl ConfigTestUtils {
     }
 
     pub fn assert_task_config_equals(
-        actual: &TaskConfig,
-        expected: &TaskConfig,
+        actual: &TaskSettings,
+        expected: &TaskSettings,
     ) {
-        assert_eq!(actual.work_duration, expected.work_duration);
-        assert_eq!(actual.short_break_duration, expected.short_break_duration);
-        assert_eq!(actual.long_break_duration, expected.long_break_duration);
+        assert_eq!(actual.custom_work_duration, expected.custom_work_duration);
+        assert_eq!(actual.custom_short_break_duration, expected.custom_short_break_duration);
+        assert_eq!(actual.custom_long_break_duration, expected.custom_long_break_duration);
         assert_eq!(
-            actual.sessions_until_long_break,
-            expected.sessions_until_long_break
+            actual.custom_sessions_until_long_break,
+            expected.custom_sessions_until_long_break
         );
         assert_eq!(
-            actual.enable_screen_blocking,
-            expected.enable_screen_blocking
+            actual.custom_enable_screen_blocking,
+            expected.custom_enable_screen_blocking
         );
     }
 

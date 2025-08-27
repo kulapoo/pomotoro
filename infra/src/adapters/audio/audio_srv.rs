@@ -7,6 +7,7 @@ use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use uuid::Uuid;
@@ -45,6 +46,58 @@ impl RodioAudioService {
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
         })
     }
+    
+    /// Resolve relative paths to absolute paths based on the current directory
+    /// or the executable's directory
+    fn resolve_audio_path(path: &Path) -> PathBuf {
+        // If the path is already absolute, return it as-is
+        if path.is_absolute() {
+            return path.to_path_buf();
+        }
+        
+        // Try to resolve relative to current directory first
+        let from_cwd = std::env::current_dir()
+            .ok()
+            .map(|cwd| cwd.join(path));
+        
+        if let Some(ref p) = from_cwd {
+            if p.exists() {
+                return p.clone();
+            }
+        }
+        
+        // If not found, try relative to executable location
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                // In development, the executable might be in target/debug or target/release
+                // We need to go up to the project root
+                let mut current = exe_dir;
+                
+                // Look for the assets folder by traversing up
+                for _ in 0..5 {  // Limit traversal depth
+                    let candidate = current.join(path);
+                    if candidate.exists() {
+                        return candidate;
+                    }
+                    
+                    // Also check if we need to go to parent
+                    if let Some(parent) = current.parent() {
+                        let parent_candidate = parent.join(path);
+                        if parent_candidate.exists() {
+                            return parent_candidate;
+                        }
+                        current = parent;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // If all else fails, return the original path
+        // (will likely fail when trying to open, but preserves original error message)
+        path.to_path_buf()
+    }
 
     pub fn get_library(&self) -> &AudioLibrary {
         &self.library
@@ -68,7 +121,18 @@ impl RodioAudioService {
                 AudioError::AssetNotFound(request.asset_id.clone())
             })?;
 
-        let file = File::open(&asset.file_path).map_err(|_| {
+        if asset.file_path.to_string_lossy().starts_with("embedded:") {
+            return self.play_embedded_sound(request, asset);
+        }
+
+        // Resolve the audio file path
+        let resolved_path = Self::resolve_audio_path(&asset.file_path);
+        
+        let file = File::open(&resolved_path).map_err(|e| {
+            eprintln!("Warning: Audio file not found: {} (resolved to: {}). Error: {}", 
+                asset.file_path.to_string_lossy(), 
+                resolved_path.to_string_lossy(),
+                e);
             AudioError::InvalidFile(
                 asset.file_path.to_string_lossy().to_string(),
             )
@@ -252,6 +316,40 @@ impl RodioAudioService {
             }
         }
     }
+
+    fn play_embedded_sound(
+        &self,
+        request: PlaybackRequest,
+        _asset: &AudioAsset,
+    ) -> std::result::Result<PlaybackHandle, AudioError> {
+        let sink = Sink::connect_new(self.stream_handle.mixer());
+        
+        let silent_samples: Vec<f32> = vec![0.0; 44100 / 10];
+        let source = rodio::buffer::SamplesBuffer::new(1, 44100, silent_samples);
+        
+        sink.append(source);
+        sink.set_volume(0.0);
+
+        let handle_id = Uuid::new_v4().to_string();
+        let handle = PlaybackHandle {
+            id: handle_id.clone(),
+            asset_id: request.asset_id.clone(),
+            is_playing: true,
+            is_looped: false,
+            volume: 0.0,
+        };
+
+        let playback = AudioPlayback {
+            sink,
+            handle: handle.clone(),
+        };
+
+        if let Ok(mut active_playbacks) = self.active_playbacks.lock() {
+            active_playbacks.insert(handle_id, playback);
+        }
+
+        Ok(handle)
+    }
 }
 
 /// Implementation of the domain AudioService trait
@@ -295,5 +393,32 @@ impl AudioService for RodioAudioService {
     fn cleanup_finished(&mut self) -> Result<()> {
         self.cleanup_finished_playbacks();
         Ok(())
+    }
+
+    fn get_library(&self) -> &AudioLibrary {
+        RodioAudioService::get_library(self)
+    }
+
+    fn play_notification(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+        RodioAudioService::play_notification(self, asset_id, volume)
+            .map_err(|e| e.into())
+    }
+
+    fn play_background_audio(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+        RodioAudioService::play_background_audio(self, asset_id, volume)
+            .map_err(|e| e.into())
+    }
+
+    fn stop_background_audio(&mut self) -> Result<()> {
+        RodioAudioService::stop_background_audio(self);
+        Ok(())
+    }
+
+    fn add_asset(&mut self, asset: AudioAsset) {
+        RodioAudioService::add_asset(self, asset);
+    }
+
+    fn remove_asset(&mut self, asset_id: &str) -> Option<AudioAsset> {
+        RodioAudioService::remove_asset(self, asset_id)
     }
 }

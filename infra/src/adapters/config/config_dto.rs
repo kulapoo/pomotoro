@@ -1,6 +1,39 @@
-use crate::adapters::task::config_dto::TaskConfigDto;
 use domain::{Config, Result};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+mod duration_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+
+    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        duration.as_secs().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let secs = u64::deserialize(deserializer)?;
+        Ok(Duration::from_secs(secs))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDefaultsDto {
+    #[serde(with = "duration_serde")]
+    pub work_duration: Duration,
+    #[serde(with = "duration_serde")]
+    pub short_break_duration: Duration,
+    #[serde(with = "duration_serde")]
+    pub long_break_duration: Duration,
+    pub sessions_until_long_break: u8,
+    pub enable_screen_blocking: bool,
+    pub max_sessions_default: u8,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfigDto {
@@ -43,7 +76,7 @@ pub struct AppearanceConfigDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigDto {
-    pub task: TaskConfigDto,
+    pub task: TaskDefaultsDto,
     pub audio: AudioConfigDto,
     pub general: GeneralConfigDto,
     pub notification: NotificationConfigDto,
@@ -55,7 +88,14 @@ impl From<Config> for ConfigDto {
         use domain::{NotificationPosition, TaskCyclingBehavior, Theme};
 
         Self {
-            task: TaskConfigDto::from(config.task_defaults),
+            task: TaskDefaultsDto {
+                work_duration: config.task_defaults.work_duration,
+                short_break_duration: config.task_defaults.short_break_duration,
+                long_break_duration: config.task_defaults.long_break_duration,
+                sessions_until_long_break: config.task_defaults.sessions_until_long_break,
+                enable_screen_blocking: config.task_defaults.enable_screen_blocking,
+                max_sessions_default: config.task_defaults.max_sessions_default,
+            },
             audio: AudioConfigDto {
                 work_notification_sound: config.audio.work_notification_sound,
                 break_notification_sound: config.audio.break_notification_sound,
@@ -130,6 +170,21 @@ impl From<Config> for ConfigDto {
                 animate_progress: config.appearance.animate_progress,
             },
         }
+    }
+}
+
+impl TryFrom<TaskDefaultsDto> for domain::TaskDefaults {
+    type Error = domain::Error;
+
+    fn try_from(dto: TaskDefaultsDto) -> Result<Self> {
+        domain::TaskDefaults::new(
+            dto.work_duration,
+            dto.short_break_duration,
+            dto.long_break_duration,
+            dto.sessions_until_long_break,
+            dto.enable_screen_blocking,
+            dto.max_sessions_default,
+        )
     }
 }
 

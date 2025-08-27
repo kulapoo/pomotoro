@@ -56,10 +56,12 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                         0.0
                                     };
 
-                                    let task_classes = if is_active {
-                                        "task-item active-task"
-                                    } else {
-                                        "task-item"
+                                    let task_classes = match (&task.status, is_active) {
+                                        (_, true) => "task-item active-task",
+                                        (domain::TaskStatus::Completed, _) => "task-item completed-task",
+                                        (domain::TaskStatus::Paused, _) => "task-item paused-task",
+                                        (domain::TaskStatus::Queued, _) => "task-item queued-task",
+                                        _ => "task-item"
                                     };
 
                                     view! {
@@ -71,20 +73,46 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                         >
                                                             <div class="task-header">
                                                 <h3>{task.name.clone()}</h3>
-                                                <span class="task-status">
-                                                    {if is_active { "Active" } else { "Pending" }}
+                                                <span class={format!("task-status status-{}", 
+                                                    match &task.status {
+                                                        domain::TaskStatus::Active => "active",
+                                                        domain::TaskStatus::Completed => "completed",
+                                                        domain::TaskStatus::Paused => "paused",
+                                                        domain::TaskStatus::Queued => "queued",
+                                                    }
+                                                )}>
+                                                    {match &task.status {
+                                                        domain::TaskStatus::Active => "Active",
+                                                        domain::TaskStatus::Completed => "Completed",
+                                                        domain::TaskStatus::Paused => "Paused",
+                                                        domain::TaskStatus::Queued => "Queued",
+                                                    }}
                                                 </span>
                                             </div>
 
                                                             {task.description.clone().map(|desc| {
                                                 if !desc.is_empty() {
                                                     view! {
-                                                        <p style="opacity: 0.8; margin: 10px 0;">{desc}</p>
+                                                        <p class="task-description">{desc}</p>
                                                     }.into_any()
                                                 } else {
                                                     ().into_any()
                                                 }
                                             })}
+                                            
+                                                            {if !task.tags.is_empty() {
+                                                view! {
+                                                    <div class="task-tags">
+                                                        {task.tags.iter().map(|tag| {
+                                                            view! {
+                                                                <span class="task-tag">{tag.clone()}</span>
+                                                            }
+                                                        }).collect_view()}
+                                                    </div>
+                                                }.into_any()
+                                            } else {
+                                                ().into_any()
+                                            }}
 
                                                             <div class="task-meta">
                                                 <div class="pomodoro-progress">
@@ -98,8 +126,14 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                                         ></div>
                                                     </div>
                                                 </div>
-                                                <button class="btn-select">
-                                                    {if is_active { "Currently Active" } else { "Select Task" }}
+                                                <button class="btn-select" disabled=move || task.status == domain::TaskStatus::Completed>
+                                                    {if is_active { 
+                                                        "Currently Active" 
+                                                    } else if task.status == domain::TaskStatus::Completed {
+                                                        "Task Completed"
+                                                    } else { 
+                                                        "Select Task" 
+                                                    }}
                                                 </button>
                                             </div>
                                         </li>

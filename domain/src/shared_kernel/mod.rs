@@ -10,7 +10,7 @@ pub use events::{Event, EventPublisher, NoOpEventPublisher};
 pub use events::MockEventPublisher;
 
 pub use errors::{Error, Result};
-pub use serde_utils::duration_serde;
+pub use serde_utils::{duration_serde, optional_duration_serde};
 pub use traits::{
     Persistable, Readable, ReadableSync, SearchCriteria, Searchable,
     Versionable, Writable, WritableSync,

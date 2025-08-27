@@ -1,7 +1,7 @@
 use crate::Result;
 use async_trait::async_trait;
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct SearchCriteria {
     pub query: Option<String>,
     pub tags: Option<Vec<String>>,
