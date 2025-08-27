@@ -3,7 +3,7 @@ use domain::{
     Error as TaskError, Task, TaskBuilder, TaskDefaults, TaskRepository,
     TaskStatus,
 };
-use infra::adapters::InMemoryTaskRepository;
+use domain::InMemoryTaskRepository;
 use std::sync::Arc;
 
 pub struct TaskTestRepository {
@@ -18,17 +18,14 @@ impl TaskTestRepository {
     }
 
     pub fn with_default_task() -> Self {
-        let task_defaults = TaskDefaults::default();
         Self {
-            inner: Arc::new(InMemoryTaskRepository::with_default_task(
-                &task_defaults,
-            )),
+            inner: Arc::new(InMemoryTaskRepository::with_default_task()),
         }
     }
 
     pub fn empty() -> Self {
         Self {
-            inner: Arc::new(InMemoryTaskRepository::empty()),
+            inner: Arc::new(InMemoryTaskRepository::new()),
         }
     }
 

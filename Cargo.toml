@@ -15,6 +15,12 @@ tracing = "0.1"
 # Async runtime (used in domain, usecases, infra)
 tokio = { version = "1.47.1", features = ["time", "sync", "rt-multi-thread", "test-util", "macros"] }
 
+# Database dependencies
+diesel = { version = "2.2", features = ["sqlite", "r2d2", "chrono", "uuid"] }
+diesel_migrations = "2.2"
+r2d2 = "0.8"
+libsqlite3-sys = { version = "0.35.0", features = ["bundled"] }
+
 # Testing dependencies (shared across crates)
 tokio-test = "0.4"
 tempfile = "3.21.0"

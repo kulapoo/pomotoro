@@ -6,8 +6,9 @@ use tracing::info;
 use usecases::{timer::switch_timer_task};
 
 use crate::adapters::{
-    FileConfigRepository, InMemoryEventBus,
-    FileTaskRepository, FileStorageService, StorageConfig, FileTimerService,
+    InMemoryEventBus, SqliteTaskRepository, SqliteConfigRepository,
+    establish_connection, run_migrations,
+    FileStorageService, StorageConfig, FileTimerService,
     RodioAudioService, audio::{AudioServiceWrapper, InMemoryAudioLibraryService, register_audio_event_handlers},
     events::{
         EventSubscriber, app_lifecycle, mem_event_bus::EventPublisherArc,
@@ -63,14 +64,20 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
 
     let storage_path = storage_service.get_storage_path().await;
 
-    let config_file = storage_path.join("Config.json");
-    let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> =
-        Arc::new(FileConfigRepository::new(config_file));
+    // Set up SQLite database
+    let db_path = storage_path.join("pomotoro.db");
+    let db_pool = Arc::new(establish_connection(&db_path)
+        .context("Failed to establish database connection")?);
+    
+    // Run migrations
+    run_migrations(&db_pool)
+        .context("Failed to run database migrations")?;
 
-    let tasks_file = storage_path.join("tasks.json");
+    let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> =
+        Arc::new(SqliteConfigRepository::new(db_pool.clone()));
 
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> =
-        Arc::new(FileTaskRepository::new(tasks_file));
+        Arc::new(SqliteTaskRepository::new(db_pool.clone()));
 
     let default_task = if let Some(task) = task_repository.get_default_task().await? {
         task

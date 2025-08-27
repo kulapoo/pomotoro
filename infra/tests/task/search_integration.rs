@@ -3,7 +3,7 @@ mod tests {
     use domain::{TaskRepository, TaskBuilder, TaskStatus};
     use domain::task::repository::{SearchOptions, SortBy, SortOrder};
     use domain::shared_kernel::traits::searchable::SearchCriteria;
-    use infra::adapters::task::memory_repo::InMemoryTaskRepository;
+    use domain::InMemoryTaskRepository;
 
     #[tokio::test]
     async fn test_search_tasks_by_query() {
@@ -25,7 +25,10 @@ mod tests {
             .build()
             .unwrap();
         
-        let repo = InMemoryTaskRepository::with_tasks(vec![task1, task2, task3]);
+        let repo = InMemoryTaskRepository::new();
+        repo.create(task1).await.unwrap();
+        repo.create(task2).await.unwrap();
+        repo.create(task3).await.unwrap();
         
         let options = SearchOptions {
             criteria: SearchCriteria::new().with_query("documentation".to_string()),
@@ -61,7 +64,10 @@ mod tests {
             .unwrap();
         task3.pause().unwrap();
         
-        let repo = InMemoryTaskRepository::with_tasks(vec![task1, task2, task3]);
+        let repo = InMemoryTaskRepository::new();
+        repo.create(task1).await.unwrap();
+        repo.create(task2).await.unwrap();
+        repo.create(task3).await.unwrap();
         
         let completed_tasks = repo.get_by_status(TaskStatus::Completed).await.unwrap();
         assert_eq!(completed_tasks.len(), 1);
@@ -98,7 +104,10 @@ mod tests {
             .build()
             .unwrap();
         
-        let repo = InMemoryTaskRepository::with_tasks(vec![task1, task2, task3]);
+        let repo = InMemoryTaskRepository::new();
+        repo.create(task1).await.unwrap();
+        repo.create(task2).await.unwrap();
+        repo.create(task3).await.unwrap();
         
         let options = SearchOptions {
             criteria: SearchCriteria::new(),

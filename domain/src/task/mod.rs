@@ -1,5 +1,5 @@
 pub mod builder;
-pub mod cycling_service;
+pub mod cycling_srv;
 pub mod events;
 pub mod id;
 pub mod repository;
@@ -15,7 +15,7 @@ pub mod test_repository;
 
 pub use self::task::Task;
 pub use builder::Builder;
-pub use cycling_service::{
+pub use cycling_srv::{
     CyclerService, CyclingStrategy, DefaultCyclingService,
 };
 pub use events::{

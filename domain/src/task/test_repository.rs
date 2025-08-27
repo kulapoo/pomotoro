@@ -18,8 +18,21 @@ impl InMemoryRepository {
     }
 
     pub fn with_default_task() -> Self {
-        // Could add default task here if needed
-        Self::new()
+        let repo = Self::new();
+        
+        // Create default "Focus Session" task using builder
+        let default_task = crate::task::Builder::with_name_and_sessions("Focus Session".to_string(), 4)
+            .with_tags(vec!["focus".to_string()])
+            .status(Status::Active)
+            .default(true)
+            .build()
+            .expect("Failed to create default task");
+        
+        let mut tasks = repo.tasks.lock().unwrap();
+        tasks.insert(default_task.id, default_task);
+        drop(tasks);
+        
+        repo
     }
 }
 
@@ -63,6 +76,15 @@ impl Repository for InMemoryRepository {
 
     async fn delete(&self, id: Id) -> Result<bool> {
         let mut tasks = self.tasks.lock().unwrap();
+        
+        // Check if task exists and is the special "Focus Session" default
+        if let Some(task) = tasks.get(&id) {
+            if task.default && task.name == "Focus Session" {
+                // The special "Focus Session" default task cannot be deleted
+                return Ok(false);
+            }
+        }
+        
         Ok(tasks.remove(&id).is_some())
     }
 
@@ -101,7 +123,12 @@ impl Repository for InMemoryRepository {
             .filter(|task| {
                 let criteria = &options.criteria;
                 let query_match = criteria.query.as_ref()
-                    .map_or(true, |q| task.name.to_lowercase().contains(&q.to_lowercase()));
+                    .map_or(true, |q| {
+                        let q_lower = q.to_lowercase();
+                        task.name.to_lowercase().contains(&q_lower)
+                            || task.description.as_ref()
+                                .map_or(false, |d| d.to_lowercase().contains(&q_lower))
+                    });
                 let tags_match = criteria.tags.as_ref()
                     .map_or(true, |tags| tags.iter().any(|tag| task.tags.contains(tag)));
                 let status_match = criteria.status.as_ref()
@@ -147,12 +174,19 @@ impl Repository for InMemoryRepository {
 
     async fn search_fuzzy(&self, query: &str) -> Result<Vec<Task>> {
         let tasks = self.tasks.lock().unwrap();
-        let query_lower = query.to_lowercase();
+        let query_words: Vec<String> = query.to_lowercase().split_whitespace()
+            .map(|s| s.to_string()).collect();
+        
         Ok(tasks
             .values()
             .filter(|task| {
-                task.name.to_lowercase().contains(&query_lower)
-                    || task.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                // Check if all query words match somewhere in the task
+                query_words.iter().all(|word| {
+                    task.name.to_lowercase().contains(word)
+                        || task.description.as_ref()
+                            .map_or(false, |d| d.to_lowercase().contains(word))
+                        || task.tags.iter().any(|tag| tag.to_lowercase().contains(word))
+                })
             })
             .cloned()
             .collect())

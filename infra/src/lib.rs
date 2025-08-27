@@ -1,6 +1,7 @@
 pub mod adapters;
 mod bootstrap;
 pub mod commands;
+mod schema;
 
 use commands::{
     add_custom_audio_asset, cleanup_finished_audio, clear_all_data,
@@ -27,15 +28,14 @@ use crate::bootstrap::bootstrap;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // only enable instrumentation in development builds
-    #[cfg(debug_assertions)]
-    let devtools = tauri_plugin_devtools::init();
-
     #[allow(unused_mut)]
     let mut builder = tauri::Builder::default();
 
+    // only enable instrumentation in development builds
     #[cfg(debug_assertions)]
     {
+        let devtools = tauri_plugin_devtools::init();
+
         builder = builder.plugin(devtools);
     }
 

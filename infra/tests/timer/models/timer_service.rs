@@ -1,16 +1,29 @@
-use domain::{Phase, Task, timer::TimerService as TimerServiceTrait};
-use infra::adapters::InMemoryTimerService;
+use domain::{Phase, Task, timer::TimerService as TimerServiceTrait, InMemoryConfigRepository};
+use infra::adapters::{FileTimerService, InMemoryEventBus};
 use std::sync::Arc;
 use std::time::Duration;
+use tempfile::TempDir;
 
 pub struct TimerTestService {
-    service: Arc<InMemoryTimerService>,
+    service: Arc<FileTimerService>,
+    _temp_dir: TempDir,
 }
 
 impl TimerTestService {
     pub fn new() -> Self {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let event_bus = Arc::new(InMemoryEventBus::new());
+        let config_repo = Arc::new(InMemoryConfigRepository::new());
+        
+        let service = Arc::new(FileTimerService::new(
+            event_bus.clone(),
+            Some(temp_dir.path().to_path_buf()),
+            config_repo,
+        ));
+        
         Self {
-            service: Arc::new(InMemoryTimerService::new()),
+            service,
+            _temp_dir: temp_dir,
         }
     }
 
@@ -77,7 +90,7 @@ impl TimerTestService {
 }
 
 impl std::ops::Deref for TimerTestService {
-    type Target = InMemoryTimerService;
+    type Target = FileTimerService;
 
     fn deref(&self) -> &Self::Target {
         &self.service

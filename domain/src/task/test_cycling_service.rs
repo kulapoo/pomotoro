@@ -1,6 +1,6 @@
 use super::{
     Task,
-    cycling_service::{CyclerService, CyclingStrategy, DefaultCyclingService},
+    cycling_srv::{CyclerService, CyclingStrategy, DefaultCyclingService},
     id::Id,
     repository::Repository,
 };
@@ -78,7 +78,7 @@ impl CyclerService for TestCyclingService {
     ) -> Result<Option<Task>> {
         let tasks = self.task_repo.get_active_tasks().await?;
         let available_tasks = self.domain_service.filter_available_tasks(&tasks);
-        
+
         if let Some(prev_task) = self.domain_service.find_previous_task_round_robin(
             &available_tasks,
             current_task_id,
@@ -99,7 +99,7 @@ impl CyclerService for TestCyclingService {
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>> {
         let tasks = self.task_repo.get_incomplete_tasks().await?;
-        
+
         if let Some(next_task) = self.domain_service.find_next_task_round_robin(
             &tasks,
             current_task_id,
@@ -115,7 +115,7 @@ impl CyclerService for TestCyclingService {
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>> {
         let tasks = self.task_repo.get_incomplete_tasks().await?;
-        
+
         if let Some(prev_task) = self.domain_service.find_previous_task_round_robin(
             &tasks,
             current_task_id,

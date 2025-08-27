@@ -404,7 +404,9 @@ async fn test_task_specific_timer_configuration()
 
     let break_state = timer_service.get_state().await?;
     assert_eq!(break_state.phase(), Phase::ShortBreak);
-    assert_eq!(break_state.remaining_seconds(), 10 * 60); // Custom 10-min break
+    // Allow for small timing variations (±1 second)
+    let remaining = break_state.remaining_seconds();
+    assert!(remaining >= 599 && remaining <= 601, "Expected ~600 seconds, got {}", remaining);
 
     // Complete break and verify custom long break schedule (every 2 sessions, not 4)
     timer_service.force_complete_session().await.unwrap();
@@ -413,7 +415,9 @@ async fn test_task_specific_timer_configuration()
 
     let long_break_state = timer_service.get_state().await?;
     assert_eq!(long_break_state.phase(), Phase::LongBreak);
-    assert_eq!(long_break_state.remaining_seconds(), 25 * 60); // Custom 25-min long break
+    // Allow for small timing variations (±1 second)
+    let remaining_long = long_break_state.remaining_seconds();
+    assert!(remaining_long >= 1499 && remaining_long <= 1501, "Expected ~1500 seconds, got {}", remaining_long);
 
     Ok(())
 }

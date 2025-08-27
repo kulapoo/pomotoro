@@ -23,6 +23,7 @@
 
 pub mod audio;
 pub mod config;
+pub mod database;
 pub mod events;
 pub mod notifications;
 pub mod storage;
@@ -32,18 +33,17 @@ pub mod timer;
 // Config infrastructure
 pub use config::{
     AppearanceConfigDto, AudioConfigDto, ConfigBuilder, ConfigDto, ConfigError,
-    ConfigRepo, ConfigRepository, FileConfigRepo, FileConfigRepository, GeneralConfigDto,
-    InMemoryConfigRepository, NotificationConfigDto,
+    ConfigRepo, ConfigRepository, FileConfigRepo, GeneralConfigDto,
+    NotificationConfigDto,
 };
 
 // Task infrastructure
 pub use task::{
-    FileTaskRepository, InMemoryTaskRepository, StandardTaskCyclerService,
-    TaskAudioConfigDto, TaskDto, TaskRepositoryArc,
+    StandardTaskCyclerService, TaskAudioConfigDto, TaskDto, TaskRepositoryArc,
 };
 
 // Timer infrastructure
-pub use timer::{FileTimerService, InMemoryTimerService};
+pub use timer::FileTimerService;
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
@@ -56,3 +56,6 @@ pub use notifications::{NotificationService, register_notification_handlers};
 
 // Storage infrastructure
 pub use storage::{FileStorageService, StorageConfig, StorageLocation};
+
+// Database infrastructure
+pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository};

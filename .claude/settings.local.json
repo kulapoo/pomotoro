@@ -58,10 +58,11 @@
       "Bash(RUSTFLAGS=\"-W unused_imports\" cargo check --workspace)",
       "WebFetch(domain:v2.tauri.app)",
       "WebFetch(domain:tauri.app)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(env RUSTFLAGS=\"-W unused\" cargo check --workspace)"
     ],
     "deny": [],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "plan"
   },
   "hooks": {
     "PostToolUse": [

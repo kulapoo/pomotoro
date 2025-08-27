@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::adapters::{
     events::mem_event_bus::EventPublisherArc,
-    task::memory_repo::TaskRepositoryArc,
+    TaskRepositoryArc,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

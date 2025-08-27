@@ -3,6 +3,7 @@ name = "infra"
 version = "0.1.0"
 edition = "2021"
 description = "Infrastructure layer for Pomotoro with Tauri backend"
+default-run = "infra"
 
 [lib]
 name = "infra"
@@ -34,8 +35,15 @@ anyhow = "1.0.98"
 open = "5.0"
 futures = "0.3"
 
+# Database dependencies
+diesel = { workspace = true }
+diesel_migrations = { workspace = true }
+r2d2 = { workspace = true }
+libsqlite3-sys = { workspace = true }
+
 
 [dev-dependencies]
+domain = { path = "../domain", features = ["test-utils"] }
 tokio-test = { workspace = true }
 tempfile = { workspace = true }
 assert_matches = { workspace = true }
