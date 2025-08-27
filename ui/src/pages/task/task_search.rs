@@ -30,22 +30,24 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
     
     view! {
         <div class="task-search-container">
-            <div class="search-bar">
-                <input
-                    type="text"
-                    placeholder="Search tasks by name, description, or tags..."
-                    class="search-input"
-                    on:input=handle_search
-                />
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path
-                        d="M9 17A8 8 0 109 1a8 8 0 000 16zM19 19l-4.35-4.35"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+            <div class="search-wrapper">
+                <div class="search-bar">
+                    <input
+                        type="text"
+                        placeholder="Search tasks by name, description, or tags..."
+                        class="search-input"
+                        on:input=handle_search
                     />
-                </svg>
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path
+                            d="M9 17A8 8 0 109 1a8 8 0 000 16zM19 19l-4.35-4.35"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </div>
             </div>
             
             <div class="filter-controls">

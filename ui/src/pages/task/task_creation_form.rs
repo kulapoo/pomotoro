@@ -9,65 +9,78 @@ pub fn TaskCreationForm(
 ) -> impl IntoView {
     let (task_name, set_task_name) = signal(String::new());
     let (task_description, set_task_description) = signal(String::new());
+    let (is_creating, set_is_creating) = signal(false);
 
     let create_task = move |_| {
         let name = task_name.get();
         let description = task_description.get();
 
-        if name.trim().is_empty() {
+        if name.trim().is_empty() || is_creating.get() {
             return;
         }
 
+        set_is_creating.set(true);
+        web_sys::console::log_1(&format!("Creating task: {}", name).into());
+        
         vm.with_value(|v| {
             v.create_task(
                 name.trim().to_string(),
                 description.trim().to_string(),
             )
         });
+        
+        // Clear the form
+        set_task_name.set(String::new());
+        set_task_description.set(String::new());
+        set_is_creating.set(false);
         on_close.run(());
     };
 
     view! {
-        <div class="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl p-4 mb-4">
-            <h4 class="m-0 mb-4 text-base font-semibold text-gray-900 dark:text-white">"Create New Task"</h4>
+        <div class="task-creation-form">
+            <h4 class="form-title">"Create New Task"</h4>
 
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Task Name"</label>
+            <div class="form-group">
+                <label class="form-label">"Task Name"</label>
                 <input
                     type="text"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
+                    class="form-input"
                     placeholder="Enter task name..."
                     prop:value=move || task_name.get()
                     on:input=move |ev| {
                         set_task_name.set(event_target_value(&ev));
                     }
+                    prop:disabled=move || is_creating.get()
                 />
             </div>
 
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"Description (Optional)"</label>
+            <div class="form-group">
+                <label class="form-label">"Description (Optional)"</label>
                 <textarea
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white transition-colors resize-y min-h-15 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-300"
+                    class="form-textarea"
                     placeholder="Enter task description..."
                     prop:value=move || task_description.get()
                     on:input=move |ev| {
                         set_task_description.set(event_target_value(&ev));
                     }
+                    prop:disabled=move || is_creating.get()
+                    rows="3"
                 ></textarea>
             </div>
 
-            <div class="flex gap-2 justify-end mt-4">
+            <div class="form-actions">
                 <button
-                    class="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:from-blue-600 hover:to-blue-700 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                    prop:disabled=move || task_name.get().trim().is_empty()
+                    class="btn btn-primary"
+                    prop:disabled=move || task_name.get().trim().is_empty() || is_creating.get()
                     on:click=create_task
                 >
-                    "Create Task"
+                    {move || if is_creating.get() { "Creating..." } else { "Create Task" }}
                 </button>
 
                 <button
-                    class="bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-500 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-gray-200 dark:hover:bg-slate-500"
+                    class="btn btn-secondary"
                     on:click=move |_| on_close.run(())
+                    prop:disabled=move || is_creating.get()
                 >
                     "Cancel"
                 </button>

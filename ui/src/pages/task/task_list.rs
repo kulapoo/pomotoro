@@ -5,8 +5,8 @@ use leptos::prelude::*;
 #[component]
 pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
     view! {
-        <>
-            <div class="add-task-form">
+        <div class="task-list-container">
+            <div class="task-actions">
                 <Show when=move || vm.with_value(|v| v.is_creating_task())>
                     {move || {
                         view! {
@@ -19,15 +19,16 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                 </Show>
                 <Show when=move || !vm.with_value(|v| v.is_creating_task())>
                     <button
-                        class="btn btn-primary"
+                        class="btn btn-add-task"
                         on:click=move |_| vm.with_value(|v| v.set_creating_task(true))
                     >
-                        "ADD"
+                        <span class="btn-icon">"+ "</span>
+                        "Add New Task"
                     </button>
                 </Show>
             </div>
 
-            <ul class="task-list" id="taskList">
+            <div class="task-list" id="taskList">
                 {move || {
                     let (tasks, active_task_id) = vm.with_value(|v| {
                         let tasks = v.get_tasks();
@@ -40,7 +41,9 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     view! {
                         <>
                             <Show when=move || tasks.is_empty() && !vm.with_value(|v| v.is_creating_task())>
-                                <p style="text-align: center; opacity: 0.7; padding: 20px;">"No tasks yet. Create your first task to get started!"</p>
+                                <div class="empty-state">
+                                    <p class="empty-state-text">"No tasks yet. Create your first task to get started!"</p>
+                                </div>
                             </Show>
 
                             <For
@@ -65,7 +68,7 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                     };
 
                                     view! {
-                                        <li
+                                        <div
                                             class=task_classes
                                             on:click=move |_| {
                                                 vm.with_value(|v| v.switch_active_task(task_id));
@@ -136,14 +139,14 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                                     }}
                                                 </button>
                                             </div>
-                                        </li>
+                                        </div>
                                     }
                                 }
                             />
                         </>
                     }
                 }}
-            </ul>
-        </>
+            </div>
+        </div>
     }
 }
