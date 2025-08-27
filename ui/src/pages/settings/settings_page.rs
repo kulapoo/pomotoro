@@ -6,16 +6,19 @@ use domain::*;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
-    let vm = StoredValue::new(SettingsViewModel::new());
+    let vm = SettingsViewModel::new();
     let (active_tab, set_active_tab) = signal("timer");
     let (validation_errors, set_validation_errors) = signal(Vec::<String>::new());
     let (success_message, set_success_message) = signal(None::<String>);
+    
+    // Store VM in a StoredValue for access in closures
+    let vm_stored = StoredValue::new(vm);
 
     let handle_save = move |_| {
         set_validation_errors.set(Vec::new());
         set_success_message.set(None);
         
-        vm.with_value(|v| {
+        vm_stored.with_value(|v| {
             if let Err(e) = v.save_settings() {
                 set_validation_errors.update(|errors| errors.push(e.to_string()));
             } else {
@@ -34,7 +37,7 @@ pub fn SettingsPage() -> impl IntoView {
         set_validation_errors.set(Vec::new());
         set_success_message.set(None);
         
-        vm.with_value(|v| {
+        vm_stored.with_value(|v| {
             v.reset_to_defaults();
             set_success_message.set(Some("Settings reset to defaults".to_string()));
             spawn_local(async move {
@@ -47,7 +50,7 @@ pub fn SettingsPage() -> impl IntoView {
     };
 
     let handle_export = move |_| {
-        vm.with_value(|v| {
+        vm_stored.with_value(|v| {
             v.export_settings();
             set_success_message.set(Some("Settings exported successfully".to_string()));
             spawn_local(async move {
@@ -60,7 +63,7 @@ pub fn SettingsPage() -> impl IntoView {
     };
 
     let handle_import = move |_| {
-        vm.with_value(|v| {
+        vm_stored.with_value(|v| {
             if let Err(e) = v.import_settings() {
                 set_validation_errors.update(|errors| errors.push(e.to_string()));
             } else {
@@ -76,6 +79,7 @@ pub fn SettingsPage() -> impl IntoView {
     };
 
     view! {
+        <div class="settings-page-wrapper">
         <div class="settings-container">
             <div class="settings-header">
                 <h2 class="settings-title">"Global Settings"</h2>
@@ -145,46 +149,63 @@ pub fn SettingsPage() -> impl IntoView {
 
             <div class="settings-content">
                 {move || {
-                    vm.with_value(|v| v.get_config()).map(|config| {
-                        match active_tab.get() {
-                            "timer" => view! { <TimerSettings config=config vm=vm /> }.into_any(),
-                            "notifications" => view! { <NotificationSettings config=config vm=vm /> }.into_any(),
-                            "audio" => view! { <AudioSettings config=config vm=vm /> }.into_any(),
-                            "appearance" => view! { <AppearanceSettings config=config vm=vm /> }.into_any(),
-                            "general" => view! { <GeneralSettings config=config vm=vm /> }.into_any(),
-                            "storage" => view! { <StorageSettings vm=vm /> }.into_any(),
-                            _ => view! { <TimerSettings config=config vm=vm /> }.into_any()
+                    let config_opt = vm_stored.with_value(|v| v.config.get());
+                    match config_opt {
+                        Some(config) => {
+                            match active_tab.get() {
+                                "timer" => view! { <TimerSettings config=config vm=vm_stored /> }.into_any(),
+                                "notifications" => view! { <NotificationSettings config=config vm=vm_stored /> }.into_any(),
+                                "audio" => view! { <AudioSettings config=config vm=vm_stored /> }.into_any(),
+                                "appearance" => view! { <AppearanceSettings config=config vm=vm_stored /> }.into_any(),
+                                "general" => view! { <GeneralSettings config=config vm=vm_stored /> }.into_any(),
+                                "storage" => view! { <StorageSettings vm=vm_stored /> }.into_any(),
+                                _ => view! { <TimerSettings config=config vm=vm_stored /> }.into_any()
+                            }
+                        },
+                        None => {
+                            view! {
+                                <div class="settings-loading">"Loading settings..."</div>
+                            }.into_any()
                         }
-                    }).unwrap_or_else(|| {
-                        view! {
-                            <div class="settings-loading">"Loading settings..."</div>
-                        }.into_any()
-                    })
+                    }
                 }}
             </div>
 
             <div class="settings-footer">
                 <button class="btn btn-cancel" on:click=move |_| {
-                    vm.with_value(|v| v.refetch_config());
+                    vm_stored.with_value(|v| v.refetch_config());
                     set_success_message.set(Some("Changes discarded".to_string()));
                 }>"Cancel"</button>
                 <button class="btn btn-primary" on:click=handle_save>"Save All Settings"</button>
             </div>
+        </div>
         </div>
     }
 }
 
 #[component]
 fn TimerSettings(
-    config: Config,
+    #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
-    let work_minutes = (config.task_defaults.work_duration.as_secs() / 60) as u32;
-    let short_break_minutes = (config.task_defaults.short_break_duration.as_secs() / 60) as u32;
-    let long_break_minutes = (config.task_defaults.long_break_duration.as_secs() / 60) as u32;
-    let sessions_until_long = config.task_defaults.sessions_until_long_break;
-    let max_sessions = config.task_defaults.max_sessions_default;
-    let enable_screen_blocking = config.task_defaults.enable_screen_blocking;
+    let work_minutes = move || vm.with_value(|v| {
+        v.get_config().map(|c| (c.task_defaults.work_duration.as_secs() / 60) as u32).unwrap_or(25)
+    });
+    let short_break_minutes = move || vm.with_value(|v| {
+        v.get_config().map(|c| (c.task_defaults.short_break_duration.as_secs() / 60) as u32).unwrap_or(5)
+    });
+    let long_break_minutes = move || vm.with_value(|v| {
+        v.get_config().map(|c| (c.task_defaults.long_break_duration.as_secs() / 60) as u32).unwrap_or(15)
+    });
+    let sessions_until_long = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.task_defaults.sessions_until_long_break).unwrap_or(4)
+    });
+    let max_sessions = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.task_defaults.max_sessions_default).unwrap_or(0)
+    });
+    let enable_screen_blocking = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.task_defaults.enable_screen_blocking).unwrap_or(false)
+    });
 
     view! {
         <div class="settings-section">
@@ -320,14 +341,39 @@ fn TimerSettings(
 
 #[component]
 fn NotificationSettings(
-    config: Config,
+    #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
-    let enable_desktop = config.notification.enable_desktop_notifications;
-    let enable_sound = config.notification.enable_sound_notifications;
-    let show_phase_transitions = config.notification.show_phase_transition_notifications;
-    let show_task_completions = config.notification.show_task_completion_notifications;
-    let auto_dismiss_delay = config.notification.auto_dismiss_delay_seconds;
+    let enable_desktop = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.notification.enable_desktop_notifications).unwrap_or(true)
+    });
+    let enable_sound = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.notification.enable_sound_notifications).unwrap_or(true)
+    });
+    let show_phase_transitions = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.notification.show_phase_transition_notifications).unwrap_or(true)
+    });
+    let show_task_completions = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.notification.show_task_completion_notifications).unwrap_or(true)
+    });
+    let auto_dismiss_delay = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.notification.auto_dismiss_delay_seconds).unwrap_or(5)
+    });
+    let is_position_top_right = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::TopRight)).unwrap_or(true)
+    });
+    let is_position_top_left = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::TopLeft)).unwrap_or(false)
+    });
+    let is_position_bottom_right = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::BottomRight)).unwrap_or(false)
+    });
+    let is_position_bottom_left = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::BottomLeft)).unwrap_or(false)
+    });
+    let is_position_center = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::Center)).unwrap_or(false)
+    });
 
     view! {
         <div class="settings-section">
@@ -456,11 +502,11 @@ fn NotificationSettings(
                         });
                     }
                 >
-                    <option value="TopRight" selected=matches!(config.notification.notification_position, NotificationPosition::TopRight)>"Top Right"</option>
-                    <option value="TopLeft" selected=matches!(config.notification.notification_position, NotificationPosition::TopLeft)>"Top Left"</option>
-                    <option value="BottomRight" selected=matches!(config.notification.notification_position, NotificationPosition::BottomRight)>"Bottom Right"</option>
-                    <option value="BottomLeft" selected=matches!(config.notification.notification_position, NotificationPosition::BottomLeft)>"Bottom Left"</option>
-                    <option value="Center" selected=matches!(config.notification.notification_position, NotificationPosition::Center)>"Center"</option>
+                    <option value="TopRight" selected=is_position_top_right>"Top Right"</option>
+                    <option value="TopLeft" selected=is_position_top_left>"Top Left"</option>
+                    <option value="BottomRight" selected=is_position_bottom_right>"Bottom Right"</option>
+                    <option value="BottomLeft" selected=is_position_bottom_left>"Bottom Left"</option>
+                    <option value="Center" selected=is_position_center>"Center"</option>
                 </select>
                 <span class="setting-help">"Where notifications appear on screen"</span>
             </div>
@@ -470,12 +516,28 @@ fn NotificationSettings(
 
 #[component]
 fn AudioSettings(
-    config: Config,
+    #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
-    let volume = (config.audio.volume * 100.0) as u32;
-    let enable_background = config.audio.enable_background_audio;
-    let muted = config.audio.muted;
+    let volume = move || vm.with_value(|v| {
+        v.get_config().map(|c| (c.audio.volume * 100.0) as u32).unwrap_or(50)
+    });
+    let enable_background = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.audio.enable_background_audio).unwrap_or(false)
+    });
+    let muted = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.audio.muted).unwrap_or(false)
+    });
+    let audio_enabled = move || !muted();
+    let has_no_work_sound = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.audio.work_notification_sound.is_none()).unwrap_or(true)
+    });
+    let has_no_break_sound = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.audio.break_notification_sound.is_none()).unwrap_or(true)
+    });
+    let has_no_bg_sound = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.audio.background_sound.is_none()).unwrap_or(true)
+    });
 
     view! {
         <div class="settings-section">
@@ -485,7 +547,7 @@ fn AudioSettings(
                 <label class="setting-checkbox">
                     <input
                         type="checkbox"
-                        checked=!muted
+                        checked=audio_enabled
                         on:change=move |ev| {
                             let checked = event_target_checked(&ev);
                             vm.with_value(|v| {
@@ -560,7 +622,7 @@ fn AudioSettings(
                         });
                     }
                 >
-                    <option value="" selected=config.audio.work_notification_sound.is_none()>"None"</option>
+                    <option value="" selected=has_no_work_sound>"None"</option>
                     <option value="bell.wav">"Bell"</option>
                     <option value="chime.wav">"Chime"</option>
                     <option value="gong.wav">"Gong"</option>
@@ -586,7 +648,7 @@ fn AudioSettings(
                         });
                     }
                 >
-                    <option value="" selected=config.audio.break_notification_sound.is_none()>"None"</option>
+                    <option value="" selected=has_no_break_sound>"None"</option>
                     <option value="bell.wav">"Bell"</option>
                     <option value="chime.wav">"Chime"</option>
                     <option value="gong.wav">"Gong"</option>
@@ -612,7 +674,7 @@ fn AudioSettings(
                         });
                     }
                 >
-                    <option value="" selected=config.audio.background_sound.is_none()>"None"</option>
+                    <option value="" selected=has_no_bg_sound>"None"</option>
                     <option value="rain.wav">"Rain"</option>
                     <option value="forest.wav">"Forest"</option>
                     <option value="ocean.wav">"Ocean"</option>
@@ -629,14 +691,33 @@ fn AudioSettings(
 
 #[component]
 fn AppearanceSettings(
-    config: Config,
+    #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
-    let show_seconds = config.appearance.show_seconds_in_display;
-    let always_on_top = config.appearance.always_on_top;
-    let compact_mode = config.appearance.compact_mode;
-    let show_sidebar = config.appearance.show_task_list_sidebar;
-    let animate_progress = config.appearance.animate_progress;
+    let show_seconds = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.appearance.show_seconds_in_display).unwrap_or(true)
+    });
+    let always_on_top = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.appearance.always_on_top).unwrap_or(false)
+    });
+    let compact_mode = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.appearance.compact_mode).unwrap_or(false)
+    });
+    let show_sidebar = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.appearance.show_task_list_sidebar).unwrap_or(true)
+    });
+    let animate_progress = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.appearance.animate_progress).unwrap_or(true)
+    });
+    let is_theme_system = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.appearance.theme, Theme::System)).unwrap_or(true)
+    });
+    let is_theme_light = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.appearance.theme, Theme::Light)).unwrap_or(false)
+    });
+    let is_theme_dark = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.appearance.theme, Theme::Dark)).unwrap_or(false)
+    });
 
     view! {
         <div class="settings-section">
@@ -661,9 +742,9 @@ fn AppearanceSettings(
                         });
                     }
                 >
-                    <option value="System" selected=matches!(config.appearance.theme, Theme::System)>"System"</option>
-                    <option value="Light" selected=matches!(config.appearance.theme, Theme::Light)>"Light"</option>
-                    <option value="Dark" selected=matches!(config.appearance.theme, Theme::Dark)>"Dark"</option>
+                    <option value="System" selected=is_theme_system>"System"</option>
+                    <option value="Light" selected=is_theme_light>"Light"</option>
+                    <option value="Dark" selected=is_theme_dark>"Dark"</option>
                 </select>
                 <span class="setting-help">"Application color scheme"</span>
             </div>
@@ -773,13 +854,30 @@ fn AppearanceSettings(
 
 #[component]
 fn GeneralSettings(
-    config: Config,
+    #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
-    let auto_start_breaks = config.general.auto_start_breaks;
-    let auto_start_work = config.general.auto_start_work_after_break;
-    let minimize_to_tray = config.general.minimize_to_tray;
-    let start_minimized = config.general.start_minimized;
+    let auto_start_breaks = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.general.auto_start_breaks).unwrap_or(true)
+    });
+    let auto_start_work = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.general.auto_start_work_after_break).unwrap_or(false)
+    });
+    let minimize_to_tray = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.general.minimize_to_tray).unwrap_or(true)
+    });
+    let start_minimized = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.general.start_minimized).unwrap_or(false)
+    });
+    let is_cycling_manual = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::Manual)).unwrap_or(true)
+    });
+    let is_cycling_auto_advance = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::AutoAdvance)).unwrap_or(false)
+    });
+    let is_cycling_round_robin = move || vm.with_value(|v| {
+        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::RoundRobin)).unwrap_or(false)
+    });
 
     view! {
         <div class="settings-section">
@@ -804,9 +902,9 @@ fn GeneralSettings(
                         });
                     }
                 >
-                    <option value="Manual" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::Manual)>"Manual"</option>
-                    <option value="AutoAdvance" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::AutoAdvance)>"Auto Advance"</option>
-                    <option value="RoundRobin" selected=matches!(config.general.task_cycling_behavior, TaskCyclingBehavior::RoundRobin)>"Round Robin"</option>
+                    <option value="Manual" selected=is_cycling_manual>"Manual"</option>
+                    <option value="AutoAdvance" selected=is_cycling_auto_advance>"Auto Advance"</option>
+                    <option value="RoundRobin" selected=is_cycling_round_robin>"Round Robin"</option>
                 </select>
                 <span class="setting-help">"How tasks cycle after completion"</span>
             </div>

@@ -1,5 +1,6 @@
 use crate::adapters::{
     TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
+    task::task_dto::TaskDto,
 };
 use domain::{AudioConfig, Task, TaskId};
 use tauri::State;
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct CreateTaskRequest {
     pub name: String,
     pub description: Option<String>,
@@ -38,8 +39,12 @@ pub async fn create_task(
     request: CreateTaskRequest,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<Task, String> {
-    println!("Creating task with name: {}", request.name);
+) -> Result<TaskDto, String> {
+    println!("=== CREATE_TASK DEBUG START ===");
+    println!("Request: {:?}", request);
+    println!("Name: '{}', Sessions: {}", request.name, request.max_sessions);
+    println!("Description: {:?}", request.description);
+    println!("Tags: {:?}", request.tags);
 
     let cmd = CreateTaskCmd {
         name: request.name.clone(),
@@ -48,49 +53,75 @@ pub async fn create_task(
         tags: request.tags,
     };
 
-    usecases::task::create_task(&task_repo, &event_publisher, cmd)
-        .await
-        .with_context(|| format!("Failed to create task: {}", request.name))
-        .map_err(|e| e.to_string())
+    println!("Command created: {:?}", cmd);
+
+    match usecases::task::create_task(&task_repo, &event_publisher, cmd).await {
+        Ok(task) => {
+            println!("Task creation SUCCESS: {:?}", task);
+            println!("Task ID: {}", task.id);
+            println!("Task Name: '{}'", task.name);
+
+            // Let's test the serialization
+            match serde_json::to_string(&task) {
+                Ok(json_str) => {
+                    println!("Task serializes to JSON: {}", json_str);
+                }
+                Err(e) => {
+                    println!("Task JSON serialization FAILED: {:?}", e);
+                }
+            }
+
+            println!("=== CREATE_TASK DEBUG END (SUCCESS) ===");
+            Ok(TaskDto::from(task))
+        }
+        Err(e) => {
+            println!("Task creation FAILED: {:?}", e);
+            println!("Error message: {}", e);
+            println!("=== CREATE_TASK DEBUG END (FAILED) ===");
+            Err(format!("Failed to create task '{}': {}", request.name, e))
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn get_task(
     id: String,
     task_repo: State<'_, TaskRepositoryArc>,
-) -> Result<Option<Task>, String> {
+) -> Result<Option<TaskDto>, String> {
     let query = GetTaskQuery { id: id.clone() };
     let result = usecases::task::get_task(&task_repo, query)
         .await
         .with_context(|| format!("Failed to get task with id: {}", id))
         .map_err(|e| e.to_string())?;
-    Ok(Some(result))
+    Ok(Some(TaskDto::from(result)))
 }
 
 #[tauri::command]
 pub async fn get_all_tasks(
     task_repo: State<'_, TaskRepositoryArc>,
-) -> Result<Vec<Task>, String> {
+) -> Result<Vec<TaskDto>, String> {
     let query = GetTasksQuery {
         tags: None,
         status: None,
         active_only: false,
     };
-    usecases::task::get_tasks(&task_repo, query)
+    let tasks = usecases::task::get_tasks(&task_repo, query)
         .await
         .context("Failed to get all tasks")
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    Ok(tasks.into_iter().map(TaskDto::from).collect())
 }
 
 #[tauri::command]
 pub async fn get_active_tasks(
     task_repo: State<'_, TaskRepositoryArc>,
-) -> Result<Vec<Task>, String> {
-    task_repo
+) -> Result<Vec<TaskDto>, String> {
+    let tasks = task_repo
         .get_active_tasks()
         .await
         .context("Failed to get active tasks")
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    Ok(tasks.into_iter().map(TaskDto::from).collect())
 }
 
 #[tauri::command]
@@ -98,7 +129,7 @@ pub async fn update_task(
     request: UpdateTaskRequest,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<Task, String> {
+) -> Result<TaskDto, String> {
     let cmd = UpdateTaskCmd {
         id: request.id.to_string(),
         name: request.name,
@@ -113,10 +144,11 @@ pub async fn update_task(
         audio_config: request.audio_config,
     };
 
-    usecases::task::update_task(&task_repo, &event_publisher, cmd)
+    let task = usecases::task::update_task(&task_repo, &event_publisher, cmd)
         .await
         .with_context(|| format!("Failed to update task with id: {}", request.id))
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    Ok(TaskDto::from(task))
 }
 
 #[tauri::command]
@@ -220,7 +252,7 @@ pub async fn search_tasks(
         limit: request.limit,
         offset: request.offset,
     };
-    
+
     usecases::task::search_tasks(&task_repo, query)
         .await
         .context("Failed to search tasks")
@@ -255,7 +287,7 @@ pub async fn filter_tasks_by_status(
         limit: request.limit,
         offset: request.offset,
     };
-    
+
     usecases::task::filter_tasks_by_status(&task_repo, query)
         .await
         .context("Failed to filter tasks by status")
@@ -282,23 +314,23 @@ pub async fn cycle_incomplete_task(
     cycling_service: State<'_, Arc<dyn domain::TaskCyclerService + Send + Sync>>,
 ) -> Result<CycleIncompleteTaskResponse, String> {
     use usecases::task::cycle_incomplete_task::{CycleDirection, CycleIncompleteTaskQuery};
-    
+
     let direction = match request.direction.as_str() {
         "next" => CycleDirection::Next,
         "previous" => CycleDirection::Previous,
         _ => CycleDirection::Next,
     };
-    
+
     let query = CycleIncompleteTaskQuery {
         current_task_id: request.current_task_id,
         direction,
     };
-    
+
     let result = usecases::task::cycle_incomplete_task(&cycling_service, query)
         .await
         .context("Failed to cycle incomplete task")
         .map_err(|e| e.to_string())?;
-    
+
     Ok(CycleIncompleteTaskResponse {
         task: result.task,
         position: result.position,
@@ -327,4 +359,22 @@ pub async fn get_incomplete_tasks(
         .await
         .context("Failed to get incomplete tasks")
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn debug_create_test_task(
+    task_repo: State<'_, TaskRepositoryArc>,
+    event_publisher: State<'_, EventPublisherArc>,
+) -> Result<TaskDto, String> {
+    println!("=== DEBUG TEST TASK CREATION ===");
+
+    let request = CreateTaskRequest {
+        name: "Debug Test Task".to_string(),
+        description: Some("A test task for debugging".to_string()),
+        max_sessions: 3,
+        tags: vec!["debug".to_string(), "test".to_string()],
+        audio_config: None,
+    };
+
+    create_task(request, task_repo, event_publisher).await
 }

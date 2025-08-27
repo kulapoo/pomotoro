@@ -9,10 +9,10 @@ use wasm_bindgen::JsCast;
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 
 pub struct SettingsViewModel {
-    config: ReadSignal<Option<Config>>,
-    set_config: WriteSignal<Option<Config>>,
-    is_saving: ReadSignal<bool>,
-    set_is_saving: WriteSignal<bool>,
+    pub config: ReadSignal<Option<Config>>,
+    pub set_config: WriteSignal<Option<Config>>,
+    pub is_saving: ReadSignal<bool>,
+    pub set_is_saving: WriteSignal<bool>,
 }
 
 impl ViewModel for SettingsViewModel {
@@ -47,13 +47,22 @@ impl SettingsViewModel {
         let set_config = self.set_config;
 
         spawn_local(async move {
-            if let Ok(result) =
-                invoke_command_no_args(event_names::config::GET_GLOBAL).await
-            {
-                if let Ok(config) =
-                    serde_wasm_bindgen::from_value::<Config>(result)
-                {
-                    set_config.set(Some(config));
+            web_sys::console::log_1(&"Loading global config...".into());
+            match invoke_command_no_args(event_names::config::GET_GLOBAL).await {
+                Ok(result) => {
+                    web_sys::console::log_1(&format!("Got config result: {:?}", result).into());
+                    match serde_wasm_bindgen::from_value::<Config>(result) {
+                        Ok(config) => {
+                            web_sys::console::log_1(&"Successfully parsed config".into());
+                            set_config.set(Some(config));
+                        }
+                        Err(e) => {
+                            web_sys::console::error_1(&format!("Failed to parse config: {:?}", e).into());
+                        }
+                    }
+                }
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Failed to get config: {:?}", e).into());
                 }
             }
         });
@@ -203,34 +212,10 @@ impl SettingsViewModel {
     }
 
     pub fn update_task_defaults(&self, task_defaults: TaskDefaults) {
-        let set_config = self.set_config;
-        let set_is_saving = self.set_is_saving;
-
-        set_is_saving.set(true);
-        
-        // Extract durations in minutes for the command
-        let work_minutes = (task_defaults.work_duration.as_secs() / 60) as u32;
-        let short_break_minutes = (task_defaults.short_break_duration.as_secs() / 60) as u32;
-        let long_break_minutes = (task_defaults.long_break_duration.as_secs() / 60) as u32;
-
-        spawn_local(async move {
-            // Create an object with the expected parameter names
-            let args = js_sys::Object::new();
-            js_sys::Reflect::set(&args, &"work_duration_minutes".into(), &work_minutes.into()).unwrap();
-            js_sys::Reflect::set(&args, &"short_break_minutes".into(), &short_break_minutes.into()).unwrap();
-            js_sys::Reflect::set(&args, &"long_break_minutes".into(), &long_break_minutes.into()).unwrap();
-            
-            if let Ok(result) =
-                invoke_command(event_names::config::UPDATE_TIMINGS, args.into()).await
-            {
-                if let Ok(config) =
-                    serde_wasm_bindgen::from_value::<Config>(result)
-                {
-                    set_config.set(Some(config));
-                }
-            }
-            set_is_saving.set(false);
-        });
+        if let Some(mut config) = self.config.get() {
+            config.task_defaults = task_defaults;
+            self.save_config(config);
+        }
     }
 
     pub fn export_settings(&self) {
@@ -255,6 +240,7 @@ impl SettingsViewModel {
 
     pub fn import_settings(&self) -> std::result::Result<(), String> {
         let set_config = self.set_config;
+        let set_is_saving = self.set_is_saving;
         let document = leptos::prelude::document();
         let input = document.create_element("input").unwrap();
         input.set_attribute("type", "file").unwrap();
@@ -275,7 +261,17 @@ impl SettingsViewModel {
                             if let Some(text) = result.as_string() {
                                 if let Ok(config) = serde_json::from_str::<Config>(&text) {
                                     if config.validate().is_ok() {
-                                        set_config.set(Some(config));
+                                        // Update local state
+                                        set_config.set(Some(config.clone()));
+                                        
+                                        // Save to backend
+                                        set_is_saving.set(true);
+                                        spawn_local(async move {
+                                            if let Ok(args) = to_value(&config) {
+                                                let _ = invoke_command(event_names::config::SAVE_GLOBAL, args).await;
+                                            }
+                                            set_is_saving.set(false);
+                                        });
                                     }
                                 }
                             }

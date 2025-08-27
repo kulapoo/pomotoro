@@ -31,7 +31,7 @@ pub fn Sidebar(
     view! {
         <nav class={move || format!("sidebar {}", if collapsed.get() { "collapsed" } else { "" })} id="sidebar">
             <div class="sidebar-header">
-                <span class="sidebar-title">"Pomodoro"</span>
+                <span class="sidebar-title">"Pomotoro"</span>
                 <button class="toggle-btn" on:click=toggle_sidebar>"☰"</button>
             </div>
             <ul class="nav-menu">

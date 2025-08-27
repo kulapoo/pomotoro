@@ -2,7 +2,7 @@ use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::TaskRepositoryArc;
 use domain::{timer::TimerService, Phase, TaskId, TimerState};
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, State, Emitter};
 use tracing::info;
 use anyhow::Context;
 
@@ -138,7 +138,7 @@ pub async fn switch_active_task(
     timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
+    app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc = timer_service.inner().clone();
 
@@ -151,8 +151,15 @@ pub async fn switch_active_task(
         .with_context(|| format!("Failed to switch to task {}", task_id))
         .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(&timer_service_arc)
+    let updated_state = app_get_timer_state(&timer_service_arc)
         .await
         .context("Failed to get updated timer state after task switch")
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // Emit the state update event to notify the UI
+    app_handle
+        .emit("timer:state_updated", &updated_state)
+        .map_err(|e| format!("Failed to emit timer state update: {}", e))?;
+
+    Ok(updated_state)
 }

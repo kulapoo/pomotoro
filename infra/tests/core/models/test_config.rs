@@ -192,16 +192,16 @@ impl ConfigTestUtils {
         actual: &TaskSettings,
         expected: &TaskSettings,
     ) {
-        assert_eq!(actual.custom_work_duration, expected.custom_work_duration);
-        assert_eq!(actual.custom_short_break_duration, expected.custom_short_break_duration);
-        assert_eq!(actual.custom_long_break_duration, expected.custom_long_break_duration);
+        assert_eq!(actual.work_duration, expected.work_duration);
+        assert_eq!(actual.short_break_duration, expected.short_break_duration);
+        assert_eq!(actual.long_break_duration, expected.long_break_duration);
         assert_eq!(
-            actual.custom_sessions_until_long_break,
-            expected.custom_sessions_until_long_break
+            actual.sessions_until_long_break,
+            expected.sessions_until_long_break
         );
         assert_eq!(
-            actual.custom_enable_screen_blocking,
-            expected.custom_enable_screen_blocking
+            actual.enable_screen_blocking,
+            expected.enable_screen_blocking
         );
     }
 

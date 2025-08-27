@@ -46,14 +46,14 @@ mod tests {
             .max_sessions(4)
             .settings(TaskSettings {
                 use_global_settings: false,
-                custom_max_sessions: Some(6),
-                custom_work_duration: Some(Duration::from_secs(30 * 60)),
-                custom_short_break_duration: None,
-                custom_long_break_duration: None,
-                custom_sessions_until_long_break: None,
-                custom_enable_screen_blocking: None,
-                custom_audio_config: None,
-                custom_notification_config: None,
+                max_sessions: Some(6),
+                work_duration: Some(Duration::from_secs(30 * 60)),
+                short_break_duration: None,
+                long_break_duration: None,
+                sessions_until_long_break: None,
+                enable_screen_blocking: None,
+                audio_config: None,
+                notification_config: None,
             })
             .build()
             .unwrap();

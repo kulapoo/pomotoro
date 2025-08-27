@@ -152,7 +152,7 @@ impl Task {
 
     pub fn get_effective_max_sessions(&self, defaults: &crate::TaskDefaults) -> u8 {
         self.settings
-            .custom_max_sessions
+            .max_sessions
             .unwrap_or(defaults.max_sessions_default)
     }
 }

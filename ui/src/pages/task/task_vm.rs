@@ -1,8 +1,79 @@
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
-use domain::{Task, TaskId, TimerState, event_names};
+use domain::{Task, TaskId, TimerState, event_names, TaskStatus, AudioConfig, TaskSettings};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{from_value, to_value};
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+use wasm_bindgen::JsValue;
+
+// DTO to match backend's TaskDto
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDto {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub max_sessions: u8,
+    pub current_sessions: u8,
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<TaskSettings>,
+    pub audio_config: TaskAudioConfigDto,
+    pub created_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub status: String,
+    pub default: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskAudioConfigDto {
+    pub work_notification_sound: Option<String>,
+    pub break_notification_sound: Option<String>,
+    pub background_sound: Option<String>,
+    pub volume: f32,
+    pub enable_background_audio: bool,
+    pub muted: bool,
+}
+
+impl TaskDto {
+    // Convert TaskDto to domain Task
+    pub fn to_task(&self) -> Result<Task, String> {
+        let task_id = TaskId::from_string(&self.id)
+            .map_err(|e| format!("Invalid task ID: {}", e))?;
+        
+        let status = match self.status.as_str() {
+            "Active" | "active" => TaskStatus::Active,
+            "Completed" | "completed" => TaskStatus::Completed,
+            "Paused" | "paused" => TaskStatus::Paused,
+            "Queued" | "queued" => TaskStatus::Queued,
+            _ => TaskStatus::Queued,
+        };
+        
+        let audio_config = AudioConfig {
+            work_notification_sound: self.audio_config.work_notification_sound.clone(),
+            break_notification_sound: self.audio_config.break_notification_sound.clone(),
+            background_sound: self.audio_config.background_sound.clone(),
+            volume: self.audio_config.volume,
+            enable_background_audio: self.audio_config.enable_background_audio,
+            muted: self.audio_config.muted,
+        };
+        
+        Ok(Task {
+            id: task_id,
+            name: self.name.clone(),
+            description: self.description.clone(),
+            max_sessions: self.max_sessions,
+            current_sessions: self.current_sessions,
+            tags: self.tags.clone(),
+            settings: self.settings.clone().unwrap_or_default(),
+            audio_config,
+            created_at: self.created_at,
+            completed_at: self.completed_at,
+            status,
+            default: self.default,
+        })
+    }
+}
 
 pub struct TasksViewModel {
     tasks: ReadSignal<Vec<Task>>,
@@ -73,6 +144,21 @@ impl ViewModel for TasksViewModel {
     }
 }
 
+// Helper function to refetch all tasks
+async fn refetch_all_tasks(set_tasks: WriteSignal<Vec<Task>>, command: &str) {
+    if let Ok(result) = invoke_command_no_args(command).await {
+        if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
+            let mut tasks = Vec::new();
+            for dto in task_dto_list {
+                if let Ok(task) = dto.to_task() {
+                    tasks.push(task);
+                }
+            }
+            set_tasks.set(tasks);
+        }
+    }
+}
+
 impl TasksViewModel {
     fn load_initial_data(&self) {
         let set_tasks = self.set_tasks;
@@ -82,8 +168,15 @@ impl TasksViewModel {
             if let Ok(result) =
                 invoke_command_no_args(event_names::task::GET_ALL).await
             {
-                if let Ok(task_list) = from_value::<Vec<Task>>(result) {
-                    set_tasks.set(task_list);
+                // Handle TaskDto list from backend
+                if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
+                    let mut tasks = Vec::new();
+                    for dto in task_dto_list {
+                        if let Ok(task) = dto.to_task() {
+                            tasks.push(task);
+                        }
+                    }
+                    set_tasks.set(tasks);
                 }
             }
 
@@ -95,16 +188,29 @@ impl TasksViewModel {
                     {
                         if let Ok(task_id) = TaskId::from_string(&entity_id_str)
                         {
-                            if let Ok(task_args) = to_value(&task_id) {
+                            #[derive(serde::Serialize)]
+                            struct GetTaskArgs {
+                                id: String,
+                            }
+                            
+                            let args = GetTaskArgs {
+                                id: task_id.to_string(),
+                            };
+                            
+                            if let Ok(task_args) = to_value(&args) {
                                 if let Ok(task_result) = invoke_command(
                                     event_names::task::GET,
                                     task_args,
                                 )
                                 .await
                                 {
-                                    if let Ok(task) =
-                                        from_value::<Task>(task_result)
-                                    {
+                                    // Try to deserialize as TaskDto first
+                                    if let Ok(task_dto) = from_value::<TaskDto>(task_result.clone()) {
+                                        if let Ok(task) = task_dto.to_task() {
+                                            set_active_task.set(Some(task));
+                                        }
+                                    } else if let Ok(task) = from_value::<Task>(task_result) {
+                                        // Fallback to direct Task deserialization
                                         set_active_task.set(Some(task));
                                     }
                                 }
@@ -151,32 +257,73 @@ impl TasksViewModel {
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
-            struct CreateTaskArgs {
+            struct CreateTaskRequest {
                 name: String,
                 description: Option<String>,
                 max_sessions: u8,
                 tags: Vec<String>,
                 audio_config: Option<domain::AudioConfig>,
             }
+            
+            #[derive(serde::Serialize)]
+            struct CreateTaskArgs {
+                request: CreateTaskRequest,
+            }
 
-            let args = CreateTaskArgs { 
-                name, 
+            let request = CreateTaskRequest { 
+                name: name.clone(), 
                 description: if description.is_empty() { None } else { Some(description) },
                 max_sessions: 4, // Default value
                 tags: Vec::new(),
                 audio_config: None,
             };
+            
+            let args = CreateTaskArgs { request };
 
-            if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) =
-                    invoke_command(event_names::task::CREATE, args_value).await
-                {
-                    if let Ok(new_task) = from_value::<Task>(result) {
-                        let mut current_tasks = tasks.get_untracked();
-                        current_tasks.push(new_task);
-                        set_tasks.set(current_tasks);
-                        set_is_creating.set(false);
+            match to_value(&args) {
+                Ok(args_value) => {
+                    web_sys::console::log_1(&format!("Invoking create_task with args: {:?}", args_value).into());
+                    match invoke_command(event_names::task::CREATE, args_value).await {
+                        Ok(result) => {
+                            web_sys::console::log_1(&format!("Create task result: {:?}", result).into());
+                            // First try to deserialize as TaskDto
+                            match from_value::<TaskDto>(result.clone()) {
+                                Ok(task_dto) => {
+                                    web_sys::console::log_1(&format!("Successfully deserialized TaskDto: {}", task_dto.name).into());
+                                    // Convert TaskDto to Task
+                                    match task_dto.to_task() {
+                                        Ok(new_task) => {
+                                            web_sys::console::log_1(&format!("Successfully created task: {}", new_task.name).into());
+                                            let mut current_tasks = tasks.get_untracked();
+                                            current_tasks.push(new_task);
+                                            set_tasks.set(current_tasks);
+                                            set_is_creating.set(false);
+                                        }
+                                        Err(e) => {
+                                            web_sys::console::error_1(&format!("Failed to convert TaskDto to Task: {}", e).into());
+                                            // Still refetch to ensure consistency
+                                            refetch_all_tasks(set_tasks, event_names::task::GET_ALL).await;
+                                            set_is_creating.set(false);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    web_sys::console::error_1(&format!("Failed to deserialize TaskDto. Result was: {:?}, Error: {:?}", result, e).into());
+                                    // Try to refetch all tasks to ensure we have the latest list
+                                    refetch_all_tasks(set_tasks, event_names::task::GET_ALL).await;
+                                    set_is_creating.set(false);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            web_sys::console::error_1(&format!("Failed to invoke create_task command: {:?}", e).into());
+                            set_is_creating.set(false);
+                        }
                     }
+                }
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Failed to serialize args: {:?}", e).into());
+                    set_is_creating.set(false);
                 }
             }
         });
@@ -229,7 +376,16 @@ impl TasksViewModel {
         let set_selected_task = self.set_selected_task;
 
         spawn_local(async move {
-            if let Ok(args_value) = to_value(&task_id) {
+            #[derive(serde::Serialize)]
+            struct DeleteTaskArgs {
+                id: String,
+            }
+            
+            let args = DeleteTaskArgs {
+                id: task_id.to_string(),
+            };
+            
+            if let Ok(args_value) = to_value(&args) {
                 if (invoke_command(event_names::task::DELETE, args_value).await).is_ok() {
                     let mut current_tasks = tasks.get_untracked();
                     current_tasks.retain(|t| t.id != task_id);
@@ -245,30 +401,49 @@ impl TasksViewModel {
         let tasks = self.tasks;
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&task_id) {
-                if let Ok(result) =
-                    invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args)
-                        .await
-                {
-                    if let Ok(timer_state) = from_value::<TimerState>(result) {
-                        if let Some(entity_id_str) =
-                            timer_state.active_entity_id()
-                        {
-                            if let Ok(active_id) =
-                                TaskId::from_string(&entity_id_str)
-                            {
-                                let task_list = tasks.get_untracked();
-                                let active_task = task_list
-                                    .iter()
-                                    .find(|t| t.id == active_id)
-                                    .cloned();
-                                set_active_task.set(active_task);
+            // Create a JS object with taskId as the key
+            // Tauri expects parameters at the top level
+            web_sys::console::log_1(&format!("Switching to task: {:?}", task_id).into());
+            
+            let args_obj = js_sys::Object::new();
+            
+            // Serialize the TaskId and set it as the taskId property
+            if let Ok(task_id_value) = to_value(&task_id) {
+                js_sys::Reflect::set(
+                    &args_obj,
+                    &JsValue::from_str("taskId"),
+                    &task_id_value,
+                ).unwrap();
+                
+                web_sys::console::log_1(&format!("Invoking switch_active_task with args: {:?}", args_obj).into());
+                
+                match invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args_obj.into()).await {
+                    Ok(result) => {
+                        web_sys::console::log_1(&format!("Switch task result: {:?}", result).into());
+                        if let Ok(timer_state) = from_value::<TimerState>(result) {
+                            if let Some(entity_id_str) = timer_state.active_entity_id() {
+                                if let Ok(active_id) = TaskId::from_string(&entity_id_str) {
+                                    let task_list = tasks.get_untracked();
+                                    let active_task = task_list
+                                        .iter()
+                                        .find(|t| t.id == active_id)
+                                        .cloned();
+                                    let task_name = active_task.as_ref().map(|t| t.name.clone());
+                                    set_active_task.set(active_task);
+                                    web_sys::console::log_1(&format!("Active task set to: {:?}", task_name).into());
+                                }
+                            } else {
+                                set_active_task.set(None);
+                                web_sys::console::log_1(&"No active task after switch".into());
                             }
-                        } else {
-                            set_active_task.set(None);
                         }
                     }
+                    Err(e) => {
+                        web_sys::console::error_1(&format!("Failed to switch task: {:?}", e).into());
+                    }
                 }
+            } else {
+                web_sys::console::error_1(&"Failed to serialize task ID".into());
             }
         });
     }
@@ -282,7 +457,14 @@ impl TasksViewModel {
             if let Ok(result) =
                 invoke_command_no_args(event_names::task::GET_ALL).await
             {
-                if let Ok(task_list) = from_value::<Vec<Task>>(result) {
+                // Handle TaskDto list from backend
+                if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
+                    let mut task_list = Vec::new();
+                    for dto in task_dto_list {
+                        if let Ok(task) = dto.to_task() {
+                            task_list.push(task);
+                        }
+                    }
                     set_tasks.set(task_list);
                 }
             }
@@ -468,7 +650,16 @@ impl TasksViewModel {
         
         spawn_local(async move {
             if let Some(task) = active_task.get_untracked() {
-                if let Ok(args_value) = to_value(&task.id) {
+                #[derive(serde::Serialize)]
+                struct GetPositionArgs {
+                    task_id: String,
+                }
+                
+                let args = GetPositionArgs {
+                    task_id: task.id.to_string(),
+                };
+                
+                if let Ok(args_value) = to_value(&args) {
                     if let Ok(result) =
                         invoke_command(event_names::task::GET_TASK_CYCLE_POSITION, args_value).await
                     {

@@ -15,19 +15,19 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [
-    "HtmlElement", 
-    "HtmlInputElement", 
-    "FileReader", 
-    "FileList", 
-    "File", 
-    "Blob", 
-    "Url", 
+    "HtmlElement",
+    "HtmlInputElement",
+    "FileReader",
+    "FileList",
+    "File",
+    "Blob",
+    "Url",
     "Document",
     "Window",
     "Event",
     "EventTarget"
 ]}
-
+chrono = { workspace = true }
 # UI components - using standard HTML with CSS styling
 
 # Serialization for communication with backend

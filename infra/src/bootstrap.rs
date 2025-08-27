@@ -130,6 +130,16 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     timer_service.load_state().await
         .context("Failed to load timer state")?;
 
+    // Check timer state and reset if not idle before switching tasks
+    let timer_state = timer_service.get_state().await
+        .context("Failed to get timer state")?;
+    
+    if !timer_state.is_idle() {
+        // Reset timer to idle state to allow task switching
+        timer_service.stop_timer().await
+            .context("Failed to reset timer state")?;
+    }
+
     switch_timer_task(
         &timer_service,
         &task_repository,

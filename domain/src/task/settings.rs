@@ -7,35 +7,35 @@ use std::time::Duration;
 pub struct TaskSettings {
     pub use_global_settings: bool,
     #[serde(default)]
-    pub custom_max_sessions: Option<u8>,
+    pub max_sessions: Option<u8>,
     #[serde(with = "optional_duration_serde", skip_serializing_if = "Option::is_none", default)]
-    pub custom_work_duration: Option<Duration>,
+    pub work_duration: Option<Duration>,
     #[serde(with = "optional_duration_serde", skip_serializing_if = "Option::is_none", default)]
-    pub custom_short_break_duration: Option<Duration>,
+    pub short_break_duration: Option<Duration>,
     #[serde(with = "optional_duration_serde", skip_serializing_if = "Option::is_none", default)]
-    pub custom_long_break_duration: Option<Duration>,
+    pub long_break_duration: Option<Duration>,
     #[serde(default)]
-    pub custom_sessions_until_long_break: Option<u8>,
+    pub sessions_until_long_break: Option<u8>,
     #[serde(default)]
-    pub custom_enable_screen_blocking: Option<bool>,
+    pub enable_screen_blocking: Option<bool>,
     #[serde(default)]
-    pub custom_audio_config: Option<AudioConfig>,
+    pub audio_config: Option<AudioConfig>,
     #[serde(default)]
-    pub custom_notification_config: Option<NotificationConfig>,
+    pub notification_config: Option<NotificationConfig>,
 }
 
 impl Default for TaskSettings {
     fn default() -> Self {
         Self {
             use_global_settings: true,
-            custom_max_sessions: None,
-            custom_work_duration: None,
-            custom_short_break_duration: None,
-            custom_long_break_duration: None,
-            custom_sessions_until_long_break: None,
-            custom_enable_screen_blocking: None,
-            custom_audio_config: None,
-            custom_notification_config: None,
+            max_sessions: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
+            audio_config: None,
+            notification_config: None,
         }
     }
 }
@@ -59,20 +59,20 @@ impl TaskSettings {
         Self::validate_durations(&work_duration, &short_break_duration, &long_break_duration)?;
         Self::validate_session_count(sessions_until_long_break)?;
         Self::validate_session_count(max_sessions)?;
-        
+
         audio_config.validate()?;
         notification_config.validate()?;
 
         Ok(Self {
             use_global_settings: false,
-            custom_max_sessions: Some(max_sessions),
-            custom_work_duration: Some(work_duration),
-            custom_short_break_duration: Some(short_break_duration),
-            custom_long_break_duration: Some(long_break_duration),
-            custom_sessions_until_long_break: Some(sessions_until_long_break),
-            custom_enable_screen_blocking: Some(enable_screen_blocking),
-            custom_audio_config: Some(audio_config),
-            custom_notification_config: Some(notification_config),
+            max_sessions: Some(max_sessions),
+            work_duration: Some(work_duration),
+            short_break_duration: Some(short_break_duration),
+            long_break_duration: Some(long_break_duration),
+            sessions_until_long_break: Some(sessions_until_long_break),
+            enable_screen_blocking: Some(enable_screen_blocking),
+            audio_config: Some(audio_config),
+            notification_config: Some(notification_config),
         })
     }
 
@@ -81,14 +81,14 @@ impl TaskSettings {
             EffectiveSettings::from_defaults(defaults)
         } else {
             EffectiveSettings {
-                max_sessions: self.custom_max_sessions.unwrap_or(defaults.max_sessions_default),
-                work_duration: self.custom_work_duration.unwrap_or(defaults.work_duration),
-                short_break_duration: self.custom_short_break_duration.unwrap_or(defaults.short_break_duration),
-                long_break_duration: self.custom_long_break_duration.unwrap_or(defaults.long_break_duration),
-                sessions_until_long_break: self.custom_sessions_until_long_break.unwrap_or(defaults.sessions_until_long_break),
-                enable_screen_blocking: self.custom_enable_screen_blocking.unwrap_or(defaults.enable_screen_blocking),
-                audio_config: self.custom_audio_config.clone().unwrap_or_default(),
-                notification_config: self.custom_notification_config.clone().unwrap_or_default(),
+                max_sessions: self.max_sessions.unwrap_or(defaults.max_sessions_default),
+                work_duration: self.work_duration.unwrap_or(defaults.work_duration),
+                short_break_duration: self.short_break_duration.unwrap_or(defaults.short_break_duration),
+                long_break_duration: self.long_break_duration.unwrap_or(defaults.long_break_duration),
+                sessions_until_long_break: self.sessions_until_long_break.unwrap_or(defaults.sessions_until_long_break),
+                enable_screen_blocking: self.enable_screen_blocking.unwrap_or(defaults.enable_screen_blocking),
+                audio_config: self.audio_config.clone().unwrap_or_default(),
+                notification_config: self.notification_config.clone().unwrap_or_default(),
             }
         }
     }
@@ -109,35 +109,35 @@ impl TaskSettings {
         sessions_until_long_break: Option<u8>,
         enable_screen_blocking: Option<bool>,
     ) -> Result<()> {
-        let test_work = work_duration.or(self.custom_work_duration).unwrap_or(Duration::from_secs(25 * 60));
-        let test_short = short_break_duration.or(self.custom_short_break_duration).unwrap_or(Duration::from_secs(5 * 60));
-        let test_long = long_break_duration.or(self.custom_long_break_duration).unwrap_or(Duration::from_secs(15 * 60));
-        let test_sessions = sessions_until_long_break.or(self.custom_sessions_until_long_break).unwrap_or(4);
+        let test_work = work_duration.or(self.work_duration).unwrap_or(Duration::from_secs(25 * 60));
+        let test_short = short_break_duration.or(self.short_break_duration).unwrap_or(Duration::from_secs(5 * 60));
+        let test_long = long_break_duration.or(self.long_break_duration).unwrap_or(Duration::from_secs(15 * 60));
+        let test_sessions = sessions_until_long_break.or(self.sessions_until_long_break).unwrap_or(4);
 
         // Validate the new values
         Self::validate_durations(&test_work, &test_short, &test_long)?;
         Self::validate_session_count(test_sessions)?;
 
-        if work_duration.is_some() || short_break_duration.is_some() || 
-           long_break_duration.is_some() || sessions_until_long_break.is_some() || 
+        if work_duration.is_some() || short_break_duration.is_some() ||
+           long_break_duration.is_some() || sessions_until_long_break.is_some() ||
            enable_screen_blocking.is_some() {
             self.use_global_settings = false;
         }
 
         if let Some(duration) = work_duration {
-            self.custom_work_duration = Some(duration);
+            self.work_duration = Some(duration);
         }
         if let Some(duration) = short_break_duration {
-            self.custom_short_break_duration = Some(duration);
+            self.short_break_duration = Some(duration);
         }
         if let Some(duration) = long_break_duration {
-            self.custom_long_break_duration = Some(duration);
+            self.long_break_duration = Some(duration);
         }
         if let Some(sessions) = sessions_until_long_break {
-            self.custom_sessions_until_long_break = Some(sessions);
+            self.sessions_until_long_break = Some(sessions);
         }
         if let Some(blocking) = enable_screen_blocking {
-            self.custom_enable_screen_blocking = Some(blocking);
+            self.enable_screen_blocking = Some(blocking);
         }
 
         Ok(())
@@ -146,25 +146,25 @@ impl TaskSettings {
     pub fn update_audio_settings(&mut self, audio_config: AudioConfig) -> Result<()> {
         audio_config.validate()?;
         self.use_global_settings = false;
-        self.custom_audio_config = Some(audio_config);
+        self.audio_config = Some(audio_config);
         Ok(())
     }
 
     pub fn update_notification_settings(&mut self, notification_config: NotificationConfig) -> Result<()> {
         notification_config.validate()?;
         self.use_global_settings = false;
-        self.custom_notification_config = Some(notification_config);
+        self.notification_config = Some(notification_config);
         Ok(())
     }
 
     pub fn update_max_sessions(&mut self, max_sessions: u8) -> Result<()> {
         Self::validate_session_count(max_sessions)?;
-        
+
         self.use_global_settings = false;
-        self.custom_max_sessions = Some(max_sessions);
+        self.max_sessions = Some(max_sessions);
         Ok(())
     }
-    
+
     // Validation helpers
     fn validate_durations(
         work: &Duration,
@@ -172,7 +172,7 @@ impl TaskSettings {
         long_break: &Duration,
     ) -> Result<()> {
         use crate::Error;
-        
+
         if work.as_secs() < 60 || work.as_secs() > 3600 {
             return Err(Error::InvalidDuration {
                 duration: work.as_secs() as u32,
@@ -196,7 +196,7 @@ impl TaskSettings {
 
     fn validate_session_count(count: u8) -> Result<()> {
         use crate::Error;
-        
+
         if count == 0 || count > 10 {
             return Err(Error::InvalidSessionCount { count });
         }
@@ -232,7 +232,7 @@ impl EffectiveSettings {
             notification_config: NotificationConfig::default(),
         }
     }
-    
+
     // Methods to access timing information (replacing what Config provided)
     pub fn total_cycle_duration(&self) -> Duration {
         let work_time = self.work_duration * self.sessions_until_long_break as u32;

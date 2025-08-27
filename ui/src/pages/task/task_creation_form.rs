@@ -22,18 +22,26 @@ pub fn TaskCreationForm(
         set_is_creating.set(true);
         web_sys::console::log_1(&format!("Creating task: {}", name).into());
         
-        vm.with_value(|v| {
-            v.create_task(
-                name.trim().to_string(),
-                description.trim().to_string(),
-            )
-        });
+        // Store these for the async operation
+        let name_to_create = name.trim().to_string();
+        let desc_to_create = description.trim().to_string();
         
-        // Clear the form
+        // Clear form immediately for better UX
         set_task_name.set(String::new());
         set_task_description.set(String::new());
-        set_is_creating.set(false);
-        on_close.run(());
+        
+        vm.with_value(|v| {
+            v.create_task(name_to_create, desc_to_create);
+        });
+        
+        // Wait a bit for the async operation to complete
+        set_timeout(
+            move || {
+                set_is_creating.set(false);
+                on_close.run(());
+            },
+            std::time::Duration::from_millis(500),
+        );
     };
 
     view! {

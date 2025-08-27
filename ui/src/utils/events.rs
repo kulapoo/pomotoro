@@ -2,15 +2,19 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke)]
+    async fn tauri_invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
 pub async fn invoke_command(
     command: &str,
     args: JsValue,
 ) -> Result<JsValue, JsValue> {
-    let result = invoke(command, args).await;
+    web_sys::console::log_1(&format!("INVOKE: Calling command '{}' with args: {:?}", command, args).into());
+    
+    let result = tauri_invoke(command, args).await;
+    
+    web_sys::console::log_1(&format!("INVOKE: Command '{}' returned: {:?}", command, result).into());
 
     // Check if the result is a string (which could be an error message)
     if result.is_string() {
@@ -31,5 +35,7 @@ pub async fn invoke_command(
 }
 
 pub async fn invoke_command_no_args(command: &str) -> Result<JsValue, JsValue> {
-    invoke_command(command, JsValue::NULL).await
+    // Create an empty object instead of NULL for Tauri v2
+    let args = js_sys::Object::new();
+    invoke_command(command, args.into()).await
 }

@@ -13,63 +13,63 @@ pub fn TaskSettingsModal(
     let (use_global, set_use_global) = signal(
         settings.as_ref().map_or(true, |s| s.use_global_settings)
     );
-    
+
     let (work_minutes, set_work_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_work_duration)
+            .and_then(|s| s.work_duration)
             .map(|d| (d.as_secs() / 60) as u32)
             .unwrap_or(25)
     );
-    
+
     let (short_break_minutes, set_short_break_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_short_break_duration)
+            .and_then(|s| s.short_break_duration)
             .map(|d| (d.as_secs() / 60) as u32)
             .unwrap_or(5)
     );
-    
+
     let (long_break_minutes, set_long_break_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_long_break_duration)
+            .and_then(|s| s.long_break_duration)
             .map(|d| (d.as_secs() / 60) as u32)
             .unwrap_or(15)
     );
-    
+
     let (sessions_until_long_break, set_sessions_until_long_break) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_sessions_until_long_break)
+            .and_then(|s| s.sessions_until_long_break)
             .unwrap_or(4)
     );
-    
+
     let (max_sessions, set_max_sessions) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_max_sessions)
+            .and_then(|s| s.max_sessions)
             .unwrap_or(4)
     );
-    
+
     let (enable_screen_blocking, set_enable_screen_blocking) = signal(
         settings.as_ref()
-            .and_then(|s| s.custom_enable_screen_blocking)
+            .and_then(|s| s.enable_screen_blocking)
             .unwrap_or(false)
     );
 
     let handle_save = move |_| {
         let mut new_settings = TaskSettings::default();
         new_settings.use_global_settings = use_global.get();
-        
+
         if !use_global.get() {
             use std::time::Duration;
-            new_settings.custom_work_duration = Some(Duration::from_secs(work_minutes.get() as u64 * 60));
-            new_settings.custom_short_break_duration = Some(Duration::from_secs(short_break_minutes.get() as u64 * 60));
-            new_settings.custom_long_break_duration = Some(Duration::from_secs(long_break_minutes.get() as u64 * 60));
-            new_settings.custom_sessions_until_long_break = Some(sessions_until_long_break.get());
-            new_settings.custom_max_sessions = Some(max_sessions.get());
-            new_settings.custom_enable_screen_blocking = Some(enable_screen_blocking.get());
+            new_settings.work_duration = Some(Duration::from_secs(work_minutes.get() as u64 * 60));
+            new_settings.short_break_duration = Some(Duration::from_secs(short_break_minutes.get() as u64 * 60));
+            new_settings.long_break_duration = Some(Duration::from_secs(long_break_minutes.get() as u64 * 60));
+            new_settings.sessions_until_long_break = Some(sessions_until_long_break.get());
+            new_settings.max_sessions = Some(max_sessions.get());
+            new_settings.enable_screen_blocking = Some(enable_screen_blocking.get());
         }
-        
+
         on_save(new_settings);
     };
-    
+
     let handle_reset_to_global = move |_| {
         set_use_global.set(true);
     };
@@ -87,7 +87,7 @@ pub fn TaskSettingsModal(
                     <h2>"Task Settings: " {task_name}</h2>
                     <button class="close-button" on:click=move |_| on_close_2()>"×"</button>
                 </div>
-                
+
                 <div class="modal-body">
                     <div class="settings-toggle">
                         <label>
@@ -106,7 +106,7 @@ pub fn TaskSettingsModal(
                             view! { <span></span> }.into_any()
                         }}
                     </div>
-                    
+
                     <div class="settings-form" class:disabled=use_global>
                         <div class="form-group">
                             <label>"Work Duration (minutes):"</label>
@@ -123,7 +123,7 @@ pub fn TaskSettingsModal(
                                 }
                             />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>"Short Break (minutes):"</label>
                             <input
@@ -139,7 +139,7 @@ pub fn TaskSettingsModal(
                                 }
                             />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>"Long Break (minutes):"</label>
                             <input
@@ -155,7 +155,7 @@ pub fn TaskSettingsModal(
                                 }
                             />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>"Sessions Until Long Break:"</label>
                             <input
@@ -171,7 +171,7 @@ pub fn TaskSettingsModal(
                                 }
                             />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>"Max Sessions:"</label>
                             <input
@@ -187,7 +187,7 @@ pub fn TaskSettingsModal(
                                 }
                             />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>
                                 <input
@@ -201,7 +201,7 @@ pub fn TaskSettingsModal(
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer">
                     <button class="btn btn-secondary" on:click=move |_| on_close_3()>"Cancel"</button>
                     {move || if !use_global.get() {
@@ -218,21 +218,21 @@ pub fn TaskSettingsModal(
     }
 }
 
-#[component] 
+#[component]
 pub fn TaskSettingsIndicator(
     has_custom_settings: bool,
 ) -> impl IntoView {
     view! {
         <div class="task-settings-indicator">
             {if has_custom_settings {
-                view! { 
+                view! {
                     <span class="custom-badge" title="Using custom settings">
                         <i class="icon-settings"></i>
                         " Custom"
                     </span>
                 }
             } else {
-                view! { 
+                view! {
                     <span class="global-badge" title="Using global settings">
                         <i class="icon-globe"></i>
                         " Global"

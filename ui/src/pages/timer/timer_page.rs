@@ -17,10 +17,7 @@ pub fn TimerPage() -> impl IntoView {
         <ErrorToast error_signal=error_state set_error=set_error_state />
         <div class="timer-container">
             <div class="current-task-display" id="currentTaskDisplay">
-                "Working on: "{move || {
-                    let state = timer_state.get();
-                    state.active_entity_id().map(|_| "Active Task".to_string()).unwrap_or_else(|| "General Tasks".to_string())
-                }}
+                "Working on: "{move || vm.with_value(|v| v.get_active_task_name())}
             </div>
 
             <div class="timer-label" id="timerLabel">{move || vm.with_value(|v| v.get_phase_name())}</div>

@@ -316,17 +316,17 @@ async fn test_task_with_custom_configuration() {
         retrieved.description,
         Some("Long-form focused work requiring extended sessions".to_string())
     );
-    assert_eq!(retrieved.settings.custom_work_duration, Some(Duration::from_secs(45 * 60)));
+    assert_eq!(retrieved.settings.work_duration, Some(Duration::from_secs(45 * 60)));
     assert_eq!(
-        retrieved.settings.custom_short_break_duration,
+        retrieved.settings.short_break_duration,
         Some(Duration::from_secs(10 * 60))
     );
     assert_eq!(
-        retrieved.settings.custom_long_break_duration,
+        retrieved.settings.long_break_duration,
         Some(Duration::from_secs(25 * 60))
     );
-    assert_eq!(retrieved.settings.custom_sessions_until_long_break, Some(3));
-    assert_eq!(retrieved.settings.custom_enable_screen_blocking, Some(true));
+    assert_eq!(retrieved.settings.sessions_until_long_break, Some(3));
+    assert_eq!(retrieved.settings.enable_screen_blocking, Some(true));
 
     // Verify audio configuration
     assert_eq!(retrieved.audio_config.volume, 0.4);

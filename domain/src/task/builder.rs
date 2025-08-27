@@ -102,17 +102,17 @@ impl Builder {
     pub fn config(mut self, config: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
         let settings = TaskSettings {
             use_global_settings: false,
-            custom_max_sessions: None,
-            custom_work_duration: Some(config),
-            custom_short_break_duration: Some(short_break),
-            custom_long_break_duration: Some(long_break),
-            custom_sessions_until_long_break: Some(sessions_until_long),
-            custom_enable_screen_blocking: Some(screen_blocking),
-            custom_audio_config: None,
-            custom_notification_config: None,
+            max_sessions: None,
+            work_duration: Some(config),
+            short_break_duration: Some(short_break),
+            long_break_duration: Some(long_break),
+            sessions_until_long_break: Some(sessions_until_long),
+            enable_screen_blocking: Some(screen_blocking),
+            audio_config: None,
+            notification_config: None,
         };
         self.settings = Some(settings);
-        
+
         self
     }
 
@@ -138,17 +138,17 @@ impl Builder {
     pub fn with_config(mut self, work_duration: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
         let settings = TaskSettings {
             use_global_settings: false,
-            custom_max_sessions: None,
-            custom_work_duration: Some(work_duration),
-            custom_short_break_duration: Some(short_break),
-            custom_long_break_duration: Some(long_break),
-            custom_sessions_until_long_break: Some(sessions_until_long),
-            custom_enable_screen_blocking: Some(screen_blocking),
-            custom_audio_config: None,
-            custom_notification_config: None,
+            max_sessions: None,
+            work_duration: Some(work_duration),
+            short_break_duration: Some(short_break),
+            long_break_duration: Some(long_break),
+            sessions_until_long_break: Some(sessions_until_long),
+            enable_screen_blocking: Some(screen_blocking),
+            audio_config: None,
+            notification_config: None,
         };
         self.settings = Some(settings);
-        
+
         self
     }
 
@@ -238,14 +238,14 @@ impl Builder {
         // Provide default settings if none provided
         let settings = self.settings.unwrap_or_else(|| TaskSettings {
             use_global_settings: true,
-            custom_max_sessions: None,
-            custom_work_duration: None,
-            custom_short_break_duration: None,
-            custom_long_break_duration: None,
-            custom_sessions_until_long_break: None,
-            custom_enable_screen_blocking: None,
-            custom_audio_config: None,
-            custom_notification_config: None,
+            max_sessions: None,
+            work_duration: None,
+            short_break_duration: None,
+            long_break_duration: None,
+            sessions_until_long_break: None,
+            enable_screen_blocking: None,
+            audio_config: None,
+            notification_config: None,
         });
 
         Ok(super::Task {
@@ -314,14 +314,14 @@ impl Builder {
         // Provide default settings if none provided
         let settings = self.settings.unwrap_or_else(|| TaskSettings {
             use_global_settings: false,
-            custom_max_sessions: Some(max_sessions),
-            custom_work_duration: Some(defaults.work_duration),
-            custom_short_break_duration: Some(defaults.short_break_duration),
-            custom_long_break_duration: Some(defaults.long_break_duration),
-            custom_sessions_until_long_break: Some(defaults.sessions_until_long_break),
-            custom_enable_screen_blocking: Some(defaults.enable_screen_blocking),
-            custom_audio_config: None,
-            custom_notification_config: None,
+            max_sessions: Some(max_sessions),
+            work_duration: Some(defaults.work_duration),
+            short_break_duration: Some(defaults.short_break_duration),
+            long_break_duration: Some(defaults.long_break_duration),
+            sessions_until_long_break: Some(defaults.sessions_until_long_break),
+            enable_screen_blocking: Some(defaults.enable_screen_blocking),
+            audio_config: None,
+            notification_config: None,
         });
 
         Ok(super::Task {

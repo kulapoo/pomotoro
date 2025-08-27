@@ -4,7 +4,7 @@ pub mod commands;
 
 use commands::{
     add_custom_audio_asset, cleanup_finished_audio, clear_all_data,
-    complete_task_session, create_task, cycle_incomplete_task, delete_task,
+    complete_task_session, create_task, cycle_incomplete_task, debug_create_test_task, delete_task,
     export_settings, filter_tasks_by_status, get_active_playbacks,
     get_active_tasks, get_all_tasks, get_audio_library,
     get_effective_audio_config, get_effective_task_config, get_global_config,
@@ -31,6 +31,7 @@ pub fn run() {
     #[cfg(debug_assertions)]
     let devtools = tauri_plugin_devtools::init();
 
+    #[allow(unused_mut)]
     let mut builder = tauri::Builder::default();
 
     #[cfg(debug_assertions)]
@@ -81,6 +82,7 @@ pub fn run() {
             skip_phase,
             switch_active_task,
             create_task,
+            debug_create_test_task,
             get_task,
             get_all_tasks,
             get_active_tasks,

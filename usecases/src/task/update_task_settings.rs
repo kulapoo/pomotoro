@@ -11,11 +11,11 @@ pub async fn update_task_settings(
 ) -> Result<Task> {
     let mut task = repository.get_by_id(task_id).await?
         .ok_or(domain::Error::TaskNotFound { id: task_id.to_string() })?;
-    
+
     task.set_settings(settings);
-    
+
     repository.update(task.clone()).await?;
-    
+
     publisher
         .publish(Box::new(TaskUpdated::new(
             task_id,
@@ -25,7 +25,7 @@ pub async fn update_task_settings(
             Some(task.tags.clone()),
             0,
         )));
-    
+
     Ok(task)
 }
 
@@ -52,8 +52,8 @@ mod tests {
 
         let mut settings = TaskSettings::default();
         settings.use_global_settings = false;
-        settings.custom_max_sessions = Some(6);
-        settings.custom_work_duration = Some(Duration::from_secs(30 * 60));
+        settings.max_sessions = Some(6);
+        settings.work_duration = Some(Duration::from_secs(30 * 60));
 
         let updated_task = update_task_settings(
             &repository,
@@ -64,11 +64,11 @@ mod tests {
 
         assert!(updated_task.has_custom_settings());
         assert_eq!(
-            updated_task.settings.custom_max_sessions,
+            updated_task.settings.max_sessions,
             Some(6)
         );
         assert_eq!(
-            updated_task.settings.custom_work_duration,
+            updated_task.settings.work_duration,
             Some(Duration::from_secs(30 * 60))
         );
     }
