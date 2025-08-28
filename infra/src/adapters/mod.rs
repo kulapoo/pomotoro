@@ -26,7 +26,6 @@ pub mod config;
 pub mod database;
 pub mod events;
 pub mod notifications;
-pub mod storage;
 pub mod task;
 pub mod timer;
 
@@ -43,7 +42,7 @@ pub use task::{
 };
 
 // Timer infrastructure
-pub use timer::FileTimerService;
+pub use timer::{FileTimerService, SqliteTimerService};
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
@@ -54,8 +53,5 @@ pub use events::{EventHandler, InMemoryEventBus, audio_events};
 // Notifications infrastructure
 pub use notifications::{NotificationService, register_notification_handlers};
 
-// Storage infrastructure
-pub use storage::{FileStorageService, StorageConfig, StorageLocation};
-
 // Database infrastructure
-pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository};
+pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository, TimerRepository};

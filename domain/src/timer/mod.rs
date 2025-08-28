@@ -58,6 +58,6 @@ pub enum Status {
 // Re-export events
 pub use events::{
     ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted, Paused,
-    PhaseCompleted, PhaseSkipped, Reset, SessionFlowReset, SessionStarted,
+    PhaseCompleted, PhaseSkipped, Reset, SessionFlowReset,
     Started, StatusChanged, Tick, WorkSessionCompleted, WorkSessionStarted,
 };

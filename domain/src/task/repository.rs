@@ -1,6 +1,46 @@
 use super::{Task, id::Id, status::Status};
-use crate::{Result, shared_kernel::traits::searchable::SearchCriteria};
+use crate::Result;
 use async_trait::async_trait;
+
+#[derive(Default, Clone, Debug)]
+pub struct SearchCriteria {
+    pub query: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub status: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
+
+impl SearchCriteria {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_query(mut self, query: String) -> Self {
+        self.query = Some(query);
+        self
+    }
+
+    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = Some(tags);
+        self
+    }
+
+    pub fn with_status(mut self, status: String) -> Self {
+        self.status = Some(status);
+        self
+    }
+
+    pub fn with_limit(mut self, limit: usize) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn with_offset(mut self, offset: usize) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum SortBy {

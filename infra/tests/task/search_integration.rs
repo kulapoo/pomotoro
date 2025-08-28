@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use domain::{TaskRepository, TaskBuilder, TaskStatus};
-    use domain::task::repository::{SearchOptions, SortBy, SortOrder};
-    use domain::shared_kernel::traits::searchable::SearchCriteria;
+    use domain::task::repository::{SearchCriteria, SearchOptions, SortBy, SortOrder};
     use domain::InMemoryTaskRepository;
 
     #[tokio::test]

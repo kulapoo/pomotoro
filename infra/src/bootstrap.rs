@@ -6,9 +6,9 @@ use tracing::info;
 use usecases::{timer::switch_timer_task};
 
 use crate::adapters::{
-    InMemoryEventBus, SqliteTaskRepository, SqliteConfigRepository,
+    InMemoryEventBus, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository, TimerRepository,
     establish_connection, run_migrations,
-    FileStorageService, StorageConfig, FileTimerService,
+    SqliteTimerService,
     RodioAudioService, audio::{AudioServiceWrapper, InMemoryAudioLibraryService, register_audio_event_handlers},
     events::{
         EventSubscriber, app_lifecycle, mem_event_bus::EventPublisherArc,
@@ -58,11 +58,13 @@ pub fn register_handlers(
 }
 
 pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
-    let storage_config = StorageConfig::default();
-    let storage_service = FileStorageService::new(storage_config)
-        .context("Failed to initialize storage service")?;
-
-    let storage_path = storage_service.get_storage_path().await;
+    // Get default storage path for database
+    let storage_path = dirs::data_dir()
+        .context("Failed to get user data directory")?
+        .join("pomotoro");
+    
+    std::fs::create_dir_all(&storage_path)
+        .context("Failed to create storage directory")?;
 
     // Set up SQLite database
     let db_path = storage_path.join("pomotoro.db");
@@ -126,11 +128,15 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
             task_repository.clone(),
             domain::TaskCyclingStrategy::RoundRobin,
         ));
+    
+    // Create timer repository
+    let timer_repository: Arc<dyn TimerRepository + Send + Sync> =
+        Arc::new(SqliteTimerRepository::new(db_pool.clone()));
 
     let timer_service: Arc<dyn TimerService + Send + Sync> =
-        Arc::new(FileTimerService::new(
+        Arc::new(SqliteTimerService::new(
             event_publisher.clone(),
-            Some(storage_path.clone()),
+            timer_repository,
             config_repository.clone(),
         ));
 

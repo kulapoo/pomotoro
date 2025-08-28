@@ -9,7 +9,7 @@ pub mod timer;
 
 pub use shared_kernel::{
     EntityId, EntityMarker, Error, Event, EventPublisher, NoOpEventPublisher,
-    Readable, Result, Searchable, Tag, TimerConfiguration, Timestamp, Writable,
+    Result, Tag, TimerConfiguration, Timestamp,
     duration_serde,
 };
 
@@ -41,7 +41,7 @@ pub use timer::{
     ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted,
     Error as TimerError, Paused as TimerPaused, Phase, PhaseCompleted,
     PhaseSkipped, Reset as TimerReset, Result as TimerResult, SessionFlowReset,
-    SessionStarted, Started as TimerStarted, StateTransitions,
+    Started as TimerStarted, StateTransitions,
     Status as TimerStatus, StatusChanged as TimerStatusChanged,
     Tick as TimerTick, Timer, TimerState, TransitionResult, TransitionType,
     WorkSessionCompleted, WorkSessionStarted,

@@ -1,6 +1,5 @@
 use domain::{Error, Result, Task, TaskRepository, TaskStatus};
-use domain::shared_kernel::traits::searchable::SearchCriteria;
-use domain::task::repository::{SearchOptions, SortBy, SortOrder};
+use domain::task::repository::{SearchCriteria, SearchOptions, SortBy, SortOrder};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
