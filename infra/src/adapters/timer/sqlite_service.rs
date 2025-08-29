@@ -8,10 +8,31 @@ use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::database::TimerRepository;
 use super::timer_dto::SessionHistoryDto;
 use domain::{
-    ConfigRepository, Error, Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
+    ConfigRepository, Error, Event, EventPublisher, Phase, Result as DomainResult, Task, TaskId, TimerConfiguration,
     TimerState, TimerStatus, timer::{Timer, TimerService},
 };
 use chrono::Utc;
+
+/// Wrapper struct that allows an Arc<dyn EventPublisher> to implement EventPublisher
+struct ArcEventPublisher {
+    inner: EventPublisherArc,
+}
+
+impl ArcEventPublisher {
+    fn new(inner: EventPublisherArc) -> Self {
+        Self { inner }
+    }
+}
+
+impl EventPublisher for ArcEventPublisher {
+    fn publish(&self, event: Box<dyn Event>) {
+        self.inner.publish(event);
+    }
+
+    fn publish_batch(&self, events: Vec<Box<dyn Event>>) {
+        self.inner.publish_batch(events);
+    }
+}
 
 pub struct SqliteTimerService {
     timer: Arc<Mutex<Timer>>,
@@ -42,7 +63,7 @@ impl SqliteTimerService {
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
         let timer = Timer::new(TimerConfiguration::default())
-            .with_event_publisher(Box::new(event_publisher.clone()));
+            .with_event_publisher(Box::new(ArcEventPublisher::new(event_publisher.clone())));
 
         Self {
             timer: Arc::new(Mutex::new(timer)),
@@ -78,7 +99,7 @@ impl SqliteTimerService {
 
             let mut history = self.session_history.lock().await;
             history.push(history_entry);
-            
+
             // Keep only the last 1000 entries
             if history.len() > 1000 {
                 history.drain(0..100);
@@ -90,9 +111,9 @@ impl SqliteTimerService {
         if let Some(task) = task {
             let config = self.config_repository.get_config().await
                 .map_err(|e| e.to_string())?;
-            
+
             let effective_settings = task.get_effective_settings(&config.task_defaults);
-            
+
             let timer_config = TimerConfiguration::new(
                 effective_settings.work_duration,
                 effective_settings.short_break_duration,
@@ -149,13 +170,13 @@ impl SqliteTimerService {
                                 false
                             }
                         };
-                        
+
                         // Save state every 10 seconds
                         tick_count += 1;
                         if tick_count % 10 == 0 {
                             save_state().await;
                         }
-                        
+
                         true
                     }
                 };
@@ -183,7 +204,7 @@ impl TimerService for SqliteTimerService {
         if let Some(loaded_timer) = self.timer_repository.load_timer_state().await? {
             let mut timer_guard = self.timer.lock().await;
             *timer_guard = loaded_timer
-                .with_event_publisher(Box::new(self.event_publisher.clone()));
+                .with_event_publisher(Box::new(ArcEventPublisher::new(self.event_publisher.clone())));
         }
         Ok(())
     }
@@ -194,7 +215,7 @@ impl TimerService for SqliteTimerService {
         task: Option<&Task>,
     ) -> DomainResult<()> {
         let mut timer = self.timer.lock().await;
-        
+
         // Only allow switching when timer is idle
         if !timer.state().is_idle() {
             return Err(Error::ConfigurationError {
@@ -207,23 +228,23 @@ impl TimerService for SqliteTimerService {
             // Update configuration based on the new task's settings
             let config = self.config_repository.get_config().await?;
             let effective_settings = task.get_effective_settings(&config.task_defaults);
-            
+
             let timer_config = TimerConfiguration::new(
                 effective_settings.work_duration,
                 effective_settings.short_break_duration,
                 effective_settings.long_break_duration,
                 effective_settings.sessions_until_long_break,
             )?;
-            
+
             timer.update_configuration(timer_config)?;
         }
-        
+
         // Update the active entity
         timer.set_active_entity(Some(task_id.to_string()))?;
-        
+
         drop(timer);
         self.save_state().await?;
-        
+
         Ok(())
     }
 
@@ -239,7 +260,7 @@ impl TimerService for SqliteTimerService {
         let mut timer = self.timer.lock().await;
         timer.reset()?;
         drop(timer);
-        
+
         self.save_state().await?;
         Ok(())
     }
@@ -262,7 +283,7 @@ impl TimerService for SqliteTimerService {
             TimerStatus::Running
         };
         drop(timer);
-        
+
         // If resumed, restart the timer task
         if status == TimerStatus::Running {
             // We don't have the task here, so just restart without it
@@ -272,7 +293,7 @@ impl TimerService for SqliteTimerService {
                     message: format!("Failed to resume timer: {e}"),
                 })?;
         }
-        
+
         self.save_state().await?;
         Ok(status)
     }
@@ -289,7 +310,7 @@ impl TimerService for SqliteTimerService {
         let mut timer = self.timer.lock().await;
         timer.reset()?;
         drop(timer);
-        
+
         self.save_state().await?;
         Ok(())
     }
@@ -304,12 +325,12 @@ impl TimerService for SqliteTimerService {
         };
 
         self.add_session_history(task, old_phase, duration, true).await;
-        
+
         let mut timer = self.timer.lock().await;
         timer.skip_phase()?;
         let new_phase = timer.state().phase();
         drop(timer);
-        
+
         self.save_state().await?;
         Ok((old_phase, new_phase))
     }

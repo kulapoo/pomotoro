@@ -8,6 +8,9 @@ pub enum Error {
     #[error("Invalid timer duration: {duration} seconds")]
     InvalidDuration { duration: u32 },
 
+    #[error("Task creation error: {message}")]
+    TaskCreationError { message: String },
+
     #[error("Invalid session count: {count}")]
     InvalidSessionCount { count: u8 },
 

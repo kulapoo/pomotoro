@@ -13,9 +13,6 @@ pub use shared_kernel::{
     duration_serde,
 };
 
-#[cfg(any(test, feature = "test-utils"))]
-pub use shared_kernel::MockEventPublisher;
-
 pub use task::{
     AutomaticCyclingCompleted as AutomaticTaskCyclingCompleted,
     Builder as TaskBuilder, Completed as TaskCompleted,
@@ -29,13 +26,6 @@ pub use task::{
     SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskSettings,
     Updated as TaskUpdated,
 };
-
-#[cfg(any(test, feature = "test-utils"))]
-pub use config::test_repository::InMemoryConfigRepository;
-#[cfg(any(test, feature = "test-utils"))]
-pub use task::test_cycling_service::TestCyclingService as TestTaskCyclingService;
-#[cfg(any(test, feature = "test-utils"))]
-pub use task::test_repository::InMemoryRepository as InMemoryTaskRepository;
 
 pub use timer::{
     ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted,

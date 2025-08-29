@@ -1,24 +1,28 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use domain::EventPublisher;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
-use usecases::{timer::switch_timer_task};
 
 use crate::adapters::{
-    InMemoryEventBus, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository, TimerRepository,
-    establish_connection, run_migrations,
-    SqliteTimerService,
-    RodioAudioService, audio::{AudioServiceWrapper, InMemoryAudioLibraryService, register_audio_event_handlers},
-    events::{
-        EventSubscriber, app_lifecycle, mem_event_bus::EventPublisherArc,
+    InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
+    SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService,
+    TimerRepository,
+    audio::{
+        AudioServiceWrapper, InMemoryAudioLibraryService,
+        register_audio_event_handlers,
     },
-    task::{register_task_handlers, StandardTaskCyclerService},
-    timer::event_handlers::register_timer_handlers,
+    establish_connection,
+    events::{
+        EventSubscriber, mem_event_bus::EventPublisherArc,
+    },
     notifications::register_notification_handlers,
+    run_migrations,
+    task::{StandardTaskCyclerService, register_task_handlers},
+    timer::event_handlers::register_timer_handlers,
 };
-use tauri::AppHandle;
 use domain::timer::TimerService;
+use tauri::AppHandle;
 
 pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
@@ -48,12 +52,11 @@ pub fn register_handlers(
         app_handle,
         config_repository.clone(),
         task_repository,
-    ).context("Failed to register notification event handlers")?;
-    register_audio_event_handlers(
-        event_bus,
-        audio_service,
-        config_repository,
-    ).context("Failed to register audio event handlers")?;
+    )
+    .context("Failed to register notification event handlers")?;
+    register_audio_event_handlers(event_bus, audio_service, config_repository)
+        .context("Failed to register audio event handlers")?;
+
     Ok(())
 }
 
@@ -62,18 +65,19 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     let storage_path = dirs::data_dir()
         .context("Failed to get user data directory")?
         .join("pomotoro");
-    
+
     std::fs::create_dir_all(&storage_path)
         .context("Failed to create storage directory")?;
 
     // Set up SQLite database
     let db_path = storage_path.join("pomotoro.db");
-    let db_pool = Arc::new(establish_connection(&db_path)
-        .context("Failed to establish database connection")?);
-    
+    let db_pool = Arc::new(
+        establish_connection(&db_path)
+            .context("Failed to establish database connection")?,
+    );
+
     // Run migrations
-    run_migrations(&db_pool)
-        .context("Failed to run database migrations")?;
+    run_migrations(&db_pool).context("Failed to run database migrations")?;
 
     let config_repository: Arc<dyn domain::ConfigRepository + Send + Sync> =
         Arc::new(SqliteConfigRepository::new(db_pool.clone()));
@@ -81,54 +85,27 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> =
         Arc::new(SqliteTaskRepository::new(db_pool.clone()));
 
-    let default_task = if let Some(task) = task_repository.get_default_task().await? {
-        task
-    } else {
-        let task = domain::Task::new("Default Task".to_string(), 4)
-            .map_err(|e| anyhow!("Failed to create default task: {}", e))?
-            .with_default(true);
-        task_repository.create(task.clone()).await
-            .context("Failed to save default task")?;
-        task
-    };
-
     info!("Bootstraping Pomotoro...");
-
-    info!(
-        "Default task: {}",
-        default_task.name
-    );
 
     let event_bus = Arc::new(InMemoryEventBus::new());
     let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> =
         event_bus.clone();
 
-    let audio_service = Arc::new(AudioServiceWrapper::new(
-        Box::new(
-            RodioAudioService::new()
-                .context("Failed to initialize audio service")?,
-        )
-    ));
+    let audio_service = Arc::new(AudioServiceWrapper::new(Box::new(
+        RodioAudioService::new()
+            .context("Failed to initialize audio service")?,
+    )));
 
     let audio_library_service: Arc<
         Mutex<dyn usecases::audio::manage_library::AudioLibraryService>,
     > = Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
-
-    // Register all event handlers
-    register_handlers(
-        event_bus.clone(),
-        app_handle.clone(),
-        config_repository.clone(),
-        task_repository.clone(),
-        audio_service.clone(),
-    )?;
 
     let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
         Arc::new(StandardTaskCyclerService::new(
             task_repository.clone(),
             domain::TaskCyclingStrategy::RoundRobin,
         ));
-    
+
     // Create timer repository
     let timer_repository: Arc<dyn TimerRepository + Send + Sync> =
         Arc::new(SqliteTimerRepository::new(db_pool.clone()));
@@ -140,39 +117,18 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
             config_repository.clone(),
         ));
 
-    timer_service.load_state().await
-        .context("Failed to load timer state")?;
+    // Register all event handlers
+    register_handlers(
+        event_bus.clone(),
+        app_handle.clone(),
+        config_repository.clone(),
+        task_repository.clone(),
+        audio_service.clone(),
+    )?;
 
-    // Check timer state and reset if not idle before switching tasks
-    let timer_state = timer_service.get_state().await
-        .context("Failed to get timer state")?;
-    
-    if !timer_state.is_idle() {
-        // Reset timer to idle state to allow task switching
-        timer_service.stop_timer().await
-            .context("Failed to reset timer state")?;
-    }
-
-    switch_timer_task(
-        &timer_service,
-        &task_repository,
-        &event_publisher,
-        switch_timer_task::SwitchTimerTaskCmd {
-            task_id: default_task.id.to_string()
-        },
-    ).await?;
-
-    let app_started = app_lifecycle::AppStarted::new(
-        1,
-        "v1.0.0".to_string(),
-        true,
-        true,
-        true,
-        Some(100),
-        chrono::Utc::now(),
-    );
-
-    event_publisher.publish(Box::new(app_started));
+    usecases::bootstrap(&timer_service, &task_repository, &event_publisher)
+        .await
+        .context("Failed to reset timer state")?;
 
     let ctx = AppRegistry {
         task_repository,
@@ -183,6 +139,8 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         task_cycling_service,
         audio_library_service,
     };
+
+    info!("Bootstrap complete");
 
     Ok(ctx)
 }

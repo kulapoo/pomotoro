@@ -22,19 +22,11 @@
 //! - `storage/`: File storage management
 
 pub mod audio;
-pub mod config;
 pub mod database;
 pub mod events;
 pub mod notifications;
 pub mod task;
 pub mod timer;
-
-// Config infrastructure
-pub use config::{
-    AppearanceConfigDto, AudioConfigDto, ConfigBuilder, ConfigDto, ConfigError,
-    ConfigRepo, ConfigRepository, FileConfigRepo, GeneralConfigDto,
-    NotificationConfigDto,
-};
 
 // Task infrastructure
 pub use task::{
@@ -42,7 +34,7 @@ pub use task::{
 };
 
 // Timer infrastructure
-pub use timer::{FileTimerService, SqliteTimerService};
+pub use timer::SqliteTimerService;
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};

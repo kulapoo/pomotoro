@@ -8,10 +8,6 @@ pub mod status;
 mod task;
 #[cfg(test)]
 mod test_builder;
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_cycling_service;
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_repository;
 
 pub use self::task::Task;
 pub use builder::Builder;

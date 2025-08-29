@@ -5,8 +5,6 @@ pub mod general;
 pub mod notification;
 pub mod repo;
 pub mod task_defaults;
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_repository;
 
 pub use self::config::Config;
 pub use appearance::{AppearanceConfig, Theme};

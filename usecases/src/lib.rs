@@ -20,10 +20,12 @@
 //! - Error handling follows domain error types
 
 pub mod audio;
+mod bootstrap;
 pub mod config;
 pub mod task;
 pub mod timer;
 
 pub use audio::*;
+pub use bootstrap::bootstrap;
 pub use config::*;
 pub use task::*;
