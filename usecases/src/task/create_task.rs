@@ -37,8 +37,7 @@ pub async fn create_task(
         task.description.clone(),
         task.max_sessions,
         task.tags.clone(),
-        task.settings.clone(),
-        task.audio_config.clone(),
+        task.config.clone(),
         1,
     );
     event_publisher.publish(Box::new(created_event));

@@ -26,7 +26,7 @@ impl From<Task> for TaskDb {
         } else {
             Some(serde_json::to_string(&task.tags).unwrap_or_default())
         };
-        
+
         Self {
             id: task.id.to_string(),
             name: task.name,
@@ -49,32 +49,32 @@ impl From<Task> for TaskDb {
 
 impl TryFrom<TaskDb> for Task {
     type Error = domain::Error;
-    
+
     fn try_from(db: TaskDb) -> Result<Self, Self::Error> {
         let tags: Vec<String> = if let Some(tags_json) = db.tags {
             serde_json::from_str(&tags_json).unwrap_or_default()
         } else {
             vec![]
         };
-        
+
         let status = match db.status.as_str() {
             "active" => TaskStatus::Active,
             "completed" => TaskStatus::Completed,
             "paused" => TaskStatus::Paused,
             "queued" | _ => TaskStatus::Queued,
         };
-        
+
         let uuid = Uuid::parse_str(&db.id).map_err(|_e| domain::Error::SerializationError {
             message: format!("Invalid task ID: {}", db.id),
         })?;
         let task_id = TaskId::from_uuid(uuid);
-        
+
         let created_at = DateTime::parse_from_rfc3339(&db.created_at)
             .map(|dt| dt.with_timezone(&Utc))
             .map_err(|e| domain::Error::SerializationError {
                 message: format!("Invalid created_at timestamp: {}", e),
             })?;
-        
+
         Ok(Task {
             id: task_id,
             name: db.name,
@@ -86,8 +86,7 @@ impl TryFrom<TaskDb> for Task {
             default: db.is_default,
             created_at,
             completed_at: None,
-            settings: domain::TaskSettings::default(),
-            audio_config: domain::AudioConfig::default(),
+            config: domain::Config::default(),
         })
     }
 }

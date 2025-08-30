@@ -1,5 +1,5 @@
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
-use domain::{Task, TaskId, TimerState, event_names, TaskStatus, AudioConfig, TaskSettings};
+use domain::{Task, TaskId, TimerState, event_names, TaskStatus, AudioConfig, Config};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{from_value, to_value};
@@ -17,7 +17,7 @@ pub struct TaskDto {
     pub current_sessions: u8,
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settings: Option<TaskSettings>,
+    pub settings: Option<Config>,
     pub audio_config: TaskAudioConfigDto,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -40,7 +40,7 @@ impl TaskDto {
     pub fn to_task(&self) -> Result<Task, String> {
         let task_id = TaskId::from_string(&self.id)
             .map_err(|e| format!("Invalid task ID: {}", e))?;
-        
+
         let status = match self.status.as_str() {
             "Active" | "active" => TaskStatus::Active,
             "Completed" | "completed" => TaskStatus::Completed,
@@ -48,8 +48,9 @@ impl TaskDto {
             "Queued" | "queued" => TaskStatus::Queued,
             _ => TaskStatus::Queued,
         };
-        
-        let audio_config = AudioConfig {
+
+        let mut config = self.settings.clone().unwrap_or_default();
+        config.audio = AudioConfig {
             work_notification_sound: self.audio_config.work_notification_sound.clone(),
             break_notification_sound: self.audio_config.break_notification_sound.clone(),
             background_sound: self.audio_config.background_sound.clone(),
@@ -57,7 +58,7 @@ impl TaskDto {
             enable_background_audio: self.audio_config.enable_background_audio,
             muted: self.audio_config.muted,
         };
-        
+
         Ok(Task {
             id: task_id,
             name: self.name.clone(),
@@ -65,8 +66,7 @@ impl TaskDto {
             max_sessions: self.max_sessions,
             current_sessions: self.current_sessions,
             tags: self.tags.clone(),
-            settings: self.settings.clone().unwrap_or_default(),
-            audio_config,
+            config,
             created_at: self.created_at,
             completed_at: self.completed_at,
             status,
@@ -192,11 +192,11 @@ impl TasksViewModel {
                             struct GetTaskArgs {
                                 id: String,
                             }
-                            
+
                             let args = GetTaskArgs {
                                 id: task_id.to_string(),
                             };
-                            
+
                             if let Ok(task_args) = to_value(&args) {
                                 if let Ok(task_result) = invoke_command(
                                     event_names::task::GET,
@@ -264,20 +264,20 @@ impl TasksViewModel {
                 tags: Vec<String>,
                 audio_config: Option<domain::AudioConfig>,
             }
-            
+
             #[derive(serde::Serialize)]
             struct CreateTaskArgs {
                 request: CreateTaskRequest,
             }
 
-            let request = CreateTaskRequest { 
-                name: name.clone(), 
+            let request = CreateTaskRequest {
+                name: name.clone(),
                 description: if description.is_empty() { None } else { Some(description) },
                 max_sessions: 4, // Default value
                 tags: Vec::new(),
                 audio_config: None,
             };
-            
+
             let args = CreateTaskArgs { request };
 
             match to_value(&args) {
@@ -380,11 +380,11 @@ impl TasksViewModel {
             struct DeleteTaskArgs {
                 id: String,
             }
-            
+
             let args = DeleteTaskArgs {
                 id: task_id.to_string(),
             };
-            
+
             if let Ok(args_value) = to_value(&args) {
                 if (invoke_command(event_names::task::DELETE, args_value).await).is_ok() {
                     let mut current_tasks = tasks.get_untracked();
@@ -404,9 +404,9 @@ impl TasksViewModel {
             // Create a JS object with taskId as the key
             // Tauri expects parameters at the top level
             web_sys::console::log_1(&format!("Switching to task: {:?}", task_id).into());
-            
+
             let args_obj = js_sys::Object::new();
-            
+
             // Serialize the TaskId and set it as the taskId property
             if let Ok(task_id_value) = to_value(&task_id) {
                 js_sys::Reflect::set(
@@ -414,9 +414,9 @@ impl TasksViewModel {
                     &JsValue::from_str("taskId"),
                     &task_id_value,
                 ).unwrap();
-                
+
                 web_sys::console::log_1(&format!("Invoking switch_active_task with args: {:?}", args_obj).into());
-                
+
                 match invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args_obj.into()).await {
                     Ok(result) => {
                         web_sys::console::log_1(&format!("Switch task result: {:?}", result).into());
@@ -491,19 +491,19 @@ impl TasksViewModel {
             }
         });
     }
-    
+
     pub fn search_tasks(&self, query: String) {
         self.set_search_query.set(query.clone());
-        
+
         if query.is_empty() && self.status_filter.get() == "all" {
             self.set_filtered_tasks.set(self.tasks.get());
             return;
         }
-        
+
         let set_filtered = self.set_filtered_tasks;
         let sort_by = self.sort_by.get();
         let status_filter = self.status_filter.get();
-        
+
         spawn_local(async move {
             #[derive(serde::Serialize)]
             struct SearchArgs {
@@ -512,14 +512,14 @@ impl TasksViewModel {
                 sort_by: Option<String>,
                 sort_order: Option<String>,
             }
-            
+
             let args = SearchArgs {
                 query: if query.is_empty() { None } else { Some(query) },
                 status: if status_filter == "all" { None } else { Some(status_filter) },
                 sort_by: Some(sort_by),
                 sort_order: Some("asc".to_string()),
             };
-            
+
             if let Ok(args_value) = to_value(&args) {
                 if let Ok(result) = invoke_command(event_names::task::SEARCH, args_value).await {
                     if let Ok(task_list) = from_value::<Vec<Task>>(result) {
@@ -529,50 +529,50 @@ impl TasksViewModel {
             }
         });
     }
-    
+
     pub fn set_sort(&self, sort_by: String) {
         self.set_sort_by.set(sort_by);
         self.search_tasks(self.search_query.get());
     }
-    
+
     pub fn set_status_filter(&self, status: String) {
         self.set_status_filter.set(status);
         self.search_tasks(self.search_query.get());
     }
-    
+
     pub fn get_search_query(&self) -> String {
         self.search_query.get()
     }
-    
+
     pub fn get_sort_by(&self) -> String {
         self.sort_by.get()
     }
-    
+
     pub fn get_status_filter(&self) -> String {
         self.status_filter.get()
     }
-    
+
     pub fn cycle_to_next_incomplete_task(&self) {
         let set_active_task = self.set_active_task;
         let set_cycle_position = self.set_cycle_position;
         let active_task = self.active_task;
-        
+
         spawn_local(async move {
             #[derive(serde::Serialize)]
             struct CycleArgs {
                 current_task_id: Option<String>,
                 direction: String,
             }
-            
+
             let current_id = active_task
                 .get_untracked()
                 .map(|t| t.id.to_string());
-            
+
             let args = CycleArgs {
                 current_task_id: current_id,
                 direction: "next".to_string(),
             };
-            
+
             if let Ok(args_value) = to_value(&args) {
                 if let Ok(result) =
                     invoke_command(event_names::task::CYCLE_INCOMPLETE_TASK, args_value).await
@@ -583,7 +583,7 @@ impl TasksViewModel {
                         position: usize,
                         total_incomplete: usize,
                     }
-                    
+
                     if let Ok(cycle_result) = from_value::<CycleResult>(result) {
                         set_active_task.set(cycle_result.task);
                         set_cycle_position.set((
@@ -595,28 +595,28 @@ impl TasksViewModel {
             }
         });
     }
-    
+
     pub fn cycle_to_previous_incomplete_task(&self) {
         let set_active_task = self.set_active_task;
         let set_cycle_position = self.set_cycle_position;
         let active_task = self.active_task;
-        
+
         spawn_local(async move {
             #[derive(serde::Serialize)]
             struct CycleArgs {
                 current_task_id: Option<String>,
                 direction: String,
             }
-            
+
             let current_id = active_task
                 .get_untracked()
                 .map(|t| t.id.to_string());
-            
+
             let args = CycleArgs {
                 current_task_id: current_id,
                 direction: "previous".to_string(),
             };
-            
+
             if let Ok(args_value) = to_value(&args) {
                 if let Ok(result) =
                     invoke_command(event_names::task::CYCLE_INCOMPLETE_TASK, args_value).await
@@ -627,7 +627,7 @@ impl TasksViewModel {
                         position: usize,
                         total_incomplete: usize,
                     }
-                    
+
                     if let Ok(cycle_result) = from_value::<CycleResult>(result) {
                         set_active_task.set(cycle_result.task);
                         set_cycle_position.set((
@@ -639,26 +639,26 @@ impl TasksViewModel {
             }
         });
     }
-    
+
     pub fn get_cycle_position(&self) -> (usize, usize) {
         self.cycle_position.get()
     }
-    
+
     pub fn update_cycle_position(&self) {
         let set_cycle_position = self.set_cycle_position;
         let active_task = self.active_task;
-        
+
         spawn_local(async move {
             if let Some(task) = active_task.get_untracked() {
                 #[derive(serde::Serialize)]
                 struct GetPositionArgs {
                     task_id: String,
                 }
-                
+
                 let args = GetPositionArgs {
                     task_id: task.id.to_string(),
                 };
-                
+
                 if let Ok(args_value) = to_value(&args) {
                     if let Ok(result) =
                         invoke_command(event_names::task::GET_TASK_CYCLE_POSITION, args_value).await

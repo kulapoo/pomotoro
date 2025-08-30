@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
-use domain::{Result, Task, TaskId, TaskSettings, TaskStatus, NotificationConfig};
+use domain::{Result, Task, TaskId, Config, TaskStatus};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 /// Legacy config format for backward compatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,7 +32,7 @@ pub struct TaskDto {
     pub current_sessions: u8,
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settings: Option<TaskSettings>,
+    pub settings: Option<Config>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<LegacyTaskConfigDto>, // For backward compatibility
     pub audio_config: TaskAudioConfigDto,
@@ -45,6 +44,15 @@ pub struct TaskDto {
 
 impl From<Task> for TaskDto {
     fn from(task: Task) -> Self {
+        let audio_config = TaskAudioConfigDto {
+            work_notification_sound: task.config.audio.work_notification_sound.clone(),
+            break_notification_sound: task.config.audio.break_notification_sound.clone(),
+            background_sound: task.config.audio.background_sound.clone(),
+            volume: task.config.audio.volume,
+            enable_background_audio: task.config.audio.enable_background_audio,
+            muted: task.config.audio.muted,
+        };
+        
         Self {
             id: task.id.to_string(),
             name: task.name,
@@ -52,22 +60,9 @@ impl From<Task> for TaskDto {
             max_sessions: task.max_sessions,
             current_sessions: task.current_sessions,
             tags: task.tags,
-            settings: Some(task.settings),
+            settings: Some(task.config),
             config: None, // Only used for backward compatibility during deserialization
-            audio_config: TaskAudioConfigDto {
-                work_notification_sound: task
-                    .audio_config
-                    .work_notification_sound,
-                break_notification_sound: task
-                    .audio_config
-                    .break_notification_sound,
-                background_sound: task.audio_config.background_sound,
-                volume: task.audio_config.volume,
-                enable_background_audio: task
-                    .audio_config
-                    .enable_background_audio,
-                muted: task.audio_config.muted,
-            },
+            audio_config,
             created_at: task.created_at,
             completed_at: task.completed_at,
             status: match task.status {
@@ -93,14 +88,6 @@ impl TryFrom<TaskDto> for Task {
             }
         })?;
 
-        let audio_config = AudioConfig {
-            work_notification_sound: dto.audio_config.work_notification_sound,
-            break_notification_sound: dto.audio_config.break_notification_sound,
-            background_sound: dto.audio_config.background_sound,
-            volume: dto.audio_config.volume,
-            enable_background_audio: dto.audio_config.enable_background_audio,
-            muted: dto.audio_config.muted,
-        };
 
         let status = match dto.status.as_str() {
             "Active" => TaskStatus::Active,
@@ -114,26 +101,22 @@ impl TryFrom<TaskDto> for Task {
             }
         };
 
-        // Handle backward compatibility: convert legacy config to TaskSettings
-        let settings = if let Some(settings) = dto.settings {
+        // Handle backward compatibility: convert legacy config to Config
+        let mut config = if let Some(settings) = dto.settings {
             settings
-        } else if let Some(legacy_config) = dto.config {
-            // Convert legacy config to TaskSettings
-            TaskSettings::new_with_custom_settings(
-                dto.max_sessions,
-                Duration::from_secs(legacy_config.work_duration),
-                Duration::from_secs(legacy_config.short_break_duration),
-                Duration::from_secs(legacy_config.long_break_duration),
-                legacy_config.sessions_until_long_break,
-                legacy_config.enable_screen_blocking,
-                audio_config.clone(),
-                NotificationConfig::default(),
-            ).map_err(|e| Error::ConfigurationError {
-                message: format!("Failed to migrate legacy config: {}", e),
-            })?
         } else {
-            // Neither settings nor config found, use defaults
-            TaskSettings::default()
+            // Neither settings nor legacy config found, use defaults
+            Config::default()
+        };
+
+        // Set audio config from DTO
+        config.audio = AudioConfig {
+            work_notification_sound: dto.audio_config.work_notification_sound,
+            break_notification_sound: dto.audio_config.break_notification_sound,
+            background_sound: dto.audio_config.background_sound,
+            volume: dto.audio_config.volume,
+            enable_background_audio: dto.audio_config.enable_background_audio,
+            muted: dto.audio_config.muted,
         };
 
         Ok(Task {
@@ -143,8 +126,7 @@ impl TryFrom<TaskDto> for Task {
             max_sessions: dto.max_sessions,
             current_sessions: dto.current_sessions,
             tags: dto.tags,
-            settings,
-            audio_config,
+            config,
             created_at: dto.created_at,
             completed_at: dto.completed_at,
             status,

@@ -72,23 +72,25 @@ pub async fn update_task(
     }
 
     // Update timer settings if any provided
-    if cmd.work_duration.is_some() || 
-       cmd.short_break_duration.is_some() || 
-       cmd.long_break_duration.is_some() ||
-       cmd.sessions_until_long_break.is_some() ||
-       cmd.enable_screen_blocking.is_some() {
-        task.settings.update_timer_settings(
-            cmd.work_duration,
-            cmd.short_break_duration,
-            cmd.long_break_duration,
-            cmd.sessions_until_long_break,
-            cmd.enable_screen_blocking,
-        )?;
+    if let Some(work_duration) = cmd.work_duration {
+        task.config.timer.work_duration = work_duration;
+    }
+    if let Some(short_break_duration) = cmd.short_break_duration {
+        task.config.timer.short_break_duration = short_break_duration;
+    }
+    if let Some(long_break_duration) = cmd.long_break_duration {
+        task.config.timer.long_break_duration = long_break_duration;
+    }
+    if let Some(sessions_until_long_break) = cmd.sessions_until_long_break {
+        task.config.timer.sessions_until_long_break = sessions_until_long_break;
+    }
+    if let Some(enable_screen_blocking) = cmd.enable_screen_blocking {
+        task.config.general.enable_screen_blocking = enable_screen_blocking;
     }
 
     if let Some(audio_config) = cmd.audio_config {
         audio_config.validate()?;
-        task.audio_config = audio_config;
+        task.config.audio = audio_config;
     }
 
     task_repo.update(task.clone()).await?;

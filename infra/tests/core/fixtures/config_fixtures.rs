@@ -1,6 +1,6 @@
 use domain::{
     Config, GeneralConfig, NotificationConfig, 
-    AppearanceConfig, AudioConfig, TaskSettings,
+    AppearanceConfig, AudioConfig, Config,
     TaskCyclingBehavior, Theme, NotificationPosition,
 };
 use std::time::Duration;
@@ -73,9 +73,9 @@ impl ConfigFixtures {
     }
 
 
-    /// Create task settings for testing
-    pub fn task_settings() -> TaskSettings {
-        TaskSettings::default()
+    /// Create task config for testing
+    pub fn task_config() -> Config {
+        Config::default()
     }
 
     /// Create a config optimized for fast testing

@@ -8,7 +8,7 @@ pub enum Theme {
     System,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppearanceConfig {
     pub theme: Theme,
     pub show_seconds_in_display: bool,

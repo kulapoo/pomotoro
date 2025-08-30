@@ -1,73 +1,68 @@
 use leptos::prelude::*;
-use domain::{TaskId, TaskSettings};
+use domain::{TaskId, Config, TimerConfiguration, GeneralConfig};
 use std::rc::Rc;
 
 #[component]
 pub fn TaskSettingsModal(
     _task_id: TaskId,
     task_name: String,
-    settings: Option<TaskSettings>,
-    on_save: impl Fn(TaskSettings) + 'static,
+    settings: Option<Config>,
+    on_save: impl Fn(Config) + 'static,
     on_close: impl Fn() + 'static,
 ) -> impl IntoView {
-    let (use_global, set_use_global) = signal(
-        settings.as_ref().map_or(true, |s| s.use_global_settings)
-    );
+    let (use_global, set_use_global) = signal(false);
 
     let (work_minutes, set_work_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.work_duration)
-            .map(|d| (d.as_secs() / 60) as u32)
+            .map(|s| (s.timer.work_duration.as_secs() / 60) as u32)
             .unwrap_or(25)
     );
 
     let (short_break_minutes, set_short_break_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.short_break_duration)
-            .map(|d| (d.as_secs() / 60) as u32)
+            .map(|s| (s.timer.short_break_duration.as_secs() / 60) as u32)
             .unwrap_or(5)
     );
 
     let (long_break_minutes, set_long_break_minutes) = signal(
         settings.as_ref()
-            .and_then(|s| s.long_break_duration)
-            .map(|d| (d.as_secs() / 60) as u32)
+            .map(|s| (s.timer.long_break_duration.as_secs() / 60) as u32)
             .unwrap_or(15)
     );
 
     let (sessions_until_long_break, set_sessions_until_long_break) = signal(
         settings.as_ref()
-            .and_then(|s| s.sessions_until_long_break)
+            .map(|s| s.timer.sessions_until_long_break)
             .unwrap_or(4)
     );
 
-    let (max_sessions, set_max_sessions) = signal(
-        settings.as_ref()
-            .and_then(|s| s.max_sessions)
-            .unwrap_or(4)
-    );
+    let (max_sessions, set_max_sessions) = signal(4);
 
     let (enable_screen_blocking, set_enable_screen_blocking) = signal(
         settings.as_ref()
-            .and_then(|s| s.enable_screen_blocking)
+            .map(|s| s.general.enable_screen_blocking)
             .unwrap_or(false)
     );
 
     let handle_save = move |_| {
-        let mut new_settings = TaskSettings::default();
-        new_settings.use_global_settings = use_global.get();
+        use std::time::Duration;
+        let new_config = Config {
+            timer: TimerConfiguration {
+                work_duration: Duration::from_secs(work_minutes.get() as u64 * 60),
+                short_break_duration: Duration::from_secs(short_break_minutes.get() as u64 * 60),
+                long_break_duration: Duration::from_secs(long_break_minutes.get() as u64 * 60),
+                sessions_until_long_break: sessions_until_long_break.get(),
+            },
+            audio: settings.as_ref().map(|s| s.audio.clone()).unwrap_or_default(),
+            general: GeneralConfig {
+                enable_screen_blocking: enable_screen_blocking.get(),
+                ..settings.as_ref().map(|s| s.general.clone()).unwrap_or_default()
+            },
+            notification: settings.as_ref().map(|s| s.notification.clone()).unwrap_or_default(),
+            appearance: settings.as_ref().map(|s| s.appearance.clone()).unwrap_or_default(),
+        };
 
-        if !use_global.get() {
-            use std::time::Duration;
-            new_settings.work_duration = Some(Duration::from_secs(work_minutes.get() as u64 * 60));
-            new_settings.short_break_duration = Some(Duration::from_secs(short_break_minutes.get() as u64 * 60));
-            new_settings.long_break_duration = Some(Duration::from_secs(long_break_minutes.get() as u64 * 60));
-            new_settings.sessions_until_long_break = Some(sessions_until_long_break.get());
-            new_settings.max_sessions = Some(max_sessions.get());
-            new_settings.enable_screen_blocking = Some(enable_screen_blocking.get());
-        }
-
-        on_save(new_settings);
+        on_save(new_config);
     };
 
     let handle_reset_to_global = move |_| {

@@ -19,11 +19,10 @@ pub use task::{
     Created as TaskCreated, CyclerService as TaskCyclerService,
     CyclingExhausted as TaskCyclingExhausted,
     CyclingStrategy as TaskCyclingStrategy,
-    EffectiveSettings,
     Id as TaskId, Marker as TaskMarker, Repository as TaskRepository,
     SessionCompleted as TaskSessionCompleted, SessionTransitionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
-    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskSettings,
+    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task,
     Updated as TaskUpdated,
 };
 

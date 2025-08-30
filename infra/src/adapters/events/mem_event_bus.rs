@@ -260,7 +260,7 @@ pub type EventPublisherArc = Arc<dyn EventPublisher + Send + Sync>;
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use domain::{AudioConfig, Result, TaskCreated, TaskId, TaskSettings};
+    use domain::{AudioConfig, Config, Result, TaskCreated, TaskId};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -352,17 +352,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             1,
         );
@@ -406,17 +396,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             1,
         );
@@ -462,17 +442,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             1,
         );
@@ -500,17 +470,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             2,
         );
@@ -566,17 +526,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             1,
         );
@@ -626,17 +576,7 @@ mod tests {
                     None,
                     4,
                     vec![],
-                    TaskSettings::new_with_custom_settings(
-                        4,
-                        Duration::from_secs(1500),
-                        Duration::from_secs(300),
-                        Duration::from_secs(900),
-                        4,
-                        false,
-                        AudioConfig::default(),
-                        domain::NotificationConfig::default(),
-                    )
-                    .unwrap(),
+                    Config::default(),
                     AudioConfig::default(),
                     1,
                 )) as Box<dyn Event>
@@ -683,17 +623,7 @@ mod tests {
             None,
             4,
             vec![],
-            TaskSettings::new_with_custom_settings(
-                4,
-                Duration::from_secs(1500),
-                Duration::from_secs(300),
-                Duration::from_secs(900),
-                4,
-                false,
-                AudioConfig::default(),
-                domain::NotificationConfig::default(),
-            )
-            .unwrap(),
+            Config::default(),
             AudioConfig::default(),
             1,
         );

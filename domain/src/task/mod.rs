@@ -3,7 +3,6 @@ pub mod cycling_srv;
 pub mod events;
 pub mod id;
 pub mod repository;
-pub mod settings;
 pub mod status;
 mod task;
 #[cfg(test)]
@@ -21,5 +20,4 @@ pub use events::{
 };
 pub use id::{Id, Marker};
 pub use repository::Repository;
-pub use settings::{EffectiveSettings, TaskSettings};
 pub use status::Status;

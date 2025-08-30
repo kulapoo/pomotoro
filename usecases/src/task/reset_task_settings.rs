@@ -11,7 +11,7 @@ pub async fn reset_task_settings_to_defaults(
     let mut task = repository.get_by_id(task_id).await?
         .ok_or(domain::Error::TaskNotFound { id: task_id.to_string() })?;
 
-    task.reset_settings_to_global();
+    task.reset_config();
 
     repository.update(task.clone()).await?;
 

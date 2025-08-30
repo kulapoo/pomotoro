@@ -47,4 +47,4 @@ pub use switch_task::{SwitchTaskCmd, switch_task, switch_to_next_task};
 pub use update_task::{UpdateTaskCmd, update_task};
 pub use update_task_settings::update_task_settings;
 pub use reset_task_settings::reset_task_settings_to_defaults;
-pub use get_effective_task_settings::get_effective_task_settings;
+pub use get_effective_task_settings::{get_effective_task_settings, ResolvedTaskSettings};

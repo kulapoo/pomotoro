@@ -1,11 +1,12 @@
 use crate::{
     AppearanceConfig, AudioConfig, Error, GeneralConfig, NotificationConfig,
-    Result,
+    Result, TimerConfiguration,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct Config {
+    pub timer: TimerConfiguration,
     pub audio: AudioConfig,
     pub general: GeneralConfig,
     pub notification: NotificationConfig,
@@ -14,6 +15,7 @@ pub struct Config {
 
 impl Config {
     pub fn validate(&self) -> Result<()> {
+        self.timer.validate()?;
         self.audio.validate()?;
 
         if self.notification.auto_dismiss_delay_seconds > 300 {

@@ -1,5 +1,5 @@
-use super::{id::Id, settings::TaskSettings, status::Status};
-use crate::{AudioConfig, Error, Result};
+use super::{id::Id, status::Status};
+use crate::{Config, Error, Result};
 use chrono::{DateTime, Utc};
 
 // Default values for Builder - autonomous construction without external dependencies
@@ -14,8 +14,7 @@ pub struct Builder {
     max_sessions: Option<u8>,
     current_sessions: Option<u8>,
     tags: Option<Vec<String>>,
-    settings: Option<TaskSettings>,
-    audio_config: Option<AudioConfig>,
+    config: Option<Config>,
     created_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     status: Option<Status>,
@@ -38,8 +37,7 @@ impl Builder {
             max_sessions: None,
             current_sessions: None,
             tags: None,
-            settings: None,
-            audio_config: None,
+            config: None,
             created_at: None,
             completed_at: None,
             status: None,
@@ -98,29 +96,12 @@ impl Builder {
         self
     }
 
-    /// Set the task configuration by creating appropriate settings
-    pub fn config(mut self, config: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
-        let settings = TaskSettings {
-            use_global_settings: false,
-            max_sessions: None,
-            work_duration: Some(config),
-            short_break_duration: Some(short_break),
-            long_break_duration: Some(long_break),
-            sessions_until_long_break: Some(sessions_until_long),
-            enable_screen_blocking: Some(screen_blocking),
-            audio_config: None,
-            notification_config: None,
-        };
-        self.settings = Some(settings);
-
+    /// Set the task configuration
+    pub fn config(mut self, config: Config) -> Self {
+        self.config = Some(config);
         self
     }
 
-    /// Set the audio configuration
-    pub fn audio_config(mut self, audio_config: AudioConfig) -> Self {
-        self.audio_config = Some(audio_config);
-        self
-    }
 
     /// Set description (builder method for fluent API)
     pub fn with_description(mut self, description: String) -> Self {
@@ -135,28 +116,11 @@ impl Builder {
     }
 
     /// Set configuration with validation (builder method for fluent API)
-    pub fn with_config(mut self, work_duration: std::time::Duration, short_break: std::time::Duration, long_break: std::time::Duration, sessions_until_long: u8, screen_blocking: bool) -> Self {
-        let settings = TaskSettings {
-            use_global_settings: false,
-            max_sessions: None,
-            work_duration: Some(work_duration),
-            short_break_duration: Some(short_break),
-            long_break_duration: Some(long_break),
-            sessions_until_long_break: Some(sessions_until_long),
-            enable_screen_blocking: Some(screen_blocking),
-            audio_config: None,
-            notification_config: None,
-        };
-        self.settings = Some(settings);
-
+    pub fn with_config(mut self, config: Config) -> Self {
+        self.config = Some(config);
         self
     }
 
-    /// Set audio configuration with validation (builder method for fluent API)
-    pub fn with_audio_config(mut self, audio_config: AudioConfig) -> Self {
-        self.audio_config = Some(audio_config);
-        self
-    }
 
     /// Set the creation timestamp
     pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
@@ -182,11 +146,6 @@ impl Builder {
         self
     }
 
-    /// Set the task settings
-    pub fn settings(mut self, settings: TaskSettings) -> Self {
-        self.settings = Some(settings);
-        self
-    }
 
     /// Mark the task as completed
     pub fn completed(self) -> Self {
@@ -215,10 +174,6 @@ impl Builder {
             });
         }
 
-        // Validate audio config if provided
-        let audio_config = self.audio_config.unwrap_or_default();
-        audio_config.validate()?;
-
         // Determine status based on completion state
         let status = self.status.unwrap_or({
             if current_sessions >= max_sessions {
@@ -235,18 +190,8 @@ impl Builder {
             None
         };
 
-        // Provide default settings if none provided
-        let settings = self.settings.unwrap_or_else(|| TaskSettings {
-            use_global_settings: true,
-            max_sessions: None,
-            work_duration: None,
-            short_break_duration: None,
-            long_break_duration: None,
-            sessions_until_long_break: None,
-            enable_screen_blocking: None,
-            audio_config: None,
-            notification_config: None,
-        });
+        // Provide default config if none provided
+        let config = self.config.unwrap_or_default();
 
         Ok(super::Task {
             id: self.id.unwrap_or_default(),
@@ -255,8 +200,7 @@ impl Builder {
             max_sessions,
             current_sessions,
             tags: self.tags.unwrap_or_default(),
-            settings,
-            audio_config,
+            config,
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,
             status,
