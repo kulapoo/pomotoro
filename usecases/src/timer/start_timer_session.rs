@@ -28,9 +28,9 @@ pub struct StartTimerSessionCmd {
 /// - TaskRepository: For task validation and retrieval
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn start_timer_session(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: StartTimerSessionCmd,
 ) -> Result<()> {
     let task = if let Some(task_id_str) = cmd.task_id {

@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn test_config_management() {
         let mut task = create_test_task();
-        let initial_config = task.get_config().clone();
+        let _initial_config = task.get_config().clone();
         
         let new_config = Config::default();
         task.set_config(new_config.clone());

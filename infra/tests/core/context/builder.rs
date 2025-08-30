@@ -43,22 +43,32 @@ impl AppContextBuilder {
     }
 
     /// Add test task fixtures
+    pub fn with_standard_fixtures(mut self) -> Self {
+        self.with_default_task = true;
+        self.with_default_config = true;
+        self.with_task_fixtures = true;
+        self.task_count = Some(5);
+        self
+    }
+
     pub fn with_task_fixtures(mut self, count: usize) -> Self {
         self.with_task_fixtures = true;
         self.task_count = Some(count);
         self
     }
 
+
+    /// Add test timer fixtures
     /// Build the app context with the specified configuration
     pub async fn build(self) -> Result<AppContext> {
         let ctx = AppContext::with_name(self.name.as_deref()).await?;
-        
+
         // Add default task if requested
         if self.with_default_task {
             let task = TaskFixtures::default_task();
             ctx.task_repo.create(task).await?;
         }
-        
+
         // Add task fixtures if requested
         if self.with_task_fixtures {
             let count = self.task_count.unwrap_or(5);
@@ -67,13 +77,13 @@ impl AppContextBuilder {
                 ctx.task_repo.create(task).await?;
             }
         }
-        
+
         // Add default config if requested
         if self.with_default_config {
             let config = ConfigFixtures::default();
             ctx.config_repo.save_config(&config).await?;
         }
-        
+
         Ok(ctx)
     }
 }
@@ -94,7 +104,7 @@ mod tests {
             .build()
             .await
             .unwrap();
-        
+
         let tasks = ctx.task_repo.get_all().await.unwrap();
         assert!(tasks.is_empty());
     }
@@ -106,7 +116,7 @@ mod tests {
             .build()
             .await
             .unwrap();
-        
+
         let default_task = ctx.task_repo.get_default_task().await.unwrap();
         assert!(default_task.is_some());
     }
@@ -118,7 +128,7 @@ mod tests {
             .build()
             .await
             .unwrap();
-        
+
         let tasks = ctx.task_repo.get_all().await.unwrap();
         assert_eq!(tasks.len(), 3);
     }
@@ -130,9 +140,9 @@ mod tests {
             .build()
             .await
             .unwrap();
-        
+
         let config = ctx.config_repo.get_config().await.unwrap();
-        assert!(config.is_ok());
+        assert!(config.validate().is_ok());
     }
 
     #[tokio::test]
@@ -145,15 +155,15 @@ mod tests {
             .build()
             .await
             .unwrap();
-        
+
         // Should have 3 tasks total (1 default + 2 fixtures)
         let tasks = ctx.task_repo.get_all().await.unwrap();
         assert_eq!(tasks.len(), 3);
-        
+
         // Should have config
         let config = ctx.config_repo.get_config().await.unwrap();
-        assert!(config.is_ok());
-        
+        assert!(config.validate().is_ok());
+
         // Should have custom name in database
         assert!(ctx.db.test_id.starts_with("full_test"));
     }

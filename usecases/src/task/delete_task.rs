@@ -7,8 +7,8 @@ pub struct DeleteTaskCmd {
 }
 
 pub async fn delete_task(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: DeleteTaskCmd,
 ) -> Result<bool> {
     let task_id = TaskId::from_string(&cmd.id)

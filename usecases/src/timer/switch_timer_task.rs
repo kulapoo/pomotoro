@@ -25,9 +25,9 @@ pub struct SwitchTimerTaskCmd {
 /// - TaskRepository: For task validation and retrieval
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn switch_timer_task(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTimerTaskCmd,
 ) -> Result<()> {
     let task_id =

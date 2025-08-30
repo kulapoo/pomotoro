@@ -3,6 +3,15 @@ use std::time::Duration;
 
 use crate::{Error, Phase, Result, duration_serde};
 
+const MIN_WORK_DURATION: Duration = Duration::from_secs(5);
+const MAX_WORK_DURATION: Duration = Duration::from_secs(10800);
+const MIN_SHORT_BREAK_DURATION: Duration = Duration::from_secs(2);
+const MAX_SHORT_BREAK_DURATION: Duration = Duration::from_secs(3600);
+const MIN_LONG_BREAK_DURATION: Duration = Duration::from_secs(3);
+const MAX_LONG_BREAK_DURATION: Duration = Duration::from_secs(7200);
+const MIN_SESSIONS_UNTIL_LONG_BREAK: u8 = 1;
+const MAX_SESSIONS_UNTIL_LONG_BREAK: u8 = 20;
+
 /// Timer configuration value object for timing-related settings.
 ///
 /// This value object encapsulates all timing configuration needed by the Timer domain
@@ -72,33 +81,33 @@ impl TimerConfiguration {
     /// Validate the timer configuration invariants.
     /// More flexible validation - allows wider ranges for customization
     pub fn validate(&self) -> Result<()> {
-        // Work duration: minimum 1 minute, maximum 3 hours
+        // Work duration: minimum 1 sec, maximum 3 hours
         let work_secs = self.work_duration.as_secs();
-        if work_secs < 60 || work_secs > 10800 {
+        if work_secs < MIN_WORK_DURATION.as_secs() || work_secs > MAX_WORK_DURATION.as_secs() {
             return Err(Error::InvalidDuration {
                 duration: work_secs as u32,
             });
         }
 
-        // Short break duration: minimum 30 seconds, maximum 1 hour
+        // Short break duration: minimum 1 seconds, maximum 1 hour
         let short_break_secs = self.short_break_duration.as_secs();
-        if short_break_secs < 30 || short_break_secs > 3600 {
+        if short_break_secs < MIN_SHORT_BREAK_DURATION.as_secs() || short_break_secs > MAX_SHORT_BREAK_DURATION.as_secs() {
             return Err(Error::InvalidDuration {
                 duration: short_break_secs as u32,
             });
         }
 
-        // Long break duration: minimum 1 minute, maximum 2 hours
+        // Long break duration: minimum 1 sec, maximum 2 hours
         let long_break_secs = self.long_break_duration.as_secs();
-        if long_break_secs < 60 || long_break_secs > 7200 {
+        if long_break_secs < MIN_LONG_BREAK_DURATION.as_secs() || long_break_secs > MAX_LONG_BREAK_DURATION.as_secs() {
             return Err(Error::InvalidDuration {
                 duration: long_break_secs as u32,
             });
         }
 
         // Sessions until long break: 1-20 (more flexibility)
-        if self.sessions_until_long_break == 0
-            || self.sessions_until_long_break > 20
+        if self.sessions_until_long_break < MIN_SESSIONS_UNTIL_LONG_BREAK
+            || self.sessions_until_long_break > MAX_SESSIONS_UNTIL_LONG_BREAK
         {
             return Err(Error::InvalidSessionCount {
                 count: self.sessions_until_long_break,
@@ -132,7 +141,7 @@ mod tests {
     #[test]
     fn should_reject_invalid_work_duration() {
         let config = TimerConfiguration {
-            work_duration: Duration::from_secs(30), // Too short
+            work_duration: Duration::from_secs(1),
             ..Default::default()
         };
         assert!(config.validate().is_err());

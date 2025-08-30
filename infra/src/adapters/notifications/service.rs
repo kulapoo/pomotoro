@@ -20,7 +20,7 @@ pub enum NotificationEvent {
     TimerPaused { phase: Phase, remaining_seconds: u32 },
     TimerResumed { phase: Phase, remaining_seconds: u32 },
     WorkSessionCompleted { session_number: u32, task_name: Option<String> },
-    BreakStarted { break_type: Phase },
+    BreakStarted { break_type: Phase, duration_seconds: u32 },
     BreakCompleted { break_type: Phase },
 }
 
@@ -31,11 +31,11 @@ impl NotificationEvent {
                 let (title, body) = match (from, to) {
                     (Phase::Work, Phase::ShortBreak) => (
                         "Great work!".to_string(),
-                        "Time for a 5-minute break. Rest your eyes and stretch!".to_string(),
+                        "Time for a short break. Rest your eyes and stretch!".to_string(),
                     ),
                     (Phase::Work, Phase::LongBreak) => (
                         "Excellent!".to_string(),
-                        "You've completed 4 focus sessions! Take a 15-minute break.".to_string(),
+                        "You've completed your focus sessions! Time for a long break.".to_string(),
                     ),
                     (Phase::ShortBreak, Phase::Work) | (Phase::LongBreak, Phase::Work) => (
                         "Break's over!".to_string(),
@@ -104,19 +104,20 @@ impl NotificationEvent {
                     icon: None,
                 }
             },
-            NotificationEvent::BreakStarted { break_type } => {
+            NotificationEvent::BreakStarted { break_type, duration_seconds } => {
+                let duration_minutes = duration_seconds / 60;
                 let (title, body) = match break_type {
                     Phase::ShortBreak => (
                         "Short Break".to_string(),
-                        "Take 5 minutes to rest and recharge".to_string(),
+                        format!("Take {} minutes to rest and recharge", duration_minutes),
                     ),
                     Phase::LongBreak => (
                         "Long Break".to_string(),
-                        "Take 15 minutes to relax and refresh".to_string(),
+                        format!("Take {} minutes to relax and refresh", duration_minutes),
                     ),
                     _ => return NotificationContext {
                         title: "Break Started".to_string(),
-                        body: "Time for a break".to_string(),
+                        body: format!("Time for a {}-minute break", duration_minutes),
                         icon: None,
                     },
                 };

@@ -1,4 +1,4 @@
-use domain::{EventPublisher, PhaseCompleted, TaskCompleted, Phase};
+use domain::{EventPublisher, PhaseCompleted, TaskCompleted, Phase, TimerConfiguration};
 use domain::timer::events::{Started as TimerStarted, Paused as TimerPaused};
 use std::sync::Arc;
 use tauri::State;
@@ -27,18 +27,24 @@ pub async fn test_notification(
             ))
         },
         "timer_started" => {
+            // Use default configuration values
+            let default_config = TimerConfiguration::default();
+            let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerStarted::new(
                 Some("test-task-id".to_string()),
                 Phase::Work,
-                1500,
+                work_duration_seconds,
                 1,
             ))
         },
         "timer_paused" => {
+            // Use half of default work duration for pause test
+            let default_config = TimerConfiguration::default();
+            let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerPaused::new(
                 Some("test-task-id".to_string()),
                 Phase::Work,
-                900,
+                work_duration_seconds / 2,
                 1,
             ))
         },

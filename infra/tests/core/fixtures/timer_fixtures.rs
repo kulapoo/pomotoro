@@ -1,4 +1,4 @@
-use domain::{TimerConfiguration, timer::{TimerState, Phase}};
+use domain::{TimerConfiguration, timer::TimerState};
 use std::time::Duration;
 
 /// Timer-related fixtures for testing
@@ -111,6 +111,7 @@ mod tests {
     #[test]
     fn creates_fast_timer_config() {
         let config = TimerFixtures::fast_config();
+
         assert_eq!(config.work_duration, Duration::from_secs(5));
         assert_eq!(config.short_break_duration, Duration::from_secs(2));
     }

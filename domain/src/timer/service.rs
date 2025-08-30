@@ -1,8 +1,9 @@
-use crate::{Phase, Result, Task, TaskId, TimerState, TimerStatus};
+use crate::{Phase, Result, Task, TaskId, Timer, TimerState, TimerStatus};
 
 /// Timer service trait for application layer orchestration
 #[async_trait::async_trait]
 pub trait TimerService: Send + Sync {
+    async fn get_timer(&self) -> Result<Timer>;
     async fn get_state(&self) -> Result<TimerState>;
     async fn load_state(&self) -> Result<()>;
     async fn switch_task(

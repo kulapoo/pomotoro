@@ -18,7 +18,7 @@ impl MockEventBus {
     pub fn published_events(&self) -> Vec<String> {
         self.events.lock().unwrap()
             .iter()
-            .map(|e| e.event_type())
+            .map(|e| e.event_type().to_string())
             .collect()
     }
 
@@ -29,14 +29,14 @@ impl MockEventBus {
     pub fn last_event(&self) -> Option<String> {
         self.events.lock().unwrap()
             .last()
-            .map(|e| e.event_type())
+            .map(|e| e.event_type().to_string())
     }
 
     pub fn events_of_type(&self, event_type: &str) -> Vec<String> {
         self.events.lock().unwrap()
             .iter()
             .filter(|e| e.event_type() == event_type)
-            .map(|e| e.event_type())
+            .map(|e| e.event_type().to_string())
             .collect()
     }
 
@@ -58,7 +58,7 @@ impl MockEventBus {
             event_type,
             self.events.lock().unwrap()
                 .iter()
-                .map(|e| e.event_type())
+                .map(|e| e.event_type().to_string())
                 .collect::<Vec<_>>()
         );
     }
@@ -115,22 +115,63 @@ impl Clone for MockEventBus {
 mod tests {
     use super::*;
     use chrono::Utc;
+    use std::any::Any;
 
-    fn create_test_event(event_type: &str) -> Event {
-        Event {
-            id: "test_id".to_string(),
-            event_type: event_type.to_string(),
-            timestamp: Utc::now(),
-            data: serde_json::json!({}),
+    #[derive(Debug, Clone)]
+    struct TestEvent {
+        event_type: String,
+        aggregate_id: String,
+        version: u64,
+        occurred_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    impl TestEvent {
+        fn new(event_type: &str) -> Self {
+            Self {
+                event_type: event_type.to_string(),
+                aggregate_id: "test_aggregate".to_string(),
+                version: 1,
+                occurred_at: Utc::now(),
+            }
         }
+    }
+
+    impl Event for TestEvent {
+        fn event_type(&self) -> &'static str {
+            Box::leak(self.event_type.clone().into_boxed_str())
+        }
+
+        fn aggregate_id(&self) -> String {
+            self.aggregate_id.clone()
+        }
+
+        fn version(&self) -> u64 {
+            self.version
+        }
+
+        fn occurred_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.occurred_at
+        }
+
+        fn clone_box(&self) -> Box<dyn Event> {
+            Box::new(self.clone())
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    fn create_test_event(event_type: &str) -> Box<dyn Event> {
+        Box::new(TestEvent::new(event_type))
     }
 
     #[test]
     fn tracks_published_events() {
         let bus = MockEventBus::new();
         
-        bus.publish(create_test_event("task.created")).unwrap();
-        bus.publish(create_test_event("timer.started")).unwrap();
+        bus.publish(create_test_event("task.created"));
+        bus.publish(create_test_event("timer.started"));
         
         assert_eq!(bus.published_count(), 2);
         assert!(bus.has_event_type("task.created"));
@@ -141,10 +182,10 @@ mod tests {
     fn filters_events_by_type() {
         let bus = MockEventBus::new();
         
-        bus.publish(create_test_event("task.created")).unwrap();
-        bus.publish(create_test_event("task.updated")).unwrap();
-        bus.publish(create_test_event("timer.started")).unwrap();
-        bus.publish(create_test_event("task.created")).unwrap();
+        bus.publish(create_test_event("task.created"));
+        bus.publish(create_test_event("task.updated"));
+        bus.publish(create_test_event("timer.started"));
+        bus.publish(create_test_event("task.created"));
         
         let task_created = bus.events_of_type("task.created");
         assert_eq!(task_created.len(), 2);
@@ -157,7 +198,7 @@ mod tests {
     fn clears_events() {
         let bus = MockEventBus::new();
         
-        bus.publish(create_test_event("test")).unwrap();
+        bus.publish(create_test_event("test"));
         assert_eq!(bus.published_count(), 1);
         
         bus.clear();
@@ -171,7 +212,7 @@ mod tests {
         
         bus.assert_no_events();
         
-        bus.publish(create_test_event("task.created")).unwrap();
+        bus.publish(create_test_event("task.created"));
         bus.assert_event_published("task.created");
         bus.assert_event_count(1);
     }
@@ -181,10 +222,10 @@ mod tests {
         let bus1 = MockEventBus::new();
         let bus2 = bus1.clone();
         
-        bus1.publish(create_test_event("test")).unwrap();
+        bus1.publish(create_test_event("test"));
         assert_eq!(bus2.published_count(), 1);
         
-        bus2.publish(create_test_event("test2")).unwrap();
+        bus2.publish(create_test_event("test2"));
         assert_eq!(bus1.published_count(), 2);
     }
 }

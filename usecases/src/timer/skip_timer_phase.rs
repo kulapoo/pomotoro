@@ -26,9 +26,9 @@ use std::sync::Arc;
 ///
 /// - Tuple of (old_phase, new_phase) indicating the transition
 pub async fn skip_timer_phase(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<(Phase, Phase)> {
     let current_state = timer_service.get_state().await?;
 
@@ -55,9 +55,11 @@ pub async fn skip_timer_phase(
     {
         if let Some(task_ref) = &task {
             let updated_state = timer_service.get_state().await?;
+            // Get the actual work duration from the task's timer configuration
+            let work_duration_seconds = task_ref.config.timer.get_phase_duration_seconds(Phase::Work);
             let work_session_event = WorkSessionCompleted::new(
                 Some(task_ref.id.to_string()),
-                1500, // 25 minutes work session default duration (TODO: get from task config)
+                work_duration_seconds,
                 updated_state.session_count(),
                 task_ref.current_sessions as u32 + 1, // increment since we just completed
                 1,                                    // version

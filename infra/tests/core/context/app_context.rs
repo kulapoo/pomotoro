@@ -1,27 +1,22 @@
 use std::sync::Arc;
-use domain::{Result, TaskRepository, ConfigRepository};
+use domain::{Result, TaskRepository};
 use infra::adapters::{
     database::{SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository},
     timer::SqliteTimerService,
+    task::DefaultCyclingService,
 };
-use domain::task::DefaultCyclingService;
 
-use crate::core::{
-    database::{TestDatabase, IsolatedDb},
-    mocks::{MockEventBus, MockAudioService},
-};
+use crate::{core::database::TestDatabase, MockAudioService, MockEventBus};
 
 /// Application context for integration tests
 pub struct AppContext {
     /// Test database instance
     pub db: TestDatabase,
-    /// Isolated database operations
-    pub isolated_db: IsolatedDb,
     /// Event bus for testing
     pub event_bus: Arc<MockEventBus>,
     /// Task repository
     pub task_repo: Arc<SqliteTaskRepository>,
-    /// Config repository  
+    /// Config repository
     pub config_repo: Arc<SqliteConfigRepository>,
     /// Timer repository
     pub timer_repo: Arc<SqliteTimerRepository>,
@@ -43,32 +38,30 @@ impl AppContext {
     pub async fn with_name(name: Option<&str>) -> Result<Self> {
         // Create isolated test database
         let db = TestDatabase::with_name(name)?;
-        let isolated_db = IsolatedDb::new(db.pool.clone());
-        
+
         // Create event bus
         let event_bus = Arc::new(MockEventBus::new());
-        
+
         // Create repositories
         let task_repo = Arc::new(SqliteTaskRepository::new(db.pool.clone()));
         let config_repo = Arc::new(SqliteConfigRepository::new(db.pool.clone()));
         let timer_repo = Arc::new(SqliteTimerRepository::new(db.pool.clone()));
-        
+
         // Create services
         let timer_service = Arc::new(SqliteTimerService::new(
             event_bus.clone(),
             timer_repo.clone(),
             config_repo.clone(),
         ));
-        
+
         let task_cycling_service = Arc::new(DefaultCyclingService::new(
             task_repo.clone(),
         ));
-        
+
         let audio_service = Arc::new(MockAudioService::new());
-        
+
         Ok(Self {
             db,
-            isolated_db,
             event_bus,
             task_repo,
             config_repo,
@@ -77,16 +70,6 @@ impl AppContext {
             task_cycling_service,
             audio_service,
         })
-    }
-
-    /// Reset the database to a clean state
-    pub async fn reset(&self) -> Result<()> {
-        self.isolated_db.clear_all_tables()
-    }
-
-    /// Clear a specific table
-    pub async fn clear_table(&self, table_name: &str) -> Result<()> {
-        self.isolated_db.clear_table(table_name)
     }
 
     /// Get the number of events published
@@ -127,8 +110,9 @@ impl AppContext {
 
 #[cfg(test)]
 mod tests {
+    use crate::TaskFixtures;
+
     use super::*;
-    use crate::fixtures::TaskFixtures;
 
     #[tokio::test]
     async fn creates_isolated_context() {
@@ -139,35 +123,16 @@ mod tests {
     #[tokio::test]
     async fn repositories_work() {
         let ctx = AppContext::new().await.unwrap();
-        
+
         // Create a task
         let task = TaskFixtures::simple("Test Task");
         let task_id = task.id();
         ctx.task_repo.create(task).await.unwrap();
-        
+
         // Retrieve the task
         let retrieved = ctx.task_repo.get_by_id(task_id).await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "Test Task");
     }
 
-    #[tokio::test]
-    async fn reset_clears_database() {
-        let ctx = AppContext::new().await.unwrap();
-        
-        // Add a task
-        let task = TaskFixtures::simple("To be deleted");
-        ctx.task_repo.create(task).await.unwrap();
-        
-        // Verify it exists
-        let tasks = ctx.task_repo.get_all().await.unwrap();
-        assert_eq!(tasks.len(), 1);
-        
-        // Reset
-        ctx.reset().await.unwrap();
-        
-        // Verify it's gone
-        let tasks = ctx.task_repo.get_all().await.unwrap();
-        assert_eq!(tasks.len(), 0);
-    }
 }

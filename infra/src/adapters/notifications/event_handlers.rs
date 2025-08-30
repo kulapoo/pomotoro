@@ -217,6 +217,7 @@ impl EventHandler for BreakStartedNotificationHandler {
         if let Some(break_started) = event.as_any().downcast_ref::<BreakSessionStarted>() {
             let notification_event = NotificationEvent::BreakStarted {
                 break_type: break_started.phase.clone(),
+                duration_seconds: break_started.duration_seconds,
             };
             self.notification_service.send_notification(notification_event).await?;
         }

@@ -18,8 +18,8 @@ use std::sync::Arc;
 /// - TimerService: For timer state management (domain abstraction)
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn pause_timer_session(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
     let new_status = timer_service.toggle_pause().await?;
 
@@ -43,8 +43,8 @@ pub async fn pause_timer_session(
 /// This is an alias for pause_timer_session for better semantic clarity
 /// when the intent is specifically to resume a paused timer.
 pub async fn resume_timer_session(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
     timer_service.toggle_pause().await
 }

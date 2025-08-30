@@ -20,9 +20,9 @@ use std::sync::Arc;
 /// - TaskRepository: For active task context
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn reset_timer_session(
-    timer_service: &Arc<dyn TimerService + Send + Sync>,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let current_state = timer_service.get_state().await?;
 

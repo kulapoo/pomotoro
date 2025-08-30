@@ -55,7 +55,7 @@ pub async fn create_task(
 
     println!("Command created: {:?}", cmd);
 
-    match usecases::task::create_task(&task_repo, &event_publisher, cmd).await {
+    match usecases::task::create_task(task_repo.inner().clone(), event_publisher.inner().clone(), cmd).await {
         Ok(task) => {
             println!("Task creation SUCCESS: {:?}", task);
             println!("Task ID: {}", task.id);
@@ -144,7 +144,7 @@ pub async fn update_task(
         audio_config: request.audio_config,
     };
 
-    let task = usecases::task::update_task(&task_repo, &event_publisher, cmd)
+    let task = usecases::task::update_task(task_repo.inner().clone(), event_publisher.inner().clone(), cmd)
         .await
         .with_context(|| format!("Failed to update task with id: {}", request.id))
         .map_err(|e| e.to_string())?;
@@ -158,7 +158,7 @@ pub async fn delete_task(
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
     let cmd = DeleteTaskCmd { id: id.clone() };
-    usecases::task::delete_task(&task_repo, &event_publisher, cmd)
+    usecases::task::delete_task(task_repo.inner().clone(), event_publisher.inner().clone(), cmd)
         .await
         .with_context(|| format!("Failed to delete task with id: {}", id))
         .map_err(|e| e.to_string())

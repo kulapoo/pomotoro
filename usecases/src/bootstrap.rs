@@ -5,9 +5,9 @@ use domain::{
 };
 
 pub async fn bootstrap(
-    _timer_service: &Arc<dyn TimerService + Send + Sync>,
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    _timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let _default_task = if let Some(task) = task_repo.get_default_task().await? {
         task

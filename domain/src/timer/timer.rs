@@ -7,7 +7,7 @@ use super::{
 use crate::{Event, TimerConfiguration};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Timer {
     state: TimerState,
 }
@@ -102,7 +102,7 @@ impl Timer {
         self.state = new_state.clone();
 
         let mut events: Vec<Box<dyn Event>> = vec![];
-        
+
         let phase = self.get_current_phase();
         let tick_event = Tick::new(
             self.state.active_entity_id(),
@@ -285,7 +285,7 @@ impl Timer {
         }
     }
 
-    fn get_current_phase(&self) -> Phase {
+    pub fn get_current_phase(&self) -> Phase {
         match self.state {
             TimerState::Idle { .. } => Phase::Work,
             TimerState::Working { .. } => Phase::Work,
@@ -330,11 +330,11 @@ mod tests {
     fn test_timer_start() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         assert!(timer.can_start());
         let result = timer.start();
         assert!(result.is_ok());
-        
+
         assert!(timer.is_running());
         assert!(!timer.is_idle());
         assert!(!timer.can_start());
@@ -344,16 +344,16 @@ mod tests {
     fn test_timer_pause_resume() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         timer.start().unwrap();
         assert!(timer.can_pause());
-        
+
         let pause_result = timer.pause();
         assert!(pause_result.is_ok());
         assert!(timer.is_paused());
         assert!(!timer.can_pause());
         assert!(timer.can_resume());
-        
+
         let resume_result = timer.resume();
         assert!(resume_result.is_ok());
         assert!(!timer.is_paused());
@@ -364,10 +364,10 @@ mod tests {
     fn test_timer_reset() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         timer.start().unwrap();
         assert!(timer.is_running());
-        
+
         let reset_result = timer.reset();
         assert!(reset_result.is_ok());
         assert!(timer.is_idle());
@@ -378,10 +378,10 @@ mod tests {
     fn test_timer_skip_phase() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         timer.start().unwrap();
         assert!(timer.can_skip());
-        
+
         let skip_result = timer.skip_phase();
         assert!(skip_result.is_ok());
     }
@@ -397,13 +397,13 @@ mod tests {
     #[test]
     fn test_timer_phase_name() {
         let mut timer = create_test_timer();
-        
+
         assert_eq!(timer.phase_name(), "Stopped");
-        
+
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
         assert_eq!(timer.phase_name(), "Focus Time");
-        
+
         timer.pause().unwrap();
         assert_eq!(timer.phase_name(), "Focus Time (Paused)");
     }
@@ -411,9 +411,9 @@ mod tests {
     #[test]
     fn test_timer_progress_percentage() {
         let mut timer = create_test_timer();
-        
+
         assert_eq!(timer.progress_percentage(), 0.0);
-        
+
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
         let progress = timer.progress_percentage();
@@ -433,7 +433,7 @@ mod tests {
     fn test_timer_remaining_seconds() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         timer.start().unwrap();
         let remaining = timer.remaining_seconds();
         assert!(remaining > 0);
@@ -444,17 +444,17 @@ mod tests {
     fn test_timer_tick() {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
-        
+
         timer.start().unwrap();
         let initial_remaining = timer.remaining_seconds();
-        
+
         let tick_result = timer.tick();
         assert!(tick_result.is_ok());
-        
+
         let (phase_complete, events) = tick_result.unwrap();
         assert!(!phase_complete);
         assert!(!events.is_empty());
-        
+
         let new_remaining = timer.remaining_seconds();
         assert_eq!(new_remaining, initial_remaining - 1);
     }
@@ -462,17 +462,17 @@ mod tests {
     #[test]
     fn test_timer_update_configuration() {
         let mut timer = create_test_timer();
-        
+
         let new_config = TimerConfiguration {
             work_duration: Duration::from_secs(30 * 60),
             short_break_duration: Duration::from_secs(10 * 60),
             long_break_duration: Duration::from_secs(20 * 60),
             sessions_until_long_break: 3,
         };
-        
+
         let result = timer.update_configuration(new_config.clone());
         assert!(result.is_ok());
-        
+
         assert_eq!(timer.state().configuration(), &new_config);
     }
 
@@ -481,14 +481,14 @@ mod tests {
         let mut timer = create_test_timer();
         timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
-        
+
         let new_config = TimerConfiguration {
             work_duration: Duration::from_secs(30 * 60),
             short_break_duration: Duration::from_secs(10 * 60),
             long_break_duration: Duration::from_secs(20 * 60),
             sessions_until_long_break: 3,
         };
-        
+
         let result = timer.update_configuration(new_config);
         assert!(result.is_err());
     }
@@ -496,7 +496,7 @@ mod tests {
     #[test]
     fn test_timer_set_active_entity() {
         let mut timer = create_test_timer();
-        
+
         let result = timer.set_active_entity(Some("task-123".to_string()));
         assert!(result.is_ok());
     }

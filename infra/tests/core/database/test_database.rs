@@ -8,8 +8,8 @@ use infra::adapters::database::{DbPool, establish_connection, run_migrations};
 
 /// Test database instance with automatic cleanup
 pub struct TestDatabase {
-    /// Temporary directory for the database
-    temp_dir: TempDir,
+    /// Temporary directory for the database (kept for RAII cleanup)
+    _temp_dir: TempDir,
     /// Path to the test database
     pub db_path: PathBuf,
     /// Database connection pool
@@ -48,7 +48,7 @@ impl TestDatabase {
         run_migrations(&pool)?;
 
         Ok(Self {
-            temp_dir,
+            _temp_dir: temp_dir,
             db_path,
             pool,
             test_id,

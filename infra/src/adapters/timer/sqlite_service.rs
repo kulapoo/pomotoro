@@ -176,6 +176,10 @@ impl SqliteTimerService {
 
 #[async_trait]
 impl TimerService for SqliteTimerService {
+    async fn get_timer(&self) -> DomainResult<Timer> {
+        Ok(self.timer.lock().await.clone())
+    }
+
     async fn get_state(&self) -> DomainResult<TimerState> {
         Ok(self.timer.lock().await.state().clone())
     }

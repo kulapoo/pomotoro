@@ -12,8 +12,8 @@ pub struct CreateTaskCmd {
 }
 
 pub async fn create_task(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: CreateTaskCmd,
 ) -> Result<Task> {
     let mut builder =

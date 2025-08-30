@@ -6,7 +6,10 @@
       "Bash(cargo build:*)",
       "Bash(cat:*)",
       "Bash(rm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cargo test:*)",
+      "WebSearch",
+      "WebFetch(domain:burntsushi.net)"
     ],
     "deny": [],
     "ask": [],

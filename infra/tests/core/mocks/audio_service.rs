@@ -1,7 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::collections::HashMap;
-use domain::{Result, Error, audio::{AudioService, AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle}};
+use std::ops::Deref;
+use domain::{Result, audio::{AudioService, AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle}};
 
 /// Mock audio service for testing
 pub struct MockAudioService {
@@ -69,6 +70,7 @@ impl AudioService for MockAudioService {
             asset_id: request.asset_id.clone(),
             is_playing: true,
             is_looped: request.looped,
+            volume: request.volume,
         };
         self.active_playbacks.lock().unwrap()
             .insert(handle.id.clone(), handle.clone());
@@ -124,7 +126,7 @@ impl AudioService for MockAudioService {
         // This is a bit of a hack but works for testing
         // In real code, we'd need a different approach
         unsafe {
-            &*(self.library.lock().unwrap().as_ref() as *const AudioLibrary)
+            &*(self.library.lock().unwrap().deref() as *const AudioLibrary)
         }
     }
 
@@ -133,6 +135,8 @@ impl AudioService for MockAudioService {
             asset_id: asset_id.to_string(),
             volume,
             looped: false,
+            fade_in_ms: None,
+            fade_out_ms: None,
         })
     }
 
@@ -141,6 +145,8 @@ impl AudioService for MockAudioService {
             asset_id: asset_id.to_string(),
             volume,
             looped: true,
+            fade_in_ms: None,
+            fade_out_ms: None,
         })
     }
 
@@ -184,6 +190,8 @@ mod tests {
             asset_id: "test".to_string(),
             volume: 0.5,
             looped: false,
+            fade_in_ms: None,
+            fade_out_ms: None,
         };
         
         service.play_audio(request.clone()).unwrap();
@@ -200,6 +208,8 @@ mod tests {
             asset_id: "test".to_string(),
             volume: 0.5,
             looped: false,
+            fade_in_ms: None,
+            fade_out_ms: None,
         }).unwrap();
         
         service.stop_audio(&handle.id).unwrap();
@@ -214,6 +224,8 @@ mod tests {
             asset_id: "test".to_string(),
             volume: 0.5,
             looped: false,
+            fade_in_ms: None,
+            fade_out_ms: None,
         }).unwrap();
         
         service.stop_all_audio().unwrap();

@@ -117,7 +117,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         audio_service.clone(),
     )?;
 
-    usecases::bootstrap(&timer_service, &task_repository, &event_publisher)
+    usecases::bootstrap(timer_service.clone(), task_repository.clone(), event_publisher.clone())
         .await
         .context("Failed to reset timer state")?;
 

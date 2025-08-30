@@ -1,9 +1,8 @@
 use domain::{
-    Config, GeneralConfig, NotificationConfig, 
-    AppearanceConfig, AudioConfig, Config,
+    Config, GeneralConfig, NotificationConfig,
+    AppearanceConfig, AudioConfig, TimerConfiguration,
     TaskCyclingBehavior, Theme, NotificationPosition,
 };
-use std::time::Duration;
 
 /// Configuration fixtures for testing
 pub struct ConfigFixtures;
@@ -18,6 +17,7 @@ impl ConfigFixtures {
     /// Create a minimal config for testing
     pub fn minimal() -> Config {
         Config {
+            timer: TimerConfiguration::default(),
             general: Self::minimal_general(),
             notification: Self::minimal_notification(),
             appearance: Self::minimal_appearance(),
@@ -33,6 +33,7 @@ impl ConfigFixtures {
             auto_start_work_after_break: false,
             minimize_to_tray: false,
             start_minimized: false,
+            enable_screen_blocking: false,
         }
     }
 
@@ -99,11 +100,5 @@ mod tests {
         let config = ConfigFixtures::minimal();
         assert!(!config.notification.enable_desktop_notifications);
         assert!(!config.general.auto_start_work_after_break);
-    }
-
-    #[test]
-    fn creates_fast_test_config() {
-        let _config = ConfigFixtures::fast_test_config();
-        // Task defaults have been removed
     }
 }
