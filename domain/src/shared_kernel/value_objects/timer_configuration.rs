@@ -10,10 +10,10 @@ use crate::{Error, Phase, Result, duration_serde};
 /// timing rules for pomodoro sessions in a domain-agnostic way.
 ///
 /// # Domain Invariants
-/// - Work duration must be between 1-60 minutes
-/// - Short break duration must be between 30 seconds-30 minutes  
-/// - Long break duration must be between 5-60 minutes
-/// - Sessions until long break must be between 1-10
+/// - Work duration must be between 1 minute and 3 hours
+/// - Short break duration must be between 30 seconds and 1 hour
+/// - Long break duration must be between 1 minute and 2 hours
+/// - Sessions until long break must be between 1 and 20
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimerConfiguration {
     #[serde(with = "duration_serde")]
@@ -70,34 +70,35 @@ impl TimerConfiguration {
     }
 
     /// Validate the timer configuration invariants.
+    /// More flexible validation - allows wider ranges for customization
     pub fn validate(&self) -> Result<()> {
-        // Work duration: 1-60 minutes
+        // Work duration: minimum 1 minute, maximum 3 hours
         let work_secs = self.work_duration.as_secs();
-        if !(60..=3600).contains(&work_secs) {
+        if work_secs < 60 || work_secs > 10800 {
             return Err(Error::InvalidDuration {
                 duration: work_secs as u32,
             });
         }
 
-        // Short break duration: 30 seconds - 30 minutes
+        // Short break duration: minimum 30 seconds, maximum 1 hour
         let short_break_secs = self.short_break_duration.as_secs();
-        if !(30..=1800).contains(&short_break_secs) {
+        if short_break_secs < 30 || short_break_secs > 3600 {
             return Err(Error::InvalidDuration {
                 duration: short_break_secs as u32,
             });
         }
 
-        // Long break duration: 5-60 minutes
+        // Long break duration: minimum 1 minute, maximum 2 hours
         let long_break_secs = self.long_break_duration.as_secs();
-        if !(300..=3600).contains(&long_break_secs) {
+        if long_break_secs < 60 || long_break_secs > 7200 {
             return Err(Error::InvalidDuration {
                 duration: long_break_secs as u32,
             });
         }
 
-        // Sessions until long break: 1-10
+        // Sessions until long break: 1-20 (more flexibility)
         if self.sessions_until_long_break == 0
-            || self.sessions_until_long_break > 10
+            || self.sessions_until_long_break > 20
         {
             return Err(Error::InvalidSessionCount {
                 count: self.sessions_until_long_break,
@@ -107,25 +108,6 @@ impl TimerConfiguration {
         Ok(())
     }
 
-    /// Create a timer configuration optimized for focused work.
-    pub fn focused_work() -> Self {
-        Self {
-            work_duration: Duration::from_secs(50 * 60), // 50 minutes
-            short_break_duration: Duration::from_secs(10 * 60), // 10 minutes
-            long_break_duration: Duration::from_secs(30 * 60), // 30 minutes
-            sessions_until_long_break: 2,
-        }
-    }
-
-    /// Create a timer configuration optimized for quick tasks.
-    pub fn quick_tasks() -> Self {
-        Self {
-            work_duration: Duration::from_secs(15 * 60), // 15 minutes
-            short_break_duration: Duration::from_secs(3 * 60), // 3 minutes
-            long_break_duration: Duration::from_secs(10 * 60), // 10 minutes
-            sessions_until_long_break: 6,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -196,21 +178,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn should_create_focused_work_configuration() {
-        let config = TimerConfiguration::focused_work();
-        assert_eq!(config.work_duration, Duration::from_secs(50 * 60));
-        assert_eq!(config.sessions_until_long_break, 2);
-        assert!(config.validate().is_ok());
-    }
-
-    #[test]
-    fn should_create_quick_tasks_configuration() {
-        let config = TimerConfiguration::quick_tasks();
-        assert_eq!(config.work_duration, Duration::from_secs(15 * 60));
-        assert_eq!(config.sessions_until_long_break, 6);
-        assert!(config.validate().is_ok());
-    }
 
     #[test]
     fn should_serialize_and_deserialize() {

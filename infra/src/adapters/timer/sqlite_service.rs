@@ -109,18 +109,9 @@ impl SqliteTimerService {
 
     async fn start_timer_internal(&self, task: Option<&Task>) -> Result<(), String> {
         if let Some(task) = task {
-            let config = self.config_repository.get_config().await
+            let effective_settings = task.get_effective_settings();
+            let timer_config = effective_settings.to_timer_configuration()
                 .map_err(|e| e.to_string())?;
-
-            let effective_settings = task.get_effective_settings(&config.task_defaults);
-
-            let timer_config = TimerConfiguration::new(
-                effective_settings.work_duration,
-                effective_settings.short_break_duration,
-                effective_settings.long_break_duration,
-                effective_settings.sessions_until_long_break,
-            )
-            .map_err(|e| e.to_string())?;
 
             self.timer
                 .lock()
@@ -226,15 +217,8 @@ impl TimerService for SqliteTimerService {
         // Update the active entity in the timer state
         if let Some(task) = task {
             // Update configuration based on the new task's settings
-            let config = self.config_repository.get_config().await?;
-            let effective_settings = task.get_effective_settings(&config.task_defaults);
-
-            let timer_config = TimerConfiguration::new(
-                effective_settings.work_duration,
-                effective_settings.short_break_duration,
-                effective_settings.long_break_duration,
-                effective_settings.sessions_until_long_break,
-            )?;
+            let effective_settings = task.get_effective_settings();
+            let timer_config = effective_settings.to_timer_configuration()?;
 
             timer.update_configuration(timer_config)?;
         }

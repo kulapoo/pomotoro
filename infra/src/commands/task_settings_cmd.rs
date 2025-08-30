@@ -73,7 +73,7 @@ pub async fn reset_task_settings_to_defaults(
 #[command]
 pub async fn get_task_effective_settings(
     task_repo: State<'_, TaskRepositoryArc>,
-    config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
+    _config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     task_id: String,
 ) -> Result<domain::EffectiveSettings, String> {
     let task_id = TaskId::from_string(&task_id)
@@ -81,7 +81,6 @@ pub async fn get_task_effective_settings(
     
     usecases::task::get_effective_task_settings(
         &*task_repo,
-        &*config_repo,
         task_id,
     )
     .await

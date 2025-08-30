@@ -19,7 +19,7 @@ pub use task::{
     Created as TaskCreated, CyclerService as TaskCyclerService,
     CyclingExhausted as TaskCyclingExhausted,
     CyclingStrategy as TaskCyclingStrategy,
-    DefaultCyclingService as DefaultTaskCyclingService, EffectiveSettings,
+    EffectiveSettings,
     Id as TaskId, Marker as TaskMarker, Repository as TaskRepository,
     SessionCompleted as TaskSessionCompleted, SessionTransitionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
@@ -39,8 +39,7 @@ pub use timer::{
 
 pub use config::{
     AppearanceConfig, AudioConfig, Config, ConfigRepository, GeneralConfig,
-    NotificationConfig, NotificationPosition, TaskCyclingBehavior,
-    TaskDefaults, Theme,
+    NotificationConfig, NotificationPosition, TaskCyclingBehavior, Theme,
 };
 
 pub use audio::{

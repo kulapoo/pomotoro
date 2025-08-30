@@ -153,13 +153,13 @@ pub fn SettingsPage() -> impl IntoView {
                     match config_opt {
                         Some(config) => {
                             match active_tab.get() {
-                                "timer" => view! { <TimerSettings config=config vm=vm_stored /> }.into_any(),
+                                "timer" => view! { <div class="settings-section"><p>"Timer settings have been moved to individual tasks"</p></div> }.into_any(),
                                 "notifications" => view! { <NotificationSettings config=config vm=vm_stored /> }.into_any(),
                                 "audio" => view! { <AudioSettings config=config vm=vm_stored /> }.into_any(),
                                 "appearance" => view! { <AppearanceSettings config=config vm=vm_stored /> }.into_any(),
                                 "general" => view! { <GeneralSettings config=config vm=vm_stored /> }.into_any(),
                                 "storage" => view! { <StorageSettings vm=vm_stored /> }.into_any(),
-                                _ => view! { <TimerSettings config=config vm=vm_stored /> }.into_any()
+                                _ => view! { <div class="settings-section"><p>"Timer settings have been moved to individual tasks"</p></div> }.into_any()
                             }
                         },
                         None => {
@@ -183,161 +183,6 @@ pub fn SettingsPage() -> impl IntoView {
     }
 }
 
-#[component]
-fn TimerSettings(
-    #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
-) -> impl IntoView {
-    let work_minutes = move || vm.with_value(|v| {
-        v.get_config().map(|c| (c.task_defaults.work_duration.as_secs() / 60) as u32).unwrap_or(25)
-    });
-    let short_break_minutes = move || vm.with_value(|v| {
-        v.get_config().map(|c| (c.task_defaults.short_break_duration.as_secs() / 60) as u32).unwrap_or(5)
-    });
-    let long_break_minutes = move || vm.with_value(|v| {
-        v.get_config().map(|c| (c.task_defaults.long_break_duration.as_secs() / 60) as u32).unwrap_or(15)
-    });
-    let sessions_until_long = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.task_defaults.sessions_until_long_break).unwrap_or(4)
-    });
-    let max_sessions = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.task_defaults.max_sessions_default).unwrap_or(0)
-    });
-    let enable_screen_blocking = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.task_defaults.enable_screen_blocking).unwrap_or(false)
-    });
-
-    view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Timer Settings"</h3>
-            
-            <div class="setting-group">
-                <label class="setting-label">"Work Duration (minutes)"</label>
-                <input
-                    type="number"
-                    class="setting-input"
-                    value=work_minutes
-                    min="1"
-                    max="60"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(25);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.task_defaults.work_duration = std::time::Duration::from_secs((value * 60) as u64);
-                                v.update_task_defaults(cfg.task_defaults);
-                            }
-                        });
-                    }
-                />
-                <span class="setting-help">"Duration of each work session"</span>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">"Short Break Duration (minutes)"</label>
-                <input
-                    type="number"
-                    class="setting-input"
-                    value=short_break_minutes
-                    min="1"
-                    max="30"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(5);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.task_defaults.short_break_duration = std::time::Duration::from_secs((value * 60) as u64);
-                                v.update_task_defaults(cfg.task_defaults);
-                            }
-                        });
-                    }
-                />
-                <span class="setting-help">"Duration of short breaks between work sessions"</span>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">"Long Break Duration (minutes)"</label>
-                <input
-                    type="number"
-                    class="setting-input"
-                    value=long_break_minutes
-                    min="5"
-                    max="60"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u32>().unwrap_or(15);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.task_defaults.long_break_duration = std::time::Duration::from_secs((value * 60) as u64);
-                                v.update_task_defaults(cfg.task_defaults);
-                            }
-                        });
-                    }
-                />
-                <span class="setting-help">"Duration of long breaks after completing a cycle"</span>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">"Sessions Until Long Break"</label>
-                <input
-                    type="number"
-                    class="setting-input"
-                    value=sessions_until_long
-                    min="2"
-                    max="10"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u8>().unwrap_or(4);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.task_defaults.sessions_until_long_break = value;
-                                v.update_task_defaults(cfg.task_defaults);
-                            }
-                        });
-                    }
-                />
-                <span class="setting-help">"Number of work sessions before a long break"</span>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">"Max Sessions Default"</label>
-                <input
-                    type="number"
-                    class="setting-input"
-                    value=max_sessions
-                    min="1"
-                    max="10"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u8>().unwrap_or(4);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.task_defaults.max_sessions_default = value;
-                                v.update_task_defaults(cfg.task_defaults);
-                            }
-                        });
-                    }
-                />
-                <span class="setting-help">"Default maximum number of sessions for new tasks"</span>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-checkbox">
-                    <input
-                        type="checkbox"
-                        checked=enable_screen_blocking
-                        on:change=move |ev| {
-                            let checked = event_target_checked(&ev);
-                            vm.with_value(|v| {
-                                if let Some(mut cfg) = v.get_config() {
-                                    cfg.task_defaults.enable_screen_blocking = checked;
-                                    v.update_task_defaults(cfg.task_defaults);
-                                }
-                            });
-                        }
-                    />
-                    <span>"Enable Screen Blocking During Breaks"</span>
-                </label>
-                <span class="setting-help">"Block screen access during break periods"</span>
-            </div>
-        </div>
-    }
-}
 
 #[component]
 fn NotificationSettings(

@@ -67,4 +67,3 @@ impl EventPublisher for NoOpEventPublisher {
         // No-op: Events are ignored for testing domain logic
     }
 }
-

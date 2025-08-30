@@ -18,7 +18,7 @@ use crate::adapters::{
     },
     notifications::register_notification_handlers,
     run_migrations,
-    task::{StandardTaskCyclerService, register_task_handlers},
+    task::{register_task_handlers},
     timer::event_handlers::register_timer_handlers,
 };
 use domain::timer::TimerService;
@@ -30,7 +30,6 @@ pub struct AppRegistry {
     pub event_publisher: EventPublisherArc,
     pub timer_service: Arc<dyn TimerService + Send + Sync>,
     pub audio_service: Arc<AudioServiceWrapper>,
-    pub task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
     #[allow(dead_code)]
     pub audio_library_service:
         Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
@@ -100,11 +99,11 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         Mutex<dyn usecases::audio::manage_library::AudioLibraryService>,
     > = Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
 
-    let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
-        Arc::new(StandardTaskCyclerService::new(
-            task_repository.clone(),
-            domain::TaskCyclingStrategy::RoundRobin,
-        ));
+    // let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
+    //     Arc::new(StandardTaskCyclerService::new(
+    //         task_repository.clone(),
+    //         domain::TaskCyclingStrategy::RoundRobin,
+    //     ));
 
     // Create timer repository
     let timer_repository: Arc<dyn TimerRepository + Send + Sync> =
@@ -136,7 +135,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         event_publisher,
         timer_service,
         audio_service,
-        task_cycling_service,
         audio_library_service,
     };
 

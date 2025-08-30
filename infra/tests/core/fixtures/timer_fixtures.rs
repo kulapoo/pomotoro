@@ -1,0 +1,136 @@
+use domain::{TimerConfiguration, timer::{TimerState, Phase}};
+use std::time::Duration;
+
+/// Timer-related fixtures for testing
+pub struct TimerFixtures;
+
+impl TimerFixtures {
+    /// Create a default timer configuration
+    pub fn default_config() -> TimerConfiguration {
+        TimerConfiguration::new(
+            Duration::from_secs(25 * 60),  // 25 minutes work
+            Duration::from_secs(5 * 60),   // 5 minutes short break
+            Duration::from_secs(15 * 60),  // 15 minutes long break
+            4,                              // Sessions until long break
+        ).expect("Failed to create timer configuration")
+    }
+
+    /// Create a fast timer config for testing (seconds instead of minutes)
+    pub fn fast_config() -> TimerConfiguration {
+        TimerConfiguration::new(
+            Duration::from_secs(5),   // 5 seconds work
+            Duration::from_secs(2),   // 2 seconds short break
+            Duration::from_secs(3),   // 3 seconds long break
+            2,                        // 2 sessions until long break
+        ).expect("Failed to create fast timer configuration")
+    }
+
+    /// Create a custom timer configuration
+    pub fn custom_config(
+        work_secs: u64,
+        short_break_secs: u64,
+        long_break_secs: u64,
+        sessions: u8,
+    ) -> TimerConfiguration {
+        TimerConfiguration::new(
+            Duration::from_secs(work_secs),
+            Duration::from_secs(short_break_secs),
+            Duration::from_secs(long_break_secs),
+            sessions,
+        ).expect("Failed to create custom timer configuration")
+    }
+
+    /// Create an initial timer state
+    pub fn initial_state() -> TimerState {
+        TimerState::Idle {
+            configuration: Self::default_config(),
+            session_count: 0,
+            active_entity: None,
+        }
+    }
+
+    /// Create a timer state in work phase
+    pub fn work_state(remaining_secs: u32) -> TimerState {
+        TimerState::Working {
+            remaining_seconds: remaining_secs,
+            configuration: Self::default_config(),
+            session_count: 1,
+            active_entity: None,
+            entity_session_count: 0,
+        }
+    }
+
+    /// Create a timer state in break phase
+    pub fn break_state(remaining_secs: u32, is_long_break: bool) -> TimerState {
+        if is_long_break {
+            TimerState::LongBreak {
+                remaining_seconds: remaining_secs,
+                configuration: Self::default_config(),
+                session_count: 4,
+                active_entity: None,
+                entity_session_count: 0,
+            }
+        } else {
+            TimerState::ShortBreak {
+                remaining_seconds: remaining_secs,
+                configuration: Self::default_config(),
+                session_count: 1,
+                active_entity: None,
+                entity_session_count: 0,
+            }
+        }
+    }
+
+    /// Create a paused timer state
+    pub fn paused_state() -> TimerState {
+        let working_state = TimerState::Working {
+            remaining_seconds: 10 * 60,
+            configuration: Self::default_config(),
+            session_count: 2,
+            active_entity: None,
+            entity_session_count: 0,
+        };
+        TimerState::Paused {
+            paused_from: Box::new(working_state),
+            remaining_seconds: 10 * 60,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn creates_default_timer_config() {
+        let config = TimerFixtures::default_config();
+        assert_eq!(config.work_duration, Duration::from_secs(25 * 60));
+        assert_eq!(config.sessions_until_long_break, 4);
+    }
+
+    #[test]
+    fn creates_fast_timer_config() {
+        let config = TimerFixtures::fast_config();
+        assert_eq!(config.work_duration, Duration::from_secs(5));
+        assert_eq!(config.short_break_duration, Duration::from_secs(2));
+    }
+
+    #[test]
+    fn creates_work_state() {
+        let state = TimerFixtures::work_state(600);
+        assert!(matches!(state, TimerState::Working { .. }));
+        assert_eq!(state.remaining_seconds(), 600);
+        assert!(state.is_running());
+    }
+
+    #[test]
+    fn creates_break_states() {
+        let short_break = TimerFixtures::break_state(300, false);
+        assert!(matches!(short_break, TimerState::ShortBreak { .. }));
+        assert_eq!(short_break.session_count(), 1);
+
+        let long_break = TimerFixtures::break_state(900, true);
+        assert!(matches!(long_break, TimerState::LongBreak { .. }));
+        assert_eq!(long_break.session_count(), 4);
+    }
+}

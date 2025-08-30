@@ -1,4 +1,4 @@
-use crate::{AudioConfig, NotificationConfig, Result, TaskDefaults};
+use crate::{AudioConfig, NotificationConfig, Result};
 use crate::shared_kernel::optional_duration_serde;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -76,20 +76,16 @@ impl TaskSettings {
         })
     }
 
-    pub fn merge_with_defaults(&self, defaults: &TaskDefaults) -> EffectiveSettings {
-        if self.use_global_settings {
-            EffectiveSettings::from_defaults(defaults)
-        } else {
-            EffectiveSettings {
-                max_sessions: self.max_sessions.unwrap_or(defaults.max_sessions_default),
-                work_duration: self.work_duration.unwrap_or(defaults.work_duration),
-                short_break_duration: self.short_break_duration.unwrap_or(defaults.short_break_duration),
-                long_break_duration: self.long_break_duration.unwrap_or(defaults.long_break_duration),
-                sessions_until_long_break: self.sessions_until_long_break.unwrap_or(defaults.sessions_until_long_break),
-                enable_screen_blocking: self.enable_screen_blocking.unwrap_or(defaults.enable_screen_blocking),
-                audio_config: self.audio_config.clone().unwrap_or_default(),
-                notification_config: self.notification_config.clone().unwrap_or_default(),
-            }
+    pub fn to_effective_settings(&self) -> EffectiveSettings {
+        EffectiveSettings {
+            max_sessions: self.max_sessions.unwrap_or(4),
+            work_duration: self.work_duration.unwrap_or(Duration::from_secs(25 * 60)),
+            short_break_duration: self.short_break_duration.unwrap_or(Duration::from_secs(5 * 60)),
+            long_break_duration: self.long_break_duration.unwrap_or(Duration::from_secs(15 * 60)),
+            sessions_until_long_break: self.sessions_until_long_break.unwrap_or(4),
+            enable_screen_blocking: self.enable_screen_blocking.unwrap_or(false),
+            audio_config: self.audio_config.clone().unwrap_or_default(),
+            notification_config: self.notification_config.clone().unwrap_or_default(),
         }
     }
 
@@ -165,7 +161,7 @@ impl TaskSettings {
         Ok(())
     }
 
-    // Validation helpers
+    // Validation helpers - matching TimerConfiguration's flexible ranges
     fn validate_durations(
         work: &Duration,
         short_break: &Duration,
@@ -173,19 +169,22 @@ impl TaskSettings {
     ) -> Result<()> {
         use crate::Error;
 
-        if work.as_secs() < 60 || work.as_secs() > 3600 {
+        // Work: 1 minute to 3 hours
+        if work.as_secs() < 60 || work.as_secs() > 10800 {
             return Err(Error::InvalidDuration {
                 duration: work.as_secs() as u32,
             });
         }
 
-        if short_break.as_secs() < 30 || short_break.as_secs() > 1800 {
+        // Short break: 30 seconds to 1 hour
+        if short_break.as_secs() < 30 || short_break.as_secs() > 3600 {
             return Err(Error::InvalidDuration {
                 duration: short_break.as_secs() as u32,
             });
         }
 
-        if long_break.as_secs() < 300 || long_break.as_secs() > 3600 {
+        // Long break: 1 minute to 2 hours
+        if long_break.as_secs() < 60 || long_break.as_secs() > 7200 {
             return Err(Error::InvalidDuration {
                 duration: long_break.as_secs() as u32,
             });
@@ -197,7 +196,7 @@ impl TaskSettings {
     fn validate_session_count(count: u8) -> Result<()> {
         use crate::Error;
 
-        if count == 0 || count > 10 {
+        if count == 0 || count > 20 {
             return Err(Error::InvalidSessionCount { count });
         }
         Ok(())
@@ -220,17 +219,27 @@ pub struct EffectiveSettings {
 }
 
 impl EffectiveSettings {
-    pub fn from_defaults(defaults: &TaskDefaults) -> Self {
+    pub fn default_values() -> Self {
         Self {
-            max_sessions: defaults.max_sessions_default,
-            work_duration: defaults.work_duration,
-            short_break_duration: defaults.short_break_duration,
-            long_break_duration: defaults.long_break_duration,
-            sessions_until_long_break: defaults.sessions_until_long_break,
-            enable_screen_blocking: defaults.enable_screen_blocking,
+            max_sessions: 4,
+            work_duration: Duration::from_secs(25 * 60),
+            short_break_duration: Duration::from_secs(5 * 60),
+            long_break_duration: Duration::from_secs(15 * 60),
+            sessions_until_long_break: 4,
+            enable_screen_blocking: false,
             audio_config: AudioConfig::default(),
             notification_config: NotificationConfig::default(),
         }
+    }
+
+    /// Convert EffectiveSettings to TimerConfiguration
+    pub fn to_timer_configuration(&self) -> Result<crate::TimerConfiguration> {
+        crate::TimerConfiguration::new(
+            self.work_duration,
+            self.short_break_duration,
+            self.long_break_duration,
+            self.sessions_until_long_break,
+        )
     }
 
     // Methods to access timing information (replacing what Config provided)

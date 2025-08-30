@@ -1,5 +1,5 @@
 use super::{id::Id, settings::TaskSettings, status::Status};
-use crate::{AudioConfig, Error, Result, TaskDefaults};
+use crate::{AudioConfig, Error, Result};
 use chrono::{DateTime, Utc};
 
 // Default values for Builder - autonomous construction without external dependencies
@@ -244,82 +244,6 @@ impl Builder {
             long_break_duration: None,
             sessions_until_long_break: None,
             enable_screen_blocking: None,
-            audio_config: None,
-            notification_config: None,
-        });
-
-        Ok(super::Task {
-            id: self.id.unwrap_or_default(),
-            name: name.trim().to_string(),
-            description: self.description,
-            max_sessions,
-            current_sessions,
-            tags: self.tags.unwrap_or_default(),
-            settings,
-            audio_config,
-            created_at: self.created_at.unwrap_or_else(Utc::now),
-            completed_at,
-            status,
-            default: self.default.unwrap_or(false),
-        })
-    }
-
-    /// Build the Task with custom defaults (for configuration management)
-    pub fn build_with_defaults(
-        self,
-        defaults: &TaskDefaults,
-    ) -> Result<super::Task> {
-        // Validate required fields
-        let name = self.name.ok_or(Error::EmptyTaskName)?;
-        if name.trim().is_empty() {
-            return Err(Error::EmptyTaskName);
-        }
-
-        let max_sessions =
-            self.max_sessions.unwrap_or(defaults.max_sessions_default);
-        if max_sessions == 0 {
-            return Err(Error::InvalidSessionCount {
-                count: max_sessions,
-            });
-        }
-
-        let current_sessions = self.current_sessions.unwrap_or(0);
-        if current_sessions > max_sessions {
-            return Err(Error::InvalidSessionCount {
-                count: current_sessions,
-            });
-        }
-
-
-        // Validate audio config if provided
-        let audio_config = self.audio_config.unwrap_or_default();
-        audio_config.validate()?;
-
-        // Determine status based on completion state
-        let status = self.status.unwrap_or({
-            if current_sessions >= max_sessions {
-                Status::Completed
-            } else {
-                Status::Queued
-            }
-        });
-
-        // Set completion time if completed
-        let completed_at = if status == Status::Completed {
-            self.completed_at.or_else(|| Some(Utc::now()))
-        } else {
-            None
-        };
-
-        // Provide default settings if none provided
-        let settings = self.settings.unwrap_or_else(|| TaskSettings {
-            use_global_settings: false,
-            max_sessions: Some(max_sessions),
-            work_duration: Some(defaults.work_duration),
-            short_break_duration: Some(defaults.short_break_duration),
-            long_break_duration: Some(defaults.long_break_duration),
-            sessions_until_long_break: Some(defaults.sessions_until_long_break),
-            enable_screen_blocking: Some(defaults.enable_screen_blocking),
             audio_config: None,
             notification_config: None,
         });

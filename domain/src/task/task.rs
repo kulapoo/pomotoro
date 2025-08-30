@@ -40,12 +40,10 @@ impl Task {
     pub fn new_with_defaults(
         name: String,
         max_sessions: u8,
-        defaults: &crate::TaskDefaults,
     ) -> Result<Self> {
         use super::builder::Builder;
 
-        Builder::with_name_and_sessions(name, max_sessions)
-            .build_with_defaults(defaults)
+        Builder::with_name_and_sessions(name, max_sessions).build()
     }
 
     pub fn is_completed(&self) -> bool {
@@ -141,18 +139,18 @@ impl Task {
         self.settings.has_custom_settings()
     }
 
-    pub fn get_effective_settings(&self, defaults: &crate::TaskDefaults) -> super::settings::EffectiveSettings {
-        self.settings.merge_with_defaults(defaults)
+    pub fn get_effective_settings(&self) -> super::settings::EffectiveSettings {
+        self.settings.to_effective_settings()
     }
 
-    pub fn get_effective_audio_config(&self, defaults: &crate::TaskDefaults) -> AudioConfig {
-        let effective = self.get_effective_settings(defaults);
+    pub fn get_effective_audio_config(&self) -> AudioConfig {
+        let effective = self.get_effective_settings();
         effective.audio_config
     }
 
-    pub fn get_effective_max_sessions(&self, defaults: &crate::TaskDefaults) -> u8 {
+    pub fn get_effective_max_sessions(&self) -> u8 {
         self.settings
             .max_sessions
-            .unwrap_or(defaults.max_sessions_default)
+            .unwrap_or(4)
     }
 }

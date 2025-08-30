@@ -211,12 +211,6 @@ impl SettingsViewModel {
         }
     }
 
-    pub fn update_task_defaults(&self, task_defaults: TaskDefaults) {
-        if let Some(mut config) = self.config.get() {
-            config.task_defaults = task_defaults;
-            self.save_config(config);
-        }
-    }
 
     pub fn export_settings(&self) {
         if let Some(config) = self.config.get() {

@@ -30,7 +30,7 @@ pub mod timer;
 
 // Task infrastructure
 pub use task::{
-    StandardTaskCyclerService, TaskAudioConfigDto, TaskDto, TaskRepositoryArc,
+    TaskAudioConfigDto, TaskDto, TaskRepositoryArc,
 };
 
 // Timer infrastructure

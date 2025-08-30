@@ -12,7 +12,7 @@ mod test_builder;
 pub use self::task::Task;
 pub use builder::Builder;
 pub use cycling_srv::{
-    CyclerService, CyclingStrategy, DefaultCyclingService,
+    CyclerService, CyclingStrategy,
 };
 pub use events::{
     AutomaticCyclingCompleted, Completed, Created, CyclingExhausted,

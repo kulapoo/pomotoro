@@ -8,7 +8,7 @@ use commands::{
     complete_task_session, create_task, cycle_incomplete_task, debug_create_test_task, delete_task,
     export_settings, filter_tasks_by_status, get_active_playbacks,
     get_active_tasks, get_all_tasks, get_audio_library,
-    get_effective_audio_config, get_effective_task_config, get_global_config,
+    get_effective_audio_config, get_global_config,
     get_incomplete_tasks, get_task, get_task_cycle_position,
     get_task_effective_settings, get_tasks_by_tags, get_timer_state,
     import_settings, open_data_directory, pause_audio, pause_timer, play_audio,
@@ -18,9 +18,9 @@ use commands::{
     save_global_config, search_tasks, search_tasks_fuzzy, set_audio_volume,
     skip_phase, start_timer, stop_all_audio, stop_audio, stop_background_audio,
     switch_active_task, test_audio_preview, test_notification, update_appearance_config,
-    update_audio_config, update_default_cycle_length, update_general_config,
+    update_audio_config, update_general_config,
     update_notification_config, update_storage_path, update_task,
-    update_task_settings, update_timing_config, validate_storage_path,
+    update_task_settings, validate_storage_path,
 };
 use tauri::Manager;
 
@@ -67,7 +67,7 @@ pub fn run() {
             // services
             app.manage(app_registry.audio_service);
             app.manage(app_registry.timer_service.clone());
-            app.manage(app_registry.task_cycling_service.clone());
+            // app.manage(app_registry.task_cycling_service.clone());
 
             // events
             app.manage(app_registry.event_publisher.clone());
@@ -100,13 +100,10 @@ pub fn run() {
             get_global_config,
             save_global_config,
             reset_config_to_defaults,
-            update_timing_config,
-            update_default_cycle_length,
             update_general_config,
             update_notification_config,
             update_appearance_config,
             update_audio_config,
-            get_effective_task_config,
             get_effective_audio_config,
             update_task_settings,
             reset_task_settings_to_defaults,

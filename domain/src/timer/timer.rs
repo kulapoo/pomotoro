@@ -2,16 +2,14 @@ use super::events::*;
 use super::{
     Error, Phase, Result,
     state_machine::TimerState,
-    transitions::{StateTransitions, TransitionResult, TransitionType},
+    transitions::{StateTransitions, TransitionType},
 };
-use crate::{EventPublisher, TimerConfiguration};
+use crate::{Event, TimerConfiguration};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Timer {
     state: TimerState,
-    #[serde(skip)]
-    event_publisher: Option<Box<dyn EventPublisher>>,
 }
 
 
@@ -19,7 +17,6 @@ impl std::fmt::Debug for Timer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Timer")
             .field("state", &self.state)
-            .field("has_publisher", &self.event_publisher.is_some())
             .finish()
     }
 }
@@ -28,23 +25,14 @@ impl Timer {
     pub fn new(configuration: TimerConfiguration) -> Self {
         Self {
             state: TimerState::new(configuration),
-            event_publisher: None,
         }
-    }
-
-    pub fn with_event_publisher(
-        mut self,
-        publisher: Box<dyn EventPublisher>,
-    ) -> Self {
-        self.event_publisher = Some(publisher);
-        self
     }
 
     pub fn state(&self) -> &TimerState {
         &self.state
     }
 
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(&self.state, TransitionType::Start)
         {
             return Err(Error::InvalidStateTransition {
@@ -54,10 +42,11 @@ impl Timer {
         }
 
         let result = StateTransitions::start(self.state.clone())?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
-    pub fn pause(&mut self) -> Result<()> {
+    pub fn pause(&mut self) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(&self.state, TransitionType::Pause)
         {
             return Err(Error::InvalidStateTransition {
@@ -67,10 +56,11 @@ impl Timer {
         }
 
         let result = StateTransitions::pause(self.state.clone())?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
-    pub fn resume(&mut self) -> Result<()> {
+    pub fn resume(&mut self) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(
             &self.state,
             TransitionType::Resume,
@@ -82,15 +72,17 @@ impl Timer {
         }
 
         let result = StateTransitions::resume(self.state.clone())?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
-    pub fn reset(&mut self) -> Result<()> {
+    pub fn reset(&mut self) -> Result<Vec<Box<dyn Event>>> {
         let result = StateTransitions::reset(self.state.clone())?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
-    pub fn skip_phase(&mut self) -> Result<()> {
+    pub fn skip_phase(&mut self) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(&self.state, TransitionType::Skip)
         {
             return Err(Error::InvalidStateTransition {
@@ -100,38 +92,39 @@ impl Timer {
         }
 
         let result = StateTransitions::skip_phase(self.state.clone())?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
-    pub fn tick(&mut self) -> Result<bool> {
+    pub fn tick(&mut self) -> Result<(bool, Vec<Box<dyn Event>>)> {
         let (new_state, phase_complete) =
             StateTransitions::tick(self.state.clone())?;
-        let _old_state = self.state.clone();
         self.state = new_state.clone();
 
-        if let Some(publisher) = &self.event_publisher {
-            let phase = self.get_current_phase();
-            let event = Tick::new(
-                self.state.active_entity_id(),
-                phase,
-                self.state.remaining_seconds(),
-                1,
-            );
-            publisher.publish(Box::new(event));
-        }
+        let mut events: Vec<Box<dyn Event>> = vec![];
+        
+        let phase = self.get_current_phase();
+        let tick_event = Tick::new(
+            self.state.active_entity_id(),
+            phase,
+            self.state.remaining_seconds(),
+            1,
+        );
+        events.push(Box::new(tick_event));
 
         if phase_complete {
             let result = StateTransitions::complete_phase(self.state.clone())?;
-            self.publish_events(result)?;
+            self.state = result.new_state;
+            events.extend(result.events);
         }
 
-        Ok(phase_complete)
+        Ok((phase_complete, events))
     }
 
     pub fn set_active_entity(
         &mut self,
         entity_id: Option<String>,
-    ) -> Result<()> {
+    ) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(
             &self.state,
             TransitionType::SwitchTask,
@@ -144,7 +137,8 @@ impl Timer {
 
         let result =
             StateTransitions::switch_entity(self.state.clone(), entity_id)?;
-        self.publish_events(result)
+        self.state = result.new_state;
+        Ok(result.events)
     }
 
     pub fn update_configuration(
@@ -279,18 +273,6 @@ impl Timer {
 
     pub fn is_idle(&self) -> bool {
         self.state.is_idle()
-    }
-
-    fn publish_events(&mut self, result: TransitionResult) -> Result<()> {
-        self.state = result.new_state;
-
-        if let Some(publisher) = &self.event_publisher {
-            for event in result.events {
-                publisher.publish(event);
-            }
-        }
-
-        Ok(())
     }
 
     fn get_state_name(&self) -> String {

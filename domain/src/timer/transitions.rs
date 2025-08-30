@@ -26,8 +26,7 @@ impl StateTransitions {
                     return Err(Error::NoActiveEntity);
                 }
 
-                let remaining_seconds =
-                    configuration.get_phase_duration_seconds(Phase::Work);
+                let remaining_seconds = configuration.work_duration.as_secs() as u32;
 
                 let entity_id = active_entity.clone();
                 let duration = configuration.work_duration.as_secs() as u32;
@@ -146,7 +145,7 @@ impl StateTransitions {
     }
 
     pub fn reset(state: TimerState) -> Result<TransitionResult> {
-        let configuration = state.configuration().clone();
+        let configuration = state.configuration();
         let active_entity = state.active_entity().map(|s| s.to_string());
         let session_count = match &state {
             TimerState::ShortBreak { session_count, .. }
@@ -164,7 +163,7 @@ impl StateTransitions {
 
         Ok(TransitionResult {
             new_state: TimerState::Idle {
-                configuration,
+                configuration: configuration.clone(),
                 session_count,
                 active_entity,
             },
@@ -189,21 +188,19 @@ impl StateTransitions {
 
                 // Clone values we need before moving them
                 let entity_id = active_entity.clone();
-                let work_duration =
-                    configuration.work_duration.as_secs() as u32;
+                let work_duration_secs = configuration.work_duration.as_secs() as u32;
+                let short_break_duration = configuration.short_break_duration;
+                let long_break_duration = configuration.long_break_duration;
+                let sessions_until_long_break = configuration.sessions_until_long_break as u32;
 
-                let sessions_until_long =
-                    configuration.sessions_until_long_break as u32;
                 let (next_state, cycle_completed, to_phase, break_duration) =
-                    if new_session_count % sessions_until_long == 0 {
-                        let remaining_seconds = configuration
-                            .get_phase_duration_seconds(Phase::LongBreak);
-                        let break_dur =
-                            configuration.long_break_duration.as_secs() as u32;
+                    if new_session_count % sessions_until_long_break == 0 {
+                        let remaining_seconds = long_break_duration.as_secs() as u32;
+                        let break_dur = long_break_duration.as_secs() as u32;
                         (
                             TimerState::LongBreak {
                                 remaining_seconds,
-                                configuration,
+                                configuration: configuration.clone(),
                                 session_count: new_session_count,
                                 active_entity,
                                 entity_session_count: new_entity_session_count,
@@ -213,14 +210,12 @@ impl StateTransitions {
                             break_dur,
                         )
                     } else {
-                        let remaining_seconds = configuration
-                            .get_phase_duration_seconds(Phase::ShortBreak);
-                        let break_dur =
-                            configuration.short_break_duration.as_secs() as u32;
+                        let remaining_seconds = short_break_duration.as_secs() as u32;
+                        let break_dur = short_break_duration.as_secs() as u32;
                         (
                             TimerState::ShortBreak {
                                 remaining_seconds,
-                                configuration,
+                                configuration: configuration.clone(),
                                 session_count: new_session_count,
                                 active_entity,
                                 entity_session_count: new_entity_session_count,
@@ -244,7 +239,7 @@ impl StateTransitions {
                     // Work session completed
                     Box::new(WorkSessionCompleted::new(
                         entity_id.clone(),
-                        work_duration,
+                        work_duration_secs,
                         new_session_count,
                         1,
                         1,
@@ -273,13 +268,10 @@ impl StateTransitions {
                 entity_session_count,
                 ..
             } => {
-                let remaining_seconds =
-                    configuration.get_phase_duration_seconds(Phase::Work);
+                let remaining_seconds = configuration.work_duration.as_secs() as u32;
                 let entity_id = active_entity.clone();
-                let break_duration =
-                    configuration.short_break_duration.as_secs() as u32;
-                let work_duration =
-                    configuration.work_duration.as_secs() as u32;
+                let break_duration_secs = configuration.short_break_duration.as_secs() as u32;
+                let work_duration_secs = configuration.work_duration.as_secs() as u32;
 
                 let events: Vec<Box<dyn Event>> = vec![
                     // Phase completed
@@ -295,13 +287,13 @@ impl StateTransitions {
                     Box::new(BreakSessionCompleted::new(
                         entity_id.clone(),
                         Phase::ShortBreak,
-                        break_duration,
+                        break_duration_secs,
                         1,
                     )),
                     // Work session started
                     Box::new(WorkSessionStarted::new(
                         entity_id,
-                        work_duration,
+                        work_duration_secs,
                         session_count,
                         1,
                         1,
@@ -311,7 +303,7 @@ impl StateTransitions {
                 Ok(TransitionResult {
                     new_state: TimerState::Working {
                         remaining_seconds,
-                        configuration,
+                        configuration: configuration.clone(),
                         session_count,
                         active_entity,
                         entity_session_count,
@@ -329,15 +321,12 @@ impl StateTransitions {
                 entity_session_count,
                 ..
             } => {
-                let remaining_seconds =
-                    configuration.get_phase_duration_seconds(Phase::Work);
+                let remaining_seconds = configuration.work_duration.as_secs() as u32;
                 let reset_sessions = session_count
                     >= configuration.sessions_until_long_break as u32;
                 let entity_id = active_entity.clone();
-                let break_duration =
-                    configuration.long_break_duration.as_secs() as u32;
-                let work_duration =
-                    configuration.work_duration.as_secs() as u32;
+                let break_duration_secs = configuration.long_break_duration.as_secs() as u32;
+                let work_duration_secs = configuration.work_duration.as_secs() as u32;
 
                 let events: Vec<Box<dyn Event>> = vec![
                     // Phase completed
@@ -353,13 +342,13 @@ impl StateTransitions {
                     Box::new(BreakSessionCompleted::new(
                         entity_id.clone(),
                         Phase::LongBreak,
-                        break_duration,
+                        break_duration_secs,
                         1,
                     )),
                     // Work session started
                     Box::new(WorkSessionStarted::new(
                         entity_id,
-                        work_duration,
+                        work_duration_secs,
                         if reset_sessions { 0 } else { session_count },
                         1,
                         1,
@@ -369,7 +358,7 @@ impl StateTransitions {
                 Ok(TransitionResult {
                     new_state: TimerState::Working {
                         remaining_seconds,
-                        configuration,
+                        configuration: configuration.clone(),
                         session_count: if reset_sessions {
                             0
                         } else {
@@ -476,12 +465,12 @@ impl StateTransitions {
                     vec![]
                 };
 
-                let configuration = state.configuration().clone();
+                let configuration = state.configuration();
                 let session_count = state.session_count();
 
                 Ok(TransitionResult {
                     new_state: TimerState::Idle {
-                        configuration,
+                        configuration: configuration.clone(),
                         session_count,
                         active_entity: new_entity,
                     },
@@ -574,17 +563,17 @@ pub enum TransitionType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TimerConfiguration;
+    use uuid::Uuid;
 
     fn create_entity_id() -> String {
-        uuid::Uuid::new_v4().to_string()
+        Uuid::new_v4().to_string()
     }
 
     #[test]
     fn should_start_timer_from_idle() {
         let entity_id = create_entity_id();
         let state = TimerState::Idle {
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(entity_id),
         };
@@ -597,7 +586,7 @@ mod tests {
     #[test]
     fn should_not_start_without_entity() {
         let state = TimerState::Idle {
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: None,
         };
@@ -610,7 +599,7 @@ mod tests {
     fn should_pause_running_timer() {
         let state = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
             entity_session_count: 0,
@@ -624,7 +613,7 @@ mod tests {
     fn should_resume_paused_timer() {
         let working = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
             entity_session_count: 0,
@@ -643,7 +632,7 @@ mod tests {
     fn should_transition_from_work_to_short_break() {
         let state = TimerState::Working {
             remaining_seconds: 0,
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
             entity_session_count: 0,
@@ -658,7 +647,7 @@ mod tests {
 
     #[test]
     fn should_transition_to_long_break_after_cycle() {
-        let mut config = TimerConfiguration::default();
+        let mut config = crate::TimerConfiguration::default();
         config.sessions_until_long_break = 2;
 
         let state = TimerState::Working {
@@ -678,7 +667,7 @@ mod tests {
     fn should_process_tick() {
         let state = TimerState::Working {
             remaining_seconds: 2,
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
             entity_session_count: 0,
@@ -697,7 +686,7 @@ mod tests {
     #[test]
     fn should_validate_transitions() {
         let idle = TimerState::Idle {
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
         };
@@ -713,7 +702,7 @@ mod tests {
 
         let working = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
+            configuration: crate::TimerConfiguration::default(),
             session_count: 0,
             active_entity: Some(create_entity_id()),
             entity_session_count: 0,
