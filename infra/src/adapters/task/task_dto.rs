@@ -14,16 +14,6 @@ pub struct LegacyTaskConfigDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskAudioConfigDto {
-    pub work_notification_sound: Option<String>,
-    pub break_notification_sound: Option<String>,
-    pub background_sound: Option<String>,
-    pub volume: f32,
-    pub enable_background_audio: bool,
-    pub muted: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskDto {
     pub id: String, // TaskId serialized as string
     pub name: String,
@@ -35,7 +25,6 @@ pub struct TaskDto {
     pub settings: Option<Config>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<LegacyTaskConfigDto>, // For backward compatibility
-    pub audio_config: TaskAudioConfigDto,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: String, // TaskStatus serialized as string
@@ -44,15 +33,6 @@ pub struct TaskDto {
 
 impl From<Task> for TaskDto {
     fn from(task: Task) -> Self {
-        let audio_config = TaskAudioConfigDto {
-            work_notification_sound: task.config.audio.work_notification_sound.clone(),
-            break_notification_sound: task.config.audio.break_notification_sound.clone(),
-            background_sound: task.config.audio.background_sound.clone(),
-            volume: task.config.audio.volume,
-            enable_background_audio: task.config.audio.enable_background_audio,
-            muted: task.config.audio.muted,
-        };
-        
         Self {
             id: task.id.to_string(),
             name: task.name,
@@ -62,7 +42,6 @@ impl From<Task> for TaskDto {
             tags: task.tags,
             settings: Some(task.config),
             config: None, // Only used for backward compatibility during deserialization
-            audio_config,
             created_at: task.created_at,
             completed_at: task.completed_at,
             status: match task.status {
@@ -80,7 +59,7 @@ impl TryFrom<TaskDto> for Task {
     type Error = domain::Error;
 
     fn try_from(dto: TaskDto) -> Result<Self> {
-        use domain::{AudioConfig, Error};
+        use domain::Error;
 
         let task_id = TaskId::from_string(&dto.id).map_err(|_| {
             Error::ConfigurationError {
@@ -102,21 +81,11 @@ impl TryFrom<TaskDto> for Task {
         };
 
         // Handle backward compatibility: convert legacy config to Config
-        let mut config = if let Some(settings) = dto.settings {
+        let config = if let Some(settings) = dto.settings {
             settings
         } else {
             // Neither settings nor legacy config found, use defaults
             Config::default()
-        };
-
-        // Set audio config from DTO
-        config.audio = AudioConfig {
-            work_notification_sound: dto.audio_config.work_notification_sound,
-            break_notification_sound: dto.audio_config.break_notification_sound,
-            background_sound: dto.audio_config.background_sound,
-            volume: dto.audio_config.volume,
-            enable_background_audio: dto.audio_config.enable_background_audio,
-            muted: dto.audio_config.muted,
         };
 
         Ok(Task {

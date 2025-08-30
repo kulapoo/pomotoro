@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use domain::EventPublisher;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::adapters::{
@@ -9,7 +8,7 @@ use crate::adapters::{
     SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService,
     TimerRepository,
     audio::{
-        AudioServiceWrapper, InMemoryAudioLibraryService,
+        AudioServiceWrapper,
         register_audio_event_handlers,
     },
     establish_connection,
@@ -30,9 +29,6 @@ pub struct AppRegistry {
     pub event_publisher: EventPublisherArc,
     pub timer_service: Arc<dyn TimerService + Send + Sync>,
     pub audio_service: Arc<AudioServiceWrapper>,
-    #[allow(dead_code)]
-    pub audio_library_service:
-        Arc<Mutex<dyn usecases::audio::manage_library::AudioLibraryService>>,
 }
 
 pub fn register_handlers(
@@ -95,10 +91,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
             .context("Failed to initialize audio service")?,
     )));
 
-    let audio_library_service: Arc<
-        Mutex<dyn usecases::audio::manage_library::AudioLibraryService>,
-    > = Arc::new(Mutex::new(InMemoryAudioLibraryService::new()));
-
     // let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
     //     Arc::new(StandardTaskCyclerService::new(
     //         task_repository.clone(),
@@ -135,7 +127,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         event_publisher,
         timer_service,
         audio_service,
-        audio_library_service,
     };
 
     info!("Bootstrap complete");

@@ -14,13 +14,11 @@ pub use shared_kernel::{
 };
 
 pub use task::{
-    AutomaticCyclingCompleted as AutomaticTaskCyclingCompleted,
     Builder as TaskBuilder, Completed as TaskCompleted,
     Created as TaskCreated, CyclerService as TaskCyclerService,
-    CyclingExhausted as TaskCyclingExhausted,
     CyclingStrategy as TaskCyclingStrategy,
     Id as TaskId, Marker as TaskMarker, Repository as TaskRepository,
-    SessionCompleted as TaskSessionCompleted, SessionTransitionCompleted,
+    SessionCompleted as TaskSessionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
     SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task,
     Updated as TaskUpdated,

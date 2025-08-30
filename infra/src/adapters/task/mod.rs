@@ -13,4 +13,4 @@ pub mod task_dto;
 
 pub use common::TaskRepositoryArc;
 pub use event_handlers::{register_task_handlers, unregister_task_handlers};
-pub use task_dto::{TaskAudioConfigDto, TaskDto};
+pub use task_dto::TaskDto;

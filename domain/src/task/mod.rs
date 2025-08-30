@@ -14,8 +14,7 @@ pub use cycling_srv::{
     CyclerService, CyclingStrategy,
 };
 pub use events::{
-    AutomaticCyclingCompleted, Completed, Created, CyclingExhausted,
-    SessionCompleted, SessionTransitionCompleted, StatusChanged,
+    Completed, Created, SessionCompleted, StatusChanged,
     SwitchWorkflowCompleted, Updated,
 };
 pub use id::{Id, Marker};

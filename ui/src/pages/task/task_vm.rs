@@ -1,5 +1,5 @@
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
-use domain::{Task, TaskId, TimerState, event_names, TaskStatus, AudioConfig, Config};
+use domain::{Task, TaskId, TimerState, event_names, TaskStatus, Config};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{from_value, to_value};
@@ -18,21 +18,10 @@ pub struct TaskDto {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<Config>,
-    pub audio_config: TaskAudioConfigDto,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: String,
     pub default: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TaskAudioConfigDto {
-    pub work_notification_sound: Option<String>,
-    pub break_notification_sound: Option<String>,
-    pub background_sound: Option<String>,
-    pub volume: f32,
-    pub enable_background_audio: bool,
-    pub muted: bool,
 }
 
 impl TaskDto {
@@ -49,15 +38,7 @@ impl TaskDto {
             _ => TaskStatus::Queued,
         };
 
-        let mut config = self.settings.clone().unwrap_or_default();
-        config.audio = AudioConfig {
-            work_notification_sound: self.audio_config.work_notification_sound.clone(),
-            break_notification_sound: self.audio_config.break_notification_sound.clone(),
-            background_sound: self.audio_config.background_sound.clone(),
-            volume: self.audio_config.volume,
-            enable_background_audio: self.audio_config.enable_background_audio,
-            muted: self.audio_config.muted,
-        };
+        let config = self.settings.clone().unwrap_or_default();
 
         Ok(Task {
             id: task_id,

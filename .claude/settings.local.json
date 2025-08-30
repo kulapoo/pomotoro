@@ -4,7 +4,9 @@
       "Bash(git checkout:*)",
       "Bash(cargo check:*)",
       "Bash(cargo build:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

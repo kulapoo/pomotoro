@@ -6,7 +6,7 @@ pub mod value_objects;
 pub use events::{Event, EventPublisher, NoOpEventPublisher};
 
 pub use errors::{Error, Result};
-pub use serde_utils::{duration_serde, optional_duration_serde};
+pub use serde_utils::duration_serde;
 pub use value_objects::{
     EntityId, EntityMarker, Tag, TimerConfiguration, Timestamp,
 };

@@ -1,9 +1,11 @@
 use super::EventHandler;
 use domain::{Event, EventPublisher};
+use tracing::{debug, error, warn};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use tokio::sync::Semaphore;
 
 use crate::adapters::events::EventSubscriber;
 
@@ -61,7 +63,6 @@ pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}
 /// ## Future Enhancements (TODOs)
 ///
 /// ```rust,ignore
-/// // TODO: Add bounded concurrency control with semaphore
 /// // TODO: Add handler execution metrics and monitoring
 /// // TODO: Add dead letter queue for failed events
 /// // TODO: Add timeout protection for slow handlers
@@ -76,6 +77,9 @@ pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}
 pub struct InMemoryEventBus {
     handlers: Arc<Mutex<HandlersMap>>,
     next_handler_id: Arc<AtomicU64>,
+    /// Semaphore to limit concurrent handler executions
+    /// Default: 100 concurrent handlers max
+    concurrency_limiter: Arc<Semaphore>,
 }
 
 impl Default for InMemoryEventBus {
@@ -85,11 +89,17 @@ impl Default for InMemoryEventBus {
 }
 
 impl InMemoryEventBus {
-    /// Creates a new empty event bus
+    /// Creates a new empty event bus with default concurrency limit (100)
     pub fn new() -> Self {
+        Self::with_concurrency_limit(100)
+    }
+    
+    /// Creates a new empty event bus with specified concurrency limit
+    pub fn with_concurrency_limit(max_concurrent_handlers: usize) -> Self {
         Self {
             handlers: Arc::new(Mutex::new(HashMap::new())),
             next_handler_id: Arc::new(AtomicU64::new(1)),
+            concurrency_limiter: Arc::new(Semaphore::new(max_concurrent_handlers)),
         }
     }
 
@@ -127,9 +137,7 @@ impl InMemoryEventBus {
 impl EventPublisher for InMemoryEventBus {
     fn publish(&self, event: Box<dyn Event>) {
         if tokio::runtime::Handle::try_current().is_err() {
-            eprintln!(
-                "Warning: No tokio runtime available for publishing events"
-            );
+            warn!("No tokio runtime available for publishing events");
             return;
         }
 
@@ -157,28 +165,40 @@ impl EventSubscriber for InMemoryEventBus {
         let handler_id = self.next_handler_id.fetch_add(1, Ordering::SeqCst);
         let handler_arc = Arc::new(handler);
 
-        eprintln!(
-            "Subscribing handler '{handler_name}' with ID {handler_id} for event type"
+        debug!(
+            "Subscribing handler '{}' with ID {} for event type",
+            handler_name, handler_id
         );
 
+        let semaphore = Arc::clone(&self.concurrency_limiter);
+        
         let handler_fn = Arc::new(move |event: &dyn Event| {
             let event_box = event.clone_box();
             let handler_clone = Arc::clone(&handler_arc);
+            let semaphore_clone = Arc::clone(&semaphore);
 
             let handle = match tokio::runtime::Handle::try_current() {
                 Ok(handle) => handle,
                 Err(_) => {
-                    eprintln!(
-                        "Warning: No tokio runtime available for event handler"
-                    );
+                    warn!("No tokio runtime available for event handler");
                     return;
                 }
             };
 
             handle.spawn(async move {
+                // Acquire permit before executing handler
+                let _permit = match semaphore_clone.acquire().await {
+                    Ok(permit) => permit,
+                    Err(_) => {
+                        error!("Failed to acquire semaphore permit for event handler");
+                        return;
+                    }
+                };
+                
                 if let Err(e) = handler_clone.handle(event_box).await {
-                    eprintln!("Event handler error: {e}");
+                    error!("Event handler error: {}", e);
                 }
+                // Permit is automatically released when dropped
             });
         }) as Arc<dyn Fn(&dyn Event) + Send + Sync>;
 
@@ -208,7 +228,7 @@ impl EventSubscriber for InMemoryEventBus {
             handlers.remove(&event_type).map(|v| v.len()).unwrap_or(0);
 
         if removed_count > 0 {
-            eprintln!("Cleared {removed_count} handlers for event type");
+            debug!("Cleared {} handlers for event type", removed_count);
         }
 
         Ok(())
@@ -228,8 +248,9 @@ impl EventSubscriber for InMemoryEventBus {
             let removed_count = initial_len - event_handlers.len();
 
             if removed_count > 0 {
-                eprintln!(
-                    "Unsubscribed {removed_count} handler(s) named '{handler_name}' from event type"
+                debug!(
+                    "Unsubscribed {} handler(s) named '{}' from event type",
+                    removed_count, handler_name
                 );
 
                 if event_handlers.is_empty() {
@@ -260,7 +281,7 @@ pub type EventPublisherArc = Arc<dyn EventPublisher + Send + Sync>;
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use domain::{AudioConfig, Config, Result, TaskCreated, TaskId};
+    use domain::{Config, Result, TaskCreated, TaskId};
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -313,14 +334,9 @@ mod tests {
         }
 
         fn name(&self) -> &'static str {
-            match self.name.as_str() {
-                "Handler1" => "Handler1",
-                "Handler2" => "Handler2",
-                "TestHandler" => "TestHandler",
-                "RemovableHandler" => "RemovableHandler",
-                "BatchHandler" => "BatchHandler",
-                _ => "UnknownHandler",
-            }
+            // Leak the string to get a 'static lifetime for test purposes
+            // This is acceptable in tests as they are short-lived
+            Box::leak(self.name.clone().into_boxed_str())
         }
     }
 
@@ -353,7 +369,6 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             1,
         );
 
@@ -397,7 +412,6 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             1,
         );
 
@@ -443,7 +457,6 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             1,
         );
 
@@ -471,7 +484,6 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             2,
         );
 
@@ -527,7 +539,6 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             1,
         );
 
@@ -577,7 +588,6 @@ mod tests {
                     4,
                     vec![],
                     Config::default(),
-                    AudioConfig::default(),
                     1,
                 )) as Box<dyn Event>
             })
@@ -624,10 +634,103 @@ mod tests {
             4,
             vec![],
             Config::default(),
-            AudioConfig::default(),
             1,
         );
 
         bus.publish(Box::new(task_created));
+    }
+
+    #[tokio::test]
+    async fn should_limit_concurrent_handler_executions() {
+        use std::sync::atomic::AtomicBool;
+        use tokio::time::sleep;
+
+        // Create bus with only 2 concurrent handlers allowed
+        let bus = InMemoryEventBus::with_concurrency_limit(2);
+        let execution_counter = Arc::new(AtomicUsize::new(0));
+        let max_concurrent = Arc::new(AtomicUsize::new(0));
+        let is_blocking = Arc::new(AtomicBool::new(false));
+
+        // Create a slow handler that increments/decrements counter
+        struct SlowHandler {
+            execution_counter: Arc<AtomicUsize>,
+            max_concurrent: Arc<AtomicUsize>,
+            is_blocking: Arc<AtomicBool>,
+        }
+
+        #[async_trait]
+        impl EventHandler for SlowHandler {
+            fn subscribes_to(&self) -> TypeId {
+                TypeId::of::<TaskCreated>()
+            }
+
+            async fn handle(&self, _event: Box<dyn Event>) -> domain::Result<()> {
+                // Increment counter on entry
+                let current = self.execution_counter.fetch_add(1, Ordering::SeqCst) + 1;
+                
+                // Track maximum concurrent executions
+                let mut max = self.max_concurrent.load(Ordering::SeqCst);
+                while current > max {
+                    match self.max_concurrent.compare_exchange_weak(
+                        max,
+                        current,
+                        Ordering::SeqCst,
+                        Ordering::SeqCst,
+                    ) {
+                        Ok(_) => break,
+                        Err(x) => max = x,
+                    }
+                }
+
+                // Block if requested (to test queueing)
+                if self.is_blocking.load(Ordering::SeqCst) {
+                    sleep(Duration::from_millis(50)).await;
+                }
+
+                // Decrement counter on exit
+                self.execution_counter.fetch_sub(1, Ordering::SeqCst);
+                Ok(())
+            }
+
+            fn name(&self) -> &'static str {
+                "SlowHandler"
+            }
+        }
+
+        let handler = SlowHandler {
+            execution_counter: Arc::clone(&execution_counter),
+            max_concurrent: Arc::clone(&max_concurrent),
+            is_blocking: Arc::clone(&is_blocking),
+        };
+
+        bus.subscribe(Box::new(handler)).unwrap();
+
+        // Enable blocking to make handlers slow
+        is_blocking.store(true, Ordering::SeqCst);
+
+        // Publish 5 events rapidly
+        for i in 0..5 {
+            let task = TaskCreated::new(
+                TaskId::new(),
+                format!("Task {}", i),
+                None,
+                4,
+                vec![],
+                Config::default(),
+                1,
+            );
+            bus.publish(Box::new(task));
+        }
+
+        // Wait a bit for handlers to process
+        sleep(Duration::from_millis(200)).await;
+
+        // Check that max concurrent never exceeded 2
+        let max = max_concurrent.load(Ordering::SeqCst);
+        assert!(
+            max <= 2,
+            "Max concurrent handlers ({}) should not exceed limit (2)",
+            max
+        );
     }
 }
