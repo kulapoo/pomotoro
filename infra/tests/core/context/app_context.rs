@@ -1,17 +1,22 @@
 use std::sync::Arc;
 use domain::{Result, TaskRepository};
 use infra::adapters::{
-    database::{SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository}, events::{app_emitter::Emitter, EventSubscriber}, task::DefaultCyclingService, timer::SqliteTimerService
+    database::{SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository},
+    events::{EventSubscriber, mem_event_bus::InMemoryEventBus},
+    task::DefaultCyclingService,
+    timer::SqliteTimerService
 };
 
-use crate::{core::{database::TestDatabase, mocks::{ui::register_test_handlers, MockAppHandle}}, MockAudioService, MockEventBus, UiSimulator, UiSimulatorBuilder};
+use crate::{core::{database::TestDatabase, mocks::ui::register_test_handlers}, MockAudioService, MockEventBus, UiSimulator};
 
 /// Application context for integration tests
 pub struct AppContext {
     /// Test database instance
     pub db: TestDatabase,
-    /// Event bus for testing
-    pub event_bus: Arc<MockEventBus>,
+    /// Event bus for testing (using real implementation for proper handler execution)
+    pub event_bus: Arc<InMemoryEventBus>,
+    /// Mock event bus for tracking (used for assertions only)
+    pub mock_event_tracker: Arc<MockEventBus>,
     /// Task repository
     pub task_repo: Arc<SqliteTaskRepository>,
     /// Config repository
@@ -39,8 +44,11 @@ impl AppContext {
         // Create isolated test database
         let db = TestDatabase::with_name(name)?;
 
-        // Create event bus
-        let event_bus = Arc::new(MockEventBus::new());
+        // Create real event bus for proper handler execution
+        let event_bus = Arc::new(InMemoryEventBus::new());
+
+        // Create mock event tracker for assertions
+        let mock_event_tracker = Arc::new(MockEventBus::new());
 
         // Create repositories
         let task_repo = Arc::new(SqliteTaskRepository::new(db.pool.clone()));
@@ -62,11 +70,7 @@ impl AppContext {
 
 
         let ui_simulator = Arc::new(
-            UiSimulatorBuilder::new()
-                .with_auto_acknowledge_ticks(true)
-                .with_auto_acknowledge_state_updates(true)
-                .with_response_delay(100)
-                .build(event_bus.clone())
+            UiSimulator::new()
         );
 
         let app_handle = ui_simulator.app_handle().clone();
@@ -76,6 +80,7 @@ impl AppContext {
         Ok(Self {
             db,
             event_bus,
+            mock_event_tracker,
             task_repo,
             config_repo,
             timer_repo,
@@ -88,27 +93,27 @@ impl AppContext {
 
     /// Get the number of events published
     pub fn event_count(&self) -> usize {
-        self.event_bus.published_count()
+        self.mock_event_tracker.published_count()
     }
 
     /// Check if a specific event type was published
     pub fn has_event(&self, event_type: &str) -> bool {
-        self.event_bus.has_event_type(event_type)
+        self.mock_event_tracker.has_event_type(event_type)
     }
 
     /// Clear all published events
     pub fn clear_events(&self) {
-        self.event_bus.clear()
+        self.mock_event_tracker.clear()
     }
 
     /// Assert that an event was published
     pub fn assert_event_published(&self, event_type: &str) {
-        self.event_bus.assert_event_published(event_type)
+        self.mock_event_tracker.assert_event_published(event_type)
     }
 
     /// Assert that no events were published
     pub fn assert_no_events(&self) {
-        self.event_bus.assert_no_events()
+        self.mock_event_tracker.assert_no_events()
     }
 
     /// Get audio service play count

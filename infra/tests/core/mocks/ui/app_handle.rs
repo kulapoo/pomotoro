@@ -7,11 +7,7 @@ use infra::adapters::events::app_emitter::Emitter;
 /// Mock implementation of Tauri's AppHandle for testing
 #[derive(Clone)]
 pub struct MockAppHandle {
-    /// Events emitted through the handle
     emitted_events: Arc<Mutex<Vec<EmittedEvent>>>,
-    /// Command handlers registered
-    // command_handlers: Arc<Mutex<HashMap<String, Box<dyn Fn(Value) -> Value + Send + Sync>>>>,
-    /// Event listeners
     event_listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(Value) + Send + Sync>>>>>,
 }
 

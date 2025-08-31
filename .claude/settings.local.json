@@ -10,7 +10,8 @@
       "Bash(cargo test:*)",
       "WebSearch",
       "WebFetch(domain:burntsushi.net)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": [],

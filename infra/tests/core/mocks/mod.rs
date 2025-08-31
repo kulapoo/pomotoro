@@ -10,9 +10,4 @@ pub use event_bus::MockEventBus;
 pub use timer_service::MockTimerService;
 
 // UI Simulator exports from the ui module
-pub use ui::{
-    UiSimulator,
-    UiSimulatorBuilder,
-    UiResponse,
-    MockAppHandle,
-};
+pub use ui::{MockAppHandle, UiSimulator};

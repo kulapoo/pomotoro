@@ -11,7 +11,6 @@ pub fn register_test_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: MockAppHandle,
 ) -> Result<()> {
-    // Use MockAppHandle directly as the emitter since it implements the Emitter trait
     let emitter: Arc<dyn Emitter> = Arc::new(app_handle);
 
     register_timer_handlers(event_bus.clone(), emitter.clone())?;

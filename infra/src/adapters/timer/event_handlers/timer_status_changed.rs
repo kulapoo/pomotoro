@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{Event, Result, TimerStatusChanged};
+use domain::{Event, Result, TimerStatusChanged, event_names::ui_listeners};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ impl EventHandler for TimerStatusChangedHandler {
             event.as_any().downcast_ref::<TimerStatusChanged>()
         {
             self.emitter
-                .emit("timer:status_changed", json!(status_changed.clone()))
+                .emit(ui_listeners::timer::STATUS_CHANGED, json!(status_changed.clone()))
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit timer status changed event: {e}"

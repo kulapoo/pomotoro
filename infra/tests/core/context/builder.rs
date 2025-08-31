@@ -68,7 +68,7 @@ impl AppContextBuilder {
     /// Add test timer fixtures
     /// Build the app context with the specified configuration
     pub async fn build(self) -> Result<AppContext> {
-        let mut ctx = AppContext::with_name(self.name.as_deref()).await?;
+        let ctx = AppContext::with_name(self.name.as_deref()).await?;
 
         // Add default task if requested
         if self.with_default_task {

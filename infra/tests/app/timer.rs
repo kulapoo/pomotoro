@@ -1,5 +1,5 @@
-use crate::{AppContextBuilder, UiSimulatorBuilder};
-use domain::{Phase, timer::TimerService};
+use crate::AppContextBuilder;
+use domain::{Phase, timer::TimerService, event_names};
 use usecases::timer::{start_timer_session, StartTimerSessionCmd};
 
 #[tokio::test]
@@ -54,6 +54,15 @@ async fn timer_should_start_from_idle_state() {
         start_timer_session_cmd
     ).await.expect("Failed to start timer session");
 
+    // Wait a bit for async event handlers to execute
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    assert!(simulator.app_handle().was_event_emitted("start_timer"));
+    // Check what events were actually emitted
+    let events = simulator.app_handle().emitted_events();
+
+    assert!(
+        simulator.app_handle().was_event_emitted(event_names::ui_listeners::timer::STATUS_CHANGED),
+        "Expected timer:status_changed event to be emitted, but got: {:?}",
+        events.iter().map(|e| &e.event_name).collect::<Vec<_>>()
+    );
 }

@@ -1,6 +1,6 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::TaskRepositoryArc;
-use domain::{timer::TimerService, Phase, TaskId, TimerState};
+use domain::{timer::TimerService, Phase, TaskId, TimerState, event_names::ui_listeners};
 use std::sync::Arc;
 use tauri::{AppHandle, State, Emitter};
 use tracing::info;
@@ -158,7 +158,7 @@ pub async fn switch_active_task(
 
     // Emit the state update event to notify the UI
     app_handle
-        .emit("timer:state_updated", &updated_state)
+        .emit(ui_listeners::timer::STATE_UPDATED, &updated_state)
         .map_err(|e| format!("Failed to emit timer state update: {}", e))?;
 
     Ok(updated_state)

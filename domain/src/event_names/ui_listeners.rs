@@ -2,6 +2,8 @@ pub mod timer {
     pub const TICK: &str = "timer:tick";
     pub const STATUS_CHANGED: &str = "timer:status_changed";
     pub const PHASE_EVENT: &str = "timer:phase_event";
+    pub const PHASE_COMPLETED: &str = "timer:phase_completed";
+    pub const PHASE_SKIPPED: &str = "timer:phase_skipped";
     pub const STATE_UPDATED: &str = "timer:state_updated";
 }
 

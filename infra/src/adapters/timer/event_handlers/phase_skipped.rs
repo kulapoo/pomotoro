@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{Event, PhaseSkipped, Result};
+use domain::{Event, PhaseSkipped, Result, event_names::ui_listeners};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ impl EventHandler for PhaseSkippedHandler {
             event.as_any().downcast_ref::<PhaseSkipped>()
         {
             self.emitter
-                .emit("timer:phase_skipped", json!(phase_skipped.clone()))
+                .emit(ui_listeners::timer::PHASE_SKIPPED, json!(phase_skipped.clone()))
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit phase skipped event: {e}"

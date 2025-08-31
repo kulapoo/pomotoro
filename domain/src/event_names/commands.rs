@@ -23,6 +23,8 @@ pub mod task {
     pub const DELETE: &str = "delete_task";
     pub const GET: &str = "get_task";
     pub const GET_ALL: &str = "get_all_tasks";
+    pub const GET_ACTIVE: &str = "get_active_tasks";
+    pub const GET_BY_TAGS: &str = "get_tasks_by_tags";
     pub const COMPLETE_SESSION: &str = "complete_task_session";
     pub const RESET_SESSIONS: &str = "reset_task_sessions";
     pub const SEARCH: &str = "search_tasks";
@@ -31,6 +33,7 @@ pub mod task {
     pub const CYCLE_INCOMPLETE_TASK: &str = "cycle_incomplete_task";
     pub const GET_TASK_CYCLE_POSITION: &str = "get_task_cycle_position";
     pub const GET_INCOMPLETE_TASKS: &str = "get_incomplete_tasks";
+    pub const DEBUG_CREATE_TEST_TASK: &str = "debug_create_test_task";
 
     // Business Events
     pub const TASK_CREATED: &str = "task_created";
@@ -50,6 +53,7 @@ pub mod config {
     pub const UPDATE_AUDIO: &str = "update_audio_config";
     pub const UPDATE_TIMINGS: &str = "update_timing_config";
     pub const RESET_TO_DEFAULTS: &str = "reset_config_to_defaults";
+    pub const GET_EFFECTIVE_AUDIO: &str = "get_effective_audio_config";
 
     // Business Events
     pub const CONFIG_UPDATED: &str = "config_updated";
@@ -57,15 +61,43 @@ pub mod config {
 }
 
 pub mod audio {
+    // User Commands
     pub const TEST_PREVIEW: &str = "test_audio_preview";
     pub const PLAY_NOTIFICATION: &str = "play_notification_sound";
     pub const PLAY_BACKGROUND: &str = "play_background_audio";
     pub const STOP_BACKGROUND: &str = "stop_background_audio";
+    pub const GET_LIBRARY: &str = "get_audio_library";
+    pub const PLAY: &str = "play_audio";
+    pub const STOP: &str = "stop_audio";
+    pub const PAUSE: &str = "pause_audio";
+    pub const RESUME: &str = "resume_audio";
+    pub const SET_VOLUME: &str = "set_audio_volume";
+    pub const GET_ACTIVE_PLAYBACKS: &str = "get_active_playbacks";
+    pub const STOP_ALL: &str = "stop_all_audio";
+    pub const ADD_CUSTOM_ASSET: &str = "add_custom_audio_asset";
+    pub const REMOVE_ASSET: &str = "remove_audio_asset";
+    pub const CLEANUP_FINISHED: &str = "cleanup_finished_audio";
 }
 
 pub mod storage {
+    // User Commands
     pub const OPEN_DATA_DIR: &str = "open_data_directory";
     pub const CLEAR_ALL_DATA: &str = "clear_all_data";
     pub const VALIDATE_PATH: &str = "validate_storage_path";
     pub const UPDATE_PATH: &str = "update_storage_path";
+    pub const EXPORT_SETTINGS: &str = "export_settings";
+    pub const IMPORT_SETTINGS: &str = "import_settings";
+}
+
+pub mod notification {
+    // User Commands
+    pub const TEST: &str = "test_notification";
+    pub const REQUEST_PERMISSION: &str = "request_notification_permission";
+}
+
+pub mod task_settings {
+    // User Commands
+    pub const UPDATE: &str = "update_task_settings";
+    pub const RESET_TO_DEFAULTS: &str = "reset_task_settings_to_defaults";
+    pub const GET_EFFECTIVE: &str = "get_task_effective_settings";
 }

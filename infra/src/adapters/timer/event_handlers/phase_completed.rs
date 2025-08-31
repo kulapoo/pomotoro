@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use domain::{Event, PhaseCompleted, Result};
+use domain::{Event, PhaseCompleted, Result, event_names::ui_listeners};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ impl EventHandler for PhaseCompletedHandler {
             event.as_any().downcast_ref::<PhaseCompleted>()
         {
             self.emitter
-                .emit("timer:phase_completed", json!(phase_completed.clone()))
+                .emit(ui_listeners::timer::PHASE_COMPLETED, json!(phase_completed.clone()))
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit phase completed event: {e}"

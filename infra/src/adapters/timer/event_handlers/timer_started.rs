@@ -28,7 +28,7 @@ impl EventHandler for TimerStartedHandler {
 
         self.emitter
             .emit(
-                domain::event_names::ui_listeners::app::APP_STARTED,
+                domain::event_names::ui_listeners::timer::STATUS_CHANGED,
                 json!(timer_started),
             )
             .map_err(|e| domain::Error::EventPublishingError {
