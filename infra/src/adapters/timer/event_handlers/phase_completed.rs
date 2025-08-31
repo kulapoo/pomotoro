@@ -1,17 +1,19 @@
 use async_trait::async_trait;
 use domain::{Event, PhaseCompleted, Result};
+use serde_json::json;
 use std::any::TypeId;
-use tauri::Emitter;
+use std::sync::Arc;
 
+use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventHandler;
 
 pub struct PhaseCompletedHandler {
-    app_handle: tauri::AppHandle,
+    emitter: Arc<dyn Emitter>,
 }
 
 impl PhaseCompletedHandler {
-    pub fn new(app_handle: tauri::AppHandle) -> Self {
-        Self { app_handle }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        Self { emitter }
     }
 }
 
@@ -25,8 +27,8 @@ impl EventHandler for PhaseCompletedHandler {
         if let Some(phase_completed) =
             event.as_any().downcast_ref::<PhaseCompleted>()
         {
-            self.app_handle
-                .emit("timer:phase_completed", phase_completed.clone())
+            self.emitter
+                .emit("timer:phase_completed", json!(phase_completed.clone()))
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit phase completed event: {e}"

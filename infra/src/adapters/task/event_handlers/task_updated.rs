@@ -1,16 +1,18 @@
 use crate::adapters::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use serde_json::json;
 use std::any::TypeId;
-use tauri::{AppHandle, Emitter};
+use std::sync::Arc;
 
 pub struct TaskUpdatedHandler {
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
 }
 
 impl TaskUpdatedHandler {
-    pub fn new(app_handle: AppHandle) -> Self {
-        TaskUpdatedHandler { app_handle }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        TaskUpdatedHandler { emitter }
     }
 }
 
@@ -23,8 +25,8 @@ impl EventHandler for TaskUpdatedHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_updated = event.as_any().downcast_ref::<domain::TaskUpdated>();
 
-        self.app_handle
-            .emit(domain::event_names::task::LIST_UPDATED, task_updated)
+        self.emitter
+            .emit(domain::event_names::task::LIST_UPDATED, json!(task_updated))
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task updated event: {e}"),
             })?;

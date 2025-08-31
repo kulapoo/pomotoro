@@ -1,8 +1,8 @@
 use std::{any::TypeId, sync::Arc};
 
 use domain::Result;
-use tauri::AppHandle;
 
+use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventSubscriber;
 
 use super::{
@@ -13,22 +13,22 @@ use super::{
 
 pub fn register_task_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
 ) -> Result<()> {
     event_bus
-        .subscribe(Box::new(TaskCreatedHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(TaskCompletedHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(TaskCompletedHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(TaskUpdatedHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(TaskUpdatedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TaskStatusChangedHandler::new(
-        app_handle.clone(),
+        emitter.clone(),
     )))?;
     event_bus.subscribe(Box::new(TaskSessionCompletedHandler::new(
-        app_handle.clone(),
+        emitter.clone(),
     )))?;
     event_bus.subscribe(Box::new(TaskSwitchWorkflowCompletedHandler::new(
-        app_handle.clone(),
+        emitter.clone(),
     )))?;
 
     Ok(())

@@ -1,8 +1,8 @@
 use std::{any::TypeId, sync::Arc};
 
 use domain::Result;
-use tauri::AppHandle;
 
+use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventSubscriber;
 
 use super::{
@@ -12,17 +12,17 @@ use super::{
 
 pub fn register_timer_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
 ) -> Result<()> {
     event_bus
-        .subscribe(Box::new(TimerStartedHandler::new(app_handle.clone())))?;
-    event_bus.subscribe(Box::new(TimerTickHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(TimerStartedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TimerTickHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(PhaseCompletedHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(PhaseSkippedHandler::new(app_handle.clone())))?;
+        .subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TimerStatusChangedHandler::new(
-        app_handle.clone(),
+        emitter.clone(),
     )))?;
 
     Ok(())

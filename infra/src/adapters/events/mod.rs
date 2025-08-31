@@ -10,6 +10,7 @@ pub mod audio_events;
 mod event_handler;
 mod event_subscriber;
 pub mod mem_event_bus;
+pub mod app_emitter;
 
 pub use event_handler::EventHandler;
 pub use event_subscriber::EventSubscriber;

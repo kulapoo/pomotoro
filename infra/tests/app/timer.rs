@@ -1,4 +1,4 @@
-use crate::AppContextBuilder;
+use crate::{AppContextBuilder, UiSimulatorBuilder};
 use domain::{Phase, timer::TimerService};
 use usecases::timer::{start_timer_session, StartTimerSessionCmd};
 
@@ -35,14 +35,14 @@ async fn timer_should_start_from_idle_state() {
         .await
         .expect("Failed to build context");
 
+    let _ = (*ctx.ui_simulator).clone().start_auto_responder();
+
     let timer_state = ctx
         .timer_service
         .get_state()
         .await
         .expect("Failed to get timer state");
 
-
-    // let
     let start_timer_session_cmd = StartTimerSessionCmd {
         task_id: timer_state.active_entity_id()
     };

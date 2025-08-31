@@ -1,16 +1,18 @@
 use crate::adapters::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use serde_json::json;
 use std::any::TypeId;
-use tauri::{AppHandle, Emitter};
+use std::sync::Arc;
 
 pub struct TaskSessionCompletedHandler {
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
 }
 
 impl TaskSessionCompletedHandler {
-    pub fn new(app_handle: AppHandle) -> Self {
-        TaskSessionCompletedHandler { app_handle }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        TaskSessionCompletedHandler { emitter }
     }
 }
 
@@ -25,10 +27,10 @@ impl EventHandler for TaskSessionCompletedHandler {
             .as_any()
             .downcast_ref::<domain::TaskSessionCompleted>();
 
-        self.app_handle
+        self.emitter
             .emit(
                 domain::event_names::task::PROGRESS_UPDATED,
-                task_session_completed,
+                json!(task_session_completed),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(

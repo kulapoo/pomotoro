@@ -6,7 +6,7 @@ use infra::adapters::{
     task::DefaultCyclingService,
 };
 
-use crate::{core::database::TestDatabase, MockAudioService, MockEventBus};
+use crate::{core::{database::TestDatabase, mocks::MockAppHandle}, MockAudioService, MockEventBus, UiSimulator, UiSimulatorBuilder};
 
 /// Application context for integration tests
 pub struct AppContext {
@@ -26,6 +26,8 @@ pub struct AppContext {
     pub task_cycling_service: Arc<DefaultCyclingService>,
     /// Audio service mock
     pub audio_service: Arc<MockAudioService>,
+
+    pub ui_simulator: Arc<UiSimulator>,
 }
 
 impl AppContext {
@@ -60,6 +62,15 @@ impl AppContext {
 
         let audio_service = Arc::new(MockAudioService::new());
 
+
+        let ui_simulator = Arc::new(
+            UiSimulatorBuilder::new()
+                .with_auto_acknowledge_ticks(true)
+                .with_auto_acknowledge_state_updates(true)
+                .with_response_delay(100)
+                .build(event_bus.clone())
+        );
+
         Ok(Self {
             db,
             event_bus,
@@ -69,6 +80,7 @@ impl AppContext {
             timer_service,
             task_cycling_service,
             audio_service,
+            ui_simulator,
         })
     }
 

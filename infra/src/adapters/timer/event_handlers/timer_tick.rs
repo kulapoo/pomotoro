@@ -1,17 +1,19 @@
 use async_trait::async_trait;
 use domain::{Event, Result, TimerTick};
+use serde_json::json;
 use std::any::TypeId;
-use tauri::Emitter;
+use std::sync::Arc;
 
+use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventHandler;
 
 pub struct TimerTickHandler {
-    app_handle: tauri::AppHandle,
+    emitter: Arc<dyn Emitter>,
 }
 
 impl TimerTickHandler {
-    pub fn new(app_handle: tauri::AppHandle) -> Self {
-        Self { app_handle }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        Self { emitter }
     }
 }
 
@@ -24,8 +26,8 @@ impl EventHandler for TimerTickHandler {
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(timer_tick) = event.as_any().downcast_ref::<TimerTick>() {
             // Emit the timer tick event to the frontend
-            self.app_handle
-                .emit("timer:tick", timer_tick.clone())
+            self.emitter
+                .emit("timer:tick", json!(timer_tick.clone()))
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!("Failed to emit timer tick event: {e}"),
                 })?;

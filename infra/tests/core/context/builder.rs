@@ -1,7 +1,7 @@
-use domain::{Result, TaskRepository, ConfigRepository};
+use domain::{Result, TaskRepository, ConfigRepository, timer::TimerService};
 use crate::core::{
     context::AppContext,
-    fixtures::{TaskFixtures, ConfigFixtures},
+    fixtures::{ConfigFixtures, TaskFixtures}, mocks::MockAppHandle,
 };
 
 /// Builder for customizing app context creation
@@ -11,6 +11,7 @@ pub struct AppContextBuilder {
     with_default_config: bool,
     with_task_fixtures: bool,
     task_count: Option<usize>,
+    app_handle: Option<MockAppHandle>,
 }
 
 impl AppContextBuilder {
@@ -21,6 +22,7 @@ impl AppContextBuilder {
             with_default_config: false,
             with_task_fixtures: false,
             task_count: None,
+            app_handle: None,
         }
     }
 
@@ -57,11 +59,16 @@ impl AppContextBuilder {
         self
     }
 
+    pub fn with_app_handle(mut self, app_handle: MockAppHandle) -> Self {
+        self.app_handle = Some(app_handle);
+        self
+    }
+
 
     /// Add test timer fixtures
     /// Build the app context with the specified configuration
     pub async fn build(self) -> Result<AppContext> {
-        let ctx = AppContext::with_name(self.name.as_deref()).await?;
+        let mut ctx = AppContext::with_name(self.name.as_deref()).await?;
 
         // Add default task if requested
         if self.with_default_task {
@@ -83,6 +90,13 @@ impl AppContextBuilder {
             let config = ConfigFixtures::default();
             ctx.config_repo.save_config(&config).await?;
         }
+
+        let task = ctx.task_repo.get_default_task().await?.map(|task| task);
+
+        ctx.timer_service.switch_task(
+            task.clone().expect("Failed to get default task").id,
+            task.as_ref()
+        ).await?;
 
         Ok(ctx)
     }

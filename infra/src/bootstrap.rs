@@ -14,6 +14,7 @@ use crate::adapters::{
     establish_connection,
     events::{
         EventSubscriber, mem_event_bus::EventPublisherArc,
+        app_emitter::{Emitter, TauriAppHandleEmitter},
     },
     notifications::register_notification_handlers,
     run_migrations,
@@ -38,9 +39,12 @@ pub fn register_handlers(
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     audio_service: Arc<AudioServiceWrapper>,
 ) -> Result<()> {
-    register_timer_handlers(event_bus.clone(), app_handle.clone())
+    // Create the emitter that will be shared by all event handlers
+    let emitter: Arc<dyn Emitter> = Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
+    
+    register_timer_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register timer event handlers")?;
-    register_task_handlers(event_bus.clone(), app_handle.clone())
+    register_task_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register task event handlers")?;
     register_notification_handlers(
         event_bus.clone(),

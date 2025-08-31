@@ -1,16 +1,18 @@
 use crate::adapters::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
 use async_trait::async_trait;
 use domain::{Event, Result};
+use serde_json::json;
 use std::any::TypeId;
-use tauri::{AppHandle, Emitter};
+use std::sync::Arc;
 
 pub struct TaskSwitchWorkflowCompletedHandler {
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
 }
 
 impl TaskSwitchWorkflowCompletedHandler {
-    pub fn new(app_handle: AppHandle) -> Self {
-        TaskSwitchWorkflowCompletedHandler { app_handle }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        TaskSwitchWorkflowCompletedHandler { emitter }
     }
 }
 
@@ -25,8 +27,8 @@ impl EventHandler for TaskSwitchWorkflowCompletedHandler {
             .as_any()
             .downcast_ref::<domain::TaskSwitchWorkflowCompleted>();
 
-        self.app_handle
-            .emit(domain::event_names::task::ACTIVE_CHANGED, task_switch)
+        self.emitter
+            .emit(domain::event_names::task::ACTIVE_CHANGED, json!(task_switch))
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(
                     "Failed to emit task switch workflow completed event: {e}"
