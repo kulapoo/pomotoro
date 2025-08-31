@@ -6,7 +6,7 @@ mod app;
 // Re-export test utilities for use in test modules
 pub use core::{
     context::{AppContext, AppContextBuilder},
-    mocks::{MockAudioService, MockEventBus, MockTimerService, UiSimulator, UiSimulatorHandle, UiSimulatorBuilder, UiResponse},
+    mocks::{MockAudioService, MockEventBus, MockTimerService, UiSimulator, UiSimulatorBuilder, UiResponse},
     fixtures::{TaskFixtures, TaskBuilder, ConfigFixtures, TimerFixtures, AudioFixtures},
     database::TestDatabase,
 };

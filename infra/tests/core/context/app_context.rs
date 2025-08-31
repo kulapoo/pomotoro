@@ -1,12 +1,10 @@
 use std::sync::Arc;
 use domain::{Result, TaskRepository};
 use infra::adapters::{
-    database::{SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository},
-    timer::SqliteTimerService,
-    task::DefaultCyclingService,
+    database::{SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository}, events::{app_emitter::Emitter, EventSubscriber}, task::DefaultCyclingService, timer::SqliteTimerService
 };
 
-use crate::{core::{database::TestDatabase, mocks::MockAppHandle}, MockAudioService, MockEventBus, UiSimulator, UiSimulatorBuilder};
+use crate::{core::{database::TestDatabase, mocks::{ui::register_test_handlers, MockAppHandle}}, MockAudioService, MockEventBus, UiSimulator, UiSimulatorBuilder};
 
 /// Application context for integration tests
 pub struct AppContext {
@@ -70,6 +68,10 @@ impl AppContext {
                 .with_response_delay(100)
                 .build(event_bus.clone())
         );
+
+        let app_handle = ui_simulator.app_handle().clone();
+
+        register_test_handlers(event_bus.clone() as Arc<dyn EventSubscriber + Send + Sync>, app_handle).unwrap();
 
         Ok(Self {
             db,

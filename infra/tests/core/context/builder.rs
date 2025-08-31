@@ -91,12 +91,13 @@ impl AppContextBuilder {
             ctx.config_repo.save_config(&config).await?;
         }
 
-        let task = ctx.task_repo.get_default_task().await?.map(|task| task);
-
-        ctx.timer_service.switch_task(
-            task.clone().expect("Failed to get default task").id,
-            task.as_ref()
-        ).await?;
+        // Only switch task if a default task exists
+        if let Some(task) = ctx.task_repo.get_default_task().await? {
+            ctx.timer_service.switch_task(
+                task.id(),
+                Some(&task)
+            ).await?;
+        }
 
         Ok(ctx)
     }

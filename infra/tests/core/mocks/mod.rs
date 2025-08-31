@@ -12,7 +12,6 @@ pub use timer_service::MockTimerService;
 // UI Simulator exports from the ui module
 pub use ui::{
     UiSimulator,
-    UiSimulatorHandle,
     UiSimulatorBuilder,
     UiResponse,
     MockAppHandle,

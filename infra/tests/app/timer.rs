@@ -35,7 +35,7 @@ async fn timer_should_start_from_idle_state() {
         .await
         .expect("Failed to build context");
 
-    let _ = (*ctx.ui_simulator).clone().start_auto_responder();
+    let simulator = (*ctx.ui_simulator).clone().start_listen_to_events();
 
     let timer_state = ctx
         .timer_service
@@ -54,4 +54,6 @@ async fn timer_should_start_from_idle_state() {
         start_timer_session_cmd
     ).await.expect("Failed to start timer session");
 
+
+    assert!(simulator.app_handle().was_event_emitted("start_timer"));
 }

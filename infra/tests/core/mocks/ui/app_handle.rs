@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use infra::adapters::events::app_emitter::Emitter;
 
 /// Mock implementation of Tauri's AppHandle for testing
 #[derive(Clone)]
@@ -9,7 +10,7 @@ pub struct MockAppHandle {
     /// Events emitted through the handle
     emitted_events: Arc<Mutex<Vec<EmittedEvent>>>,
     /// Command handlers registered
-    command_handlers: Arc<Mutex<HashMap<String, Box<dyn Fn(Value) -> Value + Send + Sync>>>>,
+    // command_handlers: Arc<Mutex<HashMap<String, Box<dyn Fn(Value) -> Value + Send + Sync>>>>,
     /// Event listeners
     event_listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(Value) + Send + Sync>>>>>,
 }
@@ -25,7 +26,7 @@ impl MockAppHandle {
     pub fn new() -> Self {
         Self {
             emitted_events: Arc::new(Mutex::new(Vec::new())),
-            command_handlers: Arc::new(Mutex::new(HashMap::new())),
+            // command_handlers: Arc::new(Mutex::new(HashMap::new())),
             event_listeners: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -34,7 +35,7 @@ impl MockAppHandle {
     pub fn emit<S: Serialize>(&self, event: &str, payload: S) -> Result<(), String> {
         let json_payload = serde_json::to_value(payload)
             .map_err(|e| format!("Failed to serialize payload: {}", e))?;
-        
+
         // Store the emitted event
         self.emitted_events.lock().unwrap().push(EmittedEvent {
             event_name: event.to_string(),
@@ -53,7 +54,7 @@ impl MockAppHandle {
     }
 
     /// Listen to an event
-    pub fn listen<F>(&self, event: &str, handler: F) 
+    pub fn listen<F>(&self, event: &str, handler: F)
     where
         F: Fn(Value) + Send + Sync + 'static
     {
@@ -92,6 +93,13 @@ impl MockAppHandle {
     }
 }
 
+impl Emitter for MockAppHandle {
+    fn emit(&self, event: &str, payload: Value) -> anyhow::Result<()> {
+        self.emit(event, payload)
+            .map_err(|e| anyhow::anyhow!(e))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,25 +108,25 @@ mod tests {
     #[tokio::test]
     async fn test_mock_app_handle() {
         let app_handle = MockAppHandle::new();
-        
+
         // Test emitting events
         app_handle.emit("test_event", json!({"data": "test"})).unwrap();
         assert_eq!(app_handle.emitted_events().len(), 1);
-        
+
         // Test event listener
         let received = Arc::new(Mutex::new(Vec::new()));
         let received_clone = received.clone();
-        
+
         app_handle.listen("test_event", move |payload| {
             received_clone.lock().unwrap().push(payload);
         });
-        
+
         app_handle.emit("test_event", json!({"data": "test2"})).unwrap();
-        
+
         // Check both emission and listener
         assert_eq!(app_handle.emitted_events().len(), 2);
         assert_eq!(received.lock().unwrap().len(), 1);
-        
+
         // Test filtering by event type
         app_handle.emit("other_event", json!({"data": "other"})).unwrap();
         let test_events = app_handle.events_of_type("test_event");

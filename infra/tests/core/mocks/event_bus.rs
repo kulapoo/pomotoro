@@ -1,10 +1,15 @@
 use std::sync::{Arc, Mutex};
+use std::any::TypeId;
+use std::collections::HashMap;
 use domain::shared_kernel::events::{Event, EventPublisher};
+use infra::adapters::events::{EventHandler, EventSubscriber};
+use domain::Result;
 
 /// Mock event bus for testing
 pub struct MockEventBus {
     events: Arc<Mutex<Vec<Box<dyn Event>>>>,
     publish_count: Arc<Mutex<usize>>,
+    handlers: Arc<Mutex<HashMap<TypeId, Vec<Box<dyn EventHandler>>>>>,
 }
 
 impl MockEventBus {
@@ -12,6 +17,7 @@ impl MockEventBus {
         Self {
             events: Arc::new(Mutex::new(Vec::new())),
             publish_count: Arc::new(Mutex::new(0)),
+            handlers: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -49,6 +55,7 @@ impl MockEventBus {
     pub fn clear(&self) {
         self.events.lock().unwrap().clear();
         *self.publish_count.lock().unwrap() = 0;
+        self.handlers.lock().unwrap().clear();
     }
 
     pub fn assert_event_published(&self, event_type: &str) {
@@ -80,6 +87,25 @@ impl MockEventBus {
             expected, actual
         );
     }
+
+    pub fn handler_count(&self) -> usize {
+        self.handlers.lock().unwrap()
+            .values()
+            .map(|v| v.len())
+            .sum()
+    }
+
+    pub fn handler_count_for_type(&self, event_type: TypeId) -> usize {
+        self.handlers.lock().unwrap()
+            .get(&event_type)
+            .map(|v| v.len())
+            .unwrap_or(0)
+    }
+
+    pub fn has_handler_for_type(&self, event_type: TypeId) -> bool {
+        self.handlers.lock().unwrap()
+            .contains_key(&event_type)
+    }
 }
 
 impl EventPublisher for MockEventBus {
@@ -96,6 +122,38 @@ impl EventPublisher for MockEventBus {
     }
 }
 
+impl EventSubscriber for MockEventBus {
+    fn subscribe(&self, handler: Box<dyn EventHandler>) -> Result<()> {
+        let event_type = handler.subscribes_to();
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.entry(event_type)
+            .or_insert_with(Vec::new)
+            .push(handler);
+        Ok(())
+    }
+
+    fn clear_handlers_for_type(&self, event_type: TypeId) -> Result<()> {
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.remove(&event_type);
+        Ok(())
+    }
+
+    fn unsubscribe_by_name(
+        &self,
+        event_type: TypeId,
+        handler_name: &str,
+    ) -> Result<bool> {
+        let mut handlers = self.handlers.lock().unwrap();
+        if let Some(type_handlers) = handlers.get_mut(&event_type) {
+            let initial_len = type_handlers.len();
+            type_handlers.retain(|h| h.name() != handler_name);
+            Ok(initial_len != type_handlers.len())
+        } else {
+            Ok(false)
+        }
+    }
+}
+
 impl Default for MockEventBus {
     fn default() -> Self {
         Self::new()
@@ -107,6 +165,7 @@ impl Clone for MockEventBus {
         Self {
             events: Arc::clone(&self.events),
             publish_count: Arc::clone(&self.publish_count),
+            handlers: Arc::clone(&self.handlers),
         }
     }
 }

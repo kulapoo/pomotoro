@@ -6,5 +6,6 @@ ai_contexts
 !.claude
 !CLAUDE.md
 /tmp
+/infra/tmp/
 /infra/dist/
 /docs/.obsidian
