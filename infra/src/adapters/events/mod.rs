@@ -5,7 +5,6 @@
 //! - Event registrar trait for handler lifecycle management
 //! - Factory functions for creating event publishers
 
-pub mod app_lifecycle;
 pub mod audio_events;
 mod event_handler;
 mod event_subscriber;

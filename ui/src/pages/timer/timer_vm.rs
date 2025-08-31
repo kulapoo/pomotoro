@@ -67,11 +67,11 @@ impl TimerViewModel {
     pub fn set_error_state(&self) -> WriteSignal<Option<ErrorInfo>> {
         self.set_error_state
     }
-    
+
     pub fn get_active_task(&self) -> Option<Task> {
         self.active_task.get()
     }
-    
+
     pub fn get_active_task_name(&self) -> String {
         self.active_task.get()
             .map(|t| t.name.clone())
@@ -102,7 +102,7 @@ impl TimerViewModel {
                         serde_wasm_bindgen::from_value::<TimerState>(result)
                     {
                         set_timer_state.set(state.clone());
-                        
+
                         // If there's an active task, fetch its details
                         if let Some(entity_id) = state.active_entity_id() {
                             Self::fetch_task_details(entity_id, set_active_task).await;
@@ -132,38 +132,7 @@ impl TimerViewModel {
                     serde_wasm_bindgen::from_value::<TimerTick>(payload)
                 {
                     set_timer_state.update(|state| {
-                        // Update the timer state with the new remaining seconds
-                        // This ensures the UI stays in sync with the backend timer
-                        *state = match state {
-                            TimerState::Working { configuration, session_count, active_entity, entity_session_count, .. } => {
-                                TimerState::Working {
-                                    remaining_seconds: timer_tick.remaining_seconds,
-                                    configuration: configuration.clone(),
-                                    session_count: *session_count,
-                                    active_entity: active_entity.clone(),
-                                    entity_session_count: *entity_session_count,
-                                }
-                            }
-                            TimerState::ShortBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
-                                TimerState::ShortBreak {
-                                    remaining_seconds: timer_tick.remaining_seconds,
-                                    configuration: configuration.clone(),
-                                    session_count: *session_count,
-                                    active_entity: active_entity.clone(),
-                                    entity_session_count: *entity_session_count,
-                                }
-                            }
-                            TimerState::LongBreak { configuration, session_count, active_entity, entity_session_count, .. } => {
-                                TimerState::LongBreak {
-                                    remaining_seconds: timer_tick.remaining_seconds,
-                                    configuration: configuration.clone(),
-                                    session_count: *session_count,
-                                    active_entity: active_entity.clone(),
-                                    entity_session_count: *entity_session_count,
-                                }
-                            }
-                            _ => state.clone(),
-                        };
+                        *state = state.with_remaining_seconds(timer_tick.remaining_seconds);
                     });
                 }
             });
@@ -184,7 +153,7 @@ impl TimerViewModel {
                     serde_wasm_bindgen::from_value::<TimerState>(payload)
                 {
                     set_timer_state.set(state.clone());
-                    
+
                     // When state updates, also fetch the new task details
                     if let Some(entity_id) = state.active_entity_id() {
                         let set_active_task_clone = set_active_task.clone();
@@ -202,18 +171,18 @@ impl TimerViewModel {
             callback.forget();
         });
     }
-    
+
     async fn fetch_task_details(entity_id: String, set_active_task: WriteSignal<Option<Task>>) {
         if let Ok(task_id) = TaskId::from_string(&entity_id) {
             #[derive(serde::Serialize)]
             struct GetTaskArgs {
                 id: String,
             }
-            
+
             let args = GetTaskArgs {
                 id: task_id.to_string(),
             };
-            
+
             if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
                 if let Ok(result) = invoke_command(event_names::task::GET, args_value).await {
                     // Try to parse the TaskDto from task_vm.rs

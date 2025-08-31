@@ -102,6 +102,7 @@ impl SqliteTimerService {
 
         let events =
             self.timer.lock().await.start().map_err(|e| e.to_string())?;
+
         self.event_publisher.publish_batch(events);
 
         // Cancel any existing timer task

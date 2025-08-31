@@ -10,17 +10,22 @@ pub trait CyclerService: Send + Sync {
         &self,
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>>;
-    async fn validate_task_switch(&self, task_id: Id) -> Result<Option<Task>>;
-    async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
-    async fn cycle_to_next_active_task(
-        &self,
-        current_task_id: Option<Id>,
-    ) -> Result<Option<Task>>;
     async fn get_previous_task(
         &self,
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>>;
-    async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>>;
+    async fn get_default_task(&self) -> Result<Option<Task>>;
+    async fn get_cycle_tasks(&self) -> Result<Vec<Task>>;
+    async fn has_tasks(&self) -> Result<bool>;
+    
+    // Methods for cycling through active tasks
+    async fn cycle_to_next_active_task(
+        &self,
+        current_task_id: Option<Id>,
+    ) -> Result<Option<Task>>;
+    async fn get_active_task_queue(&self) -> Result<Vec<Task>>;
+    
+    // Methods for cycling through incomplete tasks
     async fn cycle_to_next_incomplete_task(
         &self,
         current_task_id: Option<Id>,
@@ -29,16 +34,9 @@ pub trait CyclerService: Send + Sync {
         &self,
         current_task_id: Option<Id>,
     ) -> Result<Option<Task>>;
-    async fn get_task_cycle_position(
-        &self,
-        task_id: Id,
-    ) -> Result<(usize, usize)>;
-}
-
-/// Domain value object for task cycling strategies
-#[derive(Debug, Clone)]
-pub enum CyclingStrategy {
-    Manual,
-    RoundRobin,
-    PriorityBased,
+    async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>>;
+    async fn get_task_cycle_position(&self, task_id: Id) -> Result<(usize, usize)>;
+    
+    // Task validation
+    async fn validate_task_switch(&self, task_id: Id) -> Result<()>;
 }

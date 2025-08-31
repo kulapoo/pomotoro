@@ -34,7 +34,7 @@ impl AppStarted {
     }
 }
 
-impl domain::Event for AppStarted {
+impl crate::Event for AppStarted {
     fn event_type(&self) -> &'static str {
         "AppStarted"
     }
@@ -51,7 +51,7 @@ impl domain::Event for AppStarted {
         self.occurred_at
     }
 
-    fn clone_box(&self) -> Box<dyn domain::Event> {
+    fn clone_box(&self) -> Box<dyn crate::Event> {
         Box::new(self.clone())
     }
 

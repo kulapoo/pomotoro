@@ -260,13 +260,17 @@ impl EventHandler for BreakCompletedNotificationHandler {
     }
 }
 
-pub fn register_notification_handlers(
+pub async fn register_notification_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: AppHandle,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
 ) -> Result<()> {
-    let config = futures::executor::block_on(config_repository.get_config())?;
+    let config = config_repository.get_config().await
+        .map_err(|e| {
+            eprintln!("Failed to get config in register_notification_handlers: {:?}", e);
+            e
+        })?;
     
     let notification_service: Arc<dyn NotificationServiceTrait> = Arc::new(
         NotificationService::new(app_handle, config.notification)

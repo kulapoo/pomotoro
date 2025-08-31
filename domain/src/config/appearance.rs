@@ -13,9 +13,16 @@ pub struct AppearanceConfig {
     pub theme: Theme,
     pub show_seconds_in_display: bool,
     pub always_on_top: bool,
+    #[serde(default)]
     pub compact_mode: bool,
+    #[serde(default = "default_true")]
     pub show_task_list_sidebar: bool,
+    #[serde(default = "default_true")]
     pub animate_progress: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for AppearanceConfig {

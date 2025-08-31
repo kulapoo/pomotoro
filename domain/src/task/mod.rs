@@ -10,9 +10,7 @@ mod test_builder;
 
 pub use self::task::Task;
 pub use builder::Builder;
-pub use cycling_srv::{
-    CyclerService, CyclingStrategy,
-};
+pub use cycling_srv::CyclerService;
 pub use events::{
     Completed, Created, SessionCompleted, StatusChanged,
     SwitchWorkflowCompleted, Updated,

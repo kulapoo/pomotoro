@@ -10,6 +10,7 @@ pub struct AppContextBuilder {
     with_default_task: bool,
     with_default_config: bool,
     with_task_fixtures: bool,
+    with_timer_started: bool,
     task_count: Option<usize>,
     app_handle: Option<MockAppHandle>,
 }
@@ -21,6 +22,7 @@ impl AppContextBuilder {
             with_default_task: false,
             with_default_config: false,
             with_task_fixtures: false,
+            with_timer_started: false,
             task_count: None,
             app_handle: None,
         }
@@ -64,6 +66,10 @@ impl AppContextBuilder {
         self
     }
 
+    pub fn with_timer_started(mut self) -> Self {
+        self.with_timer_started = true;
+        self
+    }
 
     /// Add test timer fixtures
     /// Build the app context with the specified configuration
@@ -97,6 +103,12 @@ impl AppContextBuilder {
                 task.id(),
                 Some(&task)
             ).await?;
+        }
+
+        if self.with_timer_started {
+            if let Some(task) = ctx.task_repo.get_default_task().await? {
+                ctx.timer_service.start_timer(Some(&task)).await?;
+            }
         }
 
         Ok(ctx)

@@ -67,7 +67,7 @@ pub fn run() {
             // services
             app.manage(app_registry.audio_service);
             app.manage(app_registry.timer_service.clone());
-            // app.manage(app_registry.task_cycling_service.clone());
+            app.manage(app_registry.task_cycling_service.clone());
 
             // events
             app.manage(app_registry.event_publisher.clone());

@@ -4,35 +4,25 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::adapters::{
-    InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
-    SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService,
-    TimerRepository,
     audio::{
-        AudioServiceWrapper,
-        register_audio_event_handlers,
-    },
-    establish_connection,
-    events::{
-        EventSubscriber, mem_event_bus::EventPublisherArc,
-        app_emitter::{Emitter, TauriAppHandleEmitter},
-    },
-    notifications::register_notification_handlers,
-    run_migrations,
-    task::{register_task_handlers},
-    timer::event_handlers::register_timer_handlers,
+        register_audio_event_handlers, AudioServiceWrapper
+    }, establish_connection, events::{
+        app_emitter::{Emitter, TauriAppHandleEmitter}, mem_event_bus::EventPublisherArc, EventSubscriber
+    }, notifications::register_notification_handlers, run_migrations, task::{register_task_handlers, DefaultCyclingService}, timer::event_handlers::register_timer_handlers, InMemoryEventBus, RodioAudioService, SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService, TimerRepository
 };
 use domain::timer::TimerService;
 use tauri::AppHandle;
 
 pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
+    pub task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
     pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     pub event_publisher: EventPublisherArc,
     pub timer_service: Arc<dyn TimerService + Send + Sync>,
     pub audio_service: Arc<AudioServiceWrapper>,
 }
 
-pub fn register_handlers(
+pub async fn register_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: AppHandle,
     config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
@@ -41,7 +31,7 @@ pub fn register_handlers(
 ) -> Result<()> {
     // Create the emitter that will be shared by all event handlers
     let emitter: Arc<dyn Emitter> = Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
-    
+
     register_timer_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register timer event handlers")?;
     register_task_handlers(event_bus.clone(), emitter.clone())
@@ -52,6 +42,8 @@ pub fn register_handlers(
         config_repository.clone(),
         task_repository,
     )
+    .await
+    .inspect_err(|e| eprintln!("Error in register_notification_handlers: {:?}", e))
     .context("Failed to register notification event handlers")?;
     register_audio_event_handlers(event_bus, audio_service, config_repository)
         .context("Failed to register audio event handlers")?;
@@ -95,11 +87,8 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
             .context("Failed to initialize audio service")?,
     )));
 
-    // let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
-    //     Arc::new(StandardTaskCyclerService::new(
-    //         task_repository.clone(),
-    //         domain::TaskCyclingStrategy::RoundRobin,
-    //     ));
+    let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
+        Arc::new(DefaultCyclingService::new(task_repository.clone()));
 
     // Create timer repository
     let timer_repository: Arc<dyn TimerRepository + Send + Sync> =
@@ -119,7 +108,8 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         config_repository.clone(),
         task_repository.clone(),
         audio_service.clone(),
-    )?;
+    )
+    .await?;
 
     usecases::bootstrap(timer_service.clone(), task_repository.clone(), event_publisher.clone())
         .await
@@ -127,6 +117,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
 
     let ctx = AppRegistry {
         task_repository,
+        task_cycling_service,
         config_repository,
         event_publisher,
         timer_service,

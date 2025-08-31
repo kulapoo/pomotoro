@@ -15,6 +15,7 @@ pub struct GeneralConfig {
     pub auto_start_work_after_break: bool,
     pub minimize_to_tray: bool,
     pub start_minimized: bool,
+    #[serde(default)]
     pub enable_screen_blocking: bool,
 }
 
