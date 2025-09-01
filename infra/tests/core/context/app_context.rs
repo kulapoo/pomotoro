@@ -7,7 +7,7 @@ use infra::adapters::{
     timer::SqliteTimerService
 };
 
-use crate::{core::{database::TestDatabase, mocks::ui::register_test_handlers}, MockAudioService, MockEventBus, UiSimulator};
+use crate::{core::{database::TestDatabase, mocks::ui::register_test_handlers}, MockAudioService, UiSimulator};
 
 /// Application context for integration tests
 pub struct AppContext {
@@ -15,8 +15,6 @@ pub struct AppContext {
     pub db: TestDatabase,
     /// Event bus for testing (using real implementation for proper handler execution)
     pub event_bus: Arc<InMemoryEventBus>,
-    /// Mock event bus for tracking (used for assertions only)
-    pub mock_event_tracker: Arc<MockEventBus>,
     /// Task repository
     pub task_repo: Arc<SqliteTaskRepository>,
     /// Config repository
@@ -43,12 +41,13 @@ impl AppContext {
     pub async fn with_name(name: Option<&str>) -> Result<Self> {
         // Create isolated test database
         let db = TestDatabase::with_name(name)?;
+        Self::from_database(db).await
+    }
 
+    /// Create app context from existing database (for testing persistence)
+    pub async fn from_database(db: TestDatabase) -> Result<Self> {
         // Create real event bus for proper handler execution
         let event_bus = Arc::new(InMemoryEventBus::new());
-
-        // Create mock event tracker for assertions
-        let mock_event_tracker = Arc::new(MockEventBus::new());
 
         // Create repositories
         let task_repo = Arc::new(SqliteTaskRepository::new(db.pool.clone()));
@@ -80,7 +79,6 @@ impl AppContext {
         Ok(Self {
             db,
             event_bus,
-            mock_event_tracker,
             task_repo,
             config_repo,
             timer_repo,
@@ -89,41 +87,6 @@ impl AppContext {
             audio_service,
             ui_simulator,
         })
-    }
-
-    /// Get the number of events published
-    pub fn event_count(&self) -> usize {
-        self.mock_event_tracker.published_count()
-    }
-
-    /// Check if a specific event type was published
-    pub fn has_event(&self, event_type: &str) -> bool {
-        self.mock_event_tracker.has_event_type(event_type)
-    }
-
-    /// Clear all published events
-    pub fn clear_events(&self) {
-        self.mock_event_tracker.clear()
-    }
-
-    /// Assert that an event was published
-    pub fn assert_event_published(&self, event_type: &str) {
-        self.mock_event_tracker.assert_event_published(event_type)
-    }
-
-    /// Assert that no events were published
-    pub fn assert_no_events(&self) {
-        self.mock_event_tracker.assert_no_events()
-    }
-
-    /// Get audio service play count
-    pub fn audio_play_count(&self) -> usize {
-        self.audio_service.play_count()
-    }
-
-    /// Reset audio service counts
-    pub fn reset_audio_counts(&self) {
-        self.audio_service.reset_counts()
     }
 }
 

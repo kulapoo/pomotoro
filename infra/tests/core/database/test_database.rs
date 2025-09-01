@@ -24,6 +24,12 @@ impl TestDatabase {
         Self::with_name(None)
     }
 
+    /// Reconnect to existing test database (simulates app restart)
+    pub fn reconnect(&self) -> Result<Arc<DbPool>> {
+        let pool = establish_connection(&self.db_path)?;
+        Ok(Arc::new(pool))
+    }
+
     /// Create a new test database with a custom name prefix
     pub fn with_name(name: Option<&str>) -> Result<Self> {
         // Create temp directory in the project's tmp folder

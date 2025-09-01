@@ -116,7 +116,7 @@ impl UiSimulator {
         // Take the receiver and start processing in background
         if let Some(mut rx) = self.response_rx.lock().unwrap().take() {
             tokio::spawn(async move {
-                println!("Event listener started");
+
                 while let Some(response) = rx.recv().await {
                     println!("Event: {:#?}", response);
                 }

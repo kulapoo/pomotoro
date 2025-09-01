@@ -7,7 +7,7 @@ use crate::adapters::{
     audio::{
         register_audio_event_handlers, AudioServiceWrapper
     }, establish_connection, events::{
-        app_emitter::{Emitter, TauriAppHandleEmitter}, mem_event_bus::EventPublisherArc, EventSubscriber
+        app_emitter::{Emitter, TauriAppHandleEmitter}, app_started_handler::AppStartedHandler, mem_event_bus::EventPublisherArc, EventSubscriber
     }, notifications::register_notification_handlers, run_migrations, task::{register_task_handlers, DefaultCyclingService}, timer::event_handlers::register_timer_handlers, InMemoryEventBus, RodioAudioService, SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService, TimerRepository
 };
 use domain::timer::TimerService;
@@ -31,6 +31,9 @@ pub async fn register_handlers(
 ) -> Result<()> {
     // Create the emitter that will be shared by all event handlers
     let emitter: Arc<dyn Emitter> = Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
+
+    event_bus
+        .subscribe(Box::new(AppStartedHandler::new(emitter.clone())))?;
 
     register_timer_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register timer event handlers")?;

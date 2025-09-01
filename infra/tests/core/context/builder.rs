@@ -1,6 +1,7 @@
 use domain::{Result, TaskRepository, ConfigRepository, timer::TimerService};
 use crate::core::{
     context::AppContext,
+    database::TestDatabase,
     fixtures::{ConfigFixtures, TaskFixtures}, mocks::MockAppHandle,
 };
 
@@ -13,6 +14,7 @@ pub struct AppContextBuilder {
     with_timer_started: bool,
     task_count: Option<usize>,
     app_handle: Option<MockAppHandle>,
+    existing_db: Option<TestDatabase>,
 }
 
 impl AppContextBuilder {
@@ -25,6 +27,7 @@ impl AppContextBuilder {
             with_timer_started: false,
             task_count: None,
             app_handle: None,
+            existing_db: None,
         }
     }
 
@@ -71,10 +74,20 @@ impl AppContextBuilder {
         self
     }
 
+    /// Use an existing database (for testing persistence across restarts)
+    pub fn with_existing_db(mut self, db: TestDatabase) -> Self {
+        self.existing_db = Some(db);
+        self
+    }
+
     /// Add test timer fixtures
     /// Build the app context with the specified configuration
     pub async fn build(self) -> Result<AppContext> {
-        let ctx = AppContext::with_name(self.name.as_deref()).await?;
+        let ctx = if let Some(db) = self.existing_db {
+            AppContext::from_database(db).await?
+        } else {
+            AppContext::with_name(self.name.as_deref()).await?
+        };
 
         // Add default task if requested
         if self.with_default_task {

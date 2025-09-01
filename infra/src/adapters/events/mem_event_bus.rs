@@ -93,7 +93,7 @@ impl InMemoryEventBus {
     pub fn new() -> Self {
         Self::with_concurrency_limit(100)
     }
-    
+
     /// Creates a new empty event bus with specified concurrency limit
     pub fn with_concurrency_limit(max_concurrent_handlers: usize) -> Self {
         Self {
@@ -131,6 +131,12 @@ impl InMemoryEventBus {
             .get(&event_type)
             .map(|handlers| handlers.iter().map(|h| h.id).collect())
             .unwrap_or_default()
+    }
+
+    pub fn has_event_type(&self, event_type: TypeId) -> bool {
+        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+
+        handlers.keys().any(|k| *k == event_type)
     }
 }
 
@@ -171,7 +177,7 @@ impl EventSubscriber for InMemoryEventBus {
         );
 
         let semaphore = Arc::clone(&self.concurrency_limiter);
-        
+
         let handler_fn = Arc::new(move |event: &dyn Event| {
             let event_box = event.clone_box();
             let handler_clone = Arc::clone(&handler_arc);
@@ -194,7 +200,7 @@ impl EventSubscriber for InMemoryEventBus {
                         return;
                     }
                 };
-                
+
                 if let Err(e) = handler_clone.handle(event_box).await {
                     error!("Event handler error: {}", e);
                 }
@@ -267,7 +273,7 @@ impl EventSubscriber for InMemoryEventBus {
     fn unsubscribe(&self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
         let event_type = handler.subscribes_to();
         let handler_name = handler.name();
-        
+
         self.unsubscribe_by_name(event_type, handler_name)?;
         Ok(())
     }
@@ -667,7 +673,7 @@ mod tests {
             async fn handle(&self, _event: Box<dyn Event>) -> domain::Result<()> {
                 // Increment counter on entry
                 let current = self.execution_counter.fetch_add(1, Ordering::SeqCst) + 1;
-                
+
                 // Track maximum concurrent executions
                 let mut max = self.max_concurrent.load(Ordering::SeqCst);
                 while current > max {
