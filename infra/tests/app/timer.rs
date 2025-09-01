@@ -1,9 +1,12 @@
 use std::any::TypeId;
 
 use crate::AppContextBuilder;
-use domain::{event_names, timer::TimerService, Phase, TimerStarted, TimerStatus};
+use domain::{
+    Phase, TimerStarted, TimerStatus, event_names, timer::TimerService,
+};
 use usecases::timer::{
-    pause_timer_session, reset_timer_session, start_timer_session, StartTimerSessionCmd
+    StartTimerSessionCmd, pause_timer_session, reset_timer_session,
+    start_timer_session,
 };
 
 #[tokio::test]
@@ -138,7 +141,6 @@ async fn timer_should_pause_when_running() {
     assert!(timer_state.remaining_seconds() < 25 * 60);
 }
 
-
 #[tokio::test]
 async fn timer_should_reset_to_initial_state() {
     let ctx = AppContextBuilder::new()
@@ -148,9 +150,13 @@ async fn timer_should_reset_to_initial_state() {
         .await
         .expect("Failed to build context");
 
-    reset_timer_session(ctx.timer_service.clone(), ctx.task_repo.clone(), ctx.event_bus.clone())
-        .await
-        .expect("Failed to reset timer session");
+    reset_timer_session(
+        ctx.timer_service.clone(),
+        ctx.task_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await
+    .expect("Failed to reset timer session");
 
     let timer_state = ctx
         .timer_service
@@ -167,7 +173,13 @@ async fn timer_should_reset_to_initial_state() {
 async fn timer_state_should_persist_across_restarts() {
     use std::sync::Arc;
 
-    let (test_db, status_before, remaining_before, phase_before, session_count_before) = {
+    let (
+        test_db,
+        status_before,
+        remaining_before,
+        phase_before,
+        session_count_before,
+    ) = {
         let first_ctx = AppContextBuilder::new()
             .with_name("persistence_test")
             .with_standard_fixtures()
@@ -198,13 +210,14 @@ async fn timer_state_should_persist_across_restarts() {
         (first_ctx.db, status, remaining, phase, session_count)
     };
 
-    let new_pool = test_db.reconnect()
+    let new_pool = test_db
+        .reconnect()
         .expect("Failed to reconnect to database");
 
     use infra::adapters::{
         database::{SqliteConfigRepository, SqliteTimerRepository},
         events::mem_event_bus::InMemoryEventBus,
-        timer::SqliteTimerService
+        timer::SqliteTimerService,
     };
 
     let event_bus = Arc::new(InMemoryEventBus::new());
@@ -226,9 +239,21 @@ async fn timer_state_should_persist_across_restarts() {
         .await
         .expect("Failed to get timer after restart");
 
-    assert_eq!(state_after.status(), status_before, "Timer status should persist");
-    assert_eq!(timer_after.get_current_phase(), phase_before, "Timer phase should persist");
-    assert_eq!(state_after.session_count(), session_count_before, "Session count should persist");
+    assert_eq!(
+        state_after.status(),
+        status_before,
+        "Timer status should persist"
+    );
+    assert_eq!(
+        timer_after.get_current_phase(),
+        phase_before,
+        "Timer phase should persist"
+    );
+    assert_eq!(
+        state_after.session_count(),
+        session_count_before,
+        "Session count should persist"
+    );
 
     // Remaining time should be approximately the same (allowing small drift for processing time)
     let remaining_after = state_after.remaining_seconds();
@@ -240,4 +265,16 @@ async fn timer_state_should_persist_across_restarts() {
         remaining_after,
         time_diff
     );
+}
+
+#[tokio::test]
+async fn should_start_timer_with_specific_task() {
+    let ctx = AppContextBuilder::new()
+        .with_standard_fixtures()
+        .build()
+        .await
+        .expect("Failed to build context");
+
+    let event_bus = ctx.event_bus.clone();
+    let simulator = (*ctx.ui_simulator).clone().start_listen_to_events();
 }

@@ -1,15 +1,16 @@
 # Pomotoro Project Overview
 
-## Project Type
-Pomodoro Timer Application with task management and productivity features
+## Project Description
+Pomotoro is a Pomodoro timer application built with Rust/Tauri backend and Leptos frontend, following Clean Architecture principles. It provides a feature-rich timer system with task management, audio feedback, notifications, and extensive customization options.
 
 ## Technology Stack
 - **Backend**: Rust with Tauri framework
-- **Frontend**: Leptos (Rust-based reactive UI)
-- **Database**: SQLite with Diesel ORM
-- **Architecture**: Clean Architecture (Domain-Driven Design)
-- **Build**: Trunk for frontend, Cargo for Rust
-- **Testing**: Rust native testing with integration/e2e tests
+- **Frontend**: Leptos (Rust-based reactive web framework)
+- **Database**: SQLite for persistence
+- **Audio**: rodio library for audio playback
+- **Architecture**: Clean Architecture with Domain-Driven Design
+- **Build**: Cargo workspace with Tauri CLI
+- **Testing**: Comprehensive test coverage across all layers
 
 ## Architecture Layers
 
