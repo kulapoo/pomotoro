@@ -1,37 +1,20 @@
-use crate::TimerConfiguration;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "state", content = "data")]
 pub enum TimerState {
-    Idle {
-        configuration: TimerConfiguration,
-        session_count: u32,
-        active_entity: Option<String>,
-    },
+    Idle,
 
     Working {
         remaining_seconds: u32,
-        configuration: TimerConfiguration,
-        session_count: u32,
-        active_entity: Option<String>,
-        entity_session_count: u32,
     },
 
     ShortBreak {
         remaining_seconds: u32,
-        configuration: TimerConfiguration,
-        session_count: u32,
-        active_entity: Option<String>,
-        entity_session_count: u32,
     },
 
     LongBreak {
         remaining_seconds: u32,
-        configuration: TimerConfiguration,
-        session_count: u32,
-        active_entity: Option<String>,
-        entity_session_count: u32,
     },
 
     Paused {
@@ -42,62 +25,19 @@ pub enum TimerState {
 
 impl Default for TimerState {
     fn default() -> Self {
-        Self::Idle {
-            configuration: TimerConfiguration::default(),
-            session_count: 0,
-            active_entity: None,
-        }
+        Self::Idle
     }
 }
 
 impl TimerState {
-    pub fn new(configuration: TimerConfiguration) -> Self {
-        Self::Idle {
-            configuration,
-            session_count: 0,
-            active_entity: None,
-        }
+    pub fn new() -> Self {
+        Self::Idle
     }
 
-    pub fn configuration(&self) -> &TimerConfiguration {
-        match self {
-            Self::Idle { configuration, .. }
-            | Self::Working { configuration, .. }
-            | Self::ShortBreak { configuration, .. }
-            | Self::LongBreak { configuration, .. } => configuration,
-            Self::Paused { paused_from, .. } => paused_from.configuration(),
-        }
-    }
-
-    pub fn session_count(&self) -> u32 {
-        match self {
-            Self::Idle { session_count, .. }
-            | Self::Working { session_count, .. }
-            | Self::ShortBreak { session_count, .. }
-            | Self::LongBreak { session_count, .. } => *session_count,
-            Self::Paused { paused_from, .. } => paused_from.session_count(),
-        }
-    }
-
-    pub fn active_entity(&self) -> Option<&str> {
-        match self {
-            Self::Idle { active_entity, .. }
-            | Self::Working { active_entity, .. }
-            | Self::ShortBreak { active_entity, .. }
-            | Self::LongBreak { active_entity, .. } => active_entity.as_deref(),
-            Self::Paused { paused_from, .. } => paused_from.active_entity(),
-        }
-    }
-
-    pub fn active_entity_id(&self) -> Option<String> {
-        self.active_entity().map(|s| s.to_string())
-    }
 
     pub fn remaining_seconds(&self) -> u32 {
         match self {
-            Self::Idle { configuration, .. } => {
-                configuration.get_phase_duration_seconds(super::Phase::Work)
-            }
+            Self::Idle => 0,
             Self::Working {
                 remaining_seconds, ..
             }
@@ -127,7 +67,7 @@ impl TimerState {
     }
 
     pub fn is_idle(&self) -> bool {
-        matches!(self, Self::Idle { .. })
+        matches!(self, Self::Idle)
     }
 
     pub fn is_work_phase(&self) -> bool {
@@ -148,7 +88,7 @@ impl TimerState {
 
     pub fn status(&self) -> super::Status {
         match self {
-            Self::Idle { .. } => super::Status::Stopped,
+            Self::Idle => super::Status::Stopped,
             Self::Working { .. }
             | Self::ShortBreak { .. }
             | Self::LongBreak { .. } => super::Status::Running,
@@ -158,7 +98,7 @@ impl TimerState {
 
     pub fn phase(&self) -> super::Phase {
         match self {
-            Self::Idle { .. } => super::Phase::Work,
+            Self::Idle => super::Phase::Work,
             Self::Working { .. } => super::Phase::Work,
             Self::ShortBreak { .. } => super::Phase::ShortBreak,
             Self::LongBreak { .. } => super::Phase::LongBreak,
@@ -166,72 +106,22 @@ impl TimerState {
         }
     }
 
-    pub fn entity_session_count(&self) -> u32 {
-        match self {
-            Self::Working {
-                entity_session_count,
-                ..
-            } => *entity_session_count,
-            Self::ShortBreak {
-                entity_session_count,
-                ..
-            } => *entity_session_count,
-            Self::LongBreak {
-                entity_session_count,
-                ..
-            } => *entity_session_count,
-            Self::Paused { paused_from, .. } => {
-                paused_from.entity_session_count()
-            }
-            _ => 0,
-        }
-    }
 
     pub fn with_remaining_seconds(&self, seconds: u32) -> Self {
         match self {
-            Self::Working { 
-                configuration, 
-                session_count, 
-                active_entity, 
-                entity_session_count, 
-                .. 
-            } => {
+            Self::Working { .. } => {
                 Self::Working {
                     remaining_seconds: seconds,
-                    configuration: configuration.clone(),
-                    session_count: *session_count,
-                    active_entity: active_entity.clone(),
-                    entity_session_count: *entity_session_count,
                 }
             }
-            Self::ShortBreak { 
-                configuration, 
-                session_count, 
-                active_entity, 
-                entity_session_count, 
-                .. 
-            } => {
+            Self::ShortBreak { .. } => {
                 Self::ShortBreak {
                     remaining_seconds: seconds,
-                    configuration: configuration.clone(),
-                    session_count: *session_count,
-                    active_entity: active_entity.clone(),
-                    entity_session_count: *entity_session_count,
                 }
             }
-            Self::LongBreak { 
-                configuration, 
-                session_count, 
-                active_entity, 
-                entity_session_count, 
-                .. 
-            } => {
+            Self::LongBreak { .. } => {
                 Self::LongBreak {
                     remaining_seconds: seconds,
-                    configuration: configuration.clone(),
-                    session_count: *session_count,
-                    active_entity: active_entity.clone(),
-                    entity_session_count: *entity_session_count,
                 }
             }
             Self::Paused { paused_from, .. } => {
@@ -253,19 +143,13 @@ mod tests {
     fn should_create_default_idle_state() {
         let state = TimerState::default();
         assert!(state.is_idle());
-        assert_eq!(state.session_count(), 0);
-        assert_eq!(state.remaining_seconds(), 1500);
-        assert!(state.active_entity().is_none());
+        assert_eq!(state.remaining_seconds(), 0);
     }
 
     #[test]
     fn should_identify_work_phase() {
         let state = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
-            session_count: 1,
-            active_entity: None,
-            entity_session_count: 0,
         };
         assert!(state.is_work_phase());
         assert!(!state.is_break_phase());
@@ -276,10 +160,6 @@ mod tests {
     fn should_identify_break_phase() {
         let state = TimerState::ShortBreak {
             remaining_seconds: 60,
-            configuration: TimerConfiguration::default(),
-            session_count: 1,
-            active_entity: None,
-            entity_session_count: 0,
         };
         assert!(state.is_break_phase());
         assert!(!state.is_work_phase());
@@ -290,10 +170,6 @@ mod tests {
     fn should_handle_paused_state() {
         let working = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
-            session_count: 1,
-            active_entity: None,
-            entity_session_count: 0,
         };
 
         let paused = TimerState::Paused {
@@ -309,26 +185,16 @@ mod tests {
     fn should_update_remaining_seconds_for_working_state() {
         let state = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
-            session_count: 5,
-            active_entity: Some("task-123".to_string()),
-            entity_session_count: 3,
         };
 
         let updated = state.with_remaining_seconds(50);
         
         match updated {
             TimerState::Working { 
-                remaining_seconds, 
-                session_count,
-                active_entity,
-                entity_session_count,
+                remaining_seconds,
                 .. 
             } => {
                 assert_eq!(remaining_seconds, 50);
-                assert_eq!(session_count, 5);
-                assert_eq!(active_entity, Some("task-123".to_string()));
-                assert_eq!(entity_session_count, 3);
             }
             _ => panic!("Expected Working state"),
         }
@@ -338,10 +204,6 @@ mod tests {
     fn should_update_remaining_seconds_for_break_states() {
         let short_break = TimerState::ShortBreak {
             remaining_seconds: 300,
-            configuration: TimerConfiguration::default(),
-            session_count: 2,
-            active_entity: Some("task-456".to_string()),
-            entity_session_count: 1,
         };
 
         let updated = short_break.with_remaining_seconds(150);
@@ -349,15 +211,9 @@ mod tests {
         match updated {
             TimerState::ShortBreak { 
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
                 .. 
             } => {
                 assert_eq!(remaining_seconds, 150);
-                assert_eq!(session_count, 2);
-                assert_eq!(active_entity, Some("task-456".to_string()));
-                assert_eq!(entity_session_count, 1);
             }
             _ => panic!("Expected ShortBreak state"),
         }
@@ -367,10 +223,6 @@ mod tests {
     fn should_update_remaining_seconds_for_paused_state() {
         let working = TimerState::Working {
             remaining_seconds: 100,
-            configuration: TimerConfiguration::default(),
-            session_count: 1,
-            active_entity: None,
-            entity_session_count: 0,
         };
 
         let paused = TimerState::Paused {
@@ -393,17 +245,12 @@ mod tests {
 
     #[test]
     fn should_return_idle_state_unchanged() {
-        let idle = TimerState::Idle {
-            configuration: TimerConfiguration::default(),
-            session_count: 0,
-            active_entity: None,
-        };
+        let idle = TimerState::Idle;
 
         let updated = idle.with_remaining_seconds(999);
         
         match updated {
-            TimerState::Idle { .. } => {
-                // Idle state should remain unchanged
+            TimerState::Idle => {
                 assert_eq!(idle, updated);
             }
             _ => panic!("Expected Idle state"),

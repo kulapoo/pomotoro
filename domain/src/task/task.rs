@@ -2,11 +2,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result};
+use crate::{Config, Error, Result, TimerId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: Id,
+    pub timer_id: TimerId,
     pub name: String,
     pub description: Option<String>,
     pub max_sessions: u8,
@@ -24,6 +25,10 @@ impl Task {
         self.id
     }
 
+    pub fn get_timer_id(&self) -> TimerId {
+        self.timer_id
+    }
+
     pub fn new_default() -> Result<Self> {
         use super::builder::Builder;
 
@@ -36,10 +41,7 @@ impl Task {
         Builder::with_name_and_sessions(name, max_sessions).build()
     }
 
-    pub fn new_with_defaults(
-        name: String,
-        max_sessions: u8,
-    ) -> Result<Self> {
+    pub fn new_with_defaults(name: String, max_sessions: u8) -> Result<Self> {
         use super::builder::Builder;
 
         Builder::with_name_and_sessions(name, max_sessions).build()
@@ -134,32 +136,33 @@ impl Task {
         self.config = Config::default();
     }
 
-
-
     pub fn get_effective_audio_config(&self) -> crate::AudioConfig {
         self.config.audio.clone()
     }
-
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::TaskBuilder;
+
     use super::*;
 
     fn create_test_task() -> Task {
-        Task {
-            id: Id::new(),
-            name: "Test Task".to_string(),
-            description: Some("Test description".to_string()),
-            max_sessions: 5,
-            current_sessions: 0,
-            tags: vec!["test".to_string(), "sample".to_string()],
-            config: Config::default(),
-            created_at: Utc::now(),
-            completed_at: None,
-            status: Status::Active,
-            default: false,
-        }
+        TaskBuilder::new()
+            .id(Id::new())
+            .timer_id(TimerId::new())
+            .name("Test Task".to_string())
+            .description("Test description".to_string())
+            .max_sessions(5)
+            .current_sessions(0)
+            .tags(vec!["test".to_string(), "sample".to_string()])
+            .config(Config::default())
+            .created_at(Utc::now())
+            .completed_at(Utc::now())
+            .status(Status::Active)
+            .default(false)
+            .build()
+            .unwrap()
     }
 
     #[test]
@@ -188,16 +191,16 @@ mod tests {
     #[test]
     fn test_increment_session() {
         let mut task = create_test_task();
-        
+
         assert!(task.increment_session().is_ok());
         assert_eq!(task.current_sessions, 1);
-        
+
         task.current_sessions = 4;
         assert!(task.increment_session().is_ok());
         assert_eq!(task.current_sessions, 5);
         assert_eq!(task.status, Status::Completed);
         assert!(task.completed_at.is_some());
-        
+
         assert!(task.increment_session().is_err());
     }
 
@@ -207,9 +210,9 @@ mod tests {
         task.current_sessions = 3;
         task.status = Status::Completed;
         task.completed_at = Some(Utc::now());
-        
+
         task.reset_sessions();
-        
+
         assert_eq!(task.current_sessions, 0);
         assert_eq!(task.status, Status::Active);
         assert!(task.completed_at.is_none());
@@ -219,13 +222,13 @@ mod tests {
     fn test_get_progress_ratio() {
         let mut task = create_test_task();
         assert_eq!(task.get_progress_ratio(), 0.0);
-        
+
         task.current_sessions = 2;
         assert_eq!(task.get_progress_ratio(), 0.4);
-        
+
         task.current_sessions = 5;
         assert_eq!(task.get_progress_ratio(), 1.0);
-        
+
         task.max_sessions = 0;
         assert_eq!(task.get_progress_ratio(), 1.0);
     }
@@ -234,13 +237,13 @@ mod tests {
     fn test_get_remaining_sessions() {
         let mut task = create_test_task();
         assert_eq!(task.get_remaining_sessions(), 5);
-        
+
         task.current_sessions = 2;
         assert_eq!(task.get_remaining_sessions(), 3);
-        
+
         task.current_sessions = 5;
         assert_eq!(task.get_remaining_sessions(), 0);
-        
+
         task.current_sessions = 10;
         assert_eq!(task.get_remaining_sessions(), 0);
     }
@@ -248,10 +251,10 @@ mod tests {
     #[test]
     fn test_pause() {
         let mut task = create_test_task();
-        
+
         assert!(task.pause().is_ok());
         assert_eq!(task.status, Status::Paused);
-        
+
         task.status = Status::Completed;
         assert!(task.pause().is_err());
     }
@@ -260,10 +263,10 @@ mod tests {
     fn test_activate() {
         let mut task = create_test_task();
         task.status = Status::Paused;
-        
+
         assert!(task.activate().is_ok());
         assert_eq!(task.status, Status::Active);
-        
+
         task.status = Status::Completed;
         assert!(task.activate().is_err());
     }
@@ -271,10 +274,10 @@ mod tests {
     #[test]
     fn test_queue() {
         let mut task = create_test_task();
-        
+
         assert!(task.queue().is_ok());
         assert_eq!(task.status, Status::Queued);
-        
+
         task.status = Status::Completed;
         assert!(task.queue().is_err());
     }
@@ -282,15 +285,15 @@ mod tests {
     #[test]
     fn test_default_management() {
         let mut task = create_test_task();
-        
+
         assert!(!task.is_default());
-        
+
         task.set_as_default();
         assert!(task.is_default());
-        
+
         task.unset_as_default();
         assert!(!task.is_default());
-        
+
         let task2 = task.clone().with_default(true);
         assert!(task2.is_default());
     }
@@ -299,11 +302,11 @@ mod tests {
     fn test_config_management() {
         let mut task = create_test_task();
         let _initial_config = task.get_config().clone();
-        
+
         let new_config = Config::default();
         task.set_config(new_config.clone());
         assert_eq!(*task.get_config(), new_config);
-        
+
         task.reset_config();
         assert_eq!(*task.get_config(), Config::default());
     }

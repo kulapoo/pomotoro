@@ -35,6 +35,7 @@ pub use task::{
 
 // Timer infrastructure
 pub use timer::SqliteTimerService;
+pub type TimerRepositoryArc = std::sync::Arc<dyn domain::TimerRepository + Send + Sync>;
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
@@ -46,4 +47,4 @@ pub use events::{EventHandler, InMemoryEventBus, audio_events};
 pub use notifications::{NotificationService, register_notification_handlers};
 
 // Database infrastructure
-pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository, TimerRepository};
+pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository};

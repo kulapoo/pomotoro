@@ -1,11 +1,11 @@
 use crate::timer::Phase;
+use crate::TimerId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ActiveTaskSwitched {
-    pub old_entity_id: Option<String>,
-    pub new_entity_id: Option<String>,
+    pub timer_id: TimerId,
     pub phase: Phase,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
@@ -13,14 +13,12 @@ pub struct ActiveTaskSwitched {
 
 impl ActiveTaskSwitched {
     pub fn new(
-        old_entity_id: Option<String>,
-        new_entity_id: Option<String>,
+        timer_id: TimerId,
         phase: Phase,
         version: u64,
     ) -> Self {
         Self {
-            old_entity_id,
-            new_entity_id,
+            timer_id,
             phase,
             version,
             occurred_at: Utc::now(),
@@ -34,9 +32,7 @@ impl crate::Event for ActiveTaskSwitched {
     }
 
     fn aggregate_id(&self) -> String {
-        self.new_entity_id
-            .clone()
-            .unwrap_or_else(|| "timer".to_string())
+        self.timer_id.to_string()
     }
 
     fn version(&self) -> u64 {

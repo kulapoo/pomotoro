@@ -25,8 +25,9 @@ pub use timer::{
     Error as TimerError, Paused as TimerPaused, Phase, PhaseCompleted,
     PhaseSkipped, Reset as TimerReset, Result as TimerResult, SessionFlowReset,
     Started as TimerStarted, StateTransitions, Status as TimerStatus,
-    StatusChanged as TimerStatusChanged, Tick as TimerTick, Timer, TimerState,
-    TransitionResult, TransitionType, WorkSessionCompleted, WorkSessionStarted,
+    StatusChanged as TimerStatusChanged, Tick as TimerTick, Timer, TimerId,
+    TimerRepository, TimerState, TransitionResult, TransitionType,
+    WorkSessionCompleted, WorkSessionStarted,
 };
 
 pub use config::{

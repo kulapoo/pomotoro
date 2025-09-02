@@ -1,5 +1,5 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
-use crate::adapters::TaskRepositoryArc;
+use crate::adapters::{TaskRepositoryArc, TimerRepositoryArc};
 use domain::{timer::TimerService, Phase, TaskId, TimerState, event_names::ui_listeners};
 use std::sync::Arc;
 use tauri::{AppHandle, State, Emitter};
@@ -33,6 +33,7 @@ pub async fn get_timer_state(
 pub async fn start_timer(
     timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
@@ -44,18 +45,31 @@ pub async fn start_timer(
         .map_err(|e| e.to_string())?;
 
     if current_state.status() == domain::TimerStatus::Paused {
-        pause_timer_session(timer_service_arc.clone(), event_publisher.inner().clone())
-            .await
-            .context("infra::commands::timer_cmd::start_timer - Failed to resume paused timer")
-            .map_err(|e| e.to_string())?;
+        // Get the first active task
+        let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+        let task = active_tasks.first().ok_or("No active task")?;
+        let task_id = task.id;
+        
+        // Resume the paused timer
+        usecases::timer::resume_timer_session(
+            task_id,
+            task_repo.inner().clone(),
+            timer_repo.inner().clone(),
+            event_publisher.inner().clone()
+        )
+        .await
+        .context("infra::commands::timer_cmd::start_timer - Failed to resume paused timer")
+        .map_err(|e| e.to_string())?;
     } else {
-        let task_id = current_state.active_entity_id();
+        // Get the first active task for starting
+        let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+        let task_id = active_tasks.first().map(|t| t.id.to_string());
         info!("Started timer, {}", task_id.clone().unwrap_or_default());
         let cmd = StartTimerSessionCmd { task_id };
 
         start_timer_session(
-            timer_service_arc.clone(),
             task_repo.inner().clone(),
+            timer_repo.inner().clone(),
             event_publisher.inner().clone(),
             cmd,
         )
@@ -73,15 +87,33 @@ pub async fn start_timer(
 #[tauri::command]
 pub async fn pause_timer(
     timer_service: State<'_, TimerServiceArc>,
+    task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc = timer_service.inner().clone();
 
-    pause_timer_session(timer_service_arc.clone(), event_publisher.inner().clone())
+    // Get current timer state to find active task
+    let _current_state = app_get_timer_state(timer_service_arc.clone())
         .await
-        .context("infra::commands::timer_cmd::pause_timer - Failed to toggle pause state")
+        .context("infra::commands::timer_cmd::pause_timer - Failed to get current timer state")
         .map_err(|e| e.to_string())?;
+
+    // Get the first active task
+    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let task = active_tasks.first().ok_or("No active task")?;
+    let task_id = task.id;
+
+    pause_timer_session(
+        task_id,
+        task_repo.inner().clone(),
+        timer_repo.inner().clone(),
+        event_publisher.inner().clone()
+    )
+    .await
+    .context("infra::commands::timer_cmd::pause_timer - Failed to toggle pause state")
+    .map_err(|e| e.to_string())?;
 
     app_get_timer_state(timer_service_arc)
         .await
@@ -93,12 +125,29 @@ pub async fn pause_timer(
 pub async fn reset_timer(
     timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_service_arc = timer_service.inner().clone();
 
-    reset_timer_session(timer_service_arc.clone(), task_repo.inner().clone(), event_publisher.inner().clone())
+    // Get current timer state to find active task
+    let _current_state = app_get_timer_state(timer_service_arc.clone())
+        .await
+        .context("infra::commands::timer_cmd::reset_timer - Failed to get current timer state")
+        .map_err(|e| e.to_string())?;
+
+    // Get the first active task
+    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let task = active_tasks.first().ok_or("No active task")?;
+    let task_id = task.id;
+
+    reset_timer_session(
+        task_id,
+        task_repo.inner().clone(),
+        timer_repo.inner().clone(),
+        event_publisher.inner().clone()
+    )
         .await
         .context("infra::commands::timer_cmd::reset_timer - Failed to reset current phase")
         .map_err(|e| e.to_string())?;
@@ -113,13 +162,30 @@ pub async fn reset_timer(
 pub async fn skip_phase(
     timer_service: State<'_, TimerServiceArc>,
     task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
 ) -> Result<(Phase, Phase, TimerState), String> {
     let timer_service_arc = timer_service.inner().clone();
 
+    // Get current timer state to find active task
+    let _current_state = app_get_timer_state(timer_service_arc.clone())
+        .await
+        .context("infra::commands::timer_cmd::skip_phase - Failed to get current timer state")
+        .map_err(|e| e.to_string())?;
+
+    // Get the first active task
+    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let task = active_tasks.first().ok_or("No active task")?;
+    let task_id = task.id;
+
     let (old_phase, new_phase) =
-        skip_timer_phase(timer_service_arc.clone(), task_repo.inner().clone(), event_publisher.inner().clone())
+        skip_timer_phase(
+            task_id,
+            task_repo.inner().clone(),
+            timer_repo.inner().clone(),
+            event_publisher.inner().clone()
+        )
             .await
             .context("infra::commands::timer_cmd::skip_phase - Failed to skip to next phase")
             .map_err(|e| e.to_string())?;

@@ -1,10 +1,11 @@
 use crate::timer::Phase;
+use crate::TimerId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BreakSessionStarted {
-    pub active_entity_id: Option<String>,
+    pub timer_id: TimerId,
     pub phase: Phase,
     pub duration_seconds: u32,
     pub version: u64,
@@ -13,13 +14,13 @@ pub struct BreakSessionStarted {
 
 impl BreakSessionStarted {
     pub fn new(
-        active_entity_id: Option<String>,
+        timer_id: TimerId,
         phase: Phase,
         duration_seconds: u32,
         version: u64,
     ) -> Self {
         Self {
-            active_entity_id,
+            timer_id,
             phase,
             duration_seconds,
             version,
@@ -34,9 +35,7 @@ impl crate::Event for BreakSessionStarted {
     }
 
     fn aggregate_id(&self) -> String {
-        self.active_entity_id
-            .clone()
-            .unwrap_or_else(|| "timer".to_string())
+        self.timer_id.to_string()
     }
 
     fn version(&self) -> u64 {

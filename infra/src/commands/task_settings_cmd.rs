@@ -1,7 +1,6 @@
 use domain::{TaskId, Config};
 use serde::{Deserialize, Serialize};
 use tauri::{command, State};
-use std::sync::Arc;
 
 use crate::adapters::{
     events::mem_event_bus::EventPublisherArc,
@@ -67,20 +66,21 @@ pub async fn reset_task_settings_to_defaults(
     })
 }
 
-#[command]
-pub async fn get_task_effective_settings(
-    task_repo: State<'_, TaskRepositoryArc>,
-    config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
-    task_id: String,
-) -> Result<usecases::task::ResolvedTaskSettings, String> {
-    let task_id = TaskId::from_string(&task_id)
-        .map_err(|e| format!("Invalid task ID: {}", e))?;
+// TODO: Reimplement get_task_effective_settings after refactoring
+// #[command]
+// pub async fn get_task_effective_settings(
+//     task_repo: State<'_, TaskRepositoryArc>,
+//     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
+//     task_id: String,
+// ) -> Result<usecases::task::ResolvedTaskSettings, String> {
+//     let task_id = TaskId::from_string(&task_id)
+//         .map_err(|e| format!("Invalid task ID: {}", e))?;
 
-    usecases::task::get_effective_task_settings(
-        &*task_repo,
-        &*config_repo,
-        task_id,
-    )
-    .await
-    .map_err(|e| e.to_string())
-}
+//     usecases::task::get_effective_task_settings(
+//         &*task_repo,
+//         &*config_repo,
+//         task_id,
+//     )
+//     .await
+//     .map_err(|e| e.to_string())
+// }

@@ -1,4 +1,4 @@
-use domain::{Task, TaskId, TaskStatus};
+use domain::{Task, TaskId, TaskStatus, TimerId};
 use domain::task::Builder as DomainTaskBuilder;
 
 /// Task fixtures for testing
@@ -7,12 +7,22 @@ pub struct TaskFixtures;
 impl TaskFixtures {
     /// Create a simple task with defaults
     pub fn simple(name: impl Into<String>) -> Task {
-        Task::new(name.into(), 4).expect("Failed to create task")
+        // Create a timer_id for the task
+        let timer_id = TimerId::new();
+        DomainTaskBuilder::with_name_and_sessions(name.into(), 4)
+            .timer_id(timer_id)
+            .build()
+            .expect("Failed to create task")
     }
 
     /// Create a task with custom sessions
     pub fn with_sessions(name: impl Into<String>, sessions: u8) -> Task {
-        Task::new(name.into(), sessions).expect("Failed to create task")
+        // Create a timer_id for the task
+        let timer_id = TimerId::new();
+        DomainTaskBuilder::with_name_and_sessions(name.into(), sessions)
+            .timer_id(timer_id)
+            .build()
+            .expect("Failed to create task")
     }
 
     /// Create multiple tasks for testing collections
@@ -24,12 +34,21 @@ impl TaskFixtures {
 
     /// Create a default task (the one marked as default in the system)
     pub fn default_task() -> Task {
-        Task::new_default().expect("Failed to create default task")
+        // Create a timer_id for the task
+        let timer_id = TimerId::new();
+        DomainTaskBuilder::default_task()
+            .timer_id(timer_id)
+            .build()
+            .expect("Failed to create default task")
     }
 
     /// Create a task with default settings
     pub fn with_defaults(name: impl Into<String>) -> Task {
-        Task::new_with_defaults(name.into(), 4)
+        // Create a timer_id for the task
+        let timer_id = TimerId::new();
+        DomainTaskBuilder::with_name_and_sessions(name.into(), 4)
+            .timer_id(timer_id)
+            .build()
             .expect("Failed to create task with defaults")
     }
 }

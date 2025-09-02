@@ -1,8 +1,22 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    timers (id) {
+        id -> Text,
+        timer_config -> Text,
+        current_phase -> Text,
+        remaining_seconds -> Integer,
+        is_running -> Bool,
+        session_count -> Integer,
+        created_at -> Text,
+        updated_at -> Text,
+    }
+}
+
+diesel::table! {
     tasks (id) {
         id -> Text,
+        timer_id -> Text,
         name -> Text,
         description -> Nullable<Text>,
         sessions -> Integer,
@@ -10,20 +24,6 @@ diesel::table! {
         status -> Text,
         tags -> Nullable<Text>,
         is_default -> Bool,
-        created_at -> Text,
-        updated_at -> Text,
-    }
-}
-
-diesel::table! {
-    timer_state (id) {
-        id -> Integer,
-        timer_config -> Text,
-        current_phase -> Text,
-        remaining_seconds -> Integer,
-        is_running -> Bool,
-        current_task_id -> Nullable<Text>,
-        session_count -> Integer,
         created_at -> Text,
         updated_at -> Text,
     }
@@ -48,12 +48,12 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(timer_state -> tasks (current_task_id));
+diesel::joinable!(tasks -> timers (timer_id));
 diesel::joinable!(session_history -> tasks (task_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    timers,
     tasks,
-    timer_state,
     config,
     session_history,
 );

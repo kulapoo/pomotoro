@@ -10,7 +10,7 @@ use commands::{
     get_active_tasks, get_all_tasks, get_audio_library,
     get_effective_audio_config, get_global_config,
     get_incomplete_tasks, get_task, get_task_cycle_position,
-    get_task_effective_settings, get_tasks_by_tags, get_timer_state,
+    /*get_task_effective_settings,*/ get_tasks_by_tags, get_timer_state,
     import_settings, open_data_directory, pause_audio, pause_timer, play_audio,
     play_background_audio, play_notification_sound, remove_audio_asset,
     request_notification_permission, reset_config_to_defaults, reset_task_sessions,
@@ -63,6 +63,7 @@ pub fn run() {
             //  repositories
             app.manage(app_registry.config_repository.clone());
             app.manage(app_registry.task_repository.clone());
+            app.manage(app_registry.timer_repository.clone());
 
             // services
             app.manage(app_registry.audio_service);
@@ -107,7 +108,7 @@ pub fn run() {
             get_effective_audio_config,
             update_task_settings,
             reset_task_settings_to_defaults,
-            get_task_effective_settings,
+            // get_task_effective_settings,
             get_audio_library,
             play_audio,
             stop_audio,

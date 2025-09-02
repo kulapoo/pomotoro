@@ -1,4 +1,4 @@
-use domain::{EventPublisher, PhaseCompleted, TaskCompleted, Phase, TimerConfiguration};
+use domain::{EventPublisher, PhaseCompleted, TaskCompleted, Phase, TimerConfiguration, TimerId};
 use domain::timer::events::{Started as TimerStarted, Paused as TimerPaused};
 use std::sync::Arc;
 use tauri::State;
@@ -11,10 +11,9 @@ pub async fn test_notification(
     let event: Box<dyn domain::Event> = match notification_type.as_str() {
         "phase_completed" => {
             Box::new(PhaseCompleted::new(
-                None,
+                TimerId::new(),
                 Phase::Work,
                 Phase::ShortBreak,
-                1,
                 1,
                 1,
             ))
@@ -31,7 +30,7 @@ pub async fn test_notification(
             let default_config = TimerConfiguration::default();
             let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerStarted::new(
-                Some("test-task-id".to_string()),
+                TimerId::new(),
                 Phase::Work,
                 work_duration_seconds,
                 1,
@@ -42,7 +41,7 @@ pub async fn test_notification(
             let default_config = TimerConfiguration::default();
             let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerPaused::new(
-                Some("test-task-id".to_string()),
+                TimerId::new(),
                 Phase::Work,
                 work_duration_seconds / 2,
                 1,

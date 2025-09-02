@@ -5,12 +5,12 @@ use tokio::sync::Mutex;
 use tokio::time::interval;
 
 use super::timer_dto::SessionHistoryDto;
-use crate::adapters::database::TimerRepository;
+use domain::TimerRepository;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use chrono::Utc;
 use domain::{
     ConfigRepository, Error, Phase, Result as DomainResult, Task, TaskId,
-    TimerConfiguration, TimerState, TimerStatus,
+    TimerConfiguration, TimerId, TimerState, TimerStatus,
     timer::{Timer, TimerService},
 };
 
@@ -42,7 +42,7 @@ impl SqliteTimerService {
         timer_repository: Arc<dyn TimerRepository + Send + Sync>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
-        let timer = Timer::new(TimerConfiguration::default());
+        let timer = Timer::new(TimerId::new(), TimerConfiguration::default());
 
         Self {
             timer: Arc::new(Mutex::new(timer)),
@@ -57,6 +57,7 @@ impl SqliteTimerService {
     async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
         self.timer_repository.save_timer_state(&*timer_guard).await
+            .map_err(|e| Error::RepositoryError { message: e.to_string() })
     }
 
     async fn add_session_history(
@@ -186,18 +187,21 @@ impl TimerService for SqliteTimerService {
     }
 
     async fn load_state(&self) -> DomainResult<()> {
-        if let Some(loaded_timer) =
-            self.timer_repository.load_timer_state().await?
+        if let Some(loaded_state) =
+            self.timer_repository.load_timer_state().await
+                .map_err(|e| Error::RepositoryError { message: e.to_string() })?
         {
             let mut timer_guard = self.timer.lock().await;
-            *timer_guard = loaded_timer;
+            let timer_id = timer_guard.id();
+            let configuration = timer_guard.configuration().clone();
+            *timer_guard = Timer::with_state(timer_id, configuration, loaded_state);
         }
         Ok(())
     }
 
     async fn switch_task(
         &self,
-        task_id: TaskId,
+        _task_id: TaskId,
         task: Option<&Task>,
     ) -> DomainResult<()> {
         let mut timer = self.timer.lock().await;
@@ -218,9 +222,8 @@ impl TimerService for SqliteTimerService {
             timer.update_configuration(timer_config)?;
         }
 
-        // Update the active entity
-        timer.set_active_entity(Some(task_id.to_string()))?;
-
+        // Active task is now tracked externally, not in timer
+        
         drop(timer);
         self.save_state().await?;
 

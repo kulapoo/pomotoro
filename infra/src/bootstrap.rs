@@ -8,9 +8,10 @@ use crate::adapters::{
         register_audio_event_handlers, AudioServiceWrapper
     }, establish_connection, events::{
         app_emitter::{Emitter, TauriAppHandleEmitter}, app_started_handler::AppStartedHandler, mem_event_bus::EventPublisherArc, EventSubscriber
-    }, notifications::register_notification_handlers, run_migrations, task::{register_task_handlers, DefaultCyclingService}, timer::event_handlers::register_timer_handlers, InMemoryEventBus, RodioAudioService, SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService, TimerRepository
+    }, notifications::register_notification_handlers, run_migrations, task::{register_task_handlers, DefaultCyclingService}, timer::event_handlers::register_timer_handlers, InMemoryEventBus, RodioAudioService, SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService
 };
 use domain::timer::TimerService;
+use domain::TimerRepository;
 use tauri::AppHandle;
 
 pub struct AppRegistry {
@@ -19,6 +20,7 @@ pub struct AppRegistry {
     pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     pub event_publisher: EventPublisherArc,
     pub timer_service: Arc<dyn TimerService + Send + Sync>,
+    pub timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     pub audio_service: Arc<AudioServiceWrapper>,
 }
 
@@ -100,7 +102,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     let timer_service: Arc<dyn TimerService + Send + Sync> =
         Arc::new(SqliteTimerService::new(
             event_publisher.clone(),
-            timer_repository,
+            timer_repository.clone(),
             config_repository.clone(),
         ));
 
@@ -114,7 +116,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     )
     .await?;
 
-    usecases::bootstrap(timer_service.clone(), task_repository.clone(), event_publisher.clone())
+    usecases::bootstrap(timer_service.clone(), task_repository.clone(), timer_repository.clone(), event_publisher.clone())
         .await
         .context("Failed to reset timer state")?;
 
@@ -124,6 +126,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         config_repository,
         event_publisher,
         timer_service,
+        timer_repository,
         audio_service,
     };
 

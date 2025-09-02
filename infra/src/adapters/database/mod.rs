@@ -7,4 +7,4 @@ pub mod sqlite_timer_repository;
 pub use connection::{DbConnection, DbPool, establish_connection, run_migrations};
 pub use sqlite_task_repository::SqliteTaskRepository;
 pub use sqlite_config_repository::SqliteConfigRepository;
-pub use sqlite_timer_repository::{SqliteTimerRepository, TimerRepository};
+pub use sqlite_timer_repository::SqliteTimerRepository;

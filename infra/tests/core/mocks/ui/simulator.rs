@@ -132,7 +132,7 @@ impl UiSimulator {
     }
 
     /// Respond to a domain event
-    pub fn respond_to_event(&self, event_type: &str, payload: Value) {
+    pub fn respond_to_event(&self, _event_type: &str, _payload: Value) {
 
         // self.trigger_response(response);
     }

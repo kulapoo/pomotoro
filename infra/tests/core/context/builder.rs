@@ -1,4 +1,4 @@
-use domain::{Result, TaskRepository, ConfigRepository, timer::TimerService};
+use domain::{Result, TaskRepository, ConfigRepository, timer::{Timer, TimerRepository, TimerService}, TimerConfiguration};
 use crate::core::{
     context::AppContext,
     database::TestDatabase,
@@ -92,6 +92,9 @@ impl AppContextBuilder {
         // Add default task if requested
         if self.with_default_task {
             let task = TaskFixtures::default_task();
+            // Create timer for the task first
+            let timer = Timer::new(task.get_timer_id(), TimerConfiguration::default());
+            ctx.timer_repo.create(timer).await?;
             ctx.task_repo.create(task).await?;
         }
 
@@ -100,6 +103,9 @@ impl AppContextBuilder {
             let count = self.task_count.unwrap_or(5);
             let tasks = TaskFixtures::collection(count);
             for task in tasks {
+                // Create timer for each task first
+                let timer = Timer::new(task.get_timer_id(), TimerConfiguration::default());
+                ctx.timer_repo.create(timer).await?;
                 ctx.task_repo.create(task).await?;
             }
         }

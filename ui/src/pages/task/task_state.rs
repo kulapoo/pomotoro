@@ -1,7 +1,7 @@
-use domain::{Task, TaskId, TimerState, event_names};
+use domain::{Task, TaskId, event_names};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen::{from_value, to_value};
+use serde_wasm_bindgen::from_value;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -44,49 +44,10 @@ impl TaskResource {
                 }
             }
 
-            web_sys::console::log_1(&"Loading timer state...".into());
-            let result =
-                invoke(event_names::timer::GET_STATE, JsValue::NULL).await;
-            match from_value::<TimerState>(result) {
-                Ok(timer_state) => {
-                    if let Some(entity_id_str) = timer_state.active_entity_id()
-                    {
-                        if let Ok(task_id) = TaskId::from_string(&entity_id_str)
-                        {
-                            let task_args = to_value(&task_id).unwrap();
-                            let task_result =
-                                invoke(event_names::task::GET, task_args).await;
-                            match from_value::<Task>(task_result) {
-                                Ok(task) => {
-                                    web_sys::console::log_1(
-                                        &format!("Active task: {}", &task.name)
-                                            .into(),
-                                    );
-                                    set_active_task_clone.set(Some(task));
-                                }
-                                Err(e) => {
-                                    web_sys::console::error_1(
-                                        &format!(
-                                            "Failed to load active task: {e}"
-                                        )
-                                        .into(),
-                                    );
-                                    set_active_task_clone.set(None);
-                                }
-                            }
-                        } else {
-                            set_active_task_clone.set(None);
-                        }
-                    } else {
-                        set_active_task_clone.set(None);
-                    }
-                }
-                Err(e) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to load timer state: {e}").into(),
-                    );
-                }
-            }
+            // In the new architecture, we don't have a global active task
+            // Each task has its own timer
+            // TODO: Load the currently active task from a different source
+            set_active_task_clone.set(None);
         });
 
         Self {
@@ -98,33 +59,17 @@ impl TaskResource {
     }
 
     pub async fn switch_task(&self, task_id: TaskId) -> Result<(), String> {
-        let args = to_value(&task_id).map_err(|e| e.to_string())?;
-        let result = invoke(event_names::timer::SWITCH_ACTIVE_TASK, args).await;
-
-        match from_value::<TimerState>(result) {
-            Ok(timer_state) => {
-                if let Some(entity_id_str) = timer_state.active_entity_id() {
-                    if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
-                        let tasks = self.tasks.get();
-                        let active_task =
-                            tasks.iter().find(|t| t.id == task_id).cloned();
-                        self.set_active_task.set(active_task);
-                    } else {
-                        self.set_active_task.set(None);
-                    }
-                } else {
-                    self.set_active_task.set(None);
-                }
-                Ok(())
-            }
-            Err(e) => Err(e.to_string()),
-        }
+        // In the new architecture, switching tasks means switching which timer we're working with
+        let tasks = self.tasks.get();
+        let active_task = tasks.iter().find(|t| t.id == task_id).cloned();
+        self.set_active_task.set(active_task);
+        Ok(())
     }
 
     pub fn refetch(&self) {
-        let tasks = self.tasks;
+        let _tasks = self.tasks;
         let set_tasks = self.set_tasks;
-        let set_active_task = self.set_active_task;
+        let _set_active_task = self.set_active_task;
 
         spawn_local(async move {
             web_sys::console::log_1(&"Refetching tasks...".into());
@@ -144,32 +89,9 @@ impl TaskResource {
                 }
             }
 
-            let result =
-                invoke(event_names::timer::GET_STATE, JsValue::NULL).await;
-            match from_value::<TimerState>(result) {
-                Ok(timer_state) => {
-                    web_sys::console::log_1(&"Refetched timer state".into());
-                    if let Some(entity_id_str) = timer_state.active_entity_id()
-                    {
-                        if let Ok(task_id) = TaskId::from_string(&entity_id_str)
-                        {
-                            let tasks = tasks.get_untracked();
-                            let active_task =
-                                tasks.iter().find(|t| t.id == task_id).cloned();
-                            set_active_task.set(active_task);
-                        } else {
-                            set_active_task.set(None);
-                        }
-                    } else {
-                        set_active_task.set(None);
-                    }
-                }
-                Err(e) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to refetch timer state: {e}").into(),
-                    );
-                }
-            }
+            // In the new architecture, we don't have a global timer state
+            // Each task has its own timer
+            // TODO: Load the currently active task from a different source
         });
     }
 }

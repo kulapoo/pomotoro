@@ -1,12 +1,13 @@
 use crate::Event;
 
 use crate::timer::Phase;
+use crate::TimerId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Tick {
-    pub entity_id: Option<String>,
+    pub timer_id: TimerId,
     pub phase: Phase,
     pub remaining_seconds: u32,
     pub version: u64,
@@ -15,13 +16,13 @@ pub struct Tick {
 
 impl Tick {
     pub fn new(
-        entity_id: Option<String>,
+        timer_id: TimerId,
         phase: Phase,
         remaining_seconds: u32,
         version: u64,
     ) -> Self {
         Self {
-            entity_id,
+            timer_id,
             phase,
             remaining_seconds,
             version,
@@ -36,9 +37,7 @@ impl Event for Tick {
     }
 
     fn aggregate_id(&self) -> String {
-        self.entity_id
-            .clone()
-            .unwrap_or_else(|| "timer".to_string())
+        self.timer_id.to_string()
     }
 
     fn version(&self) -> u64 {
@@ -64,8 +63,8 @@ mod tests {
 
     #[test]
     fn should_create_timer_tick_event() {
-        let entity_id = uuid::Uuid::new_v4().to_string();
-        let event = Tick::new(Some(entity_id), Phase::Work, 1234, 1);
+        let timer_id = TimerId::new();
+        let event = Tick::new(timer_id, Phase::Work, 1234, 1);
 
         assert_eq!(event.event_type(), "Tick");
         assert_eq!(event.version(), 1);
@@ -76,7 +75,7 @@ mod tests {
     #[test]
     fn should_serialize_timer_tick_event() {
         let event = Tick::new(
-            Some(uuid::Uuid::new_v4().to_string()),
+            TimerId::new(),
             Phase::ShortBreak,
             300,
             2,

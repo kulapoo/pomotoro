@@ -83,6 +83,9 @@ impl From<crate::timer::Error> for Error {
             crate::timer::Error::InvalidOperation(msg) => {
                 Error::ConfigurationError { message: msg }
             }
+            crate::timer::Error::RepositoryError { message } => {
+                Error::ConfigurationError { message }
+            }
         }
     }
 }

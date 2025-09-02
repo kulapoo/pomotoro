@@ -1,8 +1,8 @@
 use std::sync::Mutex;
 use async_trait::async_trait;
 use domain::{
-    Result, TaskId, Task, TimerStatus,
-    timer::{Timer, TimerService, TimerState, Phase},
+    Result, TaskId, Task, TimerStatus, TimerConfiguration,
+    timer::{Timer, TimerId, TimerService, TimerState, Phase},
 };
 
 /// Mock timer service for testing
@@ -18,10 +18,9 @@ pub struct MockTimerService {
 
 impl MockTimerService {
     pub fn new(initial_state: TimerState) -> Self {
-        let config = initial_state.configuration().clone();
-        let timer = Timer::new(config);
-        // TODO: We lose the initial state details (session count, active entity, etc.)
-        // but this keeps the mock simpler and avoids sync issues
+        let timer_id = TimerId::new();
+        let config = TimerConfiguration::default();
+        let timer = Timer::with_state(timer_id, config, initial_state);
         Self {
             timer: Mutex::new(timer),
             method_calls: Mutex::new(Vec::new()),
@@ -58,10 +57,10 @@ impl MockTimerService {
     }
 
     pub fn set_state(&self, state: TimerState) {
-        // Create a new timer with the configuration from the state
-        let config = state.configuration().clone();
-        *self.timer.lock().unwrap() = Timer::new(config);
-        // Note: We can't set the exact state, but at least the config is correct
+        let mut timer = self.timer.lock().unwrap();
+        let timer_id = timer.id();
+        let config = timer.configuration().clone();
+        *timer = Timer::with_state(timer_id, config, state);
     }
 
     pub fn current_state(&self) -> TimerState {
@@ -88,13 +87,12 @@ impl TimerService for MockTimerService {
 
     async fn switch_task(
         &self,
-        task_id: TaskId,
+        _task_id: TaskId,
         _task: Option<&Task>,
     ) -> Result<()> {
         self.method_calls.lock().unwrap().push("switch_task".to_string());
         
-        // Use the timer's set_active_entity method
-        self.timer.lock().unwrap().set_active_entity(Some(task_id.to_string()))?;
+        // Active task is now tracked externally, not in timer
         Ok(())
     }
 
@@ -109,10 +107,10 @@ impl TimerService for MockTimerService {
             timer.reset()?;
         }
         
-        // Set active entity - use task id if provided, otherwise use a default
-        let entity_id = task.map(|t| t.id().to_string())
-            .or_else(|| Some("default-task".to_string()));
-        timer.set_active_entity(entity_id)?;
+        // Update configuration if task has specific settings
+        if let Some(task) = task {
+            timer.update_configuration(task.config.timer.clone())?;
+        }
         
         timer.start()?;
         Ok(())

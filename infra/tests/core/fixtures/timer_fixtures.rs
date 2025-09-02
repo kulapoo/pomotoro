@@ -42,21 +42,13 @@ impl TimerFixtures {
 
     /// Create an initial timer state
     pub fn initial_state() -> TimerState {
-        TimerState::Idle {
-            configuration: Self::default_config(),
-            session_count: 0,
-            active_entity: None,
-        }
+        TimerState::Idle
     }
 
     /// Create a timer state in work phase
     pub fn work_state(remaining_secs: u32) -> TimerState {
         TimerState::Working {
             remaining_seconds: remaining_secs,
-            configuration: Self::default_config(),
-            session_count: 1,
-            active_entity: None,
-            entity_session_count: 0,
         }
     }
 
@@ -65,18 +57,10 @@ impl TimerFixtures {
         if is_long_break {
             TimerState::LongBreak {
                 remaining_seconds: remaining_secs,
-                configuration: Self::default_config(),
-                session_count: 4,
-                active_entity: None,
-                entity_session_count: 0,
             }
         } else {
             TimerState::ShortBreak {
                 remaining_seconds: remaining_secs,
-                configuration: Self::default_config(),
-                session_count: 1,
-                active_entity: None,
-                entity_session_count: 0,
             }
         }
     }
@@ -85,10 +69,6 @@ impl TimerFixtures {
     pub fn paused_state() -> TimerState {
         let working_state = TimerState::Working {
             remaining_seconds: 10 * 60,
-            configuration: Self::default_config(),
-            session_count: 2,
-            active_entity: None,
-            entity_session_count: 0,
         };
         TimerState::Paused {
             paused_from: Box::new(working_state),
@@ -128,10 +108,10 @@ mod tests {
     fn creates_break_states() {
         let short_break = TimerFixtures::break_state(300, false);
         assert!(matches!(short_break, TimerState::ShortBreak { .. }));
-        assert_eq!(short_break.session_count(), 1);
+        // Session count is now tracked in Task, not TimerState
 
         let long_break = TimerFixtures::break_state(900, true);
         assert!(matches!(long_break, TimerState::LongBreak { .. }));
-        assert_eq!(long_break.session_count(), 4);
+        // Session count is now tracked in Task, not TimerState
     }
 }

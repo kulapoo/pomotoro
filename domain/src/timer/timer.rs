@@ -1,14 +1,16 @@
 use super::events::*;
 use super::{
-    Error, Phase, Result,
+    Error, Phase, Result, TimerId,
     state_machine::TimerState,
     transitions::{StateTransitions, TransitionType},
 };
 use crate::{Event, TimerConfiguration};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Timer {
+    id: TimerId,
+    configuration: TimerConfiguration,
     state: TimerState,
 }
 
@@ -16,20 +18,36 @@ pub struct Timer {
 impl std::fmt::Debug for Timer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Timer")
+            .field("id", &self.id)
+            .field("configuration", &self.configuration)
             .field("state", &self.state)
             .finish()
     }
 }
 
 impl Timer {
-    pub fn new(configuration: TimerConfiguration) -> Self {
+    pub fn new(id: TimerId, configuration: TimerConfiguration) -> Self {
         Self {
-            state: TimerState::new(configuration),
+            id,
+            configuration,
+            state: TimerState::new(),
         }
+    }
+    
+    pub fn with_state(id: TimerId, configuration: TimerConfiguration, state: TimerState) -> Self {
+        Self { id, configuration, state }
+    }
+
+    pub fn id(&self) -> TimerId {
+        self.id
     }
 
     pub fn state(&self) -> &TimerState {
         &self.state
+    }
+
+    pub fn configuration(&self) -> &TimerConfiguration {
+        &self.configuration
     }
 
     pub fn start(&mut self) -> Result<Vec<Box<dyn Event>>> {
@@ -41,7 +59,7 @@ impl Timer {
             });
         }
 
-        let result = StateTransitions::start(self.state.clone())?;
+        let result = StateTransitions::start(self.state.clone(), self.id, &self.configuration)?;
         self.state = result.new_state;
         Ok(result.events)
     }
@@ -55,7 +73,7 @@ impl Timer {
             });
         }
 
-        let result = StateTransitions::pause(self.state.clone())?;
+        let result = StateTransitions::pause(self.state.clone(), self.id, &self.configuration)?;
         self.state = result.new_state;
         Ok(result.events)
     }
@@ -71,13 +89,13 @@ impl Timer {
             });
         }
 
-        let result = StateTransitions::resume(self.state.clone())?;
+        let result = StateTransitions::resume(self.state.clone(), self.id, &self.configuration)?;
         self.state = result.new_state;
         Ok(result.events)
     }
 
     pub fn reset(&mut self) -> Result<Vec<Box<dyn Event>>> {
-        let result = StateTransitions::reset(self.state.clone())?;
+        let result = StateTransitions::reset(self.state.clone(), self.id, &self.configuration)?;
         self.state = result.new_state;
         Ok(result.events)
     }
@@ -91,21 +109,21 @@ impl Timer {
             });
         }
 
-        let result = StateTransitions::skip_phase(self.state.clone())?;
+        let result = StateTransitions::skip_phase(self.state.clone(), self.id, &self.configuration)?;
         self.state = result.new_state;
         Ok(result.events)
     }
 
     pub fn tick(&mut self) -> Result<(bool, Vec<Box<dyn Event>>)> {
         let (new_state, phase_complete) =
-            StateTransitions::tick(self.state.clone())?;
+            StateTransitions::tick(self.state.clone(), self.id, &self.configuration)?;
         self.state = new_state.clone();
 
         let mut events: Vec<Box<dyn Event>> = vec![];
 
         let phase = self.get_current_phase();
         let tick_event = Tick::new(
-            self.state.active_entity_id(),
+            self.id,
             phase,
             self.state.remaining_seconds(),
             1,
@@ -113,7 +131,8 @@ impl Timer {
         events.push(Box::new(tick_event));
 
         if phase_complete {
-            let result = StateTransitions::complete_phase(self.state.clone())?;
+            let next_phase = self.determine_next_phase();
+            let result = StateTransitions::complete_phase(self.state.clone(), self.id, &self.configuration, next_phase)?;
             self.state = result.new_state;
             events.extend(result.events);
         }
@@ -121,24 +140,12 @@ impl Timer {
         Ok((phase_complete, events))
     }
 
-    pub fn set_active_entity(
-        &mut self,
-        entity_id: Option<String>,
-    ) -> Result<Vec<Box<dyn Event>>> {
-        if !StateTransitions::can_transition(
-            &self.state,
-            TransitionType::SwitchTask,
-        ) {
-            return Err(Error::InvalidStateTransition {
-                from: self.get_state_name(),
-                to: "SetEntity".to_string(),
-            });
+    fn determine_next_phase(&self) -> Phase {
+        match self.state {
+            TimerState::Working { .. } => Phase::ShortBreak,
+            TimerState::ShortBreak { .. } | TimerState::LongBreak { .. } => Phase::Work,
+            _ => Phase::Work,
         }
-
-        let result =
-            StateTransitions::switch_entity(self.state.clone(), entity_id)?;
-        self.state = result.new_state;
-        Ok(result.events)
     }
 
     pub fn update_configuration(
@@ -146,16 +153,8 @@ impl Timer {
         configuration: TimerConfiguration,
     ) -> Result<()> {
         match &self.state {
-            TimerState::Idle {
-                session_count,
-                active_entity,
-                ..
-            } => {
-                self.state = TimerState::Idle {
-                    configuration,
-                    session_count: *session_count,
-                    active_entity: active_entity.clone(),
-                };
+            TimerState::Idle => {
+                self.configuration = configuration;
                 Ok(())
             }
             _ => Err(Error::InvalidStateTransition {
@@ -182,7 +181,10 @@ impl Timer {
     }
 
     pub fn remaining_seconds(&self) -> u32 {
-        self.state.remaining_seconds()
+        match &self.state {
+            TimerState::Idle => self.configuration.get_phase_duration_seconds(Phase::Work),
+            _ => self.state.remaining_seconds(),
+        }
     }
 
     pub fn format_time(&self) -> String {
@@ -194,7 +196,7 @@ impl Timer {
 
     pub fn phase_name(&self) -> &'static str {
         match &self.state {
-            TimerState::Idle { .. } => "Stopped",
+            TimerState::Idle => "Stopped",
             TimerState::Working { .. } => "Focus Time",
             TimerState::ShortBreak { .. } => "Short Break",
             TimerState::LongBreak { .. } => "Long Break",
@@ -211,13 +213,12 @@ impl Timer {
 
     pub fn progress_percentage(&self) -> f64 {
         match &self.state {
-            TimerState::Idle { .. } => 0.0,
+            TimerState::Idle => 0.0,
             TimerState::Working {
                 remaining_seconds,
-                configuration,
                 ..
             } => {
-                let total = configuration
+                let total = self.configuration
                     .get_phase_duration_seconds(Phase::Work)
                     as f64;
                 let elapsed = total - *remaining_seconds as f64;
@@ -225,10 +226,9 @@ impl Timer {
             }
             TimerState::ShortBreak {
                 remaining_seconds,
-                configuration,
                 ..
             } => {
-                let total = configuration
+                let total = self.configuration
                     .get_phase_duration_seconds(Phase::ShortBreak)
                     as f64;
                 let elapsed = total - *remaining_seconds as f64;
@@ -236,10 +236,9 @@ impl Timer {
             }
             TimerState::LongBreak {
                 remaining_seconds,
-                configuration,
                 ..
             } => {
-                let total = configuration
+                let total = self.configuration
                     .get_phase_duration_seconds(Phase::LongBreak)
                     as f64;
                 let elapsed = total - *remaining_seconds as f64;
@@ -250,17 +249,7 @@ impl Timer {
     }
 
     pub fn session_display(&self) -> String {
-        let count = self.state.session_count();
-        let config = self.state.configuration();
-        let sessions_until_long = config.sessions_until_long_break as u32;
-
-        let current_in_cycle = if count == 0 {
-            0
-        } else {
-            ((count - 1) % sessions_until_long) + 1
-        };
-
-        format!("Session {current_in_cycle}/{sessions_until_long}")
+        format!("Session")
     }
 
     pub fn is_running(&self) -> bool {
@@ -274,10 +263,14 @@ impl Timer {
     pub fn is_idle(&self) -> bool {
         self.state.is_idle()
     }
+    
+    pub fn status(&self) -> super::Status {
+        self.state.status()
+    }
 
     fn get_state_name(&self) -> String {
         match &self.state {
-            TimerState::Idle { .. } => "Stopped".to_string(),
+            TimerState::Idle => "Stopped".to_string(),
             TimerState::Working { .. } => "Working".to_string(),
             TimerState::ShortBreak { .. } => "ShortBreak".to_string(),
             TimerState::LongBreak { .. } => "LongBreak".to_string(),
@@ -287,7 +280,7 @@ impl Timer {
 
     pub fn get_current_phase(&self) -> Phase {
         match self.state {
-            TimerState::Idle { .. } => Phase::Work,
+            TimerState::Idle => Phase::Work,
             TimerState::Working { .. } => Phase::Work,
             TimerState::ShortBreak { .. } => Phase::ShortBreak,
             TimerState::LongBreak { .. } => Phase::LongBreak,
@@ -300,6 +293,46 @@ impl Timer {
                 _ => Phase::Work,
             },
         }
+    }
+
+    pub fn complete_phase(&mut self, next_phase: Phase) -> Result<Vec<Box<dyn Event>>> {
+        if !StateTransitions::can_transition(&self.state, TransitionType::CompletePhase)
+        {
+            return Err(Error::InvalidStateTransition {
+                from: self.get_state_name(),
+                to: "CompletePhase".to_string(),
+            });
+        }
+
+        let result = StateTransitions::complete_phase(self.state.clone(), self.id, &self.configuration, next_phase)?;
+        self.state = result.new_state;
+        Ok(result.events)
+    }
+
+    pub fn start_phase(&mut self, phase: Phase) -> Result<Vec<Box<dyn Event>>> {
+        let duration = self.configuration.get_phase_duration_seconds(phase);
+        self.state = match phase {
+            Phase::Work => TimerState::Working {
+                remaining_seconds: duration,
+            },
+            Phase::ShortBreak => TimerState::ShortBreak {
+                remaining_seconds: duration,
+            },
+            Phase::LongBreak => TimerState::LongBreak {
+                remaining_seconds: duration,
+            },
+        };
+        
+        let events: Vec<Box<dyn Event>> = vec![
+            Box::new(Started::new(
+                self.id,
+                phase,
+                duration,
+                1,
+            )),
+        ];
+        
+        Ok(events)
     }
 }
 
@@ -315,7 +348,7 @@ mod tests {
             long_break_duration: Duration::from_secs(15 * 60),
             sessions_until_long_break: 4,
         };
-        Timer::new(config)
+        Timer::new(TimerId::new(), config)
     }
 
     #[test]
@@ -329,7 +362,6 @@ mod tests {
     #[test]
     fn test_timer_start() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         assert!(timer.can_start());
         let result = timer.start();
@@ -343,7 +375,6 @@ mod tests {
     #[test]
     fn test_timer_pause_resume() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         timer.start().unwrap();
         assert!(timer.can_pause());
@@ -363,7 +394,6 @@ mod tests {
     #[test]
     fn test_timer_reset() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         timer.start().unwrap();
         assert!(timer.is_running());
@@ -377,7 +407,6 @@ mod tests {
     #[test]
     fn test_timer_skip_phase() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         timer.start().unwrap();
         assert!(timer.can_skip());
@@ -400,7 +429,6 @@ mod tests {
 
         assert_eq!(timer.phase_name(), "Stopped");
 
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
         assert_eq!(timer.phase_name(), "Focus Time");
 
@@ -414,7 +442,6 @@ mod tests {
 
         assert_eq!(timer.progress_percentage(), 0.0);
 
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
         let progress = timer.progress_percentage();
         assert!(progress >= 0.0);
@@ -425,14 +452,12 @@ mod tests {
     fn test_timer_session_display() {
         let timer = create_test_timer();
         let display = timer.session_display();
-        assert!(display.starts_with("Session"));
-        assert!(display.contains("/"));
+        assert_eq!(display, "Session");
     }
 
     #[test]
     fn test_timer_remaining_seconds() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         timer.start().unwrap();
         let remaining = timer.remaining_seconds();
@@ -443,7 +468,6 @@ mod tests {
     #[test]
     fn test_timer_tick() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
 
         timer.start().unwrap();
         let initial_remaining = timer.remaining_seconds();
@@ -473,13 +497,12 @@ mod tests {
         let result = timer.update_configuration(new_config.clone());
         assert!(result.is_ok());
 
-        assert_eq!(timer.state().configuration(), &new_config);
+        assert_eq!(timer.configuration(), &new_config);
     }
 
     #[test]
     fn test_timer_update_configuration_while_running() {
         let mut timer = create_test_timer();
-        timer.set_active_entity(Some("test-task".to_string())).unwrap();
         timer.start().unwrap();
 
         let new_config = TimerConfiguration {
@@ -493,11 +516,4 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test]
-    fn test_timer_set_active_entity() {
-        let mut timer = create_test_timer();
-
-        let result = timer.set_active_entity(Some("task-123".to_string()));
-        assert!(result.is_ok());
-    }
 }

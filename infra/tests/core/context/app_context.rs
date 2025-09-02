@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use domain::{Result, TaskRepository};
+use domain::{Result, TaskRepository, TimerRepository};
 use infra::adapters::{
     database::{SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository},
     events::{EventSubscriber, mem_event_bus::InMemoryEventBus},
@@ -106,8 +106,14 @@ mod tests {
     async fn repositories_work() {
         let ctx = AppContext::new().await.unwrap();
 
-        // Create a task
-        let task = TaskFixtures::simple("Test Task");
+        // Create a timer first (tasks have foreign key to timers)
+        let timer_id = domain::TimerId::new();
+        let timer = domain::Timer::new(timer_id, domain::TimerConfiguration::default());
+        ctx.timer_repo.create(timer).await.unwrap();
+
+        // Create a task with the same timer_id
+        let mut task = TaskFixtures::simple("Test Task");
+        task.timer_id = timer_id;
         let task_id = task.id();
         ctx.task_repo.create(task).await.unwrap();
 

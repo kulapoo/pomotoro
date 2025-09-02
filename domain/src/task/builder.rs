@@ -1,5 +1,5 @@
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result};
+use crate::{Config, Error, Result, TimerId};
 use chrono::{DateTime, Utc};
 
 // Default values for Builder - autonomous construction without external dependencies
@@ -9,6 +9,7 @@ const DEFAULT_MAX_SESSIONS: u8 = 4;
 #[derive(Debug, Clone)]
 pub struct Builder {
     id: Option<Id>,
+    timer_id: Option<TimerId>,
     name: Option<String>,
     description: Option<String>,
     max_sessions: Option<u8>,
@@ -32,6 +33,7 @@ impl Builder {
     pub fn new() -> Self {
         Self {
             id: None,
+            timer_id: None,
             name: None,
             description: None,
             max_sessions: None,
@@ -63,6 +65,12 @@ impl Builder {
     /// Set the task ID
     pub fn id(mut self, id: Id) -> Self {
         self.id = Some(id);
+        self
+    }
+
+    /// Set the timer ID
+    pub fn timer_id(mut self, id: TimerId) -> Self {
+        self.timer_id = Some(id);
         self
     }
 
@@ -193,8 +201,12 @@ impl Builder {
         // Provide default config if none provided
         let config = self.config.unwrap_or_default();
 
+        // Generate timer_id if not provided
+        let timer_id = self.timer_id.unwrap_or_else(TimerId::new);
+
         Ok(super::Task {
             id: self.id.unwrap_or_default(),
+            timer_id,
             name: name.trim().to_string(),
             description: self.description,
             max_sessions,

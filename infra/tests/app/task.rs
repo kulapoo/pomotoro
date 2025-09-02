@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use domain::{event_names, TaskCreated, TaskRepository, TaskStatus, TaskUpdated};
+use domain::{event_names, TaskCreated, TaskRepository, TaskStatus, TaskUpdated, TimerRepository};
 use usecases::{CreateTaskCmd, create_task, GetTaskQuery, get_task, UpdateTaskCmd, update_task, DeleteTaskCmd, delete_task};
 
 use crate::AppContextBuilder;
@@ -20,6 +20,7 @@ async fn should_create_task_with_title() {
     let task_repo = ctx.task_repo.clone();
     let task_created = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Test Task".to_string(),
@@ -70,6 +71,7 @@ async fn tasks_should_have_unique_ids() {
     // Create first task
     let task1 = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task 1".to_string(),
@@ -84,6 +86,7 @@ async fn tasks_should_have_unique_ids() {
     // Create second task
     let task2 = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task 2".to_string(),
@@ -114,6 +117,7 @@ async fn should_find_task_by_id() {
     // Create a task
     let created_task = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Find me".to_string(),
@@ -152,6 +156,7 @@ async fn should_update_task_status() {
     // Create a task
     let task = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Update my status".to_string(),
@@ -206,6 +211,7 @@ async fn should_delete_task() {
     // Create a task
     let task = create_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Delete me".to_string(),
@@ -250,4 +256,118 @@ async fn should_delete_task() {
             _ => panic!("Expected TaskNotFound error, got: {:?}", e),
         }
     }
+}
+
+#[tokio::test]
+async fn should_track_task_timer_relationship() {
+    let ctx = AppContextBuilder::new()
+        .with_standard_fixtures()
+        .build()
+        .await
+        .expect("Failed to build context");
+
+    // Create a task
+    let task = create_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        CreateTaskCmd {
+            name: "Task with Timer".to_string(),
+            description: Some("Task to test timer relationship".to_string()),
+            max_sessions: 4,
+            tags: vec!["test".to_string()],
+        },
+    )
+    .await
+    .expect("Failed to create task");
+
+    // Verify task has a timer_id
+    let retrieved_task = ctx.task_repo
+        .get_by_id(task.id)
+        .await
+        .expect("Failed to get task")
+        .expect("Task not found");
+    
+    // Timer ID should be set
+    assert!(!retrieved_task.get_timer_id().to_string().is_empty(), "Task should have a timer ID");
+
+    // Verify the timer exists for this task
+    let timer = ctx.timer_repo
+        .get_by_id(retrieved_task.get_timer_id())
+        .await
+        .expect("Failed to get timer")
+        .expect("Timer not found for task");
+
+    // Timer should be in idle state initially
+    assert!(timer.is_idle(), "Timer should be idle initially");
+}
+
+#[tokio::test]
+async fn task_sessions_should_update_with_timer() {
+    use usecases::timer::{StartTimerSessionCmd, start_timer_session};
+    use domain::timer::TimerService;
+    
+    let ctx = AppContextBuilder::new()
+        .with_standard_fixtures()
+        .build()
+        .await
+        .expect("Failed to build context");
+
+    // Create a task with 2 max sessions for easier testing
+    let task = create_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        CreateTaskCmd {
+            name: "Session Tracking Task".to_string(),
+            description: None,
+            max_sessions: 2,
+            tags: vec![],
+        },
+    )
+    .await
+    .expect("Failed to create task");
+
+    // Initial task should have 0 sessions
+    let initial_task = ctx.task_repo
+        .get_by_id(task.id)
+        .await
+        .expect("Failed to get task")
+        .expect("Task not found");
+    
+    assert_eq!(initial_task.current_sessions, 0, "Task should start with 0 sessions");
+    assert_eq!(initial_task.status, TaskStatus::Queued, "Task should be queued initially");
+
+    // Start timer for the task
+    start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task.id.to_string()),
+        },
+    )
+    .await
+    .expect("Failed to start timer");
+
+    // Task status should now be Active
+    let active_task = ctx.task_repo
+        .get_by_id(task.id)
+        .await
+        .expect("Failed to get task")
+        .expect("Task not found");
+    
+    assert_eq!(active_task.status, TaskStatus::Active, "Task should be active when timer starts");
+    
+    // Verify timer is associated with the task
+    let timer_state = ctx.timer_service
+        .get_state()
+        .await
+        .expect("Failed to get timer state");
+    
+    assert_eq!(
+        timer_state.active_entity_id(),
+        Some(task.id.to_string()),
+        "Timer should be associated with the task"
+    );
 }

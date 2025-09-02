@@ -33,13 +33,13 @@ mod tests {
     #[test]
     fn should_have_correct_event_types() {
         let timer_started = Started::new(
-            Some(uuid::Uuid::new_v4().to_string()),
+            crate::TimerId::new(),
             Phase::Work,
             1500,
             1,
         );
         let timer_paused = Paused::new(
-            Some(uuid::Uuid::new_v4().to_string()),
+            crate::TimerId::new(),
             Phase::Work,
             1200,
             2,
@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn should_serialize_timer_started_event() {
         let event = Started::new(
-            Some(uuid::Uuid::new_v4().to_string()),
+            crate::TimerId::new(),
             Phase::Work,
             1500,
             1,
@@ -69,10 +69,9 @@ mod tests {
     #[test]
     fn should_serialize_phase_completed_event() {
         let event = PhaseCompleted::new(
-            Some(uuid::Uuid::new_v4().to_string()),
+            crate::TimerId::new(),
             Phase::Work,
             Phase::ShortBreak,
-            1,
             1,
             2,
         );
@@ -86,12 +85,11 @@ mod tests {
 
     #[test]
     fn should_serialize_active_task_switched_event() {
-        let old_entity_id = uuid::Uuid::new_v4().to_string();
-        let new_entity_id = uuid::Uuid::new_v4().to_string();
+        let _old_entity_id = uuid::Uuid::new_v4().to_string();
+        let _new_entity_id = uuid::Uuid::new_v4().to_string();
 
         let event = ActiveTaskSwitched::new(
-            Some(old_entity_id),
-            Some(new_entity_id),
+            crate::TimerId::new(),
             Phase::Work,
             3,
         );

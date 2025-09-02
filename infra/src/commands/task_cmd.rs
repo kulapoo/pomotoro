@@ -38,6 +38,7 @@ pub struct UpdateTaskRequest {
 pub async fn create_task(
     request: CreateTaskRequest,
     task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, Arc<dyn domain::TimerRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     println!("=== CREATE_TASK DEBUG START ===");
@@ -55,7 +56,7 @@ pub async fn create_task(
 
     println!("Command created: {:?}", cmd);
 
-    match usecases::task::create_task(task_repo.inner().clone(), event_publisher.inner().clone(), cmd).await {
+    match usecases::task::create_task(task_repo.inner().clone(), timer_repo.inner().clone(), event_publisher.inner().clone(), cmd).await {
         Ok(task) => {
             println!("Task creation SUCCESS: {:?}", task);
             println!("Task ID: {}", task.id);
@@ -364,6 +365,7 @@ pub async fn get_incomplete_tasks(
 #[tauri::command]
 pub async fn debug_create_test_task(
     task_repo: State<'_, TaskRepositoryArc>,
+    timer_repo: State<'_, Arc<dyn domain::TimerRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     println!("=== DEBUG TEST TASK CREATION ===");
@@ -376,5 +378,5 @@ pub async fn debug_create_test_task(
         audio_config: None,
     };
 
-    create_task(request, task_repo, event_publisher).await
+    create_task(request, task_repo, timer_repo, event_publisher).await
 }

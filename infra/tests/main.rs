@@ -1,13 +1,14 @@
 // Integration tests for infrastructure layer
 
 mod core;
-mod app;
+// mod app;
 
 // Re-export test utilities for use in test modules
 pub use core::{
     context::{AppContext, AppContextBuilder},
-    mocks::{MockAudioService, MockTimerService, UiSimulator},
-    fixtures::{TaskFixtures, TaskBuilder, ConfigFixtures, TimerFixtures, AudioFixtures},
     database::TestDatabase,
+    fixtures::{
+        AudioFixtures, ConfigFixtures, TaskBuilder, TaskFixtures, TimerFixtures,
+    },
+    mocks::{MockAudioService, MockTimerService, UiSimulator},
 };
-

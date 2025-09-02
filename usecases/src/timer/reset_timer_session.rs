@@ -1,52 +1,50 @@
-use domain::timer::TimerService;
-use domain::{EventPublisher, Result, TaskId, TaskRepository, timer::Reset};
+use domain::{EventPublisher, Result, TaskId, TaskRepository, TimerRepository};
 use std::sync::Arc;
 
-/// Reset the current timer session phase
+/// Reset a timer session for a specific task
 ///
-/// This use case resets the current timer phase back to its full duration
-/// while preserving the current phase and task context. It coordinates
-/// between the timer service and task repository to provide proper context.
+/// This use case resets the timer for a specific task back to its initial state.
 ///
 /// ## Business Rules
 ///
-/// - Resets only the current phase, not the entire session
-/// - Preserves the active task and phase context
-/// - Can be called in any timer state
+/// - Task must exist
+/// - Resets the timer to idle state
 ///
 /// ## Dependencies
 ///
-/// - TimerService: For timer operations (domain abstraction)
-/// - TaskRepository: For active task context
-/// - EventPublisher: For domain event publishing (business orchestration)
+/// - TaskRepository: For task validation and retrieval
+/// - TimerRepository: For timer operations
+/// - EventPublisher: For domain event publishing
 pub async fn reset_timer_session(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    let current_state = timer_service.get_state().await?;
+    // Get the task
+    let task = task_repo
+        .get_by_id(task_id)
+        .await?
+        .ok_or(domain::Error::TaskNotFound {
+            id: task_id.to_string(),
+        })?;
 
-    let task = if let Some(entity_id_str) = current_state.active_entity_id() {
-        if let Ok(task_id) = TaskId::from_string(&entity_id_str) {
-            task_repo.get_by_id(task_id).await?
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    // Get the task's timer
+    let mut timer = timer_repo
+        .get_by_id(task.get_timer_id())
+        .await?
+        .ok_or_else(|| domain::Error::RepositoryError {
+            message: format!("Timer not found for task: {}", task_id),
+        })?;
 
-    // Reset the current phase with task context
-    timer_service.reset_current_phase(task.as_ref()).await?;
+    // Reset the timer
+    let events = timer.reset()?;
+    timer_repo.save(timer).await?;
 
-    // Business logic: Publish Reset event after successful reset
-    let updated_state = timer_service.get_state().await?;
-    let timer_reset_event = Reset::new(
-        updated_state.active_entity_id(),
-        updated_state.phase(),
-        1, // version
-    );
-    event_publisher.publish(Box::new(timer_reset_event));
+    // Publish events
+    for event in events {
+        event_publisher.publish(event);
+    }
 
     Ok(())
 }

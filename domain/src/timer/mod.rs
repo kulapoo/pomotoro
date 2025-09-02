@@ -1,5 +1,7 @@
 pub mod error;
 pub mod events;
+pub mod id;
+pub mod repository;
 pub mod service;
 pub mod state_machine;
 pub mod timer;
@@ -7,6 +9,8 @@ pub mod transitions;
 
 // Re-export core types
 pub use error::{Error, Result};
+pub use id::Id as TimerId;
+pub use repository::TimerRepository;
 pub use service::TimerService;
 pub use state_machine::TimerState;
 pub use timer::Timer;

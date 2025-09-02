@@ -1,5 +1,5 @@
 use crate::components::{ErrorInfo, handle_command_error};
-use domain::{Phase, TimerState, TimerStatus, TimerTick, event_names, Task, TaskId};
+use domain::{Phase, TimerState, TimerStatus, TimerTick, TimerConfiguration, event_names, Task, TaskId};
 use domain::event_names::ui_listeners::timer as timer_event_names;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -23,6 +23,8 @@ extern "C" {
 pub struct TimerViewModel {
     timer_state: ReadSignal<TimerState>,
     set_timer_state: WriteSignal<TimerState>,
+    timer_config: ReadSignal<TimerConfiguration>,
+    set_timer_config: WriteSignal<TimerConfiguration>,
     active_task: ReadSignal<Option<Task>>,
     set_active_task: WriteSignal<Option<Task>>,
     error_state: ReadSignal<Option<ErrorInfo>>,
@@ -34,12 +36,15 @@ impl ViewModel for TimerViewModel {
 
     fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
+        let (timer_config, set_timer_config) = signal(TimerConfiguration::default());
         let (active_task, set_active_task) = signal(None::<Task>);
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
         let vm = Self {
             timer_state,
             set_timer_state,
+            timer_config,
+            set_timer_config,
             active_task,
             set_active_task,
             error_state,
@@ -92,7 +97,7 @@ impl TimerViewModel {
 
     fn setup_initial_state(
         set_timer_state: WriteSignal<TimerState>,
-        set_active_task: WriteSignal<Option<Task>>,
+        _set_active_task: WriteSignal<Option<Task>>,
         set_error_state: WriteSignal<Option<ErrorInfo>>,
     ) {
         spawn_local(async move {
@@ -103,10 +108,9 @@ impl TimerViewModel {
                     {
                         set_timer_state.set(state.clone());
 
-                        // If there's an active task, fetch its details
-                        if let Some(entity_id) = state.active_entity_id() {
-                            Self::fetch_task_details(entity_id, set_active_task).await;
-                        }
+                        // In the new architecture, there's no global active task
+                        // Each task has its own timer
+                        // TODO: Handle active task differently
                     } else {
                         web_sys::console::error_1(
                             &"Failed to parse initial timer state".into()
@@ -154,15 +158,9 @@ impl TimerViewModel {
                 {
                     set_timer_state.set(state.clone());
 
-                    // When state updates, also fetch the new task details
-                    if let Some(entity_id) = state.active_entity_id() {
-                        let set_active_task_clone = set_active_task.clone();
-                        spawn_local(async move {
-                            TimerViewModel::fetch_task_details(entity_id, set_active_task_clone).await;
-                        });
-                    } else {
-                        set_active_task.set(None);
-                    }
+                    // In the new architecture, there's no global active task
+                    // TODO: Handle active task differently
+                    set_active_task.set(None);
                 }
             });
 
@@ -317,24 +315,23 @@ impl TimerViewModel {
 
     pub fn get_progress_percentage(&self) -> f64 {
         let state = self.timer_state.get();
+        let config = self.timer_config.get();
         let remaining = state.remaining_seconds();
         let total = match &state {
-            TimerState::Working { configuration, .. } => {
-                configuration.get_phase_duration_seconds(Phase::Work)
+            TimerState::Working { .. } => {
+                config.get_phase_duration_seconds(Phase::Work)
             }
-            TimerState::ShortBreak { configuration, .. } => {
-                configuration.get_phase_duration_seconds(Phase::ShortBreak)
+            TimerState::ShortBreak { .. } => {
+                config.get_phase_duration_seconds(Phase::ShortBreak)
             }
-            TimerState::LongBreak { configuration, .. } => {
-                configuration.get_phase_duration_seconds(Phase::LongBreak)
+            TimerState::LongBreak { .. } => {
+                config.get_phase_duration_seconds(Phase::LongBreak)
             }
             TimerState::Paused { paused_from, .. } => {
                 let phase = Self::get_current_phase_static(paused_from);
-                paused_from
-                    .configuration()
-                    .get_phase_duration_seconds(phase)
+                config.get_phase_duration_seconds(phase)
             }
-            TimerState::Idle { .. } => return 0.0,
+            TimerState::Idle => return 0.0,
         };
 
         if total == 0 {
@@ -345,15 +342,17 @@ impl TimerViewModel {
     }
 
     pub fn get_session_display(&self) -> String {
-        let state = self.timer_state.get();
-        let session_count = state.session_count();
-        let sessions_until_long_break =
-            state.configuration().sessions_until_long_break as u32;
-        format!(
-            "Session {}/{}",
-            session_count % sessions_until_long_break + 1,
-            sessions_until_long_break
-        )
+        if let Some(task) = self.active_task.get() {
+            let config = self.timer_config.get();
+            let sessions_until_long_break = config.sessions_until_long_break as u32;
+            format!(
+                "Session {}/{}",
+                (task.current_sessions % sessions_until_long_break as u8) + 1,
+                sessions_until_long_break
+            )
+        } else {
+            "No active task".to_string()
+        }
     }
 
     pub fn get_start_pause_button_text(&self) -> &'static str {
@@ -376,25 +375,32 @@ impl TimerViewModel {
     }
 
     pub fn get_sessions_completed(&self) -> usize {
-        let state = self.timer_state.get();
-        (state.session_count()
-            % state.configuration().sessions_until_long_break as u32)
-            as usize
+        if let Some(task) = self.active_task.get() {
+            let config = self.timer_config.get();
+            (task.current_sessions % config.sessions_until_long_break) as usize
+        } else {
+            0
+        }
     }
 
     pub fn get_today_pomodoros(&self) -> u32 {
-        // This would typically come from a stats service, for now return session count
-        let state = self.timer_state.get();
-        state.session_count()
+        // This would typically come from a stats service, for now return task sessions
+        if let Some(task) = self.active_task.get() {
+            task.current_sessions as u32
+        } else {
+            0
+        }
     }
 
     pub fn get_task_pomodoros(&self) -> u32 {
-        // This would typically track pomodoros for the active task
-        // For now, return a default value
-        0
+        if let Some(task) = self.active_task.get() {
+            task.current_sessions as u32
+        } else {
+            0
+        }
     }
 
     pub fn get_active_entity_id(&self) -> Option<String> {
-        self.timer_state.get().active_entity_id().map(|x| x.to_string())
+        self.active_task.get().map(|task| task.id.to_string())
     }
 }

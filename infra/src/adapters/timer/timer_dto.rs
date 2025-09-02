@@ -3,7 +3,7 @@ use domain::{Result, TimerConfiguration, TimerState};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TimerConfigurationDto {
     pub work_duration: u32,
     pub short_break_duration: u32,
@@ -83,53 +83,37 @@ pub enum TimerStateDto {
 impl From<&TimerState> for TimerStateDto {
     fn from(state: &TimerState) -> Self {
         match state {
-            TimerState::Idle {
-                configuration,
-                session_count,
-                active_entity,
-            } => TimerStateDto::Idle {
-                configuration: configuration.clone().into(),
-                session_count: *session_count,
-                active_entity: active_entity.clone(),
+            TimerState::Idle => TimerStateDto::Idle {
+                configuration: Default::default(),
+                session_count: 0,
+                active_entity: None,
             },
             TimerState::Working {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             } => TimerStateDto::Working {
-                configuration: configuration.clone().into(),
+                configuration: Default::default(),
                 remaining_seconds: *remaining_seconds,
-                session_count: *session_count,
-                active_entity: active_entity.clone(),
-                entity_session_count: *entity_session_count,
+                session_count: 0,
+                active_entity: None,
+                entity_session_count: 0,
             },
             TimerState::ShortBreak {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             } => TimerStateDto::ShortBreak {
-                configuration: configuration.clone().into(),
+                configuration: Default::default(),
                 remaining_seconds: *remaining_seconds,
-                session_count: *session_count,
-                active_entity: active_entity.clone(),
-                entity_session_count: *entity_session_count,
+                session_count: 0,
+                active_entity: None,
+                entity_session_count: 0,
             },
             TimerState::LongBreak {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             } => TimerStateDto::LongBreak {
-                configuration: configuration.clone().into(),
+                configuration: Default::default(),
                 remaining_seconds: *remaining_seconds,
-                session_count: *session_count,
-                active_entity: active_entity.clone(),
-                entity_session_count: *entity_session_count,
+                session_count: 0,
+                active_entity: None,
+                entity_session_count: 0,
             },
             TimerState::Paused {
                 paused_from,
@@ -148,52 +132,25 @@ impl TryFrom<TimerStateDto> for TimerState {
     fn try_from(dto: TimerStateDto) -> Result<Self> {
         let state = match dto {
             TimerStateDto::Idle {
-                configuration,
-                session_count,
-                active_entity,
-            } => TimerState::Idle {
-                configuration: configuration.try_into()?,
-                session_count,
-                active_entity,
-            },
+                ..
+            } => TimerState::Idle,
             TimerStateDto::Working {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
+                ..
             } => TimerState::Working {
-                configuration: configuration.try_into()?,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             },
             TimerStateDto::ShortBreak {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
+                ..
             } => TimerState::ShortBreak {
-                configuration: configuration.try_into()?,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             },
             TimerStateDto::LongBreak {
-                configuration,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
+                ..
             } => TimerState::LongBreak {
-                configuration: configuration.try_into()?,
                 remaining_seconds,
-                session_count,
-                active_entity,
-                entity_session_count,
             },
             TimerStateDto::Paused {
                 paused_from,

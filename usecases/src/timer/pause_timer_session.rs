@@ -1,5 +1,4 @@
-use domain::timer::TimerService;
-use domain::{EventPublisher, Result, TimerStatus, timer::Paused};
+use domain::{EventPublisher, Result, TaskId, TaskRepository, TimerRepository, TimerStatus};
 use std::sync::Arc;
 
 /// Pause or resume a timer session
@@ -18,24 +17,37 @@ use std::sync::Arc;
 /// - TimerService: For timer state management (domain abstraction)
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn pause_timer_session(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    task_id: TaskId,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
-    let new_status = timer_service.toggle_pause().await?;
+    // Get the task
+    let task = task_repo
+        .get_by_id(task_id)
+        .await?
+        .ok_or(domain::Error::TaskNotFound {
+            id: task_id.to_string(),
+        })?;
 
-    // Business logic: Publish Paused event when timer becomes paused
-    if new_status == TimerStatus::Paused {
-        let state = timer_service.get_state().await?;
-        let timer_paused_event = Paused::new(
-            state.active_entity_id(),
-            state.phase(),
-            state.remaining_seconds(),
-            1, // version
-        );
-        event_publisher.publish(Box::new(timer_paused_event));
+    // Get the task's timer
+    let mut timer = timer_repo
+        .get_by_id(task.get_timer_id())
+        .await?
+        .ok_or_else(|| domain::Error::RepositoryError {
+            message: format!("Timer not found for task: {}", task_id),
+        })?;
+
+    // Pause the timer
+    let events = timer.pause()?;
+    timer_repo.save(timer.clone()).await?;
+
+    // Publish events
+    for event in events {
+        event_publisher.publish(event);
     }
 
-    Ok(new_status)
+    Ok(timer.status())
 }
 
 /// Resume a paused timer session
@@ -43,8 +55,35 @@ pub async fn pause_timer_session(
 /// This is an alias for pause_timer_session for better semantic clarity
 /// when the intent is specifically to resume a paused timer.
 pub async fn resume_timer_session(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
-    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    task_id: TaskId,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
-    timer_service.toggle_pause().await
+    // Get the task
+    let task = task_repo
+        .get_by_id(task_id)
+        .await?
+        .ok_or(domain::Error::TaskNotFound {
+            id: task_id.to_string(),
+        })?;
+
+    // Get the task's timer
+    let mut timer = timer_repo
+        .get_by_id(task.get_timer_id())
+        .await?
+        .ok_or_else(|| domain::Error::RepositoryError {
+            message: format!("Timer not found for task: {}", task_id),
+        })?;
+
+    // Resume the timer
+    let events = timer.resume()?;
+    timer_repo.save(timer.clone()).await?;
+
+    // Publish events
+    for event in events {
+        event_publisher.publish(event);
+    }
+
+    Ok(timer.status())
 }

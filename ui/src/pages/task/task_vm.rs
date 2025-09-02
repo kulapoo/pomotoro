@@ -42,6 +42,7 @@ impl TaskDto {
 
         Ok(Task {
             id: task_id,
+            timer_id: domain::TimerId::new(), // Each task needs its own timer
             name: self.name.clone(),
             description: self.description.clone(),
             max_sessions: self.max_sessions,
@@ -164,10 +165,12 @@ impl TasksViewModel {
             if let Ok(result) =
                 invoke_command_no_args(event_names::timer::GET_STATE).await
             {
-                if let Ok(timer_state) = from_value::<TimerState>(result) {
-                    if let Some(entity_id_str) = timer_state.active_entity_id()
+                if let Ok(_timer_state) = from_value::<TimerState>(result) {
+                    // In the new architecture, we don't have active_entity_id
+                    // Skip this for now
+                    if false
                     {
-                        if let Ok(task_id) = TaskId::from_string(&entity_id_str)
+                        if let Ok(task_id) = TaskId::from_string(&"placeholder")
                         {
                             #[derive(serde::Serialize)]
                             struct GetTaskArgs {
@@ -401,9 +404,11 @@ impl TasksViewModel {
                 match invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args_obj.into()).await {
                     Ok(result) => {
                         web_sys::console::log_1(&format!("Switch task result: {:?}", result).into());
-                        if let Ok(timer_state) = from_value::<TimerState>(result) {
-                            if let Some(entity_id_str) = timer_state.active_entity_id() {
-                                if let Ok(active_id) = TaskId::from_string(&entity_id_str) {
+                        if let Ok(_timer_state) = from_value::<TimerState>(result) {
+                            // In the new architecture, switching means working with a specific task's timer
+                            // Use the task_id we just switched to
+                            {
+                                let active_id = task_id;
                                     let task_list = tasks.get_untracked();
                                     let active_task = task_list
                                         .iter()
@@ -412,10 +417,6 @@ impl TasksViewModel {
                                     let task_name = active_task.as_ref().map(|t| t.name.clone());
                                     set_active_task.set(active_task);
                                     web_sys::console::log_1(&format!("Active task set to: {:?}", task_name).into());
-                                }
-                            } else {
-                                set_active_task.set(None);
-                                web_sys::console::log_1(&"No active task after switch".into());
                             }
                         }
                     }
@@ -453,10 +454,12 @@ impl TasksViewModel {
             if let Ok(result) =
                 invoke_command_no_args(event_names::timer::GET_STATE).await
             {
-                if let Ok(timer_state) = from_value::<TimerState>(result) {
-                    if let Some(entity_id_str) = timer_state.active_entity_id()
+                if let Ok(_timer_state) = from_value::<TimerState>(result) {
+                    // In the new architecture, we don't have active_entity_id
+                    // Skip this for now
+                    if false
                     {
-                        if let Ok(task_id) = TaskId::from_string(&entity_id_str)
+                        if let Ok(task_id) = TaskId::from_string(&"placeholder")
                         {
                             let task_list = tasks.get_untracked();
                             let active_task = task_list

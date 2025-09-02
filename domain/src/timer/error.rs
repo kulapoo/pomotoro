@@ -13,6 +13,9 @@ pub enum Error {
 
     #[error("Operation not allowed in current state: {0}")]
     InvalidOperation(String),
+    
+    #[error("Repository error: {message}")]
+    RepositoryError { message: String },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
