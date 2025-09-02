@@ -42,7 +42,6 @@ impl TaskDto {
 
         Ok(Task {
             id: task_id,
-            timer_id: domain::TimerId::new(), // Each task needs its own timer
             name: self.name.clone(),
             description: self.description.clone(),
             max_sessions: self.max_sessions,

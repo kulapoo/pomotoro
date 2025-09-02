@@ -13,7 +13,7 @@ pub use id::Id as TimerId;
 pub use repository::TimerRepository;
 pub use service::TimerService;
 pub use state_machine::TimerState;
-pub use timer::Timer;
+pub use timer::{Timer, DEFAULT_TIMER_ID};
 pub use transitions::{StateTransitions, TransitionResult, TransitionType};
 // Timer-specific value objects
 #[derive(

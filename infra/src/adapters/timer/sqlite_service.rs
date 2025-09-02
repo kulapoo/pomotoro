@@ -10,7 +10,7 @@ use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use chrono::Utc;
 use domain::{
     ConfigRepository, Error, Phase, Result as DomainResult, Task, TaskId,
-    TimerConfiguration, TimerId, TimerState, TimerStatus,
+    TaskRepository, TimerState, TimerStatus,
     timer::{Timer, TimerService},
 };
 
@@ -19,6 +19,7 @@ pub struct SqliteTimerService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     event_publisher: EventPublisherArc,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
+    task_repository: Arc<dyn TaskRepository + Send + Sync>,
     session_history: Arc<Mutex<Vec<SessionHistoryDto>>>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
@@ -30,6 +31,7 @@ impl Clone for SqliteTimerService {
             cancel_handle: Arc::clone(&self.cancel_handle),
             event_publisher: Arc::clone(&self.event_publisher),
             timer_repository: Arc::clone(&self.timer_repository),
+            task_repository: Arc::clone(&self.task_repository),
             session_history: Arc::clone(&self.session_history),
             config_repository: Arc::clone(&self.config_repository),
         }
@@ -40,15 +42,17 @@ impl SqliteTimerService {
     pub fn new(
         event_publisher: EventPublisherArc,
         timer_repository: Arc<dyn TimerRepository + Send + Sync>,
+        task_repository: Arc<dyn TaskRepository + Send + Sync>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
-        let timer = Timer::new(TimerId::new(), TimerConfiguration::default());
+        let timer = Timer::default_timer();
 
         Self {
             timer: Arc::new(Mutex::new(timer)),
             cancel_handle: Arc::new(Mutex::new(None)),
             event_publisher,
             timer_repository,
+            task_repository,
             session_history: Arc::new(Mutex::new(Vec::new())),
             config_repository,
         }
@@ -56,7 +60,7 @@ impl SqliteTimerService {
 
     async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
-        self.timer_repository.save_timer_state(&*timer_guard).await
+        self.timer_repository.save(&*timer_guard).await
             .map_err(|e| Error::RepositoryError { message: e.to_string() })
     }
 
@@ -91,18 +95,16 @@ impl SqliteTimerService {
         &self,
         task: Option<&Task>,
     ) -> Result<(), String> {
-        if let Some(task) = task {
-            let timer_config = task.config.timer.clone();
-
-            self.timer
-                .lock()
-                .await
-                .update_configuration(timer_config)
-                .map_err(|e| e.to_string())?;
-        }
+        // Get configuration from task or default from config repository
+        let config = if let Some(task) = task {
+            task.config.timer.clone()
+        } else {
+            self.config_repository.get_config().await
+                .map_err(|e| e.to_string())?.timer
+        };
 
         let events =
-            self.timer.lock().await.start().map_err(|e| e.to_string())?;
+            self.timer.lock().await.start(&config).map_err(|e| e.to_string())?;
 
         self.event_publisher.publish_batch(events);
 
@@ -116,6 +118,7 @@ impl SqliteTimerService {
 
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
+        let config_clone = config.clone();
         let save_state = {
             let service = self.clone();
             move || {
@@ -139,7 +142,7 @@ impl SqliteTimerService {
                     if !timer.is_running() {
                         false
                     } else {
-                        let continue_running = match timer.tick() {
+                        let continue_running = match timer.tick(&config_clone) {
                             Ok((phase_complete, events)) => {
                                 // Publish the events
                                 if !events.is_empty() {
@@ -187,24 +190,21 @@ impl TimerService for SqliteTimerService {
     }
 
     async fn load_state(&self) -> DomainResult<()> {
-        if let Some(loaded_state) =
-            self.timer_repository.load_timer_state().await
-                .map_err(|e| Error::RepositoryError { message: e.to_string() })?
-        {
-            let mut timer_guard = self.timer.lock().await;
-            let timer_id = timer_guard.id();
-            let configuration = timer_guard.configuration().clone();
-            *timer_guard = Timer::with_state(timer_id, configuration, loaded_state);
-        }
+        let loaded_timer = self.timer_repository.get().await
+            .map_err(|e| Error::RepositoryError { message: e.to_string() })?;
+        
+        let mut timer_guard = self.timer.lock().await;
+        *timer_guard = loaded_timer;
+        
         Ok(())
     }
 
     async fn switch_task(
         &self,
         _task_id: TaskId,
-        task: Option<&Task>,
+        _task: Option<&Task>,
     ) -> DomainResult<()> {
-        let mut timer = self.timer.lock().await;
+        let timer = self.timer.lock().await;
 
         // Only allow switching when timer is idle
         if !timer.state().is_idle() {
@@ -214,15 +214,8 @@ impl TimerService for SqliteTimerService {
             });
         }
 
-        // Update the active entity in the timer state
-        if let Some(task) = task {
-            // Update configuration based on the new task's settings
-            let timer_config = task.config.timer.clone();
-
-            timer.update_configuration(timer_config)?;
-        }
-
-        // Active task is now tracked externally, not in timer
+        // Configuration is now managed by the task itself, not stored in timer
+        // Just verify we can switch
         
         drop(timer);
         self.save_state().await?;
@@ -239,8 +232,9 @@ impl TimerService for SqliteTimerService {
             }
         }
 
+        let config = self.config_repository.get_config().await?.timer;
         let mut timer = self.timer.lock().await;
-        let events = timer.reset()?;
+        let events = timer.reset(&config)?;
         drop(timer);
 
         self.event_publisher.publish_batch(events);
@@ -257,12 +251,13 @@ impl TimerService for SqliteTimerService {
     }
 
     async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
+        let config = self.config_repository.get_config().await?.timer;
         let mut timer = self.timer.lock().await;
         let (status, events) = if timer.is_running() {
-            let events = timer.pause()?;
+            let events = timer.pause(&config)?;
             (TimerStatus::Paused, events)
         } else {
-            let events = timer.resume()?;
+            let events = timer.resume(&config)?;
             (TimerStatus::Running, events)
         };
         drop(timer);
@@ -285,7 +280,7 @@ impl TimerService for SqliteTimerService {
 
     async fn reset_current_phase(
         &self,
-        _task: Option<&Task>,
+        task: Option<&Task>,
     ) -> DomainResult<()> {
         // Cancel the timer task
         {
@@ -295,8 +290,14 @@ impl TimerService for SqliteTimerService {
             }
         }
 
+        let config = if let Some(task) = task {
+            task.config.timer.clone()
+        } else {
+            self.config_repository.get_config().await?.timer
+        };
+        
         let mut timer = self.timer.lock().await;
-        let events = timer.reset()?;
+        let events = timer.reset(&config)?;
         drop(timer);
 
         self.event_publisher.publish_batch(events);
@@ -319,8 +320,14 @@ impl TimerService for SqliteTimerService {
         self.add_session_history(task, old_phase, duration, true)
             .await;
 
+        let config = if let Some(task) = task {
+            task.config.timer.clone()
+        } else {
+            self.config_repository.get_config().await?.timer
+        };
+        
         let mut timer = self.timer.lock().await;
-        let events = timer.skip_phase()?;
+        let events = timer.skip_phase(&config)?;
         let new_phase = timer.state().phase();
         drop(timer);
 

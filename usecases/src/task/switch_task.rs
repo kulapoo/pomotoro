@@ -9,9 +9,8 @@ pub struct SwitchTaskCmd {
     pub task_id: String,
 }
 
-/// Switch to a different task's timer
-/// In the new architecture, each task has its own timer,
-/// so switching tasks means switching which timer is active.
+/// Switch to a different task
+/// Updates the timer's active_task_id to switch which task is active.
 pub async fn switch_task(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
@@ -35,13 +34,8 @@ pub async fn switch_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Check if the task's timer is already running
-    let timer = timer_repo
-        .get_by_id(task.get_timer_id())
-        .await?
-        .ok_or_else(|| Error::RepositoryError {
-            message: format!("Timer not found for task: {}", cmd.task_id),
-        })?;
+    // Get the single timer instance
+    let mut timer = timer_repo.get().await?;
 
     if timer.is_running() {
         return Err(Error::InvalidStateTransition {
@@ -52,8 +46,13 @@ pub async fn switch_task(
 
     cycling_service.validate_task_switch(task_id).await?;
 
+    // Update the timer's active task
+    let previous_task_id = timer.active_task_id();
+    timer.set_active_task(task_id);
+    timer_repo.save(&timer).await?;
+
     let switch_event = TaskSwitchWorkflowCompleted::new(
-        None, // No from_task_id in new architecture
+        previous_task_id,
         task_id,
         format!("Switched to task: {}", task.name),
         1,
@@ -65,24 +64,17 @@ pub async fn switch_task(
 
 pub async fn switch_to_next_task(
     current_task_id: Option<TaskId>,
-    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    _task_repo: Arc<dyn TaskRepository + Send + Sync>,
     cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
 ) -> Result<Option<String>> {
-    // If there's a current task, check its timer isn't running
-    if let Some(task_id) = current_task_id {
-        if let Some(task) = task_repo.get_by_id(task_id).await? {
-            if let Some(timer) =
-                timer_repo.get_by_id(task.get_timer_id()).await?
-            {
-                if timer.is_running() {
-                    return Err(Error::InvalidStateTransition {
-                        from: "Running".to_string(),
-                        to: "NextTaskSwitch".to_string(),
-                    });
-                }
-            }
-        }
+    // Check if the timer is running
+    let timer = timer_repo.get().await?;
+    if timer.is_running() {
+        return Err(Error::InvalidStateTransition {
+            from: "Running".to_string(),
+            to: "NextTaskSwitch".to_string(),
+        });
     }
 
     let next_task = cycling_service

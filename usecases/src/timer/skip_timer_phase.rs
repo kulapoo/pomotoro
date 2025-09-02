@@ -30,7 +30,7 @@ pub async fn skip_timer_phase(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<(Phase, Phase)> {
-    // Get the task
+    // Get the task for its configuration
     let task = task_repo
         .get_by_id(task_id)
         .await?
@@ -38,20 +38,15 @@ pub async fn skip_timer_phase(
             id: task_id.to_string(),
         })?;
 
-    // Get the task's timer
-    let mut timer = timer_repo
-        .get_by_id(task.get_timer_id())
-        .await?
-        .ok_or_else(|| domain::Error::RepositoryError {
-            message: format!("Timer not found for task: {}", task_id),
-        })?;
+    // Get the single timer instance
+    let mut timer = timer_repo.get().await?;
 
     // Store initial state
     let old_phase = timer.get_current_phase();
 
-    // Skip to the next phase
-    let events = timer.skip_phase()?;
-    timer_repo.save(timer.clone()).await?;
+    // Skip to the next phase with task's configuration
+    let events = timer.skip_phase(&task.config.timer)?;
+    timer_repo.save(&timer).await?;
 
     // Get new phase after skip
     let new_phase = timer.get_current_phase();

@@ -19,8 +19,7 @@ pub struct MockTimerService {
 impl MockTimerService {
     pub fn new(initial_state: TimerState) -> Self {
         let timer_id = TimerId::new();
-        let config = TimerConfiguration::default();
-        let timer = Timer::with_state(timer_id, config, initial_state);
+        let timer = Timer::with_state(timer_id, initial_state);
         Self {
             timer: Mutex::new(timer),
             method_calls: Mutex::new(Vec::new()),
@@ -59,8 +58,7 @@ impl MockTimerService {
     pub fn set_state(&self, state: TimerState) {
         let mut timer = self.timer.lock().unwrap();
         let timer_id = timer.id();
-        let config = timer.configuration().clone();
-        *timer = Timer::with_state(timer_id, config, state);
+        *timer = Timer::with_state(timer_id, state);
     }
 
     pub fn current_state(&self) -> TimerState {
@@ -102,17 +100,19 @@ impl TimerService for MockTimerService {
 
         let mut timer = self.timer.lock().unwrap();
         
+        // Get configuration from task or use default
+        let config = if let Some(task) = task {
+            task.config.timer.clone()
+        } else {
+            TimerConfiguration::default()
+        };
+        
         // If timer is already running, reset it first
         if timer.is_running() {
-            timer.reset()?;
+            timer.reset(&config)?;
         }
         
-        // Update configuration if task has specific settings
-        if let Some(task) = task {
-            timer.update_configuration(task.config.timer.clone())?;
-        }
-        
-        timer.start()?;
+        timer.start(&config)?;
         Ok(())
     }
 
@@ -120,7 +120,8 @@ impl TimerService for MockTimerService {
         self.method_calls.lock().unwrap().push("stop_timer".to_string());
         *self.stop_count.lock().unwrap() += 1;
 
-        self.timer.lock().unwrap().reset()?;
+        let config = TimerConfiguration::default();
+        self.timer.lock().unwrap().reset(&config)?;
         Ok(())
     }
 
@@ -129,12 +130,13 @@ impl TimerService for MockTimerService {
         *self.pause_count.lock().unwrap() += 1;
 
         let mut timer = self.timer.lock().unwrap();
+        let config = TimerConfiguration::default();
         
         if timer.is_paused() {
-            timer.resume()?;
+            timer.resume(&config)?;
             Ok(TimerStatus::Running)
         } else if timer.is_running() {
-            timer.pause()?;
+            timer.pause(&config)?;
             Ok(TimerStatus::Paused)
         } else {
             Ok(TimerStatus::Idle)
@@ -145,7 +147,12 @@ impl TimerService for MockTimerService {
         self.method_calls.lock().unwrap().push("reset_current_phase".to_string());
         *self.reset_count.lock().unwrap() += 1;
 
-        self.timer.lock().unwrap().reset()?;
+        let config = if let Some(task) = _task {
+            task.config.timer.clone()
+        } else {
+            TimerConfiguration::default()
+        };
+        self.timer.lock().unwrap().reset(&config)?;
         Ok(())
     }
 
@@ -159,7 +166,13 @@ impl TimerService for MockTimerService {
         let mut timer = self.timer.lock().unwrap();
         let old_phase = timer.get_current_phase();
         
-        timer.skip_phase()?;
+        let config = if let Some(task) = _task {
+            task.config.timer.clone()
+        } else {
+            TimerConfiguration::default()
+        };
+        
+        timer.skip_phase(&config)?;
         
         let new_phase = timer.get_current_phase();
         Ok((old_phase, new_phase))

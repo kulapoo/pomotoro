@@ -58,6 +58,7 @@ impl AppContext {
         let timer_service = Arc::new(SqliteTimerService::new(
             event_bus.clone(),
             timer_repo.clone(),
+            task_repo.clone(),
             config_repo.clone(),
         ));
 
@@ -106,14 +107,12 @@ mod tests {
     async fn repositories_work() {
         let ctx = AppContext::new().await.unwrap();
 
-        // Create a timer first (tasks have foreign key to timers)
-        let timer_id = domain::TimerId::new();
-        let timer = domain::Timer::new(timer_id, domain::TimerConfiguration::default());
-        ctx.timer_repo.create(timer).await.unwrap();
+        // Timer is automatically created/retrieved with default ID
+        let timer = ctx.timer_repo.get().await.unwrap();
+        assert_eq!(timer.id(), domain::DEFAULT_TIMER_ID.clone());
 
-        // Create a task with the same timer_id
-        let mut task = TaskFixtures::simple("Test Task");
-        task.timer_id = timer_id;
+        // Create a task
+        let task = TaskFixtures::simple("Test Task");
         let task_id = task.id();
         ctx.task_repo.create(task).await.unwrap();
 

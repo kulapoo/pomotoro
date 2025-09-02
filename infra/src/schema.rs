@@ -3,7 +3,7 @@
 diesel::table! {
     timers (id) {
         id -> Text,
-        timer_config -> Text,
+        active_task_id -> Nullable<Text>,
         current_phase -> Text,
         remaining_seconds -> Integer,
         is_running -> Bool,
@@ -16,13 +16,13 @@ diesel::table! {
 diesel::table! {
     tasks (id) {
         id -> Text,
-        timer_id -> Text,
         name -> Text,
         description -> Nullable<Text>,
         sessions -> Integer,
         current_sessions -> Integer,
         status -> Text,
         tags -> Nullable<Text>,
+        config -> Text,
         is_default -> Bool,
         created_at -> Text,
         updated_at -> Text,
@@ -48,7 +48,6 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(tasks -> timers (timer_id));
 diesel::joinable!(session_history -> tasks (task_id));
 
 diesel::allow_tables_to_appear_in_same_query!(

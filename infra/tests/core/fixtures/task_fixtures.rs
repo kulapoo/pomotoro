@@ -1,4 +1,4 @@
-use domain::{Task, TaskId, TaskStatus, TimerId};
+use domain::{Task, TaskId, TaskStatus};
 use domain::task::Builder as DomainTaskBuilder;
 
 /// Task fixtures for testing
@@ -7,20 +7,14 @@ pub struct TaskFixtures;
 impl TaskFixtures {
     /// Create a simple task with defaults
     pub fn simple(name: impl Into<String>) -> Task {
-        // Create a timer_id for the task
-        let timer_id = TimerId::new();
         DomainTaskBuilder::with_name_and_sessions(name.into(), 4)
-            .timer_id(timer_id)
             .build()
             .expect("Failed to create task")
     }
 
     /// Create a task with custom sessions
     pub fn with_sessions(name: impl Into<String>, sessions: u8) -> Task {
-        // Create a timer_id for the task
-        let timer_id = TimerId::new();
         DomainTaskBuilder::with_name_and_sessions(name.into(), sessions)
-            .timer_id(timer_id)
             .build()
             .expect("Failed to create task")
     }
@@ -34,20 +28,14 @@ impl TaskFixtures {
 
     /// Create a default task (the one marked as default in the system)
     pub fn default_task() -> Task {
-        // Create a timer_id for the task
-        let timer_id = TimerId::new();
         DomainTaskBuilder::default_task()
-            .timer_id(timer_id)
             .build()
             .expect("Failed to create default task")
     }
 
     /// Create a task with default settings
     pub fn with_defaults(name: impl Into<String>) -> Task {
-        // Create a timer_id for the task
-        let timer_id = TimerId::new();
         DomainTaskBuilder::with_name_and_sessions(name.into(), 4)
-            .timer_id(timer_id)
             .build()
             .expect("Failed to create task with defaults")
     }

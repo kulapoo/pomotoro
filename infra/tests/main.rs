@@ -1,7 +1,7 @@
 // Integration tests for infrastructure layer
 
+mod app;
 mod core;
-// mod app;
 
 // Re-export test utilities for use in test modules
 pub use core::{
@@ -11,4 +11,5 @@ pub use core::{
         AudioFixtures, ConfigFixtures, TaskBuilder, TaskFixtures, TimerFixtures,
     },
     mocks::{MockAudioService, MockTimerService, UiSimulator},
+    utils,
 };

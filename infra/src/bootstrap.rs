@@ -103,6 +103,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         Arc::new(SqliteTimerService::new(
             event_publisher.clone(),
             timer_repository.clone(),
+            task_repository.clone(),
             config_repository.clone(),
         ));
 

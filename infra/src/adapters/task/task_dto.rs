@@ -90,7 +90,6 @@ impl TryFrom<TaskDto> for Task {
 
         Ok(Task {
             id: task_id,
-            timer_id: domain::TimerId::new(),
             name: dto.name,
             description: dto.description,
             max_sessions: dto.max_sessions,

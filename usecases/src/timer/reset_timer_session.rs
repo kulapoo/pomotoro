@@ -21,7 +21,7 @@ pub async fn reset_timer_session(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    // Get the task
+    // Get the task for its configuration
     let task = task_repo
         .get_by_id(task_id)
         .await?
@@ -29,17 +29,12 @@ pub async fn reset_timer_session(
             id: task_id.to_string(),
         })?;
 
-    // Get the task's timer
-    let mut timer = timer_repo
-        .get_by_id(task.get_timer_id())
-        .await?
-        .ok_or_else(|| domain::Error::RepositoryError {
-            message: format!("Timer not found for task: {}", task_id),
-        })?;
+    // Get the single timer instance
+    let mut timer = timer_repo.get().await?;
 
-    // Reset the timer
-    let events = timer.reset()?;
-    timer_repo.save(timer).await?;
+    // Reset the timer with task's configuration
+    let events = timer.reset(&task.config.timer)?;
+    timer_repo.save(&timer).await?;
 
     // Publish events
     for event in events {

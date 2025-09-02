@@ -1,8 +1,12 @@
-use domain::{Result, TaskRepository, ConfigRepository, timer::{Timer, TimerRepository, TimerService}, TimerConfiguration};
 use crate::core::{
     context::AppContext,
     database::TestDatabase,
-    fixtures::{ConfigFixtures, TaskFixtures}, mocks::MockAppHandle,
+    fixtures::{ConfigFixtures, TaskFixtures},
+    mocks::MockAppHandle,
+};
+use domain::{
+    ConfigRepository, Result, TaskRepository, TimerConfiguration,
+    timer::{Timer, TimerRepository, TimerService},
 };
 
 /// Builder for customizing app context creation
@@ -89,12 +93,12 @@ impl AppContextBuilder {
             AppContext::with_name(self.name.as_deref()).await?
         };
 
+        // Ensure the single timer exists (it should be auto-created by the repository)
+        let _ = ctx.timer_repo.get().await?;
+
         // Add default task if requested
         if self.with_default_task {
             let task = TaskFixtures::default_task();
-            // Create timer for the task first
-            let timer = Timer::new(task.get_timer_id(), TimerConfiguration::default());
-            ctx.timer_repo.create(timer).await?;
             ctx.task_repo.create(task).await?;
         }
 
@@ -103,9 +107,6 @@ impl AppContextBuilder {
             let count = self.task_count.unwrap_or(5);
             let tasks = TaskFixtures::collection(count);
             for task in tasks {
-                // Create timer for each task first
-                let timer = Timer::new(task.get_timer_id(), TimerConfiguration::default());
-                ctx.timer_repo.create(timer).await?;
                 ctx.task_repo.create(task).await?;
             }
         }
@@ -118,10 +119,9 @@ impl AppContextBuilder {
 
         // Only switch task if a default task exists
         if let Some(task) = ctx.task_repo.get_default_task().await? {
-            ctx.timer_service.switch_task(
-                task.id(),
-                Some(&task)
-            ).await?;
+            ctx.timer_service
+                .switch_task(task.id(), Some(&task))
+                .await?;
         }
 
         if self.with_timer_started {
@@ -146,10 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn builds_empty_context() {
-        let ctx = AppContextBuilder::new()
-            .build()
-            .await
-            .unwrap();
+        let ctx = AppContextBuilder::new().build().await.unwrap();
 
         let tasks = ctx.task_repo.get_all().await.unwrap();
         assert!(tasks.is_empty());

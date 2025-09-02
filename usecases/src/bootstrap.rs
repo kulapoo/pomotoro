@@ -9,7 +9,7 @@ use crate::{task::{create_task, CreateTaskCmd}, timer::switch_timer_task};
 pub async fn bootstrap(
     timer_service: Arc<dyn TimerService + Send + Sync>,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
+    _timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // let _default_task = if let Some(task) = task_repo.get_default_task().await? {
@@ -36,7 +36,6 @@ pub async fn bootstrap(
         };
         create_task(
             task_repo.clone(),
-            timer_repo.clone(),
             event_publisher.clone(),
             cmd
         ).await?

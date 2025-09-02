@@ -11,13 +11,13 @@ pub struct StartTimerSessionCmd {
 
 /// Start a timer session for a specific task
 ///
-/// In the new architecture, each task has its own timer,
-/// so we start the timer associated with the specific task.
+/// Sets the active task on the timer and starts it using
+/// the task's configuration.
 ///
 /// ## Business Rules
 ///
 /// - Task must exist and not be completed
-/// - Task's timer must not already be running
+/// - Timer must not already be running
 ///
 /// ## Dependencies
 ///
@@ -54,13 +54,8 @@ pub async fn start_timer_session(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Get the task's timer
-    let mut timer = timer_repo
-        .get_by_id(task.get_timer_id())
-        .await?
-        .ok_or_else(|| Error::RepositoryError {
-            message: format!("Timer not found for task: {}", task.name),
-        })?;
+    // Get the single timer instance
+    let mut timer = timer_repo.get().await?;
 
     // Check if timer is already running
     if timer.is_running() {
@@ -70,9 +65,12 @@ pub async fn start_timer_session(
         });
     }
 
-    // Start the timer
-    let events = timer.start()?;
-    timer_repo.save(timer.clone()).await?;
+    // Set the active task on the timer
+    timer.set_active_task(task_id);
+
+    // Start the timer with the task's configuration
+    let events = timer.start(&task.config.timer)?;
+    timer_repo.save(&timer).await?;
 
     // Publish events
     for event in events {

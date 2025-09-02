@@ -27,7 +27,7 @@ pub use timer::{
     Started as TimerStarted, StateTransitions, Status as TimerStatus,
     StatusChanged as TimerStatusChanged, Tick as TimerTick, Timer, TimerId,
     TimerRepository, TimerState, TransitionResult, TransitionType,
-    WorkSessionCompleted, WorkSessionStarted,
+    WorkSessionCompleted, WorkSessionStarted, DEFAULT_TIMER_ID,
 };
 
 pub use config::{

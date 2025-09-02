@@ -3,22 +3,52 @@
 ## Overview
 This document defines the integration testing strategy for the Pomotoro MVP using Test-Driven Development (TDD). Each test is designed to be small, focused, and build upon previous tests to create a comprehensive test suite.
 
+## Domain Model Overview
+
+### Core Entities
+
+#### Task
+- **ID**: Unique identifier (UUID)
+- **Title**: Task name
+- **Description**: Optional details
+- **Status**: Pending | InProgress | Completed | Archived
+- **Priority**: Integer priority level
+- **Sessions Completed**: Counter for pomodoro sessions
+- **Tags**: List of categorization tags
+- **Timer Settings**: Optional custom durations
+- **Timestamps**: Created/Updated timestamps
+
+#### Timer
+- **ID**: Unique timer identifier  
+- **State**: Idle | Running | Paused | Stopped
+- **Phase**: Work | ShortBreak | LongBreak
+- **Task ID**: Optional reference to active task
+- **Remaining Seconds**: Time left in current phase
+- **Sessions Completed**: Total work sessions
+- **Settings**: Duration configurations
+
+#### Configuration
+- **Task Defaults**: Default work/break durations
+- **General Settings**: Theme, language, etc.
+- **Audio Settings**: Volume, sound preferences
+- **Timer Behavior**: Auto-start breaks, notifications
+
 ## MVP Feature Checklist (Progress Tracking)
 
 Track your implementation progress by checking off completed features:
 
-- [ ] **Timer Core** - Basic start/pause/reset functionality
-- [ ] **Timer Phases** - Work/Break phase transitions  
-- [ ] **Timer Tick** - Real-time countdown mechanism
-- [ ] **Task Creation** - Basic CRUD operations
-- [ ] **Task Status** - State transitions (pending/in-progress/completed)
-- [ ] **Timer-Task Integration** - Active task during timer sessions
-- [ ] **Session Tracking** - Complete work sessions counter
-- [ ] **Configuration** - Basic timer and app settings
-- [ ] **Task Queue** - Multiple task management
-- [ ] **Task Cycling** - Auto-switch between tasks
-- [ ] **Persistence** - Save/restore state across restarts
-- [ ] **Events** - Domain event publishing and handling
+- [x] **Timer Core** - Basic start/pause/reset functionality (Implemented in `domain::timer`)
+- [x] **Timer Phases** - Work/ShortBreak/LongBreak phase transitions (Implemented)
+- [x] **Timer State Machine** - Full state transitions with Idle/Running/Paused/Stopped states
+- [x] **Task Creation** - Full CRUD operations with builder pattern
+- [x] **Task Status** - State transitions (Pending/InProgress/Completed/Archived)
+- [x] **Timer-Task Integration** - Active task during timer sessions with switching
+- [x] **Session Tracking** - Complete work sessions counter per task
+- [x] **Configuration** - Timer settings, task defaults, general and audio config
+- [x] **Task Queue** - Multiple task management with priority support
+- [x] **Task Cycling** - Sequential and incomplete task cycling strategies
+- [x] **Persistence** - SQLite repositories for tasks, timers, and config
+- [x] **Events** - Full domain event system with EventBus
 
 ## TDD Process Guide
 
@@ -31,49 +61,46 @@ For each test, follow the Red-Green-Refactor cycle:
 
 ## Test Infrastructure Setup
 
-```pseudo
-// Test Context Builder
-setup_test_context():
-    db = create_in_memory_sqlite()
-    event_bus = MemEventBus::new()
+```rust
+// Test Context Builder (located in infra/tests/core/context)
+use infra::tests::core::context::{AppContext, Builder};
+
+async fn setup_test_context() -> AppContext {
+    let builder = Builder::new()
+        .with_in_memory_db()
+        .with_mock_audio_service()
+        .with_mock_ui_handle();
     
-    // Repositories
-    task_repo = SqliteTaskRepository::new(db)
-    config_repo = SqliteConfigRepository::new(db)
-    timer_repo = SqliteTimerRepository::new(db)
-    
-    // Services
-    timer_service = TimerService::new(timer_repo)
-    task_cycler = TaskCyclerService::new(task_repo)
-    audio_service = MockAudioService::new()
-    
-    // Use Cases
-    bootstrap_usecases(repos, services, event_bus)
-    
-    return TestContext {
-        db, repos, services, usecases, event_bus
-    }
+    builder.build().await
+}
 
-// Test Helper Functions
-create_test_task(title, status = "pending"):
-    return Task::builder()
-        .title(title)
-        .status(status)
-        .build()
+// Test Helper Functions (actual implementation)
+fn create_test_task(ctx: &AppContext, title: &str) -> Task {
+    let cmd = CreateTaskCmd {
+        title: title.to_string(),
+        description: None,
+        tags: vec![],
+        priority: 0,
+        work_duration: None,
+        short_break_duration: None,
+        long_break_duration: None,
+    };
+    create_task(ctx.deps(), cmd).await.unwrap()
+}
 
-start_timer_with_task(context, task_id):
-    context.usecases.start_timer.execute(task_id)
+async fn start_timer_with_task(ctx: &AppContext, task_id: TaskId) {
+    let cmd = StartTimerSessionCmd { task_id: Some(task_id) };
+    start_timer_session(ctx.deps(), cmd).await.unwrap();
+}
 
-advance_time_by(context, seconds):
-    for i in 0..seconds:
-        context.timer_service.tick()
+fn assert_event_published(ctx: &AppContext, event_name: &str) {
+    let events = ctx.event_bus().get_published_events();
+    assert!(events.iter().any(|e| e.name == event_name));
+}
 
-assert_event_published(context, event_type):
-    events = context.event_bus.get_published_events()
-    assert events.contains(event_type)
-
-get_timer_state(context):
-    return context.usecases.get_timer_state.execute()
+async fn get_timer_state(ctx: &AppContext) -> TimerState {
+    get_timer_state(ctx.deps()).await.unwrap()
+}
 ```
 
 ---
@@ -82,32 +109,41 @@ get_timer_state(context):
 *Goal: Establish basic timer functionality*
 
 ### Test 1: Timer initializes in idle state
-```pseudo
-TEST: "timer_should_initialize_in_idle_state"
-GIVEN: 
-    context = setup_test_context()
-WHEN:  
-    state = get_timer_state(context)
-THEN:  
-    assert state.status == TimerStatus::Idle
-    assert state.phase == Phase::Work
-    assert state.duration == 25 * 60  // 25 minutes default
+```rust
+#[tokio::test]
+async fn timer_should_initialize_in_idle_state() {
+    // GIVEN
+    let ctx = setup_test_context().await;
+    
+    // WHEN
+    let state = get_timer_state(&ctx).await;
+    
+    // THEN
+    assert_eq!(state.status, Status::Idle);
+    assert_eq!(state.phase, Phase::Work);
+    assert_eq!(state.remaining_seconds, 25 * 60); // 25 minutes default
+}
 ```
 
 ### Test 2: Timer can start from idle
-```pseudo
-TEST: "timer_should_start_from_idle_state"
-GIVEN: 
-    context = setup_test_context()
-    initial_state = get_timer_state(context)
-    assert initial_state.status == TimerStatus::Idle
-WHEN:  
-    result = context.usecases.start_timer.execute(None)
-THEN:  
-    assert result.is_ok()
-    state = get_timer_state(context)
-    assert state.status == TimerStatus::Running
-    assert_event_published(context, "TimerStarted")
+```rust
+#[tokio::test]
+async fn timer_should_start_from_idle_state() {
+    // GIVEN
+    let ctx = setup_test_context().await;
+    let initial_state = get_timer_state(&ctx).await;
+    assert_eq!(initial_state.status, Status::Idle);
+    
+    // WHEN
+    let cmd = StartTimerSessionCmd { task_id: None };
+    let result = start_timer_session(ctx.deps(), cmd).await;
+    
+    // THEN
+    assert!(result.is_ok());
+    let state = get_timer_state(&ctx).await;
+    assert_eq!(state.status, Status::Running);
+    assert_event_published(&ctx, "TimerStarted");
+}
 ```
 
 ### Test 3: Timer cannot start when already running
@@ -776,18 +812,29 @@ THEN:
 3. **Integration Last**: Phase 5 tests verify everything works together
 
 ### Running Tests
-```pseudo
-// Run all tests
-cargo test --package infra --test integration
+```bash
+# Run all tests
+cargo test
 
-// Run specific phase
-cargo test --package infra --test integration phase_1
+# Run integration tests only
+cargo test --test '*' 
 
-// Run with verbose output
-cargo test --package infra --test integration -- --nocapture
+# Run tests in a specific package
+cargo test --package infra
+cargo test --package domain
+cargo test --package usecases
 
-// Run single test
-cargo test --package infra --test integration test_1
+# Run with verbose output
+cargo test -- --nocapture
+
+# Run a specific test by name
+cargo test timer_should_initialize_in_idle_state
+
+# Run tests matching a pattern
+cargo test timer_
+
+# Run with specific number of test threads
+cargo test -- --test-threads=1
 ```
 
 ### Debugging Failed Tests
@@ -807,12 +854,40 @@ Each test should:
 - ✅ Clean up after itself
 - ✅ Run quickly (< 100ms per test)
 
+## Current Implementation Structure
+
+### Domain Layer (`domain/src/`)
+- **Task Module**: Task entity with builder pattern, status management, session tracking
+- **Timer Module**: Timer state machine, phase transitions, timer service
+- **Config Module**: Configuration management for app settings
+- **Events**: Full domain event system with typed events
+- **Shared Kernel**: Common types, errors, and value objects
+
+### Use Cases Layer (`usecases/src/`)
+- **Task Use Cases**: create, update, delete, search, cycle, queue management
+- **Timer Use Cases**: start, pause, reset, skip phase, switch task
+- **Config Use Cases**: get, update, reset configuration
+
+### Infrastructure Layer (`infra/src/`)
+- **Repositories**: SQLite implementations for Task, Timer, Config
+- **Adapters**: Audio service, task cycling service, UI integration
+- **Database**: Diesel ORM with migrations, connection pooling
+- **Bootstrap**: Application initialization and dependency injection
+
+### Test Infrastructure (`infra/tests/core/`)
+- **Context**: AppContext builder for test setup
+- **Mocks**: MockAudioService, MockUIHandle, MockTimerService
+- **Database**: In-memory SQLite for testing
+- **Fixtures**: Test data builders and helpers
+
 ## Next Steps After MVP
 
-Once all 30 tests pass:
-1. Add audio integration tests
-2. Add notification system tests
-3. Add import/export functionality tests
-4. Add concurrent user scenario tests
-5. Add error recovery tests
-6. Add performance/stress tests
+Once all integration tests pass:
+1. Complete UI implementation with Tauri
+2. Add audio integration with background music
+3. Add notification system for phase changes
+4. Add statistics and reporting features
+5. Add import/export functionality
+6. Add keyboard shortcuts and global hotkeys
+7. Add theme customization
+8. Add cloud sync capabilities

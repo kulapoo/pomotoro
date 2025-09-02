@@ -47,7 +47,6 @@ async fn timer_should_start_from_idle_state() {
     // Create a task
     let task = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Start Test Task".to_string(),
@@ -96,24 +95,17 @@ async fn timer_should_start_from_idle_state() {
 
     assert!(event_bus.has_event_type(TypeId::of::<TimerStarted>()));
     
-    // Get the task's timer directly from the repository
-    let task_from_repo = ctx.task_repo
-        .get_by_id(task.id)
-        .await
-        .expect("Failed to get task")
-        .expect("Task should exist");
-    
+    // Get the timer directly from the repository
     let timer = ctx.timer_repo
-        .get_by_id(task_from_repo.get_timer_id())
+        .get()
         .await
-        .expect("Failed to get timer")
-        .expect("Timer should exist");
+        .expect("Failed to get timer");
     
     assert!(timer.is_running(), "Timer should be running");
     assert_eq!(timer.state().status(), TimerStatus::Running);
     assert_eq!(
-        timer.state().active_entity_id(),
-        Some(task.id.to_string()),
+        timer.active_task_id(),
+        Some(task.id),
         "Timer should be associated with the task"
     );
 }
@@ -129,7 +121,6 @@ async fn timer_should_not_start_when_already_running() {
     // Create a task and start timer with it
     let task = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Running Task".to_string(),
@@ -190,7 +181,6 @@ async fn should_prevent_task_switch_while_timer_is_running() {
     // Create first task
     let task1 = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task 1".to_string(),
@@ -205,7 +195,6 @@ async fn should_prevent_task_switch_while_timer_is_running() {
     // Create second task  
     let task2 = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task 2".to_string(),
@@ -273,7 +262,6 @@ async fn timer_should_pause_when_running() {
     // Create a task to work with
     let task = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task to Pause".to_string(),
@@ -349,7 +337,6 @@ async fn timer_should_reset_to_initial_state() {
     // Create a task
     let task = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Task to Reset".to_string(),
@@ -436,7 +423,6 @@ async fn timer_state_should_persist_across_restarts() {
         // Create a task to associate with the timer
         let task = create_task(
             first_ctx.task_repo.clone(),
-            first_ctx.timer_repo.clone(),
             first_ctx.event_bus.clone(),
             CreateTaskCmd {
                 name: "Persistent Task".to_string(),
@@ -500,6 +486,7 @@ async fn timer_state_should_persist_across_restarts() {
     let timer_service = Arc::new(SqliteTimerService::new(
         event_bus.clone(),
         timer_repo.clone(),
+        task_repo.clone(),
         config_repo.clone(),
     ));
 
@@ -576,7 +563,6 @@ async fn should_start_timer_with_specific_task() {
     // Create a specific task for testing
     let created_task = usecases::create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         usecases::CreateTaskCmd {
             name: "Test Task for Timer".to_string(),
@@ -609,12 +595,11 @@ async fn should_start_timer_with_specific_task() {
         .await
         .expect("Failed to get timer state");
 
-    // Get the timer directly from the repository instead of the service
+    // Get the timer directly from the repository
     let timer = ctx.timer_repo
-        .get_by_id(created_task.get_timer_id())
+        .get()
         .await
-        .expect("Failed to get timer from repository")
-        .expect("Timer should exist");
+        .expect("Failed to get timer from repository");
     
     assert!(timer.is_running(), "Timer should be running");
     assert_eq!(timer.state().status(), TimerStatus::Running);
@@ -652,7 +637,6 @@ async fn should_switch_active_task_while_timer_is_idle() {
     // Create first task
     let task1 = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "First Task".to_string(),
@@ -667,7 +651,6 @@ async fn should_switch_active_task_while_timer_is_idle() {
     // Create second task
     let task2 = create_task(
         ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: "Second Task".to_string(),

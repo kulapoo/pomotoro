@@ -1,4 +1,6 @@
-use domain::{Error, Result as DomainResult, TimerState};
+use async_trait::async_trait;
+use domain::{Timer, TimerRepository};
+use domain::timer::{Error, Result as DomainResult};
 use std::path::PathBuf;
 
 /// Repository for persisting timer state to file system
@@ -31,54 +33,58 @@ impl FileTimerStateRepository {
 
         Ok(app_data_dir.join("timer_state.json"))
     }
+}
 
-    /// Save timer state to persistent storage
-    pub async fn save_state(&self, state: &TimerState) -> DomainResult<()> {
-        let state_path = self
-            .get_state_file_path()
-            .await
-            .map_err(|e| Error::RepositoryError { message: e })?;
-
-        let json = serde_json::to_string_pretty(state).map_err(|e| {
-            Error::RepositoryError {
-                message: format!("Failed to serialize state: {e}"),
-            }
-        })?;
-
-        tokio::fs::write(state_path, json).await.map_err(|e| {
-            Error::RepositoryError {
-                message: format!("Failed to write state file: {e}"),
-            }
-        })?;
-
-        Ok(())
-    }
-
-    /// Load timer state from persistent storage
-    pub async fn load_state(&self) -> DomainResult<Option<TimerState>> {
+#[async_trait]
+impl TimerRepository for FileTimerStateRepository {
+    async fn get(&self) -> DomainResult<Timer> {
         let state_path = self
             .get_state_file_path()
             .await
             .map_err(|e| Error::RepositoryError { message: e })?;
 
         if !state_path.exists() {
-            return Ok(None);
+            // Return default timer if file doesn't exist
+            let timer = Timer::default_timer();
+            self.save(&timer).await?;
+            return Ok(timer);
         }
 
         let json =
             tokio::fs::read_to_string(state_path).await.map_err(|e| {
                 Error::RepositoryError {
-                    message: format!("Failed to read state file: {e}"),
+                    message: format!("Failed to read timer file: {e}"),
                 }
             })?;
 
-        let saved_state: TimerState =
+        let timer: Timer =
             serde_json::from_str(&json).map_err(|e| {
                 Error::RepositoryError {
-                    message: format!("Failed to deserialize state: {e}"),
+                    message: format!("Failed to deserialize timer: {e}"),
                 }
             })?;
 
-        Ok(Some(saved_state))
+        Ok(timer)
+    }
+
+    async fn save(&self, timer: &Timer) -> DomainResult<()> {
+        let state_path = self
+            .get_state_file_path()
+            .await
+            .map_err(|e| Error::RepositoryError { message: e })?;
+
+        let json = serde_json::to_string_pretty(timer).map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to serialize timer: {e}"),
+            }
+        })?;
+
+        tokio::fs::write(state_path, json).await.map_err(|e| {
+            Error::RepositoryError {
+                message: format!("Failed to write timer file: {e}"),
+            }
+        })?;
+
+        Ok(())
     }
 }

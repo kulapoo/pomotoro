@@ -1,8 +1,10 @@
-use domain::{Error, Event, Phase, TaskId, TimerId, TaskRepository, TimerRepository, Result};
+use domain::{
+    Error, Event, Phase, Result, TaskId, TaskRepository,
+    TimerRepository,
+};
 
 pub struct CompleteWorkSessionRequest {
     pub task_id: TaskId,
-    pub timer_id: TimerId,
 }
 
 pub async fn execute(
@@ -10,35 +12,31 @@ pub async fn execute(
     timer_repo: &dyn TimerRepository,
     request: CompleteWorkSessionRequest,
 ) -> Result<Vec<Box<dyn Event>>> {
-    let mut task = task_repo
-        .get_by_id(request.task_id)
-        .await?
-        .ok_or_else(|| Error::TaskNotFound {
-            id: request.task_id.to_string()
+    let mut task =
+        task_repo.get_by_id(request.task_id).await?.ok_or_else(|| {
+            Error::TaskNotFound {
+                id: request.task_id.to_string(),
+            }
         })?;
 
-    let mut timer = timer_repo
-        .get_by_id(request.timer_id)
-        .await?
-        .ok_or_else(|| Error::RepositoryError {
-            message: format!("Timer not found: {}", request.timer_id)
-        })?;
+    // Get the single timer instance
+    let mut timer = timer_repo.get().await?;
 
     task.increment_session()?;
-    
-    let next_phase = determine_next_break_type(&task, &timer);
-    
-    let events = timer.complete_phase(next_phase)?;
-    
+
+    let next_phase = determine_next_break_type(&task);
+
+    let events = timer.complete_phase(next_phase, &task.config.timer)?;
+
     task_repo.update(task).await?;
-    timer_repo.save(timer).await?;
-    
+    timer_repo.save(&timer).await?;
+
     Ok(events)
 }
 
-fn determine_next_break_type(task: &domain::Task, timer: &domain::Timer) -> Phase {
-    let sessions_until_long = timer.configuration().sessions_until_long_break as u8;
-    
+fn determine_next_break_type(task: &domain::Task) -> Phase {
+    let sessions_until_long = task.config.timer.sessions_until_long_break;
+
     if task.current_sessions % sessions_until_long == 0 {
         Phase::LongBreak
     } else {
@@ -49,14 +47,12 @@ fn determine_next_break_type(task: &domain::Task, timer: &domain::Timer) -> Phas
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::{Timer, TimerConfiguration, TaskBuilder, Config};
-    use std::time::Duration;
+    use domain::{Config, TaskBuilder};
 
     #[test]
     fn should_determine_short_break_after_first_session() {
         let task = TaskBuilder::new()
             .id(TaskId::new())
-            .timer_id(TimerId::new())
             .name("Test Task".to_string())
             .max_sessions(8)
             .current_sessions(1)
@@ -64,16 +60,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let config = TimerConfiguration {
-            work_duration: Duration::from_secs(25 * 60),
-            short_break_duration: Duration::from_secs(5 * 60),
-            long_break_duration: Duration::from_secs(15 * 60),
-            sessions_until_long_break: 4,
-        };
-        
-        let timer = Timer::new(TimerId::new(), config);
-        
-        let next_phase = determine_next_break_type(&task, &timer);
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = determine_next_break_type(&task);
         assert_eq!(next_phase, Phase::ShortBreak);
     }
 
@@ -81,7 +70,6 @@ mod tests {
     fn should_determine_long_break_after_fourth_session() {
         let task = TaskBuilder::new()
             .id(TaskId::new())
-            .timer_id(TimerId::new())
             .name("Test Task".to_string())
             .max_sessions(8)
             .current_sessions(4)
@@ -89,16 +77,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let config = TimerConfiguration {
-            work_duration: Duration::from_secs(25 * 60),
-            short_break_duration: Duration::from_secs(5 * 60),
-            long_break_duration: Duration::from_secs(15 * 60),
-            sessions_until_long_break: 4,
-        };
-        
-        let timer = Timer::new(TimerId::new(), config);
-        
-        let next_phase = determine_next_break_type(&task, &timer);
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = determine_next_break_type(&task);
         assert_eq!(next_phase, Phase::LongBreak);
     }
 
@@ -106,7 +87,6 @@ mod tests {
     fn should_cycle_back_to_short_break_after_long_break() {
         let task = TaskBuilder::new()
             .id(TaskId::new())
-            .timer_id(TimerId::new())
             .name("Test Task".to_string())
             .max_sessions(10)
             .current_sessions(5)
@@ -114,16 +94,9 @@ mod tests {
             .build()
             .unwrap();
 
-        let config = TimerConfiguration {
-            work_duration: Duration::from_secs(25 * 60),
-            short_break_duration: Duration::from_secs(5 * 60),
-            long_break_duration: Duration::from_secs(15 * 60),
-            sessions_until_long_break: 4,
-        };
-        
-        let timer = Timer::new(TimerId::new(), config);
-        
-        let next_phase = determine_next_break_type(&task, &timer);
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = determine_next_break_type(&task);
         assert_eq!(next_phase, Phase::ShortBreak);
     }
 }

@@ -11,7 +11,9 @@
       "WebSearch",
       "WebFetch(domain:burntsushi.net)",
       "Bash(mkdir:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(just test:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": [],

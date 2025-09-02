@@ -2,12 +2,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result, TimerId};
+use crate::{Config, Error, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: Id,
-    pub timer_id: TimerId,
     pub name: String,
     pub description: Option<String>,
     pub max_sessions: u8,
@@ -25,9 +24,6 @@ impl Task {
         self.id
     }
 
-    pub fn get_timer_id(&self) -> TimerId {
-        self.timer_id
-    }
 
     pub fn new_default() -> Result<Self> {
         use super::builder::Builder;
@@ -150,7 +146,6 @@ mod tests {
     fn create_test_task() -> Task {
         TaskBuilder::new()
             .id(Id::new())
-            .timer_id(TimerId::new())
             .name("Test Task".to_string())
             .description("Test description".to_string())
             .max_sessions(5)
