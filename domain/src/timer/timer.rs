@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 
 /// The single default timer ID used throughout the application
 pub static DEFAULT_TIMER_ID: Lazy<TimerId> = Lazy::new(|| {
-    TimerId::from_string("default-timer-001").expect("Failed to create default timer ID")
+    TimerId::from_string("00000000-0000-0000-0000-000000000001").expect("Failed to create default timer ID")
 });
 
 #[derive(Serialize, Deserialize, Clone)]

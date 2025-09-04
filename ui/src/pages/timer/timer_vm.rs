@@ -92,6 +92,7 @@ impl TimerViewModel {
             Self::setup_initial_state(set_timer_state, set_active_task, set_error_state);
             Self::setup_timer_tick_listener(set_timer_state);
             Self::setup_timer_state_updated_listener(set_timer_state, set_active_task);
+            Self::setup_phase_event_listeners(set_timer_state, set_active_task);
         });
     }
 
@@ -108,9 +109,8 @@ impl TimerViewModel {
                     {
                         set_timer_state.set(state.clone());
 
-                        // In the new architecture, there's no global active task
-                        // Each task has its own timer
-                        // TODO: Handle active task differently
+                        // Active task should be managed at the application level
+                        // The timer state represents the current timer session
                     } else {
                         web_sys::console::error_1(
                             &"Failed to parse initial timer state".into()
@@ -147,7 +147,7 @@ impl TimerViewModel {
         });
     }
 
-    fn setup_timer_state_updated_listener(set_timer_state: WriteSignal<TimerState>, set_active_task: WriteSignal<Option<Task>>) {
+    fn setup_timer_state_updated_listener(set_timer_state: WriteSignal<TimerState>, _set_active_task: WriteSignal<Option<Task>>) {
         spawn_local(async move {
             let callback = Closure::new(move |event: JsValue| {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
@@ -158,14 +158,79 @@ impl TimerViewModel {
                 {
                     set_timer_state.set(state.clone());
 
-                    // In the new architecture, there's no global active task
-                    // TODO: Handle active task differently
-                    set_active_task.set(None);
+                    // Timer state update may include current task info
+                    // The task info should come from the timer state or a separate query
+                    // For now, keep the active task as it was
                 }
             });
 
             listen(timer_event_names::STATE_UPDATED, &callback).await;
 
+            callback.forget();
+        });
+    }
+
+    fn setup_phase_event_listeners(set_timer_state: WriteSignal<TimerState>, _set_active_task: WriteSignal<Option<Task>>) {
+        // Listen for phase completed events
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                // Log phase completion for debugging
+                web_sys::console::log_1(
+                    &format!("Phase completed event received: {:?}", payload).into()
+                );
+                
+                // Update timer state if provided in the event
+                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                    set_timer_state.set(state);
+                }
+            });
+
+            listen(timer_event_names::PHASE_COMPLETED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for phase skipped events
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                // Log phase skip for debugging
+                web_sys::console::log_1(
+                    &format!("Phase skipped event received: {:?}", payload).into()
+                );
+                
+                // Update timer state if provided in the event
+                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                    set_timer_state.set(state);
+                }
+            });
+
+            listen(timer_event_names::PHASE_SKIPPED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for status changed events
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                // Log status change for debugging
+                web_sys::console::log_1(
+                    &format!("Timer status changed: {:?}", payload).into()
+                );
+                
+                // Update timer state if provided in the event
+                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                    set_timer_state.set(state);
+                }
+            });
+
+            listen(timer_event_names::STATUS_CHANGED, &callback).await;
             callback.forget();
         });
     }

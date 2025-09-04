@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
 use domain::{
-    shared_kernel::events::AppStarted, timer::TimerService, EventPublisher, Result, TaskRepository, TimerRepository
+    EventPublisher, Result, TaskRepository, TimerRepository,
+    shared_kernel::events::AppStarted, timer::TimerService,
 };
 
-use crate::{task::{create_task, CreateTaskCmd}, timer::switch_timer_task};
+use crate::{
+    task::{CreateTaskCmd, create_task},
+    timer::switch_timer_task,
+};
 
 pub async fn bootstrap(
     timer_service: Arc<dyn TimerService + Send + Sync>,
@@ -12,19 +16,6 @@ pub async fn bootstrap(
     _timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    // let _default_task = if let Some(task) = task_repo.get_default_task().await? {
-    //     task
-    // } else {
-    //     let task = domain::Task::new("Default Task".to_string(), 4)
-    //         .map_err(|e| Error::TaskCreationError {
-    //             message: e.to_string(),
-    //         })?
-    //         .with_default(true);
-
-    //     task_repo.create(task.clone()).await?;
-    //     task
-    // };
-
     let task = if let Some(task) = task_repo.get_default_task().await? {
         task
     } else {
@@ -34,27 +25,17 @@ pub async fn bootstrap(
             max_sessions: 8,
             tags: vec![],
         };
-        create_task(
-            task_repo.clone(),
-            event_publisher.clone(),
-            cmd
-        ).await?
+        create_task(task_repo.clone(), event_publisher.clone(), cmd).await?
     };
 
-    timer_service
-        .load_state()
-        .await?;
+    timer_service.load_state().await?;
 
     // Check timer state and reset if not idle before switching tasks
-    let timer_state = timer_service
-        .get_state()
-        .await?;
+    let timer_state = timer_service.get_state().await?;
 
     if !timer_state.is_idle() {
         // Reset timer to idle state to allow task switching
-        timer_service
-            .stop_timer()
-            .await?;
+        timer_service.stop_timer().await?;
     }
 
     switch_timer_task(

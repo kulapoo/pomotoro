@@ -57,7 +57,7 @@ impl AppContextBuilder {
     pub fn with_standard_fixtures(mut self) -> Self {
         self.with_default_task = true;
         self.with_default_config = true;
-        self.with_task_fixtures = true;
+        self.with_default_task = true;
         self.task_count = Some(5);
         self
     }

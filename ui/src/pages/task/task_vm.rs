@@ -1,11 +1,23 @@
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 use domain::{Task, TaskId, TimerState, event_names, TaskStatus, Config};
+use domain::event_names::ui_listeners::task as task_event_names;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::{from_value, to_value};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
+use js_sys;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
+    async fn listen(
+        event: &str,
+        callback: &Closure<dyn Fn(JsValue)>,
+    ) -> JsValue;
+}
 
 // DTO to match backend's TaskDto
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,6 +125,7 @@ impl ViewModel for TasksViewModel {
         };
 
         vm.load_initial_data();
+        vm.setup_event_listeners();
         vm
     }
 
@@ -141,6 +154,83 @@ async fn refetch_all_tasks(set_tasks: WriteSignal<Vec<Task>>, command: &str) {
 }
 
 impl TasksViewModel {
+    fn setup_event_listeners(&self) {
+        let set_tasks = self.set_tasks;
+        let set_active_task = self.set_active_task;
+
+        // Listen for task list updates
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("Task list updated event received: {:?}", payload).into()
+                );
+
+                // Refetch all tasks when list is updated
+                let set_tasks_clone = set_tasks;
+                spawn_local(async move {
+                    refetch_all_tasks(set_tasks_clone, event_names::task::GET_ALL).await;
+                });
+            });
+
+            listen(task_event_names::LIST_UPDATED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for active task changes
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("Active task changed event received: {:?}", payload).into()
+                );
+
+                // Try to parse the new active task from the event
+                if let Ok(task_dto) = from_value::<TaskDto>(payload.clone()) {
+                    if let Ok(task) = task_dto.to_task() {
+                        set_active_task.set(Some(task));
+                    }
+                } else if let Ok(task) = from_value::<Task>(payload) {
+                    set_active_task.set(Some(task));
+                }
+            });
+
+            listen(task_event_names::ACTIVE_CHANGED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for task progress updates
+        let set_tasks_for_progress = self.set_tasks;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("Task progress updated event received: {:?}", payload).into()
+                );
+
+                // Update specific task in the list if provided
+                if let Ok(task_dto) = from_value::<TaskDto>(payload.clone()) {
+                    if let Ok(updated_task) = task_dto.to_task() {
+                        set_tasks_for_progress.update(|tasks| {
+                            if let Some(index) = tasks.iter().position(|t| t.id == updated_task.id) {
+                                tasks[index] = updated_task;
+                            }
+                        });
+                    }
+                }
+            });
+
+            listen(task_event_names::PROGRESS_UPDATED, &callback).await;
+            callback.forget();
+        });
+    }
+
     fn load_initial_data(&self) {
         let set_tasks = self.set_tasks;
         let set_active_task = self.set_active_task;
