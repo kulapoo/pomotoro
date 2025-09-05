@@ -4,14 +4,23 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::adapters::{
-    audio::{
-        register_audio_event_handlers, AudioServiceWrapper
-    }, establish_connection, events::{
-        app_emitter::{Emitter, TauriAppHandleEmitter}, app_started_handler::AppStartedHandler, mem_event_bus::EventPublisherArc, EventSubscriber
-    }, notifications::register_notification_handlers, run_migrations, task::{register_task_handlers, DefaultCyclingService}, timer::event_handlers::register_timer_handlers, InMemoryEventBus, RodioAudioService, SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService
+    InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
+    SqliteTaskRepository, SqliteTimerRepository, SqliteTimerService,
+    audio::{AudioServiceWrapper, register_audio_event_handlers},
+    establish_connection,
+    events::{
+        EventSubscriber,
+        app_emitter::{Emitter, TauriAppHandleEmitter},
+        app_started_handler::AppStartedHandler,
+        mem_event_bus::EventPublisherArc,
+    },
+    notifications::register_notification_handlers,
+    run_migrations,
+    task::{DefaultCyclingService, register_task_handlers},
+    timer::event_handlers::register_timer_handlers,
 };
-use domain::timer::TimerService;
 use domain::TimerRepository;
+use domain::timer::TimerService;
 use tauri::AppHandle;
 
 pub struct AppRegistry {
@@ -32,10 +41,10 @@ pub async fn register_handlers(
     audio_service: Arc<AudioServiceWrapper>,
 ) -> Result<()> {
     // Create the emitter that will be shared by all event handlers
-    let emitter: Arc<dyn Emitter> = Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
+    let emitter: Arc<dyn Emitter> =
+        Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
 
-    event_bus
-        .subscribe(Box::new(AppStartedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(AppStartedHandler::new(emitter.clone())))?;
 
     register_timer_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register timer event handlers")?;
@@ -48,7 +57,9 @@ pub async fn register_handlers(
         task_repository,
     )
     .await
-    .inspect_err(|e| eprintln!("Error in register_notification_handlers: {:?}", e))
+    .inspect_err(|e| {
+        eprintln!("Error in register_notification_handlers: {:?}", e)
+    })
     .context("Failed to register notification event handlers")?;
     register_audio_event_handlers(event_bus, audio_service, config_repository)
         .context("Failed to register audio event handlers")?;
@@ -117,9 +128,13 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     )
     .await?;
 
-    usecases::bootstrap(timer_service.clone(), task_repository.clone(), timer_repository.clone(), event_publisher.clone())
-        .await
-        .context("Failed to reset timer state")?;
+    usecases::bootstrap(
+        timer_service.clone(),
+        task_repository.clone(),
+        event_publisher.clone(),
+    )
+    .await
+    .context("Failed to reset timer state")?;
 
     let ctx = AppRegistry {
         task_repository,

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::{
-    EventPublisher, Result, TaskRepository, TimerRepository,
-    shared_kernel::events::AppStarted, timer::TimerService,
+    EventPublisher, Result, TaskRepository, shared_kernel::events::AppStarted,
+    timer::TimerService,
 };
 
 use crate::{
@@ -13,7 +13,6 @@ use crate::{
 pub async fn bootstrap(
     timer_service: Arc<dyn TimerService + Send + Sync>,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    _timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let task = if let Some(task) = task_repo.get_default_task().await? {

@@ -21,10 +21,7 @@ impl SqliteConfigRepository {
 #[async_trait]
 impl ConfigRepository for SqliteConfigRepository {
     async fn get_config(&self) -> Result<Config> {
-        let pool = self.pool.clone();
-        
-        tauri::async_runtime::spawn_blocking(move || {
-            let mut conn = pool.get().map_err(|e| Error::RepositoryError {
+        let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
                 message: format!("Failed to get connection: {}", e),
             })?;
             
@@ -72,24 +69,16 @@ impl ConfigRepository for SqliteConfigRepository {
                 })?;
             
             Ok(config)
-        })
-        .await
-        .map_err(|e| Error::RepositoryError {
-            message: format!("Task join error: {}", e),
-        })?
     }
     
     async fn save_config(&self, config: &Config) -> Result<()> {
-        let pool = self.pool.clone();
         let config = config.clone();
-        
-        tauri::async_runtime::spawn_blocking(move || {
-            let config_json = serde_json::to_string(&config)
+        let config_json = serde_json::to_string(&config)
                 .map_err(|e| Error::RepositoryError {
                     message: format!("Failed to serialize config: {}", e),
                 })?;
             
-            let mut conn = pool.get().map_err(|e| Error::RepositoryError {
+            let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
                 message: format!("Failed to get connection: {}", e),
             })?;
             
@@ -129,11 +118,6 @@ impl ConfigRepository for SqliteConfigRepository {
             }
             
             Ok(())
-        })
-        .await
-        .map_err(|e| Error::RepositoryError {
-            message: format!("Task join error: {}", e),
-        })?
     }
     
     async fn reset_to_defaults(&self) -> Result<Config> {
@@ -143,10 +127,7 @@ impl ConfigRepository for SqliteConfigRepository {
     }
     
     async fn config_exists(&self) -> Result<bool> {
-        let pool = self.pool.clone();
-        
-        tauri::async_runtime::spawn_blocking(move || {
-            let mut conn = pool.get().map_err(|e| Error::RepositoryError {
+        let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
                 message: format!("Failed to get connection: {}", e),
             })?;
             
@@ -158,10 +139,5 @@ impl ConfigRepository for SqliteConfigRepository {
                 })?;
             
             Ok(count > 0)
-        })
-        .await
-        .map_err(|e| Error::RepositoryError {
-            message: format!("Task join error: {}", e),
-        })?
     }
 }

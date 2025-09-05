@@ -1,3 +1,3 @@
 mod setup;
-// mod timer;
+mod timer;
 // mod task;

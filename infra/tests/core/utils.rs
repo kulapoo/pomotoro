@@ -1,8 +1,103 @@
-use crate::AppContext;
+use std::{any::TypeId, sync::Arc};
 
-#[allow(dead_code)]
-pub fn assert_event_published(_ctx: &AppContext, _event_name: &str) {
-    // TODO: Implement when event_bus has get_published_events method
-    // let events = ctx.event_bus.get_published_events();
-    // assert!(events.iter().any(|e| e.name == event_name));
+use domain::{
+    Task, TaskId, TaskRepository, Timer, TimerState, timer::TimerService,
+};
+
+use crate::{AppContext, AppContextBuilder, UiSimulator};
+
+pub mod assert_utils {
+    use super::*;
+    pub fn assert_event_published(ctx: &AppContext, event_type: TypeId) {
+        assert!(ctx.event_bus.has_event_type(event_type));
+    }
+
+    pub fn assert_event_was_emitted(
+        ui_simulator: &UiSimulator,
+        event_type: &str,
+    ) {
+        let events = ui_simulator.app_handle().emitted_events();
+        assert!(
+            ui_simulator.app_handle().was_event_emitted(event_type),
+            "Expected timer:status_changed event to be emitted, but got: {:?}",
+            events.iter().map(|e| &e.event_name).collect::<Vec<_>>()
+        );
+    }
+}
+
+pub mod setup {
+    use super::*;
+    pub async fn setup_ctx(name: &str) -> AppContext {
+        let builder = AppContextBuilder::new()
+            .with_name(name)
+            .with_standard_fixtures();
+
+        builder.build().await.expect("Failed to build test context")
+    }
+
+    pub async fn setup_ctx_with_timer(name: &str) -> AppContext {
+        let builder = AppContextBuilder::new()
+            .with_name(name)
+            .with_timer_started()
+            .with_standard_fixtures();
+
+        builder.build().await.expect("Failed to build test context")
+    }
+}
+
+pub mod task {
+    use super::*;
+    pub async fn get_active_task(ctx: &AppContext) -> Task {
+        let timer = timer::get_timer(ctx).await;
+
+        let active_task_id = timer.active_task_id().unwrap();
+
+        let task = if let Some(task) = ctx
+            .task_repo
+            .get_by_id(active_task_id)
+            .await
+            .expect("Failed to get active task")
+        {
+            task
+        } else {
+            ctx.task_repo
+                .get_default_task()
+                .await
+                .unwrap()
+                .expect("Failed to get default task")
+        };
+
+        task
+    }
+
+    pub async fn switch_task(ctx: &AppContext, task_id: TaskId) -> () {
+        let timer_service: Arc<dyn TimerService + Send + Sync> =
+            ctx.timer_service.clone();
+
+        timer_service.switch_task(task_id, None).await.unwrap()
+    }
+}
+
+pub mod timer {
+    use super::*;
+    pub async fn get_timer_state(ctx: &AppContext) -> TimerState {
+        let timer_service: Arc<dyn TimerService + Send + Sync> =
+            ctx.timer_service.clone();
+
+        timer_service.get_state().await.unwrap()
+    }
+
+    pub async fn get_timer(ctx: &AppContext) -> Timer {
+        let timer_service: Arc<dyn TimerService + Send + Sync> =
+            ctx.timer_service.clone();
+
+        timer_service.get_timer().await.unwrap()
+    }
+
+    pub async fn load_timer_state(ctx: &AppContext) -> () {
+        let timer_service: Arc<dyn TimerService + Send + Sync> =
+            ctx.timer_service.clone();
+
+        timer_service.load_state().await.unwrap()
+    }
 }

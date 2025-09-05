@@ -5,8 +5,8 @@ use crate::core::{
     mocks::MockAppHandle,
 };
 use domain::{
-    ConfigRepository, Result, TaskRepository, TimerConfiguration,
-    timer::{Timer, TimerRepository, TimerService},
+    ConfigRepository, Result, TaskRepository,
+    timer::{TimerRepository, TimerService},
 };
 
 /// Builder for customizing app context creation
@@ -57,7 +57,6 @@ impl AppContextBuilder {
     pub fn with_standard_fixtures(mut self) -> Self {
         self.with_default_task = true;
         self.with_default_config = true;
-        self.with_default_task = true;
         self.task_count = Some(5);
         self
     }

@@ -14,7 +14,7 @@ pub fn establish_connection(database_path: &PathBuf) -> Result<DbPool> {
     
     let manager = ConnectionManager::<DbConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
-        .max_size(1) // SQLite works best with single connection
+        .max_size(10) // Increase for tests to avoid timeouts
         .build(manager)
         .map_err(|e| Error::RepositoryError {
             message: format!("Failed to create connection pool: {}", e),
