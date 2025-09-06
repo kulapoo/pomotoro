@@ -5,7 +5,7 @@ use crate::core::{
     mocks::MockAppHandle,
 };
 use domain::{
-    ConfigRepository, Result, TaskRepository,
+    ConfigRepository, Result, Task, TaskRepository,
     timer::{TimerRepository, TimerService},
 };
 
@@ -92,6 +92,7 @@ impl AppContextBuilder {
             AppContext::with_name(self.name.as_deref()).await?
         };
 
+        (*ctx.ui_simulator).clone().start_listen_to_events();
         // Ensure the single timer exists (it should be auto-created by the repository)
         let _ = ctx.timer_repo.get().await?;
 
@@ -116,17 +117,18 @@ impl AppContextBuilder {
             ctx.config_repo.save_config(&config).await?;
         }
 
-        // Only switch task if a default task exists
-        if let Some(task) = ctx.task_repo.get_default_task().await? {
-            ctx.timer_service
-                .switch_task(task.id(), Some(&task))
-                .await?;
-        }
+        let task = ctx
+            .task_repo
+            .get_default_task()
+            .await?
+            .ok_or(domain::Error::DefaultTaskNotFound)?;
+
+        ctx.timer_service
+            .switch_task(task.id(), Some(&task))
+            .await?;
 
         if self.with_timer_started {
-            if let Some(task) = ctx.task_repo.get_default_task().await? {
-                ctx.timer_service.start_timer(Some(&task)).await?;
-            }
+            ctx.timer_service.start_timer(Some(&task)).await?;
         }
 
         Ok(ctx)

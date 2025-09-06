@@ -32,8 +32,8 @@ impl TestDatabase {
 
     /// Create a new test database with a custom name prefix
     pub fn with_name(name: Option<&str>) -> Result<Self> {
-        // Create temp directory in the project's tmp folder
-        let temp_dir = TempDir::new_in("tmp").map_err(|e| Error::RepositoryError {
+        // Create temp directory in the system's temp folder for better isolation
+        let temp_dir = TempDir::new().map_err(|e| Error::RepositoryError {
             message: format!("Failed to create temp directory: {}", e),
         })?;
 

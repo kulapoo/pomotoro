@@ -10,6 +10,6 @@ pub use core::{
     fixtures::{
         AudioFixtures, ConfigFixtures, TaskBuilder, TaskFixtures, TimerFixtures,
     },
-    mocks::{MockAudioService, MockTimerService, UiSimulator},
+    mocks::{MockAudioService, UiSimulator},
     utils,
 };

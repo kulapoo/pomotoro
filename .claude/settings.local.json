@@ -14,7 +14,8 @@
       "Bash(tree:*)",
       "Bash(just test:*)",
       "Bash(git log:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(cargo clippy:*)"
     ],
     "deny": [],
     "ask": [],

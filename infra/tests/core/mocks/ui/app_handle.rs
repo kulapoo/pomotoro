@@ -1,14 +1,15 @@
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use infra::adapters::events::app_emitter::Emitter;
 use serde::Serialize;
 use serde_json::Value;
-use infra::adapters::events::app_emitter::Emitter;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Mock implementation of Tauri's AppHandle for testing
 #[derive(Clone)]
 pub struct MockAppHandle {
     emitted_events: Arc<Mutex<Vec<EmittedEvent>>>,
-    event_listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(Value) + Send + Sync>>>>>,
+    event_listeners:
+        Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(Value) + Send + Sync>>>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -28,7 +29,11 @@ impl MockAppHandle {
     }
 
     /// Emit an event (mimics Tauri's emit functionality)
-    pub fn emit<S: Serialize>(&self, event: &str, payload: S) -> Result<(), String> {
+    pub fn emit<S: Serialize>(
+        &self,
+        event: &str,
+        payload: S,
+    ) -> Result<(), String> {
         let json_payload = serde_json::to_value(payload)
             .map_err(|e| format!("Failed to serialize payload: {}", e))?;
 
@@ -40,7 +45,8 @@ impl MockAppHandle {
         });
 
         // Trigger any listeners
-        if let Some(listeners) = self.event_listeners.lock().unwrap().get(event) {
+        if let Some(listeners) = self.event_listeners.lock().unwrap().get(event)
+        {
             for listener in listeners {
                 listener(json_payload.clone());
             }
@@ -52,7 +58,7 @@ impl MockAppHandle {
     /// Listen to an event
     pub fn listen<F>(&self, event: &str, handler: F)
     where
-        F: Fn(Value) + Send + Sync + 'static
+        F: Fn(Value) + Send + Sync + 'static,
     {
         self.event_listeners
             .lock()
@@ -91,8 +97,7 @@ impl MockAppHandle {
 
 impl Emitter for MockAppHandle {
     fn emit(&self, event: &str, payload: Value) -> anyhow::Result<()> {
-        self.emit(event, payload)
-            .map_err(|e| anyhow::anyhow!(e))
+        self.emit(event, payload).map_err(|e| anyhow::anyhow!(e))
     }
 }
 
@@ -106,7 +111,9 @@ mod tests {
         let app_handle = MockAppHandle::new();
 
         // Test emitting events
-        app_handle.emit("test_event", json!({"data": "test"})).unwrap();
+        app_handle
+            .emit("test_event", json!({"data": "test"}))
+            .unwrap();
         assert_eq!(app_handle.emitted_events().len(), 1);
 
         // Test event listener
@@ -117,14 +124,18 @@ mod tests {
             received_clone.lock().unwrap().push(payload);
         });
 
-        app_handle.emit("test_event", json!({"data": "test2"})).unwrap();
+        app_handle
+            .emit("test_event", json!({"data": "test2"}))
+            .unwrap();
 
         // Check both emission and listener
         assert_eq!(app_handle.emitted_events().len(), 2);
         assert_eq!(received.lock().unwrap().len(), 1);
 
         // Test filtering by event type
-        app_handle.emit("other_event", json!({"data": "other"})).unwrap();
+        app_handle
+            .emit("other_event", json!({"data": "other"}))
+            .unwrap();
         let test_events = app_handle.events_of_type("test_event");
         assert_eq!(test_events.len(), 2);
     }

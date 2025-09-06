@@ -1,10 +1,12 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::{TaskRepositoryArc, TimerRepositoryArc};
-use domain::{timer::TimerService, Phase, TaskId, TimerState, event_names::ui_listeners};
-use std::sync::Arc;
-use tauri::{AppHandle, State, Emitter};
-use tracing::info;
 use anyhow::Context;
+use domain::{
+    Phase, TaskId, TimerState, event_names::ui_listeners, timer::TimerService,
+};
+use std::sync::Arc;
+use tauri::{AppHandle, Emitter, State};
+use tracing::info;
 
 use usecases::timer::{
     StartTimerSessionCmd, SwitchTimerTaskCmd,
@@ -20,14 +22,13 @@ pub async fn get_timer_state(
     timer_service: State<'_, TimerServiceArc>,
     _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
-    let timer_service_arc  = timer_service.inner().clone();
+    let timer_service_arc = timer_service.inner().clone();
 
     app_get_timer_state(timer_service_arc.clone())
         .await
         .context("infra::commands::timer_cmd::get_timer_state - Failed to retrieve timer state")
         .map_err(|e| e.to_string())
 }
-
 
 #[tauri::command]
 pub async fn start_timer(
@@ -46,10 +47,13 @@ pub async fn start_timer(
 
     if current_state.status() == domain::TimerStatus::Paused {
         // Get the first active task
-        let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+        let active_tasks = task_repo
+            .get_active_tasks()
+            .await
+            .map_err(|e| e.to_string())?;
         let task = active_tasks.first().ok_or("No active task")?;
         let task_id = task.id;
-        
+
         // Resume the paused timer
         usecases::timer::resume_timer_session(
             task_id,
@@ -62,15 +66,19 @@ pub async fn start_timer(
         .map_err(|e| e.to_string())?;
     } else {
         // Get the first active task for starting
-        let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
-        let task_id = active_tasks.first().map(|t| t.id.to_string());
+        let active_tasks = task_repo
+            .get_active_tasks()
+            .await
+            .map_err(|e| e.to_string())?;
+        let task_id = active_tasks.first().map(|t| t.id);
         info!("Started timer, {}", task_id.clone().unwrap_or_default());
-        let cmd = StartTimerSessionCmd { task_id };
+        let cmd = StartTimerSessionCmd {
+            task_id: Some(task_id.unwrap_or_default().as_str()),
+        };
 
         start_timer_session(
             task_repo.inner().clone(),
-            timer_repo.inner().clone(),
-            event_publisher.inner().clone(),
+            timer_service_arc.clone(),
             cmd,
         )
         .await
@@ -80,7 +88,9 @@ pub async fn start_timer(
 
     app_get_timer_state(timer_service_arc)
         .await
-        .context("infra::commands::timer_cmd - Failed to get updated timer state")
+        .context(
+            "infra::commands::timer_cmd - Failed to get updated timer state",
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -101,7 +111,10 @@ pub async fn pause_timer(
         .map_err(|e| e.to_string())?;
 
     // Get the first active task
-    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let active_tasks = task_repo
+        .get_active_tasks()
+        .await
+        .map_err(|e| e.to_string())?;
     let task = active_tasks.first().ok_or("No active task")?;
     let task_id = task.id;
 
@@ -117,7 +130,9 @@ pub async fn pause_timer(
 
     app_get_timer_state(timer_service_arc)
         .await
-        .context("infra::commands::timer_cmd - Failed to get updated timer state")
+        .context(
+            "infra::commands::timer_cmd - Failed to get updated timer state",
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -138,7 +153,10 @@ pub async fn reset_timer(
         .map_err(|e| e.to_string())?;
 
     // Get the first active task
-    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let active_tasks = task_repo
+        .get_active_tasks()
+        .await
+        .map_err(|e| e.to_string())?;
     let task = active_tasks.first().ok_or("No active task")?;
     let task_id = task.id;
 
@@ -154,7 +172,9 @@ pub async fn reset_timer(
 
     app_get_timer_state(timer_service_arc)
         .await
-        .context("infra::commands::timer_cmd - Failed to get updated timer state")
+        .context(
+            "infra::commands::timer_cmd - Failed to get updated timer state",
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -175,20 +195,24 @@ pub async fn skip_phase(
         .map_err(|e| e.to_string())?;
 
     // Get the first active task
-    let active_tasks = task_repo.get_active_tasks().await.map_err(|e| e.to_string())?;
+    let active_tasks = task_repo
+        .get_active_tasks()
+        .await
+        .map_err(|e| e.to_string())?;
     let task = active_tasks.first().ok_or("No active task")?;
     let task_id = task.id;
 
-    let (old_phase, new_phase) =
-        skip_timer_phase(
-            task_id,
-            task_repo.inner().clone(),
-            timer_repo.inner().clone(),
-            event_publisher.inner().clone()
-        )
-            .await
-            .context("infra::commands::timer_cmd::skip_phase - Failed to skip to next phase")
-            .map_err(|e| e.to_string())?;
+    let (old_phase, new_phase) = skip_timer_phase(
+        task_id,
+        task_repo.inner().clone(),
+        timer_repo.inner().clone(),
+        event_publisher.inner().clone(),
+    )
+    .await
+    .context(
+        "infra::commands::timer_cmd::skip_phase - Failed to skip to next phase",
+    )
+    .map_err(|e| e.to_string())?;
 
     let state = usecases::timer::get_timer_state(timer_service_arc)
         .await
@@ -212,10 +236,15 @@ pub async fn switch_active_task(
         task_id: task_id.to_string(),
     };
 
-    switch_timer_task(timer_service_arc.clone(), task_repo.inner().clone(), event_publisher.inner().clone(), cmd)
-        .await
-        .with_context(|| format!("Failed to switch to task {}", task_id))
-        .map_err(|e| e.to_string())?;
+    switch_timer_task(
+        timer_service_arc.clone(),
+        task_repo.inner().clone(),
+        event_publisher.inner().clone(),
+        cmd,
+    )
+    .await
+    .with_context(|| format!("Failed to switch to task {}", task_id))
+    .map_err(|e| e.to_string())?;
 
     let updated_state = app_get_timer_state(timer_service_arc.clone())
         .await

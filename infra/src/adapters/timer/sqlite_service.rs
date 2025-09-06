@@ -5,9 +5,9 @@ use tokio::sync::Mutex;
 use tokio::time::interval;
 
 use super::timer_dto::SessionHistoryDto;
-use domain::TimerRepository;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use chrono::Utc;
+use domain::TimerRepository;
 use domain::{
     ConfigRepository, Error, Phase, Result as DomainResult, Task, TaskId,
     TaskRepository, TimerState, TimerStatus,
@@ -60,8 +60,12 @@ impl SqliteTimerService {
 
     async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
-        self.timer_repository.save(&*timer_guard).await
-            .map_err(|e| Error::RepositoryError { message: e.to_string() })
+        self.timer_repository
+            .save(&*timer_guard)
+            .await
+            .map_err(|e| Error::RepositoryError {
+                message: e.to_string(),
+            })
     }
 
     async fn add_session_history(
@@ -85,8 +89,12 @@ impl SqliteTimerService {
             history.push(history_entry);
 
             // Keep only the last 1000 entries
-            if history.len() > 1000 {
-                history.drain(0..100);
+            // Drain oldest entries to maintain memory efficiency
+            const MAX_HISTORY_SIZE: usize = 1000;
+            const ENTRIES_TO_REMOVE: usize = 100;
+
+            if history.len() > MAX_HISTORY_SIZE {
+                history.drain(0..ENTRIES_TO_REMOVE);
             }
         }
     }
@@ -99,12 +107,19 @@ impl SqliteTimerService {
         let config = if let Some(task) = task {
             task.config.timer.clone()
         } else {
-            self.config_repository.get_config().await
-                .map_err(|e| e.to_string())?.timer
+            self.config_repository
+                .get_config()
+                .await
+                .map_err(|e| e.to_string())?
+                .timer
         };
 
-        let events =
-            self.timer.lock().await.start(&config).map_err(|e| e.to_string())?;
+        let events = self
+            .timer
+            .lock()
+            .await
+            .start(&config)
+            .map_err(|e| e.to_string())?;
 
         self.event_publisher.publish_batch(events);
 
@@ -119,15 +134,8 @@ impl SqliteTimerService {
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
         let config_clone = config.clone();
-        let save_state = {
-            let service = self.clone();
-            move || {
-                let service = service.clone();
-                async move {
-                    service.save_state().await.ok();
-                }
-            }
-        };
+        // Create a cloned service for the timer task
+        let service_for_timer = self.clone();
 
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -156,10 +164,18 @@ impl SqliteTimerService {
                             }
                         };
 
-                        // Save state every 10 seconds
+                        // Save state every 10 seconds for persistence
                         tick_count += 1;
                         if tick_count % 10 == 0 {
-                            save_state().await;
+                            // Spawn save operation to avoid blocking the timer
+                            let service = service_for_timer.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = service.save_state().await {
+                                    eprintln!(
+                                        "Failed to save timer state: {e}"
+                                    );
+                                }
+                            });
                         }
 
                         continue_running
@@ -173,8 +189,11 @@ impl SqliteTimerService {
         });
 
         *self.cancel_handle.lock().await = Some(handle);
-        self.save_state().await.ok();
 
+        // Save initial state after starting
+        if let Err(e) = self.save_state().await {
+            return Err(e.to_string());
+        }
         Ok(())
     }
 }
@@ -190,37 +209,34 @@ impl TimerService for SqliteTimerService {
     }
 
     async fn load_state(&self) -> DomainResult<()> {
-        let loaded_timer = self.timer_repository.get().await
-            .map_err(|e| Error::RepositoryError { message: e.to_string() })?;
-        
-        let mut timer_guard = self.timer.lock().await;
-        *timer_guard = loaded_timer;
-        
+        let loaded_timer = self.timer_repository.get().await.map_err(|e| {
+            Error::RepositoryError {
+                message: e.to_string(),
+            }
+        })?;
+
+        *self.timer.lock().await = loaded_timer;
         Ok(())
     }
 
     async fn switch_task(
         &self,
-        _task_id: TaskId,
+        task_id: TaskId,
         _task: Option<&Task>,
     ) -> DomainResult<()> {
-        let timer = self.timer.lock().await;
-
-        // Only allow switching when timer is idle
-        if !timer.state().is_idle() {
-            return Err(Error::ConfigurationError {
-                message: "Cannot switch tasks while timer is running"
-                    .to_string(),
-            });
+        {
+            let mut timer = self.timer.lock().await;
+            // Only allow switching when timer is idle
+            if !timer.state().is_idle() {
+                return Err(Error::ConfigurationError {
+                    message: "Cannot switch tasks while timer is running"
+                        .to_string(),
+                });
+            }
+            timer.set_active_task(task_id);
         }
 
-        // Configuration is now managed by the task itself, not stored in timer
-        // Just verify we can switch
-        
-        drop(timer);
-        self.save_state().await?;
-
-        Ok(())
+        self.save_state().await
     }
 
     async fn stop_timer(&self) -> DomainResult<()> {
@@ -233,9 +249,11 @@ impl TimerService for SqliteTimerService {
         }
 
         let config = self.config_repository.get_config().await?.timer;
-        let mut timer = self.timer.lock().await;
-        let events = timer.reset(&config)?;
-        drop(timer);
+
+        let events = {
+            let mut timer = self.timer.lock().await;
+            timer.reset(&config)?
+        };
 
         self.event_publisher.publish_batch(events);
         self.save_state().await?;
@@ -252,21 +270,23 @@ impl TimerService for SqliteTimerService {
 
     async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
         let config = self.config_repository.get_config().await?.timer;
-        let mut timer = self.timer.lock().await;
-        let (status, events) = if timer.is_running() {
-            let events = timer.pause(&config)?;
-            (TimerStatus::Paused, events)
-        } else {
-            let events = timer.resume(&config)?;
-            (TimerStatus::Running, events)
+
+        let (status, events) = {
+            let mut timer = self.timer.lock().await;
+            if timer.is_running() {
+                let events = timer.pause(&config)?;
+                (TimerStatus::Paused, events)
+            } else {
+                let events = timer.resume(&config)?;
+                (TimerStatus::Running, events)
+            }
         };
-        drop(timer);
 
         self.event_publisher.publish_batch(events);
 
         // If resumed, restart the timer task
         if status == TimerStatus::Running {
-            // We don't have the task here, so just restart without it
+            // Restart the timer task without a specific task context
             self.start_timer_internal(None).await.map_err(|e| {
                 Error::RepositoryError {
                     message: format!("Failed to resume timer: {e}"),
@@ -295,10 +315,11 @@ impl TimerService for SqliteTimerService {
         } else {
             self.config_repository.get_config().await?.timer
         };
-        
-        let mut timer = self.timer.lock().await;
-        let events = timer.reset(&config)?;
-        drop(timer);
+
+        let events = {
+            let mut timer = self.timer.lock().await;
+            timer.reset(&config)?
+        };
 
         self.event_publisher.publish_batch(events);
         self.save_state().await?;
@@ -325,11 +346,13 @@ impl TimerService for SqliteTimerService {
         } else {
             self.config_repository.get_config().await?.timer
         };
-        
-        let mut timer = self.timer.lock().await;
-        let events = timer.skip_phase(&config)?;
-        let new_phase = timer.state().phase();
-        drop(timer);
+
+        let (events, new_phase) = {
+            let mut timer = self.timer.lock().await;
+            let events = timer.skip_phase(&config)?;
+            let new_phase = timer.state().phase();
+            (events, new_phase)
+        };
 
         self.event_publisher.publish_batch(events);
         self.save_state().await?;

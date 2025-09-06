@@ -78,12 +78,54 @@ impl TimerConfiguration {
         self.get_phase_duration(phase).as_secs() as u32
     }
 
+    /// Update work duration, returning a new validated configuration.
+    pub fn with_work_duration(&self, duration: Duration) -> Result<Self> {
+        Self::new(
+            duration,
+            self.short_break_duration,
+            self.long_break_duration,
+            self.sessions_until_long_break,
+        )
+    }
+
+    /// Update short break duration, returning a new validated configuration.
+    pub fn with_short_break_duration(&self, duration: Duration) -> Result<Self> {
+        Self::new(
+            self.work_duration,
+            duration,
+            self.long_break_duration,
+            self.sessions_until_long_break,
+        )
+    }
+
+    /// Update long break duration, returning a new validated configuration.
+    pub fn with_long_break_duration(&self, duration: Duration) -> Result<Self> {
+        Self::new(
+            self.work_duration,
+            self.short_break_duration,
+            duration,
+            self.sessions_until_long_break,
+        )
+    }
+
+    /// Update sessions until long break, returning a new validated configuration.
+    pub fn with_sessions_until_long_break(&self, sessions: u8) -> Result<Self> {
+        Self::new(
+            self.work_duration,
+            self.short_break_duration,
+            self.long_break_duration,
+            sessions,
+        )
+    }
+
     /// Validate the timer configuration invariants.
     /// More flexible validation - allows wider ranges for customization
     pub fn validate(&self) -> Result<()> {
         // Work duration: minimum 1 sec, maximum 3 hours
         let work_secs = self.work_duration.as_secs();
-        if work_secs < MIN_WORK_DURATION.as_secs() || work_secs > MAX_WORK_DURATION.as_secs() {
+        if work_secs < MIN_WORK_DURATION.as_secs()
+            || work_secs > MAX_WORK_DURATION.as_secs()
+        {
             return Err(Error::InvalidDuration {
                 duration: work_secs as u32,
             });
@@ -91,7 +133,9 @@ impl TimerConfiguration {
 
         // Short break duration: minimum 1 seconds, maximum 1 hour
         let short_break_secs = self.short_break_duration.as_secs();
-        if short_break_secs < MIN_SHORT_BREAK_DURATION.as_secs() || short_break_secs > MAX_SHORT_BREAK_DURATION.as_secs() {
+        if short_break_secs < MIN_SHORT_BREAK_DURATION.as_secs()
+            || short_break_secs > MAX_SHORT_BREAK_DURATION.as_secs()
+        {
             return Err(Error::InvalidDuration {
                 duration: short_break_secs as u32,
             });
@@ -99,7 +143,9 @@ impl TimerConfiguration {
 
         // Long break duration: minimum 1 sec, maximum 2 hours
         let long_break_secs = self.long_break_duration.as_secs();
-        if long_break_secs < MIN_LONG_BREAK_DURATION.as_secs() || long_break_secs > MAX_LONG_BREAK_DURATION.as_secs() {
+        if long_break_secs < MIN_LONG_BREAK_DURATION.as_secs()
+            || long_break_secs > MAX_LONG_BREAK_DURATION.as_secs()
+        {
             return Err(Error::InvalidDuration {
                 duration: long_break_secs as u32,
             });
@@ -116,7 +162,6 @@ impl TimerConfiguration {
 
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -187,7 +232,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn should_serialize_and_deserialize() {
         let config = TimerConfiguration::default();
@@ -195,5 +239,53 @@ mod tests {
         let deserialized: TimerConfiguration =
             serde_json::from_str(&serialized).unwrap();
         assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn should_update_single_field_with_builder_methods() {
+        let original = TimerConfiguration::default();
+        
+        // Test updating work duration
+        let updated = original
+            .with_work_duration(Duration::from_secs(30 * 60))
+            .unwrap();
+        assert_eq!(updated.work_duration, Duration::from_secs(30 * 60));
+        assert_eq!(updated.short_break_duration, original.short_break_duration);
+        
+        // Test updating short break duration
+        let updated = original
+            .with_short_break_duration(Duration::from_secs(10 * 60))
+            .unwrap();
+        assert_eq!(updated.short_break_duration, Duration::from_secs(10 * 60));
+        assert_eq!(updated.work_duration, original.work_duration);
+        
+        // Test updating long break duration
+        let updated = original
+            .with_long_break_duration(Duration::from_secs(20 * 60))
+            .unwrap();
+        assert_eq!(updated.long_break_duration, Duration::from_secs(20 * 60));
+        assert_eq!(updated.work_duration, original.work_duration);
+        
+        // Test updating sessions until long break
+        let updated = original
+            .with_sessions_until_long_break(6)
+            .unwrap();
+        assert_eq!(updated.sessions_until_long_break, 6);
+        assert_eq!(updated.work_duration, original.work_duration);
+    }
+
+    #[test]
+    fn should_validate_when_updating_single_field() {
+        let original = TimerConfiguration::default();
+        
+        // Invalid work duration
+        let result = original
+            .with_work_duration(Duration::from_secs(1));
+        assert!(result.is_err());
+        
+        // Invalid sessions count
+        let result = original
+            .with_sessions_until_long_break(0);
+        assert!(result.is_err());
     }
 }

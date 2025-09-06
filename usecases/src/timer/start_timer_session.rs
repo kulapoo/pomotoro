@@ -1,6 +1,6 @@
 use domain::{
-    Error, EventPublisher, Result, TaskId, TaskRepository, 
-    TimerRepository,
+    Error, EventPublisher, Result, TaskId, TaskRepository, TimerRepository,
+    timer::TimerService,
 };
 use std::sync::Arc;
 
@@ -22,29 +22,25 @@ pub struct StartTimerSessionCmd {
 /// ## Dependencies
 ///
 /// - TaskRepository: For task validation and retrieval
-/// - TimerRepository: For timer operations
+/// - TimerService: Timer service helpers
 /// - EventPublisher: For domain event publishing
 pub async fn start_timer_session(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
-    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
     cmd: StartTimerSessionCmd,
 ) -> Result<()> {
-    // Get task_id - either from command or use default task
+    // Closure that preserves error context
+    let to_invalid_task_data =
+        |msg: String| domain::Error::InvalidTaskParams { message: msg };
+
     let task_id_str = cmd.task_id.ok_or_else(|| {
-        Error::InvalidStateTransition {
-            from: "no_task_specified".to_string(),
-            to: "start_session".to_string(),
-        }
+        to_invalid_task_data("Task ID is required".to_string())
     })?;
 
-    let task_id = TaskId::from_string(&task_id_str).map_err(|_| {
-        Error::TaskNotFound {
-            id: task_id_str.clone(),
-        }
+    let task_id = TaskId::from_string(&task_id_str).map_err(|e| {
+        to_invalid_task_data(format!("Invalid task ID format: {}", e))
     })?;
 
-    // Get the task
     let task = task_repo
         .get_by_id(task_id)
         .await?
@@ -55,9 +51,8 @@ pub async fn start_timer_session(
     }
 
     // Get the single timer instance
-    let mut timer = timer_repo.get().await?;
-
-    // Check if timer is already running
+    let timer = timer_service.get_timer().await?;
+    // // Check if timer is already running
     if timer.is_running() {
         return Err(Error::InvalidStateTransition {
             from: "Running".to_string(),
@@ -65,17 +60,8 @@ pub async fn start_timer_session(
         });
     }
 
-    // Set the active task on the timer
-    timer.set_active_task(task_id);
+    timer_service.switch_task(task_id, Some(&task)).await?;
 
-    // Start the timer with the task's configuration
-    let events = timer.start(&task.config.timer)?;
-    timer_repo.save(&timer).await?;
-
-    // Publish events
-    for event in events {
-        event_publisher.publish(event);
-    }
-
+    timer_service.start_timer(Some(&task)).await?;
     Ok(())
 }

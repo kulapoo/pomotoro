@@ -1,4 +1,7 @@
-use domain::{EventPublisher, Result, TaskId, TaskRepository, TimerRepository, timer::Status as TimerStatus};
+use domain::{
+    EventPublisher, Result, TaskId, TaskRepository, TimerRepository,
+    timer::{Status as TimerStatus, TimerService},
+};
 use std::sync::Arc;
 
 /// Pause a timer session
@@ -20,11 +23,11 @@ use std::sync::Arc;
 pub async fn pause_timer_session(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
+    timer_service: Arc<dyn TimerService + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
     // Get the single timer instance
-    let mut timer = timer_repo.get().await?;
+    let mut timer = timer_service.get_timer().await?;
 
     // Verify the timer has the expected active task
     if timer.active_task_id() != Some(task_id) {
@@ -35,15 +38,14 @@ pub async fn pause_timer_session(
     }
 
     // Get the task for its configuration
-    let task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or(domain::Error::TaskNotFound {
+    let task = task_repo.get_by_id(task_id).await?.ok_or(
+        domain::Error::TaskNotFound {
             id: task_id.to_string(),
-        })?;
+        },
+    )?;
 
     // Pause the timer with task's configuration
-    let events = timer.pause(&task.config.timer)?;
+    let events = timer_service.toggle_pause().await?;
     timer_repo.save(&timer).await?;
 
     // Publish events
@@ -75,12 +77,11 @@ pub async fn resume_timer_session(
     }
 
     // Get the task for its configuration
-    let task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or(domain::Error::TaskNotFound {
+    let task = task_repo.get_by_id(task_id).await?.ok_or(
+        domain::Error::TaskNotFound {
             id: task_id.to_string(),
-        })?;
+        },
+    )?;
 
     // Resume the timer with task's configuration
     let events = timer.resume(&task.config.timer)?;

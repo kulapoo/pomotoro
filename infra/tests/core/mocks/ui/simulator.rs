@@ -1,18 +1,21 @@
-use std::{sync::{Arc, Mutex}};
-use tokio::sync::mpsc;
-use serde_json::{Value};
-use domain::event_names::ui_listeners::{timer as timer_events, task as task_events, config as config_events, app as app_events};
 use domain::event_names::commands::{
-    timer as timer_commands,
-    task as task_commands,
-    config as config_commands,
+    config as config_commands, task as task_commands, timer as timer_commands,
 };
-
-use super::{
-    app_handle::MockAppHandle,
+use domain::event_names::ui_listeners::{
+    app as app_events, config as config_events, task as task_events,
+    timer as timer_events,
 };
+use serde_json::Value;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tracing::info;
 
-fn register_events(app_handle: MockAppHandle, tx: mpsc::UnboundedSender<Value>) {
+use super::app_handle::MockAppHandle;
+
+fn register_events(
+    app_handle: MockAppHandle,
+    tx: mpsc::UnboundedSender<Value>,
+) {
     let ui_events = vec![
         timer_events::TICK,
         timer_events::STATUS_CHANGED,
@@ -60,7 +63,7 @@ fn register_events(app_handle: MockAppHandle, tx: mpsc::UnboundedSender<Value>) 
         config_commands::RESET_TO_DEFAULTS,
         config_commands::GET_EFFECTIVE_AUDIO,
         config_commands::CONFIG_UPDATED,
-        config_commands::CONFIG_RESET
+        config_commands::CONFIG_RESET,
     ];
 
     let events = [ui_events, command_events].concat();
@@ -70,12 +73,14 @@ fn register_events(app_handle: MockAppHandle, tx: mpsc::UnboundedSender<Value>) 
         let event_name = event.to_string();
         app_handle.listen(event, move |mut payload| {
             if let Value::Object(ref mut map) = payload {
-                map.insert("event_name".to_string(), Value::String(event_name.clone()));
+                map.insert(
+                    "event_name".to_string(),
+                    Value::String(event_name.clone()),
+                );
             }
             let _ = tx_clone.send(payload);
         });
     }
-
 }
 
 /// Simple UI Simulator for integration testing
@@ -116,9 +121,8 @@ impl UiSimulator {
         // Take the receiver and start processing in background
         if let Some(mut rx) = self.response_rx.lock().unwrap().take() {
             tokio::spawn(async move {
-
                 while let Some(response) = rx.recv().await {
-                    println!("Event: {:#?}", response);
+                    info!("Event: {:#?}", response);
                 }
             });
         }

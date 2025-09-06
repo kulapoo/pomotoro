@@ -2,17 +2,15 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
 pub enum Error {
+    // Task domain errors
     #[error("Task not found: {id}")]
     TaskNotFound { id: String },
 
-    #[error("Invalid timer duration: {duration} seconds")]
-    InvalidDuration { duration: u32 },
+    #[error("Invalid task params: {message}")]
+    InvalidTaskParams { message: String },
 
     #[error("Task creation error: {message}")]
     TaskCreationError { message: String },
-
-    #[error("Invalid session count: {count}")]
-    InvalidSessionCount { count: u8 },
 
     #[error("Task already completed")]
     TaskAlreadyCompleted,
@@ -23,29 +21,39 @@ pub enum Error {
     #[error("Default task not found")]
     DefaultTaskNotFound,
 
+    #[error("Invalid task name: cannot be empty")]
+    EmptyTaskName,
+
+    // Timer domain errors
+    #[error("Invalid timer duration: {duration} seconds")]
+    InvalidDuration { duration: u32 },
+
+    #[error("Invalid session count: {count}")]
+    InvalidSessionCount { count: u8 },
+
     #[error("Timer state transition not allowed: {from} -> {to}")]
     InvalidStateTransition { from: String, to: String },
 
+    // Tag domain errors
     #[error("Invalid tag format: {tag}")]
     InvalidTagFormat { tag: String },
 
     #[error("Tag too long: {tag} (max length: {max_length})")]
     TagTooLong { tag: String, max_length: usize },
 
-    #[error("Invalid task name: cannot be empty")]
-    EmptyTaskName,
-
+    // Audio domain errors
     #[error("Invalid volume: {volume} (must be between 0.0 and 1.0)")]
     InvalidVolume { volume: f32 },
 
+    #[error("Audio error: {message}")]
+    AudioError { message: String },
+
+    // Infrastructure errors
     #[error("Repository error: {message}")]
     RepositoryError { message: String },
 
     #[error("Configuration error: {message}")]
     ConfigurationError { message: String },
-
-    #[error("Audio error: {message}")]
-    AudioError { message: String },
 
     #[error("Event publishing error: {message}")]
     EventPublishingError { message: String },
@@ -139,7 +147,10 @@ mod tests {
         let error = Error::TaskCreationError {
             message: "Invalid parameters".to_string(),
         };
-        assert_eq!(error.to_string(), "Task creation error: Invalid parameters");
+        assert_eq!(
+            error.to_string(),
+            "Task creation error: Invalid parameters"
+        );
 
         let error = Error::InvalidLifecycle {
             message: "Cannot transition from completed state".to_string(),
@@ -152,7 +163,10 @@ mod tests {
         let error = Error::RepositoryError {
             message: "Database connection failed".to_string(),
         };
-        assert_eq!(error.to_string(), "Repository error: Database connection failed");
+        assert_eq!(
+            error.to_string(),
+            "Repository error: Database connection failed"
+        );
     }
 
     #[test]
