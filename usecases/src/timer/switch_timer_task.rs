@@ -1,5 +1,4 @@
-use domain::timer::TimerService;
-use domain::{Error, EventPublisher, Result, TaskId, TaskRepository};
+use domain::{Error, EventPublisher, Result, TaskId, TaskRepository, TimerRepository};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -21,11 +20,11 @@ pub struct SwitchTimerTaskCmd {
 ///
 /// ## Dependencies
 ///
-/// - TimerService: For timer operations (domain abstraction)
+/// - TimerRepository: For timer persistence
 /// - TaskRepository: For task validation and retrieval
 /// - EventPublisher: For domain event publishing (business orchestration)
 pub async fn switch_timer_task(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTimerTaskCmd,
@@ -45,8 +44,14 @@ pub async fn switch_timer_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Switch to the task with its configuration
-    timer_service.switch_task(task_id, Some(&task)).await?;
+    // Load the timer aggregate
+    let mut timer = timer_repo.get().await?;
+    
+    // Execute domain logic: switch the active task
+    timer.set_active_task(task_id);
+    
+    // Save the timer state
+    timer_repo.save(&timer).await?;
 
     Ok(())
 }

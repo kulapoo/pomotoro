@@ -363,10 +363,11 @@ async fn should_create_task_with_title() {
 //     assert_eq!(active_task.status, TaskStatus::Active, "Task should be active when timer starts");
 
 //     // Verify timer is associated with the task
-//     let timer_state = ctx.timer_service
-//         .get_state()
+//     let timer = ctx.timer_repo
+//         .get()
 //         .await
-//         .expect("Failed to get timer state");
+//         .expect("Failed to get timer");
+//     let timer_state = timer.state();
 
 //     assert_eq!(
 //         timer_state.active_entity_id(),

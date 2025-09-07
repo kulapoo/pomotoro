@@ -1,7 +1,7 @@
-use std::{any::TypeId, sync::Arc};
+use std::any::TypeId;
 
 use domain::{
-    Task, TaskId, TaskRepository, Timer, TimerState, timer::TimerService,
+    Task, TaskId, TaskRepository, Timer, TimerRepository, TimerState,
 };
 
 use crate::{AppContext, AppContextBuilder, UiSimulator};
@@ -71,33 +71,25 @@ pub mod task {
     }
 
     pub async fn switch_task(ctx: &AppContext, task_id: TaskId) -> () {
-        let timer_service: Arc<dyn TimerService + Send + Sync> =
-            ctx.timer_service.clone();
-
-        timer_service.switch_task(task_id, None).await.unwrap()
+        let mut timer = ctx.timer_repo.get().await.unwrap();
+        timer.set_active_task(task_id);
+        ctx.timer_repo.save(&timer).await.unwrap()
     }
 }
 
 pub mod timer {
     use super::*;
     pub async fn get_timer_state(ctx: &AppContext) -> TimerState {
-        let timer_service: Arc<dyn TimerService + Send + Sync> =
-            ctx.timer_service.clone();
-
-        timer_service.get_state().await.unwrap()
+        let timer = ctx.timer_repo.get().await.unwrap();
+        timer.state().clone()
     }
 
     pub async fn get_timer(ctx: &AppContext) -> Timer {
-        let timer_service: Arc<dyn TimerService + Send + Sync> =
-            ctx.timer_service.clone();
-
-        timer_service.get_timer().await.unwrap()
+        ctx.timer_repo.get().await.unwrap()
     }
 
     pub async fn load_timer_state(ctx: &AppContext) -> () {
-        let timer_service: Arc<dyn TimerService + Send + Sync> =
-            ctx.timer_service.clone();
-
-        timer_service.load_state().await.unwrap()
+        // Load state is now handled directly through the repository
+        let _ = ctx.timer_repo.get().await.unwrap();
     }
 }

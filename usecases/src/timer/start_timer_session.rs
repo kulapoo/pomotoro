@@ -1,6 +1,5 @@
 use domain::{
     Error, EventPublisher, Result, TaskId, TaskRepository, TimerRepository,
-    timer::TimerService,
 };
 use std::sync::Arc;
 
@@ -22,11 +21,12 @@ pub struct StartTimerSessionCmd {
 /// ## Dependencies
 ///
 /// - TaskRepository: For task validation and retrieval
-/// - TimerService: Timer service helpers
+/// - TimerRepository: For timer persistence
 /// - EventPublisher: For domain event publishing
 pub async fn start_timer_session(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: StartTimerSessionCmd,
 ) -> Result<()> {
     // Closure that preserves error context
@@ -50,9 +50,10 @@ pub async fn start_timer_session(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Get the single timer instance
-    let timer = timer_service.get_timer().await?;
-    // // Check if timer is already running
+    // Load the timer aggregate
+    let mut timer = timer_repo.get().await?;
+    
+    // Check if timer is already running
     if timer.is_running() {
         return Err(Error::InvalidStateTransition {
             from: "Running".to_string(),
@@ -60,8 +61,19 @@ pub async fn start_timer_session(
         });
     }
 
-    timer_service.switch_task(task_id, Some(&task)).await?;
-
-    timer_service.start_timer(Some(&task)).await?;
+    // Set the active task
+    timer.set_active_task(task_id);
+    
+    // Execute domain logic: start the timer
+    let events = timer.start(&task.config.timer)?;
+    
+    // Save the timer state
+    timer_repo.save(&timer).await?;
+    
+    // Publish domain events
+    for event in events {
+        event_publisher.publish(event);
+    }
+    
     Ok(())
 }

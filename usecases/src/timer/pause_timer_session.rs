@@ -1,6 +1,6 @@
 use domain::{
     EventPublisher, Result, TaskId, TaskRepository, TimerRepository,
-    timer::{Status as TimerStatus, TimerService},
+    TimerStatus,
 };
 use std::sync::Arc;
 
@@ -23,11 +23,11 @@ use std::sync::Arc;
 pub async fn pause_timer_session(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
-    // Get the single timer instance
-    let mut timer = timer_service.get_timer().await?;
+    // Load the timer aggregate
+    let mut timer = timer_repo.get().await?;
 
     // Verify the timer has the expected active task
     if timer.active_task_id() != Some(task_id) {
@@ -44,11 +44,13 @@ pub async fn pause_timer_session(
         },
     )?;
 
-    // Pause the timer with task's configuration
-    let events = timer_service.toggle_pause().await?;
+    // Execute domain logic: pause the timer
+    let events = timer.pause(&task.config.timer)?;
+    
+    // Save the timer state
     timer_repo.save(&timer).await?;
 
-    // Publish events
+    // Publish domain events
     for event in events {
         event_publisher.publish(event);
     }
@@ -65,7 +67,7 @@ pub async fn resume_timer_session(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<TimerStatus> {
-    // Get the single timer instance
+    // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
 
     // Verify the timer has the expected active task
@@ -83,11 +85,13 @@ pub async fn resume_timer_session(
         },
     )?;
 
-    // Resume the timer with task's configuration
+    // Execute domain logic: resume the timer
     let events = timer.resume(&task.config.timer)?;
+    
+    // Save the timer state
     timer_repo.save(&timer).await?;
 
-    // Publish events
+    // Publish domain events
     for event in events {
         event_publisher.publish(event);
     }

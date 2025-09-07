@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::core::{
     context::AppContext,
     database::TestDatabase,
@@ -5,8 +7,8 @@ use crate::core::{
     mocks::MockAppHandle,
 };
 use domain::{
-    ConfigRepository, Result, Task, TaskRepository,
-    timer::{TimerRepository, TimerService},
+    ConfigRepository, EventPublisher, Result, Task, TaskRepository,
+    TimerRepository,
 };
 
 /// Builder for customizing app context creation
@@ -123,12 +125,30 @@ impl AppContextBuilder {
             .await?
             .ok_or(domain::Error::DefaultTaskNotFound)?;
 
-        ctx.timer_service
-            .switch_task(task.id(), Some(&task))
-            .await?;
+        // Switch to the default task
+        let mut timer = ctx.timer_repo.get().await?;
+        timer.set_active_task(task.id);
+        ctx.timer_repo.save(&timer).await?;
 
         if self.with_timer_started {
-            ctx.timer_service.start_timer(Some(&task)).await?;
+            ctx.timer_tick_service
+                .update_timer(|timer| {
+                    let events =
+                        timer.start(&task.config.timer).map_err(|e| {
+                            domain::Error::RepositoryError {
+                                message: e.to_string(),
+                            }
+                        })?;
+
+                    (ctx.event_bus.clone() as Arc<dyn EventPublisher>)
+                        .publish_batch(events);
+                    Ok(())
+                })
+                .await?;
+            ctx.timer_tick_service
+                .start_timer_tick_loop(Some(&task))
+                .await
+                .map_err(|e| domain::Error::RepositoryError { message: e })?;
         }
 
         Ok(ctx)

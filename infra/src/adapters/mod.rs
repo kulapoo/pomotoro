@@ -29,13 +29,12 @@ pub mod task;
 pub mod timer;
 
 // Task infrastructure
-pub use task::{
-    TaskDto, TaskRepositoryArc,
-};
+pub use task::{SqliteTaskRepository, TaskDto, TaskRepositoryArc};
 
 // Timer infrastructure
-pub use timer::SqliteTimerService;
-pub type TimerRepositoryArc = std::sync::Arc<dyn domain::TimerRepository + Send + Sync>;
+pub use timer::{SqliteTimerRepository, TimerTickService};
+pub type TimerRepositoryArc =
+    std::sync::Arc<dyn domain::TimerRepository + Send + Sync>;
 
 // Audio infrastructure
 pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
@@ -47,4 +46,6 @@ pub use events::{EventHandler, InMemoryEventBus, audio_events};
 pub use notifications::{NotificationService, register_notification_handlers};
 
 // Database infrastructure
-pub use database::{DbPool, establish_connection, run_migrations, SqliteTaskRepository, SqliteConfigRepository, SqliteTimerRepository};
+pub use database::{
+    DbPool, SqliteConfigRepository, establish_connection, run_migrations,
+};

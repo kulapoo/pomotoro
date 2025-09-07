@@ -1,9 +1,10 @@
 use std::{any::TypeId, sync::Arc};
 
-use domain::Result;
+use domain::{Result, TaskRepository};
 
-use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventSubscriber;
+use crate::adapters::timer::event_handlers::TimerResetHandler;
+use crate::adapters::{TimerTickService, events::app_emitter::Emitter};
 
 use super::{
     PhaseCompletedHandler, PhaseSkippedHandler, TimerStartedHandler,
@@ -13,17 +14,21 @@ use super::{
 pub fn register_timer_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     emitter: Arc<dyn Emitter>,
+    timer_srv: Arc<TimerTickService>,
+    task_repo: Arc<dyn TaskRepository + Sync + Send>,
 ) -> Result<()> {
-    event_bus
-        .subscribe(Box::new(TimerStartedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TimerStartedHandler::new(
+        emitter.clone(),
+        timer_srv.clone(),
+        task_repo.clone(),
+    )))?;
     event_bus.subscribe(Box::new(TimerTickHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;
-    event_bus.subscribe(Box::new(TimerStatusChangedHandler::new(
-        emitter.clone(),
-    )))?;
+        .subscribe(Box::new(TimerStatusChangedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TimerResetHandler::new(emitter.clone())))?;
 
     Ok(())
 }
@@ -37,6 +42,7 @@ pub fn unregister_timer_handlers(
     event_bus.clear_handlers_for_type(TypeId::of::<PhaseSkippedHandler>())?;
     event_bus
         .clear_handlers_for_type(TypeId::of::<TimerStatusChangedHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<TimerResetHandler>())?;
 
     Ok(())
 }

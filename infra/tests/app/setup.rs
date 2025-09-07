@@ -12,7 +12,7 @@ async fn setup() -> Result<()> {
     let ctx = setup_ctx("setup").await;
 
     bootstrap(
-        ctx.timer_service.clone(),
+        ctx.timer_repo.clone(),
         ctx.task_repo.clone(),
         ctx.event_bus.clone(),
     )

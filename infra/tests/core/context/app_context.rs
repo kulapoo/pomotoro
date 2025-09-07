@@ -1,13 +1,16 @@
-use std::sync::Arc;
 use domain::{Result, TaskRepository, TimerRepository};
 use infra::adapters::{
-    database::{SqliteConfigRepository, SqliteTaskRepository, SqliteTimerRepository},
+    database::SqliteConfigRepository,
     events::{EventSubscriber, mem_event_bus::InMemoryEventBus},
-    task::DefaultCyclingService,
-    timer::SqliteTimerService
+    task::{DefaultCyclingService, SqliteTaskRepository},
+    timer::{SqliteTimerRepository, TimerTickService},
 };
+use std::sync::Arc;
 
-use crate::{core::{database::TestDatabase, mocks::ui::register_test_handlers}, MockAudioService, UiSimulator};
+use crate::{
+    MockAudioService, UiSimulator,
+    core::{database::TestDatabase, mocks::ui::register_test_handlers},
+};
 
 /// Application context for integration tests
 pub struct AppContext {
@@ -21,8 +24,8 @@ pub struct AppContext {
     pub config_repo: Arc<SqliteConfigRepository>,
     /// Timer repository
     pub timer_repo: Arc<SqliteTimerRepository>,
-    /// Timer service
-    pub timer_service: Arc<SqliteTimerService>,
+    /// Timer tick service (infrastructure)
+    pub timer_tick_service: Arc<TimerTickService>,
     /// Task cycling service
     pub task_cycling_service: Arc<DefaultCyclingService>,
     /// Audio service mock
@@ -51,31 +54,34 @@ impl AppContext {
 
         // Create repositories
         let task_repo = Arc::new(SqliteTaskRepository::new(db.pool.clone()));
-        let config_repo = Arc::new(SqliteConfigRepository::new(db.pool.clone()));
+        let config_repo =
+            Arc::new(SqliteConfigRepository::new(db.pool.clone()));
         let timer_repo = Arc::new(SqliteTimerRepository::new(db.pool.clone()));
 
         // Create services
-        let timer_service = Arc::new(SqliteTimerService::new(
+        let timer_tick_service = Arc::new(TimerTickService::new(
             event_bus.clone(),
             timer_repo.clone(),
             task_repo.clone(),
             config_repo.clone(),
         ));
 
-        let task_cycling_service = Arc::new(DefaultCyclingService::new(
-            task_repo.clone(),
-        ));
+        let task_cycling_service =
+            Arc::new(DefaultCyclingService::new(task_repo.clone()));
 
         let audio_service = Arc::new(MockAudioService::new());
 
-
-        let ui_simulator = Arc::new(
-            UiSimulator::new()
-        );
+        let ui_simulator = Arc::new(UiSimulator::new());
 
         let app_handle = ui_simulator.app_handle().clone();
 
-        register_test_handlers(event_bus.clone() as Arc<dyn EventSubscriber + Send + Sync>, app_handle).unwrap();
+        register_test_handlers(
+            event_bus.clone() as Arc<dyn EventSubscriber + Send + Sync>,
+            app_handle,
+            task_repo.clone(),
+            timer_tick_service.clone(),
+        )
+        .unwrap();
 
         Ok(Self {
             db,
@@ -83,7 +89,7 @@ impl AppContext {
             task_repo,
             config_repo,
             timer_repo,
-            timer_service,
+            timer_tick_service,
             task_cycling_service,
             audio_service,
             ui_simulator,
@@ -121,5 +127,4 @@ mod tests {
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "Test Task");
     }
-
 }

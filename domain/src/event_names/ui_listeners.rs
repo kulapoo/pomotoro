@@ -5,6 +5,7 @@ pub mod timer {
     pub const PHASE_COMPLETED: &str = "timer:phase_completed";
     pub const PHASE_SKIPPED: &str = "timer:phase_skipped";
     pub const STATE_UPDATED: &str = "timer:state_updated";
+    pub const TIMER_RESET: &str = "timer:timer_reset";
 }
 
 pub mod task {

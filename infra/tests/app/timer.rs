@@ -9,10 +9,9 @@ use crate::{
     },
 };
 use domain::{
-    Phase, TaskRepository, TaskStatus, TimerRepository, TimerStarted,
-    TimerState, event_names,
+    Phase, TaskRepository, TaskStatus, TimerPaused, TimerRepository,
+    TimerReset, TimerStarted, TimerState, TimerStatus, event_names,
     shared_kernel::events::AppStarted,
-    timer::{Status as TimerStatus, TimerService},
 };
 use usecases::{CreateTaskCmd, SwitchTaskCmd, create_task};
 use usecases::{
@@ -46,7 +45,8 @@ async fn timer_should_start_from_idle_state() {
     // act
     let result = start_timer_session(
         ctx.task_repo.clone(),
-        ctx.timer_service.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
         StartTimerSessionCmd {
             task_id: Some(task_id.as_str()),
         },
@@ -85,12 +85,22 @@ async fn timer_should_not_start_when_already_running() {
 
     let result = start_timer_session(
         ctx.task_repo.clone(),
-        ctx.timer_service.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
         StartTimerSessionCmd {
             task_id: Some(task_id.as_str()),
         },
     )
     .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::STATUS_CHANGED,
+    );
+
+    assert_utils::assert_event_published(&ctx, TypeId::of::<TimerStarted>());
 
     assert!(result.is_err());
 }
@@ -136,12 +146,6 @@ async fn timer_should_pause_when_running() {
 
     timer.remaining_seconds(Some(&task_config));
 
-    ctx.timer_repo
-        .save(&timer)
-        .await
-        .expect("Failed to save timer");
-
-    println!("timer: {:?}", timer);
     // Act
     let result = pause_timer_session(
         task_id,
@@ -151,11 +155,51 @@ async fn timer_should_pause_when_running() {
     )
     .await;
 
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let timer_after_pause = get_timer(&ctx).await;
+
+    println!("timer_after_pause: {:?}", timer_after_pause);
     // Assert
-    assert!(result.is_ok());
+    assert_eq!(result.is_ok(), true);
+    assert_eq!(timer.is_running(), true);
+    assert_eq!(timer.active_task_id(), Some(task_id));
+
+    assert_eq!(timer_after_pause.is_paused(), true);
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::STATUS_CHANGED,
+    );
+
+    assert_utils::assert_event_published(&ctx, TypeId::of::<TimerPaused>());
+}
+
+#[tokio::test]
+async fn timer_should_reset_to_initial_state() {
+    let ctx = setup_ctx_with_timer("timer_should_reset_to_initial_state").await;
 
     let timer = get_timer(&ctx).await;
-    println!("timer: {:?}", timer);
-    // assert_eq!(timer.state().status(), TimerStatus::Paused);
-    // assert_eq!(timer.active_task_id(), Some(task_id));
+    let task_id = timer.active_task_id().expect("Task id should be set");
+
+    let result = reset_timer_session(
+        task_id,
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    let timer_after_reset = get_timer(&ctx).await;
+
+    assert_eq!(result.is_ok(), true);
+    assert_eq!(timer_after_reset.is_idle(), true);
+    assert_eq!(timer_after_reset.active_task_id(), Some(task_id));
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::TIMER_RESET,
+    );
+
+    assert_utils::assert_event_published(&ctx, TypeId::of::<TimerReset>());
 }

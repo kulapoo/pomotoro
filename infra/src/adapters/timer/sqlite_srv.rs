@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -9,12 +8,13 @@ use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use chrono::Utc;
 use domain::TimerRepository;
 use domain::{
-    ConfigRepository, Error, Phase, Result as DomainResult, Task, TaskId,
-    TaskRepository, TimerState, TimerStatus,
-    timer::{Timer, TimerService},
+    ConfigRepository, Error, Phase, Result as DomainResult, Task,
+    TaskRepository, Timer,
 };
 
-pub struct SqliteTimerService {
+/// Infrastructure service for managing timer tick loops and technical concerns
+/// This is NOT a domain service - it handles infrastructure-specific timer management
+pub struct TimerTickService {
     timer: Arc<Mutex<Timer>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     event_publisher: EventPublisherArc,
@@ -24,7 +24,7 @@ pub struct SqliteTimerService {
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
-impl Clone for SqliteTimerService {
+impl Clone for TimerTickService {
     fn clone(&self) -> Self {
         Self {
             timer: Arc::clone(&self.timer),
@@ -38,7 +38,7 @@ impl Clone for SqliteTimerService {
     }
 }
 
-impl SqliteTimerService {
+impl TimerTickService {
     pub fn new(
         event_publisher: EventPublisherArc,
         timer_repository: Arc<dyn TimerRepository + Send + Sync>,
@@ -68,6 +68,8 @@ impl SqliteTimerService {
             })
     }
 
+    // TODO: Remove this once we have a proper session history implementation
+    #[allow(dead_code)]
     async fn add_session_history(
         &self,
         task: Option<&Task>,
@@ -79,7 +81,7 @@ impl SqliteTimerService {
             let history_entry = SessionHistoryDto {
                 task_id: task.id.to_string(),
                 task_name: task.name.clone(),
-                phase: format!("{:?}", phase),
+                phase: phase.name().to_string(),
                 duration_seconds,
                 completed_at: Utc::now(),
                 was_skipped,
@@ -88,8 +90,7 @@ impl SqliteTimerService {
             let mut history = self.session_history.lock().await;
             history.push(history_entry);
 
-            // Keep only the last 1000 entries
-            // Drain oldest entries to maintain memory efficiency
+            // Limit history size to prevent unbounded growth
             const MAX_HISTORY_SIZE: usize = 1000;
             const ENTRIES_TO_REMOVE: usize = 100;
 
@@ -99,7 +100,9 @@ impl SqliteTimerService {
         }
     }
 
-    async fn start_timer_internal(
+    /// Start the infrastructure timer tick loop
+    /// This manages the technical aspects of timer ticking
+    pub async fn start_timer_tick_loop(
         &self,
         task: Option<&Task>,
     ) -> Result<(), String> {
@@ -113,16 +116,6 @@ impl SqliteTimerService {
                 .map_err(|e| e.to_string())?
                 .timer
         };
-
-        let events = self
-            .timer
-            .lock()
-            .await
-            .start(&config)
-            .map_err(|e| e.to_string())?;
-
-        self.event_publisher.publish_batch(events);
-
         // Cancel any existing timer task
         {
             let mut cancel_guard = self.cancel_handle.lock().await;
@@ -130,20 +123,16 @@ impl SqliteTimerService {
                 handle.abort();
             }
         }
-
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
         let config_clone = config.clone();
         // Create a cloned service for the timer task
         let service_for_timer = self.clone();
-
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             let mut tick_count = 0u32;
-
             loop {
                 interval.tick().await;
-
                 let should_continue = {
                     let mut timer = timer_clone.lock().await;
 
@@ -153,6 +142,7 @@ impl SqliteTimerService {
                         let continue_running = match timer.tick(&config_clone) {
                             Ok((phase_complete, events)) => {
                                 // Publish the events
+
                                 if !events.is_empty() {
                                     event_publisher_clone.publish_batch(events);
                                 }
@@ -196,166 +186,47 @@ impl SqliteTimerService {
         }
         Ok(())
     }
-}
 
-#[async_trait]
-impl TimerService for SqliteTimerService {
-    async fn get_timer(&self) -> DomainResult<Timer> {
-        Ok(self.timer.lock().await.clone())
+    /// Stop the timer tick loop
+    pub async fn stop_timer_tick_loop(&self) -> DomainResult<()> {
+        // Cancel the timer task
+        let mut cancel_guard = self.cancel_handle.lock().await;
+        if let Some(handle) = cancel_guard.take() {
+            handle.abort();
+        }
+        Ok(())
     }
 
-    async fn get_state(&self) -> DomainResult<TimerState> {
-        Ok(self.timer.lock().await.state().clone())
+    /// Get the current timer for infrastructure purposes
+    pub async fn get_current_timer(&self) -> Timer {
+        self.timer.lock().await.clone()
     }
 
-    async fn load_state(&self) -> DomainResult<()> {
+    /// Update the timer (for infrastructure use only)
+    pub async fn update_timer<F>(&self, update_fn: F) -> DomainResult<()>
+    where
+        F: FnOnce(&mut Timer) -> DomainResult<()>,
+    {
+        {
+            let mut timer = self.timer.lock().await;
+            update_fn(&mut *timer)?;
+        }
+        self.save_state().await
+    }
+
+    /// Load timer state from repository
+    pub async fn load_state(&self) -> DomainResult<()> {
         let loaded_timer = self.timer_repository.get().await.map_err(|e| {
             Error::RepositoryError {
                 message: e.to_string(),
             }
         })?;
-
         *self.timer.lock().await = loaded_timer;
         Ok(())
     }
 
-    async fn switch_task(
-        &self,
-        task_id: TaskId,
-        _task: Option<&Task>,
-    ) -> DomainResult<()> {
-        {
-            let mut timer = self.timer.lock().await;
-            // Only allow switching when timer is idle
-            if !timer.state().is_idle() {
-                return Err(Error::ConfigurationError {
-                    message: "Cannot switch tasks while timer is running"
-                        .to_string(),
-                });
-            }
-            timer.set_active_task(task_id);
-        }
-
-        self.save_state().await
-    }
-
-    async fn stop_timer(&self) -> DomainResult<()> {
-        // Cancel the timer task
-        {
-            let mut cancel_guard = self.cancel_handle.lock().await;
-            if let Some(handle) = cancel_guard.take() {
-                handle.abort();
-            }
-        }
-
-        let config = self.config_repository.get_config().await?.timer;
-
-        let events = {
-            let mut timer = self.timer.lock().await;
-            timer.reset(&config)?
-        };
-
-        self.event_publisher.publish_batch(events);
-        self.save_state().await?;
-        Ok(())
-    }
-
-    async fn start_timer(&self, task: Option<&Task>) -> DomainResult<()> {
-        self.start_timer_internal(task).await.map_err(|e| {
-            Error::RepositoryError {
-                message: format!("Failed to start timer: {e}"),
-            }
-        })
-    }
-
-    async fn toggle_pause(&self) -> DomainResult<TimerStatus> {
-        let config = self.config_repository.get_config().await?.timer;
-
-        let (status, events) = {
-            let mut timer = self.timer.lock().await;
-            if timer.is_running() {
-                let events = timer.pause(&config)?;
-                (TimerStatus::Paused, events)
-            } else {
-                let events = timer.resume(&config)?;
-                (TimerStatus::Running, events)
-            }
-        };
-
-        self.event_publisher.publish_batch(events);
-
-        // If resumed, restart the timer task
-        if status == TimerStatus::Running {
-            // Restart the timer task without a specific task context
-            self.start_timer_internal(None).await.map_err(|e| {
-                Error::RepositoryError {
-                    message: format!("Failed to resume timer: {e}"),
-                }
-            })?;
-        }
-
-        self.save_state().await?;
-        Ok(status)
-    }
-
-    async fn reset_current_phase(
-        &self,
-        task: Option<&Task>,
-    ) -> DomainResult<()> {
-        // Cancel the timer task
-        {
-            let mut cancel_guard = self.cancel_handle.lock().await;
-            if let Some(handle) = cancel_guard.take() {
-                handle.abort();
-            }
-        }
-
-        let config = if let Some(task) = task {
-            task.config.timer.clone()
-        } else {
-            self.config_repository.get_config().await?.timer
-        };
-
-        let events = {
-            let mut timer = self.timer.lock().await;
-            timer.reset(&config)?
-        };
-
-        self.event_publisher.publish_batch(events);
-        self.save_state().await?;
-        Ok(())
-    }
-
-    async fn skip_to_next_phase(
-        &self,
-        task: Option<&Task>,
-    ) -> DomainResult<(Phase, Phase)> {
-        let (old_phase, duration) = {
-            let timer = self.timer.lock().await;
-            let state = timer.state();
-            let phase = state.phase();
-            let duration = state.remaining_seconds();
-            (phase, duration)
-        };
-
-        self.add_session_history(task, old_phase, duration, true)
-            .await;
-
-        let config = if let Some(task) = task {
-            task.config.timer.clone()
-        } else {
-            self.config_repository.get_config().await?.timer
-        };
-
-        let (events, new_phase) = {
-            let mut timer = self.timer.lock().await;
-            let events = timer.skip_phase(&config)?;
-            let new_phase = timer.state().phase();
-            (events, new_phase)
-        };
-
-        self.event_publisher.publish_batch(events);
-        self.save_state().await?;
-        Ok((old_phase, new_phase))
+    /// Get session history
+    pub async fn get_session_history(&self) -> Vec<SessionHistoryDto> {
+        self.session_history.lock().await.clone()
     }
 }

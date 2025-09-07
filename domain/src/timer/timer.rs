@@ -200,70 +200,6 @@ impl Timer {
         }
     }
 
-    pub fn format_time(&self) -> String {
-        let seconds = self.state.remaining_seconds();
-        let minutes = seconds / 60;
-        let secs = seconds % 60;
-        format!("{minutes:02}:{secs:02}")
-    }
-
-    pub fn phase_name(&self) -> &'static str {
-        match &self.state {
-            TimerState::Idle => "Stopped",
-            TimerState::Working { .. } => "Focus Time",
-            TimerState::ShortBreak { .. } => "Short Break",
-            TimerState::LongBreak { .. } => "Long Break",
-            TimerState::Paused { paused_from, .. } => {
-                match paused_from.as_ref() {
-                    TimerState::Working { .. } => "Focus Time (Paused)",
-                    TimerState::ShortBreak { .. } => "Short Break (Paused)",
-                    TimerState::LongBreak { .. } => "Long Break (Paused)",
-                    _ => "Paused",
-                }
-            }
-        }
-    }
-
-    pub fn progress_percentage(&self, configuration: Option<&TimerConfiguration>) -> f64 {
-        match &self.state {
-            TimerState::Idle => 0.0,
-            TimerState::Working {
-                remaining_seconds,
-                ..
-            } => {
-                let total = configuration
-                    .map(|c| c.get_phase_duration_seconds(Phase::Work))
-                    .unwrap_or(25 * 60) as f64;
-                let elapsed = total - *remaining_seconds as f64;
-                (elapsed / total * 100.0).clamp(0.0, 100.0)
-            }
-            TimerState::ShortBreak {
-                remaining_seconds,
-                ..
-            } => {
-                let total = configuration
-                    .map(|c| c.get_phase_duration_seconds(Phase::ShortBreak))
-                    .unwrap_or(5 * 60) as f64;
-                let elapsed = total - *remaining_seconds as f64;
-                (elapsed / total * 100.0).clamp(0.0, 100.0)
-            }
-            TimerState::LongBreak {
-                remaining_seconds,
-                ..
-            } => {
-                let total = configuration
-                    .map(|c| c.get_phase_duration_seconds(Phase::LongBreak))
-                    .unwrap_or(15 * 60) as f64;
-                let elapsed = total - *remaining_seconds as f64;
-                (elapsed / total * 100.0).clamp(0.0, 100.0)
-            }
-            TimerState::Paused { .. } => 0.0,
-        }
-    }
-
-    pub fn session_display(&self) -> String {
-        format!("Session")
-    }
 
     pub fn is_running(&self) -> bool {
         self.state.is_running()
@@ -436,47 +372,6 @@ mod tests {
         assert!(skip_result.is_ok());
     }
 
-    #[test]
-    fn test_timer_format_time() {
-        let timer = create_test_timer();
-        let formatted = timer.format_time();
-        assert!(formatted.contains(":"));
-        assert_eq!(formatted.len(), 5);
-    }
-
-    #[test]
-    fn test_timer_phase_name() {
-        let mut timer = create_test_timer();
-        let config = create_test_config();
-
-        assert_eq!(timer.phase_name(), "Stopped");
-
-        timer.start(&config).unwrap();
-        assert_eq!(timer.phase_name(), "Focus Time");
-
-        timer.pause(&config).unwrap();
-        assert_eq!(timer.phase_name(), "Focus Time (Paused)");
-    }
-
-    #[test]
-    fn test_timer_progress_percentage() {
-        let mut timer = create_test_timer();
-        let config = create_test_config();
-
-        assert_eq!(timer.progress_percentage(Some(&config)), 0.0);
-
-        timer.start(&config).unwrap();
-        let progress = timer.progress_percentage(Some(&config));
-        assert!(progress >= 0.0);
-        assert!(progress <= 100.0);
-    }
-
-    #[test]
-    fn test_timer_session_display() {
-        let timer = create_test_timer();
-        let display = timer.session_display();
-        assert_eq!(display, "Session");
-    }
 
     #[test]
     fn test_timer_remaining_seconds() {

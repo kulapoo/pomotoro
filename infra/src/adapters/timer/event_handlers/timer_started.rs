@@ -1,18 +1,28 @@
-use crate::adapters::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
+use crate::adapters::{EventHandler, TimerTickService};
 use async_trait::async_trait;
-use domain::{Event, Result};
+use domain::{Event, Result, TaskId, TaskRepository};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct TimerStartedHandler {
     emitter: Arc<dyn Emitter>,
+    timer_srv: Arc<TimerTickService>,
+    task_repository: Arc<dyn TaskRepository>,
 }
 
 impl TimerStartedHandler {
-    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
-        TimerStartedHandler { emitter }
+    pub fn new(
+        emitter: Arc<dyn Emitter>,
+        timer_srv: Arc<TimerTickService>,
+        task_repository: Arc<dyn TaskRepository>,
+    ) -> Self {
+        TimerStartedHandler {
+            emitter,
+            timer_srv,
+            task_repository,
+        }
     }
 }
 
@@ -23,8 +33,32 @@ impl EventHandler for TimerStartedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let timer_started =
-            event.as_any().downcast_ref::<domain::TimerStarted>();
+        let timer_started = event
+            .as_any()
+            .downcast_ref::<domain::TimerStarted>()
+            .ok_or(domain::Error::EventHandlingError {
+                message: format!("Failed to start timer tick loop"),
+            })?;
+
+        let task_id = TaskId::from_string(
+            timer_started.active_entity_id.as_deref().ok_or(
+                domain::Error::InvalidTaskParams {
+                    message: "missing task id".into(),
+                },
+            )?,
+        )
+        .map_err(|e| domain::Error::InvalidTaskParams {
+            message: e.to_string(),
+        })?;
+
+        let task = self.task_repository.get_by_id(task_id).await?;
+
+        self.timer_srv
+            .start_timer_tick_loop(task.as_ref())
+            .await
+            .map_err(|e| domain::Error::EventHandlingError {
+                message: format!("Failed to start timer tick loop: {e}"),
+            })?;
 
         self.emitter
             .emit(

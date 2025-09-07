@@ -16,8 +16,8 @@ use commands::{
     request_notification_permission, reset_config_to_defaults, reset_task_sessions,
     reset_task_settings_to_defaults, reset_timer, resume_audio,
     save_global_config, search_tasks, search_tasks_fuzzy, set_audio_volume,
-    skip_phase, start_timer, stop_all_audio, stop_audio, stop_background_audio,
-    switch_active_task, test_audio_preview, test_notification, update_appearance_config,
+    skip_timer, start_timer, stop_all_audio, stop_audio, stop_background_audio,
+    switch_timer_task_cmd, test_audio_preview, test_notification, update_appearance_config,
     update_audio_config, update_general_config,
     update_notification_config, update_storage_path, update_task,
     update_task_settings, validate_storage_path,
@@ -67,7 +67,7 @@ pub fn run() {
 
             // services
             app.manage(app_registry.audio_service);
-            app.manage(app_registry.timer_service.clone());
+            app.manage(app_registry.timer_tick_service.clone());
             app.manage(app_registry.task_cycling_service.clone());
 
             // events
@@ -80,8 +80,8 @@ pub fn run() {
             start_timer,
             pause_timer,
             reset_timer,
-            skip_phase,
-            switch_active_task,
+            skip_timer,
+            switch_timer_task_cmd,
             create_task,
             debug_create_test_task,
             get_task,

@@ -58,6 +58,9 @@ pub enum Error {
     #[error("Event publishing error: {message}")]
     EventPublishingError { message: String },
 
+    #[error("Event handling error: {message}")]
+    EventHandlingError { message: String },
+
     #[error("Serialization error: {message}")]
     SerializationError { message: String },
 

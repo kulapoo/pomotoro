@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::{
-    EventPublisher, Result, TaskRepository, shared_kernel::events::AppStarted,
-    timer::TimerService,
+    EventPublisher, Result, TaskRepository, TimerRepository,
+    shared_kernel::events::AppStarted,
 };
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub async fn bootstrap(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
@@ -27,18 +27,18 @@ pub async fn bootstrap(
         create_task(task_repo.clone(), event_publisher.clone(), cmd).await?
     };
 
-    timer_service.load_state().await?;
-
     // Check timer state and reset if not idle before switching tasks
-    let timer_state = timer_service.get_state().await?;
+    let timer = timer_repo.get().await?;
 
-    if !timer_state.is_idle() {
+    if !timer.is_idle() {
         // Reset timer to idle state to allow task switching
-        timer_service.stop_timer().await?;
+        let mut timer = timer;
+        timer.reset(&task.config.timer)?;
+        timer_repo.save(&timer).await?;
     }
 
     switch_timer_task(
-        timer_service.clone(),
+        timer_repo.clone(),
         task_repo.clone(),
         event_publisher.clone(),
         switch_timer_task::SwitchTimerTaskCmd {

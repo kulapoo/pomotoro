@@ -6,9 +6,11 @@
 
 pub mod event_handlers;
 pub mod repository;
-pub mod sqlite_service;
+mod sqlite_repository;
+pub mod sqlite_srv;
 pub mod timer_dto;
 pub mod timer_storage_dto;
 
 pub use repository::FileTimerStateRepository;
-pub use sqlite_service::SqliteTimerService;
+pub use sqlite_repository::SqliteTimerRepository;
+pub use sqlite_srv::TimerTickService;

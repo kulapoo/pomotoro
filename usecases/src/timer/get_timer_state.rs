@@ -1,10 +1,9 @@
-use domain::timer::TimerService;
-use domain::{Result, TimerState};
+use domain::{Result, TimerState, TimerRepository};
 use std::sync::Arc;
 
 /// Get the current timer state
 ///
-/// This use case retrieves the current timer state from the timer service.
+/// This use case retrieves the current timer state from the timer repository.
 /// It provides a clean abstraction for controllers to access timer information
 /// without directly depending on infrastructure concerns.
 ///
@@ -15,11 +14,13 @@ use std::sync::Arc;
 ///
 /// ## Dependencies
 ///
-/// - TimerService: For timer state access (domain abstraction)
+/// - TimerRepository: For timer persistence
 pub async fn get_timer_state(
-    timer_service: Arc<dyn TimerService + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
 ) -> Result<TimerState> {
-    timer_service.load_state().await?;
-
-    timer_service.get_state().await
+    // Load the timer aggregate
+    let timer = timer_repo.get().await?;
+    
+    // Return the timer's state
+    Ok(timer.state().clone())
 }
