@@ -1,9 +1,7 @@
 use crate::adapters::audio::AudioServiceWrapper;
-use domain::{
-    AudioAsset, AudioLibrary, PlaybackHandle, PlaybackRequest,
-};
-use tauri::State;
 use anyhow::Context;
+use domain::{AudioAsset, AudioLibrary, PlaybackHandle, PlaybackRequest};
+use tauri::State;
 
 type AudioServiceState<'a> = State<'a, AudioServiceWrapper>;
 
@@ -19,7 +17,8 @@ pub async fn play_audio(
     request: PlaybackRequest,
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
-    audio_service.play_audio(request)
+    audio_service
+        .play_audio(request)
         .context("Failed to play audio")
         .map_err(|e| e.to_string())
 }
@@ -29,8 +28,11 @@ pub async fn stop_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    audio_service.stop_audio(&handle_id)
-        .with_context(|| format!("Failed to stop audio playback: {}", handle_id))
+    audio_service
+        .stop_audio(&handle_id)
+        .with_context(|| {
+            format!("Failed to stop audio playback: {}", handle_id)
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -41,7 +43,9 @@ pub async fn pause_audio(
 ) -> Result<(), String> {
     audio_service
         .pause_audio(&handle_id)
-        .with_context(|| format!("Failed to pause audio playback: {}", handle_id))
+        .with_context(|| {
+            format!("Failed to pause audio playback: {}", handle_id)
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -52,7 +56,9 @@ pub async fn resume_audio(
 ) -> Result<(), String> {
     audio_service
         .resume_audio(&handle_id)
-        .with_context(|| format!("Failed to resume audio playback: {}", handle_id))
+        .with_context(|| {
+            format!("Failed to resume audio playback: {}", handle_id)
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -64,7 +70,12 @@ pub async fn set_audio_volume(
 ) -> Result<(), String> {
     audio_service
         .set_volume(&handle_id, volume)
-        .with_context(|| format!("Failed to set volume to {} for playback: {}", volume, handle_id))
+        .with_context(|| {
+            format!(
+                "Failed to set volume to {} for playback: {}",
+                volume, handle_id
+            )
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -72,7 +83,8 @@ pub async fn set_audio_volume(
 pub async fn get_active_playbacks(
     audio_service: AudioServiceState<'_>,
 ) -> Result<Vec<PlaybackHandle>, String> {
-    audio_service.get_active_playbacks()
+    audio_service
+        .get_active_playbacks()
         .context("Failed to get active playbacks")
         .map_err(|e| e.to_string())
 }
@@ -81,7 +93,8 @@ pub async fn get_active_playbacks(
 pub async fn stop_all_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    audio_service.stop_all_audio()
+    audio_service
+        .stop_all_audio()
         .context("Failed to stop all audio")
         .map_err(|e| e.to_string())
 }
@@ -94,7 +107,9 @@ pub async fn play_notification_sound(
 ) -> Result<PlaybackHandle, String> {
     audio_service
         .play_notification(&asset_id, volume)
-        .with_context(|| format!("Failed to play notification sound: {}", asset_id))
+        .with_context(|| {
+            format!("Failed to play notification sound: {}", asset_id)
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -106,7 +121,9 @@ pub async fn play_background_audio(
 ) -> Result<PlaybackHandle, String> {
     audio_service
         .play_background_audio(&asset_id, volume)
-        .with_context(|| format!("Failed to play background audio: {}", asset_id))
+        .with_context(|| {
+            format!("Failed to play background audio: {}", asset_id)
+        })
         .map_err(|e| e.to_string())
 }
 
@@ -114,7 +131,8 @@ pub async fn play_background_audio(
 pub async fn stop_background_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    audio_service.stop_background_audio()
+    audio_service
+        .stop_background_audio()
         .context("Failed to stop background audio")
         .map_err(|e| e.to_string())
 }
@@ -140,7 +158,8 @@ pub async fn remove_audio_asset(
 pub async fn cleanup_finished_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
-    audio_service.cleanup_finished()
+    audio_service
+        .cleanup_finished()
         .context("Failed to cleanup finished audio")
         .map_err(|e| e.to_string())
 }
@@ -152,11 +171,14 @@ pub async fn test_audio_preview(
     audio_service: AudioServiceState<'_>,
 ) -> Result<PlaybackHandle, String> {
     let request = PlaybackRequest::new(asset_id.clone(), volume)
-        .with_context(|| format!("Failed to create playback request for asset: {}", asset_id))
+        .with_context(|| {
+            format!("Failed to create playback request for asset: {}", asset_id)
+        })
         .map_err(|e| e.to_string())?
         .with_fade_in(500);
 
-    audio_service.play_audio(request)
+    audio_service
+        .play_audio(request)
         .context("Failed to play audio preview")
         .map_err(|e| e.to_string())
 }

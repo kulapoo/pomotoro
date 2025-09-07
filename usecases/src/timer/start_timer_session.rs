@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct StartTimerSessionCmd {
-    pub task_id: Option<String>,
+    pub task_id: Option<TaskId>,
 }
 
 /// Start a timer session for a specific task
@@ -33,18 +33,17 @@ pub async fn start_timer_session(
     let to_invalid_task_data =
         |msg: String| domain::Error::InvalidTaskParams { message: msg };
 
-    let task_id_str = cmd.task_id.ok_or_else(|| {
+    let task_id = cmd.task_id.ok_or_else(|| {
         to_invalid_task_data("Task ID is required".to_string())
     })?;
 
-    let task_id = TaskId::from_string(&task_id_str).map_err(|e| {
-        to_invalid_task_data(format!("Invalid task ID format: {}", e))
-    })?;
-
-    let task = task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or(Error::TaskNotFound { id: task_id_str })?;
+    let task =
+        task_repo
+            .get_by_id(task_id)
+            .await?
+            .ok_or(Error::TaskNotFound {
+                id: task_id.as_str(),
+            })?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
@@ -52,28 +51,20 @@ pub async fn start_timer_session(
 
     // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
-    
-    // Check if timer is already running
-    if timer.is_running() {
-        return Err(Error::InvalidStateTransition {
-            from: "Running".to_string(),
-            to: "Start".to_string(),
-        });
-    }
 
     // Set the active task
     timer.set_active_task(task_id);
-    
+
     // Execute domain logic: start the timer
     let events = timer.start(&task.config.timer)?;
-    
+
+    // timer.star
     // Save the timer state
     timer_repo.save(&timer).await?;
-    
     // Publish domain events
     for event in events {
         event_publisher.publish(event);
     }
-    
+
     Ok(())
 }

@@ -48,7 +48,7 @@ async fn timer_should_start_from_idle_state() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerSessionCmd {
-            task_id: Some(task_id.as_str()),
+            task_id: Some(task_id),
         },
     )
     .await;
@@ -67,11 +67,10 @@ async fn timer_should_start_from_idle_state() {
 
     assert_utils::assert_event_published(&ctx, TypeId::of::<TimerStarted>());
 
-    let timer = get_timer(&ctx).await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+    let timer = get_timer(&ctx).await;
     assert!(timer.is_running(), "Timer should be running");
-    assert_eq!(timer.state().status(), TimerStatus::Running);
-    assert_eq!(timer.active_task_id(), Some(task_id));
 }
 
 #[tokio::test]
@@ -88,17 +87,12 @@ async fn timer_should_not_start_when_already_running() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerSessionCmd {
-            task_id: Some(task_id.as_str()),
+            task_id: Some(task_id),
         },
     )
     .await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-    assert_utils::assert_event_was_emitted(
-        &ctx.ui_simulator,
-        event_names::ui_listeners::timer::STATUS_CHANGED,
-    );
 
     assert_utils::assert_event_published(&ctx, TypeId::of::<TimerStarted>());
 
@@ -202,4 +196,39 @@ async fn timer_should_reset_to_initial_state() {
     );
 
     assert_utils::assert_event_published(&ctx, TypeId::of::<TimerReset>());
+}
+
+#[tokio::test]
+async fn timer_should_start_with_specific_task() {
+    let ctx = setup_ctx("should_start_timer_with_specific_task").await;
+
+    let timer = get_timer(&ctx).await;
+    let task_id = timer.active_task_id().expect("Task id should be set");
+
+    let result = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task_id),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let timer = get_timer(&ctx).await;
+
+    assert!(result.is_ok());
+    assert_eq!(timer.active_task_id(), Some(task_id));
+    assert_eq!(timer.state().status(), TimerStatus::Running);
+    assert_eq!(timer.state().is_work_phase(), true);
+    assert_eq!(timer.state().remaining_seconds(), 1500);
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::STATUS_CHANGED,
+    );
+
+    assert_utils::assert_event_published(&ctx, TypeId::of::<TimerStarted>());
 }

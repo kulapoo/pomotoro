@@ -1,10 +1,9 @@
-use domain::{TaskId, Config};
+use domain::{Config, TaskId};
 use serde::{Deserialize, Serialize};
-use tauri::{command, State};
+use tauri::{State, command};
 
 use crate::adapters::{
-    events::mem_event_bus::EventPublisherArc,
-    TaskRepositoryArc,
+    TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

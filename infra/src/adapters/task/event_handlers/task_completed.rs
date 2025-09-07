@@ -27,7 +27,10 @@ impl EventHandler for TaskCompletedHandler {
             event.as_any().downcast_ref::<domain::TaskCompleted>();
 
         self.emitter
-            .emit(domain::event_names::task::LIST_UPDATED, json!(task_completed))
+            .emit(
+                domain::event_names::task::LIST_UPDATED,
+                json!(task_completed),
+            )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task completed event: {e}"),
             })?;

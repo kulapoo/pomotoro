@@ -39,17 +39,11 @@ impl EventHandler for TimerStartedHandler {
             .ok_or(domain::Error::EventHandlingError {
                 message: format!("Failed to start timer tick loop"),
             })?;
-
-        let task_id = TaskId::from_string(
-            timer_started.active_entity_id.as_deref().ok_or(
-                domain::Error::InvalidTaskParams {
-                    message: "missing task id".into(),
-                },
-            )?,
-        )
-        .map_err(|e| domain::Error::InvalidTaskParams {
-            message: e.to_string(),
-        })?;
+        let task_id = timer_started.active_entity_id.ok_or(
+            domain::Error::InvalidTaskParams {
+                message: "missing task id".into(),
+            },
+        )?;
 
         let task = self.task_repository.get_by_id(task_id).await?;
 
@@ -68,6 +62,7 @@ impl EventHandler for TimerStartedHandler {
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}"),
             })?;
+
         Ok(())
     }
 }

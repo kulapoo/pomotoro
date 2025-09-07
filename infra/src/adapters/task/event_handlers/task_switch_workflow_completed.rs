@@ -28,7 +28,10 @@ impl EventHandler for TaskSwitchWorkflowCompletedHandler {
             .downcast_ref::<domain::TaskSwitchWorkflowCompleted>();
 
         self.emitter
-            .emit(domain::event_names::task::ACTIVE_CHANGED, json!(task_switch))
+            .emit(
+                domain::event_names::task::ACTIVE_CHANGED,
+                json!(task_switch),
+            )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(
                     "Failed to emit task switch workflow completed event: {e}"

@@ -88,33 +88,33 @@ impl From<&TimerState> for TimerStateDto {
                 session_count: 0,
                 active_entity: None,
             },
-            TimerState::Working {
-                remaining_seconds,
-            } => TimerStateDto::Working {
-                configuration: Default::default(),
-                remaining_seconds: *remaining_seconds,
-                session_count: 0,
-                active_entity: None,
-                entity_session_count: 0,
-            },
-            TimerState::ShortBreak {
-                remaining_seconds,
-            } => TimerStateDto::ShortBreak {
-                configuration: Default::default(),
-                remaining_seconds: *remaining_seconds,
-                session_count: 0,
-                active_entity: None,
-                entity_session_count: 0,
-            },
-            TimerState::LongBreak {
-                remaining_seconds,
-            } => TimerStateDto::LongBreak {
-                configuration: Default::default(),
-                remaining_seconds: *remaining_seconds,
-                session_count: 0,
-                active_entity: None,
-                entity_session_count: 0,
-            },
+            TimerState::Working { remaining_seconds } => {
+                TimerStateDto::Working {
+                    configuration: Default::default(),
+                    remaining_seconds: *remaining_seconds,
+                    session_count: 0,
+                    active_entity: None,
+                    entity_session_count: 0,
+                }
+            }
+            TimerState::ShortBreak { remaining_seconds } => {
+                TimerStateDto::ShortBreak {
+                    configuration: Default::default(),
+                    remaining_seconds: *remaining_seconds,
+                    session_count: 0,
+                    active_entity: None,
+                    entity_session_count: 0,
+                }
+            }
+            TimerState::LongBreak { remaining_seconds } => {
+                TimerStateDto::LongBreak {
+                    configuration: Default::default(),
+                    remaining_seconds: *remaining_seconds,
+                    session_count: 0,
+                    active_entity: None,
+                    entity_session_count: 0,
+                }
+            }
             TimerState::Paused {
                 paused_from,
                 remaining_seconds,
@@ -131,27 +131,16 @@ impl TryFrom<TimerStateDto> for TimerState {
 
     fn try_from(dto: TimerStateDto) -> Result<Self> {
         let state = match dto {
-            TimerStateDto::Idle {
-                ..
-            } => TimerState::Idle,
+            TimerStateDto::Idle { .. } => TimerState::Idle,
             TimerStateDto::Working {
-                remaining_seconds,
-                ..
-            } => TimerState::Working {
-                remaining_seconds,
-            },
+                remaining_seconds, ..
+            } => TimerState::Working { remaining_seconds },
             TimerStateDto::ShortBreak {
-                remaining_seconds,
-                ..
-            } => TimerState::ShortBreak {
-                remaining_seconds,
-            },
+                remaining_seconds, ..
+            } => TimerState::ShortBreak { remaining_seconds },
             TimerStateDto::LongBreak {
-                remaining_seconds,
-                ..
-            } => TimerState::LongBreak {
-                remaining_seconds,
-            },
+                remaining_seconds, ..
+            } => TimerState::LongBreak { remaining_seconds },
             TimerStateDto::Paused {
                 paused_from,
                 remaining_seconds,

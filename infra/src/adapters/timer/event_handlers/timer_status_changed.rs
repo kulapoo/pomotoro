@@ -4,8 +4,8 @@ use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
-use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
 
 pub struct TimerStatusChangedHandler {
     emitter: Arc<dyn Emitter>,
@@ -28,7 +28,10 @@ impl EventHandler for TimerStatusChangedHandler {
             event.as_any().downcast_ref::<TimerStatusChanged>()
         {
             self.emitter
-                .emit(ui_listeners::timer::STATUS_CHANGED, json!(status_changed.clone()))
+                .emit(
+                    ui_listeners::timer::STATUS_CHANGED,
+                    json!(status_changed.clone()),
+                )
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit timer status changed event: {e}"

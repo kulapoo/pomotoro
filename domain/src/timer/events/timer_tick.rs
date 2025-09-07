@@ -1,7 +1,7 @@
-use crate::Event;
+use crate::{Event, TimerConfiguration};
 
-use crate::timer::Phase;
 use crate::TimerId;
+use crate::timer::Phase;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +12,7 @@ pub struct Tick {
     pub remaining_seconds: u32,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
+    pub config: TimerConfiguration,
 }
 
 impl Tick {
@@ -20,6 +21,7 @@ impl Tick {
         phase: Phase,
         remaining_seconds: u32,
         version: u64,
+        config: TimerConfiguration,
     ) -> Self {
         Self {
             timer_id,
@@ -27,6 +29,7 @@ impl Tick {
             remaining_seconds,
             version,
             occurred_at: Utc::now(),
+            config,
         }
     }
 }
@@ -64,7 +67,13 @@ mod tests {
     #[test]
     fn should_create_timer_tick_event() {
         let timer_id = TimerId::new();
-        let event = Tick::new(timer_id, Phase::Work, 1234, 1);
+        let event = Tick::new(
+            timer_id,
+            Phase::Work,
+            1234,
+            1,
+            TimerConfiguration::default(),
+        );
 
         assert_eq!(event.event_type(), "Tick");
         assert_eq!(event.version(), 1);
@@ -79,6 +88,7 @@ mod tests {
             Phase::ShortBreak,
             300,
             2,
+            TimerConfiguration::default(),
         );
 
         let serialized = serde_json::to_string(&event).unwrap();

@@ -7,7 +7,6 @@ diesel::table! {
         current_phase -> Text,
         remaining_seconds -> Integer,
         is_running -> Bool,
-        session_count -> Integer,
         created_at -> Text,
         updated_at -> Text,
     }

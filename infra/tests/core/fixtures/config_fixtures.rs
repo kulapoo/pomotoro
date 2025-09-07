@@ -1,7 +1,6 @@
 use domain::{
-    Config, GeneralConfig, NotificationConfig,
-    AppearanceConfig, AudioConfig, TimerConfiguration,
-    TaskCyclingBehavior, Theme, NotificationPosition,
+    AppearanceConfig, AudioConfig, Config, GeneralConfig, NotificationConfig,
+    NotificationPosition, TaskCyclingBehavior, Theme, TimerConfiguration,
 };
 
 /// Configuration fixtures for testing
@@ -12,7 +11,6 @@ impl ConfigFixtures {
     pub fn default() -> Config {
         Config::default()
     }
-
 
     /// Create a minimal config for testing
     pub fn minimal() -> Config {
@@ -34,6 +32,7 @@ impl ConfigFixtures {
             minimize_to_tray: false,
             start_minimized: false,
             enable_screen_blocking: false,
+            persistence_interval_seconds: 10,
         }
     }
 
@@ -72,7 +71,6 @@ impl ConfigFixtures {
             muted: false,
         }
     }
-
 
     /// Create task config for testing
     pub fn task_config() -> Config {

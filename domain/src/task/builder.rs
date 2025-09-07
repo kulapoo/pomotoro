@@ -66,7 +66,6 @@ impl Builder {
         self
     }
 
-
     /// Set the task name
     pub fn name(mut self, name: String) -> Self {
         self.name = Some(name);
@@ -103,7 +102,6 @@ impl Builder {
         self
     }
 
-
     /// Set description (builder method for fluent API)
     pub fn with_description(mut self, description: String) -> Self {
         self.description = Some(description);
@@ -121,7 +119,6 @@ impl Builder {
         self.config = Some(config);
         self
     }
-
 
     /// Set the creation timestamp
     pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
@@ -146,7 +143,6 @@ impl Builder {
         self.default = Some(default);
         self
     }
-
 
     /// Mark the task as completed
     pub fn completed(self) -> Self {
@@ -206,6 +202,7 @@ impl Builder {
             completed_at,
             status,
             default: self.default.unwrap_or(false),
+            updated_at: Utc::now(),
         })
     }
 }

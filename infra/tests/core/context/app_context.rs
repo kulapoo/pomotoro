@@ -80,6 +80,7 @@ impl AppContext {
             app_handle,
             task_repo.clone(),
             timer_tick_service.clone(),
+            config_repo.clone(),
         )
         .unwrap();
 

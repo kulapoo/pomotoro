@@ -1,21 +1,30 @@
 use async_trait::async_trait;
-use domain::{Event, PhaseCompleted, TaskCompleted, Result, ConfigRepository};
-use domain::timer::events::{Started as TimerStarted, Paused as TimerPaused, WorkSessionCompleted, BreakSessionStarted, BreakSessionCompleted};
+use domain::timer::events::{
+    BreakSessionCompleted, BreakSessionStarted, Paused as TimerPaused,
+    Started as TimerStarted, WorkSessionCompleted,
+};
+use domain::{ConfigRepository, Event, PhaseCompleted, Result, TaskCompleted};
 use std::any::TypeId;
 use std::sync::Arc;
 use tauri::AppHandle;
 
+use super::service::{
+    NotificationEvent, NotificationService, NotificationServiceTrait,
+};
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::EventSubscriber;
-use super::service::{NotificationService, NotificationServiceTrait, NotificationEvent};
 
 pub struct PhaseCompletedNotificationHandler {
     notification_service: Arc<dyn NotificationServiceTrait>,
 }
 
 impl PhaseCompletedNotificationHandler {
-    pub fn new(notification_service: Arc<dyn NotificationServiceTrait>) -> Self {
-        Self { notification_service }
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+    ) -> Self {
+        Self {
+            notification_service,
+        }
     }
 }
 
@@ -26,12 +35,16 @@ impl EventHandler for PhaseCompletedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(phase_completed) = event.as_any().downcast_ref::<PhaseCompleted>() {
+        if let Some(phase_completed) =
+            event.as_any().downcast_ref::<PhaseCompleted>()
+        {
             let notification_event = NotificationEvent::PhaseCompleted {
                 from: phase_completed.completed_phase.clone(),
                 to: phase_completed.next_phase.clone(),
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -51,7 +64,10 @@ impl TimerStartedNotificationHandler {
         notification_service: Arc<dyn NotificationServiceTrait>,
         task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     ) -> Self {
-        Self { notification_service, task_repository }
+        Self {
+            notification_service,
+            task_repository,
+        }
     }
 }
 
@@ -62,22 +78,33 @@ impl EventHandler for TimerStartedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(timer_started) = event.as_any().downcast_ref::<TimerStarted>() {
-            let task_name = if let Some(entity_id) = &timer_started.active_entity_id {
-                if let Some(task) = self.task_repository.get_all().await?.into_iter().find(|t| t.id.to_string() == *entity_id) {
-                    Some(task.name)
+        if let Some(timer_started) =
+            event.as_any().downcast_ref::<TimerStarted>()
+        {
+            let task_name =
+                if let Some(entity_id) = &timer_started.active_entity_id {
+                    if let Some(task) = self
+                        .task_repository
+                        .get_all()
+                        .await?
+                        .into_iter()
+                        .find(|t| t.id == *entity_id)
+                    {
+                        Some(task.name)
+                    } else {
+                        None
+                    }
                 } else {
                     None
-                }
-            } else {
-                None
-            };
-            
+                };
+
             let notification_event = NotificationEvent::SessionStarted {
                 phase: timer_started.phase.clone(),
                 task_name,
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -92,8 +119,12 @@ pub struct TimerPausedNotificationHandler {
 }
 
 impl TimerPausedNotificationHandler {
-    pub fn new(notification_service: Arc<dyn NotificationServiceTrait>) -> Self {
-        Self { notification_service }
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+    ) -> Self {
+        Self {
+            notification_service,
+        }
     }
 }
 
@@ -104,12 +135,15 @@ impl EventHandler for TimerPausedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(timer_paused) = event.as_any().downcast_ref::<TimerPaused>() {
+        if let Some(timer_paused) = event.as_any().downcast_ref::<TimerPaused>()
+        {
             let notification_event = NotificationEvent::TimerPaused {
                 phase: timer_paused.phase.clone(),
                 remaining_seconds: timer_paused.remaining_seconds,
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -124,8 +158,12 @@ pub struct TaskCompletedNotificationHandler {
 }
 
 impl TaskCompletedNotificationHandler {
-    pub fn new(notification_service: Arc<dyn NotificationServiceTrait>) -> Self {
-        Self { notification_service }
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+    ) -> Self {
+        Self {
+            notification_service,
+        }
     }
 }
 
@@ -136,12 +174,16 @@ impl EventHandler for TaskCompletedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(task_completed) = event.as_any().downcast_ref::<TaskCompleted>() {
+        if let Some(task_completed) =
+            event.as_any().downcast_ref::<TaskCompleted>()
+        {
             let notification_event = NotificationEvent::TaskCompleted {
                 task_name: task_completed.task_id.to_string(),
                 total_sessions: task_completed.total_sessions as u32,
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -161,7 +203,10 @@ impl WorkSessionCompletedNotificationHandler {
         notification_service: Arc<dyn NotificationServiceTrait>,
         task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     ) -> Self {
-        Self { notification_service, task_repository }
+        Self {
+            notification_service,
+            task_repository,
+        }
     }
 }
 
@@ -172,22 +217,33 @@ impl EventHandler for WorkSessionCompletedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(work_completed) = event.as_any().downcast_ref::<WorkSessionCompleted>() {
-            let task_name = if let Some(entity_id) = &work_completed.active_entity_id {
-                if let Some(task) = self.task_repository.get_all().await?.into_iter().find(|t| t.id.to_string() == *entity_id) {
-                    Some(task.name)
+        if let Some(work_completed) =
+            event.as_any().downcast_ref::<WorkSessionCompleted>()
+        {
+            let task_name =
+                if let Some(entity_id) = &work_completed.active_entity_id {
+                    if let Some(task) = self
+                        .task_repository
+                        .get_all()
+                        .await?
+                        .into_iter()
+                        .find(|t| t.id.to_string() == *entity_id)
+                    {
+                        Some(task.name)
+                    } else {
+                        None
+                    }
                 } else {
                     None
-                }
-            } else {
-                None
-            };
-            
+                };
+
             let notification_event = NotificationEvent::WorkSessionCompleted {
                 session_number: work_completed.session_count,
                 task_name,
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -202,8 +258,12 @@ pub struct BreakStartedNotificationHandler {
 }
 
 impl BreakStartedNotificationHandler {
-    pub fn new(notification_service: Arc<dyn NotificationServiceTrait>) -> Self {
-        Self { notification_service }
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+    ) -> Self {
+        Self {
+            notification_service,
+        }
     }
 }
 
@@ -214,12 +274,16 @@ impl EventHandler for BreakStartedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(break_started) = event.as_any().downcast_ref::<BreakSessionStarted>() {
+        if let Some(break_started) =
+            event.as_any().downcast_ref::<BreakSessionStarted>()
+        {
             let notification_event = NotificationEvent::BreakStarted {
                 break_type: break_started.phase.clone(),
                 duration_seconds: break_started.duration_seconds,
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -234,8 +298,12 @@ pub struct BreakCompletedNotificationHandler {
 }
 
 impl BreakCompletedNotificationHandler {
-    pub fn new(notification_service: Arc<dyn NotificationServiceTrait>) -> Self {
-        Self { notification_service }
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+    ) -> Self {
+        Self {
+            notification_service,
+        }
     }
 }
 
@@ -246,11 +314,15 @@ impl EventHandler for BreakCompletedNotificationHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(break_completed) = event.as_any().downcast_ref::<BreakSessionCompleted>() {
+        if let Some(break_completed) =
+            event.as_any().downcast_ref::<BreakSessionCompleted>()
+        {
             let notification_event = NotificationEvent::BreakCompleted {
                 break_type: break_completed.phase.clone(),
             };
-            self.notification_service.send_notification(notification_event).await?;
+            self.notification_service
+                .send_notification(notification_event)
+                .await?;
         }
         Ok(())
     }
@@ -266,45 +338,49 @@ pub async fn register_notification_handlers(
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
 ) -> Result<()> {
-    let config = config_repository.get_config().await
-        .map_err(|e| {
-            eprintln!("Failed to get config in register_notification_handlers: {:?}", e);
+    let config = config_repository.get_config().await.map_err(|e| {
+        eprintln!(
+            "Failed to get config in register_notification_handlers: {:?}",
             e
-        })?;
-    
-    let notification_service: Arc<dyn NotificationServiceTrait> = Arc::new(
-        NotificationService::new(app_handle, config.notification)
-    );
+        );
+        e
+    })?;
 
-    let _ = event_bus.subscribe(Box::new(PhaseCompletedNotificationHandler::new(
-        notification_service.clone()
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(TimerStartedNotificationHandler::new(
-        notification_service.clone(),
-        task_repository.clone(),
-    )));
-    
+    let notification_service: Arc<dyn NotificationServiceTrait> =
+        Arc::new(NotificationService::new(app_handle, config.notification));
+
+    let _ = event_bus.subscribe(Box::new(
+        PhaseCompletedNotificationHandler::new(notification_service.clone()),
+    ));
+
+    let _ =
+        event_bus.subscribe(Box::new(TimerStartedNotificationHandler::new(
+            notification_service.clone(),
+            task_repository.clone(),
+        )));
+
     let _ = event_bus.subscribe(Box::new(TimerPausedNotificationHandler::new(
-        notification_service.clone()
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(TaskCompletedNotificationHandler::new(
-        notification_service.clone()
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(WorkSessionCompletedNotificationHandler::new(
         notification_service.clone(),
-        task_repository.clone(),
     )));
-    
-    let _ = event_bus.subscribe(Box::new(BreakStartedNotificationHandler::new(
-        notification_service.clone()
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(BreakCompletedNotificationHandler::new(
-        notification_service.clone()
-    )));
+
+    let _ = event_bus.subscribe(Box::new(
+        TaskCompletedNotificationHandler::new(notification_service.clone()),
+    ));
+
+    let _ = event_bus.subscribe(Box::new(
+        WorkSessionCompletedNotificationHandler::new(
+            notification_service.clone(),
+            task_repository.clone(),
+        ),
+    ));
+
+    let _ = event_bus.subscribe(Box::new(
+        BreakStartedNotificationHandler::new(notification_service.clone()),
+    ));
+
+    let _ = event_bus.subscribe(Box::new(
+        BreakCompletedNotificationHandler::new(notification_service.clone()),
+    ));
 
     Ok(())
 }

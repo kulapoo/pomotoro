@@ -1,7 +1,9 @@
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use infra::adapters::{establish_connection, run_migrations, SqliteTaskRepository};
+use infra::adapters::{
+    SqliteTaskRepository, establish_connection, run_migrations,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let storage_path = PathBuf::from("/tmp/pomotoro_test");
@@ -31,16 +33,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let runtime = tokio::runtime::Runtime::new()?;
 
         runtime.block_on(async {
-            let task = Task::new("Test Task".to_string(), 4).expect("Failed to create task");
-            task_repo.create(task.clone()).await.expect("Failed to save task");
+            let task = Task::new("Test Task".to_string(), 4)
+                .expect("Failed to create task");
+            task_repo
+                .create(task.clone())
+                .await
+                .expect("Failed to save task");
             println!("Task created with ID: {}", task.id);
 
-            let loaded = task_repo.get_by_id(task.id).await.expect("Failed to load task");
+            let loaded = task_repo
+                .get_by_id(task.id)
+                .await
+                .expect("Failed to load task");
             if let Some(loaded_task) = loaded {
                 println!("Task loaded successfully: {}", loaded_task.name);
             }
         });
-
     } else {
         println!("ERROR: Database file was not created");
     }

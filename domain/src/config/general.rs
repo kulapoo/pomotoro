@@ -17,6 +17,12 @@ pub struct GeneralConfig {
     pub start_minimized: bool,
     #[serde(default)]
     pub enable_screen_blocking: bool,
+    #[serde(default = "default_persistence_interval_seconds")]
+    pub persistence_interval_seconds: u32,
+}
+
+fn default_persistence_interval_seconds() -> u32 {
+    10 // Save every 10 seconds by default
 }
 
 impl Default for GeneralConfig {
@@ -28,6 +34,7 @@ impl Default for GeneralConfig {
             minimize_to_tray: true,
             start_minimized: false,
             enable_screen_blocking: false,
+            persistence_interval_seconds: default_persistence_interval_seconds(),
         }
     }
 }

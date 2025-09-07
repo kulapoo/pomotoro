@@ -8,21 +8,23 @@ impl TimerFixtures {
     /// Create a default timer configuration
     pub fn default_config() -> TimerConfiguration {
         TimerConfiguration::new(
-            Duration::from_secs(25 * 60),  // 25 minutes work
-            Duration::from_secs(5 * 60),   // 5 minutes short break
-            Duration::from_secs(15 * 60),  // 15 minutes long break
-            4,                              // Sessions until long break
-        ).expect("Failed to create timer configuration")
+            Duration::from_secs(25 * 60), // 25 minutes work
+            Duration::from_secs(5 * 60),  // 5 minutes short break
+            Duration::from_secs(15 * 60), // 15 minutes long break
+            4,                            // Sessions until long break
+        )
+        .expect("Failed to create timer configuration")
     }
 
     /// Create a fast timer config for testing (seconds instead of minutes)
     pub fn fast_config() -> TimerConfiguration {
         TimerConfiguration::new(
-            Duration::from_secs(5),   // 5 seconds work
-            Duration::from_secs(2),   // 2 seconds short break
-            Duration::from_secs(3),   // 3 seconds long break
-            2,                        // 2 sessions until long break
-        ).expect("Failed to create fast timer configuration")
+            Duration::from_secs(5), // 5 seconds work
+            Duration::from_secs(2), // 2 seconds short break
+            Duration::from_secs(3), // 3 seconds long break
+            2,                      // 2 sessions until long break
+        )
+        .expect("Failed to create fast timer configuration")
     }
 
     /// Create a custom timer configuration
@@ -37,7 +39,8 @@ impl TimerFixtures {
             Duration::from_secs(short_break_secs),
             Duration::from_secs(long_break_secs),
             sessions,
-        ).expect("Failed to create custom timer configuration")
+        )
+        .expect("Failed to create custom timer configuration")
     }
 
     /// Create an initial timer state

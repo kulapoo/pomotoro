@@ -23,8 +23,10 @@ impl EventHandler for AppStartedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let app_started =
-            event.as_any().downcast_ref::<domain::shared_kernel::events::AppStarted>();
+        let app_started = event
+            .as_any()
+            .downcast_ref::<domain::shared_kernel::events::AppStarted>(
+        );
 
         self.emitter
             .emit(domain::event_names::task::LIST_UPDATED, json!(app_started))

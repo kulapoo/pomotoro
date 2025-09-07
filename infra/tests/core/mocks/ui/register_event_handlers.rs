@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::core::mocks::ui::app_handle::MockAppHandle;
 use anyhow::Result;
-use domain::TaskRepository;
+use domain::{ConfigRepository, TaskRepository};
 use infra::adapters::TimerTickService;
 use infra::adapters::events::EventSubscriber;
 use infra::adapters::events::app_emitter::Emitter;
@@ -15,6 +15,7 @@ pub fn register_test_handlers(
     app_handle: MockAppHandle,
     task_repository: Arc<dyn TaskRepository>,
     timer_tick_service: Arc<TimerTickService>,
+    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 ) -> Result<()> {
     let emitter: Arc<dyn Emitter> = Arc::new(app_handle);
 
@@ -25,6 +26,7 @@ pub fn register_test_handlers(
         emitter.clone(),
         timer_tick_service.clone(),
         task_repository.clone(),
+        config_repository.clone(),
     )?;
 
     // Note: We're not registering notification and audio handlers in tests

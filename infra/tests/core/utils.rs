@@ -69,12 +69,6 @@ pub mod task {
 
         task
     }
-
-    pub async fn switch_task(ctx: &AppContext, task_id: TaskId) -> () {
-        let mut timer = ctx.timer_repo.get().await.unwrap();
-        timer.set_active_task(task_id);
-        ctx.timer_repo.save(&timer).await.unwrap()
-    }
 }
 
 pub mod timer {

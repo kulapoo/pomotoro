@@ -1,22 +1,36 @@
+//! Timer state machine representation.
+//!
+//! This module defines the pure state representation for the Pomodoro timer,
+//! providing immutable state queries without side effects or business logic.
+
 use serde::{Deserialize, Serialize};
 
+/// Represents all possible states of a Pomodoro timer.
+/// 
+/// Each state variant contains the data relevant to that state.
+/// The state machine ensures type-safe transitions and makes invalid states unrepresentable.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "state", content = "data")]
 pub enum TimerState {
+    /// Timer is stopped and ready to start.
     Idle,
 
+    /// Active work session.
     Working {
         remaining_seconds: u32,
     },
 
+    /// Short break between work sessions.
     ShortBreak {
         remaining_seconds: u32,
     },
 
+    /// Long break after multiple work sessions.
     LongBreak {
         remaining_seconds: u32,
     },
 
+    /// Timer is paused, preserving the previous state.
     Paused {
         paused_from: Box<TimerState>,
         remaining_seconds: u32,
@@ -30,11 +44,12 @@ impl Default for TimerState {
 }
 
 impl TimerState {
+    /// Creates a new timer in idle state.
     pub fn new() -> Self {
         Self::Idle
     }
 
-
+    /// Returns the remaining seconds for the current state.
     pub fn remaining_seconds(&self) -> u32 {
         match self {
             Self::Idle => 0,
@@ -53,6 +68,7 @@ impl TimerState {
         }
     }
 
+    /// Checks if the timer is actively counting down.
     pub fn is_running(&self) -> bool {
         matches!(
             self,
@@ -62,14 +78,17 @@ impl TimerState {
         )
     }
 
+    /// Checks if the timer is paused.
     pub fn is_paused(&self) -> bool {
         matches!(self, Self::Paused { .. })
     }
 
+    /// Checks if the timer is idle (stopped).
     pub fn is_idle(&self) -> bool {
         matches!(self, Self::Idle)
     }
 
+    /// Checks if currently in a work phase (including paused work).
     pub fn is_work_phase(&self) -> bool {
         match self {
             Self::Working { .. } => true,
@@ -78,6 +97,7 @@ impl TimerState {
         }
     }
 
+    /// Checks if currently in a break phase (including paused break).
     pub fn is_break_phase(&self) -> bool {
         match self {
             Self::ShortBreak { .. } | Self::LongBreak { .. } => true,
@@ -86,6 +106,7 @@ impl TimerState {
         }
     }
 
+    /// Returns the timer's operational status.
     pub fn status(&self) -> super::Status {
         match self {
             Self::Idle => super::Status::Stopped,
@@ -96,6 +117,7 @@ impl TimerState {
         }
     }
 
+    /// Returns the current phase (Work, ShortBreak, or LongBreak).
     pub fn phase(&self) -> super::Phase {
         match self {
             Self::Idle => super::Phase::Work,
@@ -107,6 +129,8 @@ impl TimerState {
     }
 
 
+    /// Creates a new state with updated remaining seconds.
+    /// Returns unchanged state for Idle.
     pub fn with_remaining_seconds(&self, seconds: u32) -> Self {
         match self {
             Self::Working { .. } => {

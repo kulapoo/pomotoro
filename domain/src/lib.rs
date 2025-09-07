@@ -15,7 +15,7 @@ pub use task::{
     CyclerService as TaskCyclerService, Id as TaskId, Marker as TaskMarker,
     Repository as TaskRepository, SessionCompleted as TaskSessionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
-    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task,
+    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskDeleted,
     Updated as TaskUpdated,
 };
 

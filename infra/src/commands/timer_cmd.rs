@@ -1,9 +1,7 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::{TaskRepositoryArc, TimerRepositoryArc};
 use anyhow::Context;
-use domain::{
-    Phase, TaskId, TimerState, event_names::ui_listeners,
-};
+use domain::{Phase, TaskId, TimerState, event_names::ui_listeners};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tracing::info;
@@ -70,9 +68,9 @@ pub async fn start_timer(
         let task = active_tasks.first().ok_or("No active task")?;
         let task_id = task.id;
         info!("Started timer, {}", task_id);
-        
+
         let cmd = StartTimerSessionCmd {
-            task_id: Some(task_id.to_string()),
+            task_id: Some(task_id),
         };
 
         start_timer_session(
@@ -203,10 +201,12 @@ pub async fn skip_timer(
         task_id,
         task_repo.inner().clone(),
         timer_repo.inner().clone(),
-        event_publisher.inner().clone()
+        event_publisher.inner().clone(),
     )
     .await
-    .context("infra::commands::timer_cmd::skip_timer - Failed to skip to next phase")
+    .context(
+        "infra::commands::timer_cmd::skip_timer - Failed to skip to next phase",
+    )
     .map_err(|e| e.to_string())?;
 
     // Send tauri event with new phase information

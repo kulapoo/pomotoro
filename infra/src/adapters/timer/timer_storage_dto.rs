@@ -1,7 +1,7 @@
+use super::timer_dto::SessionHistoryDto;
 use chrono::{DateTime, Utc};
 use domain::timer::Timer;
 use serde::{Deserialize, Serialize};
-use super::timer_dto::SessionHistoryDto;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TimerStorageDto {

@@ -1,10 +1,15 @@
-use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use domain::{Task, TaskId, TaskStatus, Timer, TimerId, timer::{TimerState, Phase}};
+use diesel::prelude::*;
+use domain::{
+    Task, TaskId, TaskStatus, Timer, TimerId,
+    timer::{Phase, TimerState},
+};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
+)]
 #[diesel(table_name = crate::schema::tasks)]
 pub struct TaskDb {
     pub id: String,
@@ -41,7 +46,8 @@ impl From<Task> for TaskDb {
                 TaskStatus::Completed => "completed",
                 TaskStatus::Paused => "paused",
                 TaskStatus::Queued => "queued",
-            }.to_string(),
+            }
+            .to_string(),
             tags,
             config,
             is_default: task.default,
@@ -68,8 +74,10 @@ impl TryFrom<TaskDb> for Task {
             "queued" | _ => TaskStatus::Queued,
         };
 
-        let uuid = Uuid::parse_str(&db.id).map_err(|_e| domain::Error::SerializationError {
-            message: format!("Invalid task ID: {}", db.id),
+        let uuid = Uuid::parse_str(&db.id).map_err(|_e| {
+            domain::Error::SerializationError {
+                message: format!("Invalid task ID: {}", db.id),
+            }
         })?;
         let task_id = TaskId::from_uuid(uuid);
 
@@ -77,6 +85,12 @@ impl TryFrom<TaskDb> for Task {
             .map(|dt| dt.with_timezone(&Utc))
             .map_err(|e| domain::Error::SerializationError {
                 message: format!("Invalid created_at timestamp: {}", e),
+            })?;
+
+        let updated_at = DateTime::parse_from_rfc3339(&db.updated_at)
+            .map(|dt| dt.with_timezone(&Utc))
+            .map_err(|e| domain::Error::SerializationError {
+                message: format!("Invalid updated_at timestamp: {}", e),
             })?;
 
         let config: domain::Config = serde_json::from_str(&db.config)
@@ -93,12 +107,15 @@ impl TryFrom<TaskDb> for Task {
             default: db.is_default,
             created_at,
             completed_at: None,
+            updated_at,
             config,
         })
     }
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
+)]
 #[diesel(table_name = crate::schema::timers)]
 pub struct TimerDb {
     pub id: String,
@@ -106,12 +123,13 @@ pub struct TimerDb {
     pub current_phase: String,
     pub remaining_seconds: i32,
     pub is_running: bool,
-    pub session_count: i32,
     pub created_at: String,
     pub updated_at: String,
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
+)]
 #[diesel(table_name = crate::schema::config)]
 pub struct ConfigDb {
     pub id: i32,
@@ -120,7 +138,9 @@ pub struct ConfigDb {
     pub updated_at: String,
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
+)]
 #[diesel(table_name = crate::schema::session_history)]
 pub struct SessionHistoryDb {
     pub id: String,
@@ -136,15 +156,15 @@ impl From<Timer> for TimerDb {
             Phase::Work => "work",
             Phase::ShortBreak => "short_break",
             Phase::LongBreak => "long_break",
-        }.to_string();
-        
+        }
+        .to_string();
+
         Self {
             id: timer.id().to_string(),
             active_task_id: timer.active_task_id().map(|id| id.to_string()),
             current_phase,
             remaining_seconds: timer.state().remaining_seconds() as i32,
             is_running: timer.state().is_running(),
-            session_count: 0, // Session count is now tracked in Task
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
         }
@@ -153,22 +173,26 @@ impl From<Timer> for TimerDb {
 
 impl TryFrom<TimerDb> for Timer {
     type Error = domain::Error;
-    
+
     fn try_from(db: TimerDb) -> Result<Self, Self::Error> {
-        let timer_uuid = Uuid::parse_str(&db.id).map_err(|e| domain::Error::SerializationError {
-            message: format!("Invalid timer ID: {}", e),
+        let timer_uuid = Uuid::parse_str(&db.id).map_err(|e| {
+            domain::Error::SerializationError {
+                message: format!("Invalid timer ID: {}", e),
+            }
         })?;
         let timer_id = TimerId::from_uuid(timer_uuid);
-        
+
         let active_task_id = if let Some(task_id_str) = db.active_task_id {
-            let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| domain::Error::SerializationError {
-                message: format!("Invalid task ID: {}", e),
+            let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| {
+                domain::Error::SerializationError {
+                    message: format!("Invalid task ID: {}", e),
+                }
             })?;
             Some(TaskId::from_uuid(task_uuid))
         } else {
             None
         };
-        
+
         let state = match db.current_phase.as_str() {
             "work" | "Work" if !db.is_running => TimerState::Idle,
             "work" | "Work" => TimerState::Working {
@@ -182,7 +206,7 @@ impl TryFrom<TimerDb> for Timer {
             },
             _ => TimerState::Idle,
         };
-        
+
         let mut timer = Timer::with_state(timer_id, state);
         if let Some(task_id) = active_task_id {
             timer.set_active_task(task_id);

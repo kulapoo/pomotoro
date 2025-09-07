@@ -4,8 +4,8 @@ use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
-use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
 
 pub struct PhaseCompletedHandler {
     emitter: Arc<dyn Emitter>,
@@ -28,7 +28,10 @@ impl EventHandler for PhaseCompletedHandler {
             event.as_any().downcast_ref::<PhaseCompleted>()
         {
             self.emitter
-                .emit(ui_listeners::timer::PHASE_COMPLETED, json!(phase_completed.clone()))
+                .emit(
+                    ui_listeners::timer::PHASE_COMPLETED,
+                    json!(phase_completed.clone()),
+                )
                 .map_err(|e| domain::Error::RepositoryError {
                     message: format!(
                         "Failed to emit phase completed event: {e}"

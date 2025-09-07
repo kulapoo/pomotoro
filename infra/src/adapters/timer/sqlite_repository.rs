@@ -43,7 +43,9 @@ impl TimerRepository for SqliteTimerRepository {
                 })
             }
             None => {
+                // TODO: Remove this once we have a proper timer implementation
                 // Timer doesn't exist, create the default one
+                println!("Timer doesn't exist, creating the default one");
                 let timer = Timer::default_timer();
                 self.save(&timer).await?;
                 Ok(timer)
@@ -53,6 +55,7 @@ impl TimerRepository for SqliteTimerRepository {
 
     async fn save(&self, timer: &Timer) -> Result<()> {
         let timer_db = TimerDb::from(timer.clone());
+
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;

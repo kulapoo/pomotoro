@@ -1,4 +1,7 @@
-use domain::{AudioAsset, AudioLibrary, AudioService, PlaybackHandle, PlaybackRequest, Result};
+use domain::{
+    AudioAsset, AudioLibrary, AudioService, PlaybackHandle, PlaybackRequest,
+    Result,
+};
 use std::sync::Mutex;
 
 pub struct AudioServiceWrapper {
@@ -15,7 +18,10 @@ impl AudioServiceWrapper {
         }
     }
 
-    pub fn play_audio(&self, request: PlaybackRequest) -> Result<PlaybackHandle> {
+    pub fn play_audio(
+        &self,
+        request: PlaybackRequest,
+    ) -> Result<PlaybackHandle> {
         self.inner.lock().unwrap().play_audio(request)
     }
 
@@ -51,12 +57,26 @@ impl AudioServiceWrapper {
         self.inner.lock().unwrap().get_library().clone()
     }
 
-    pub fn play_notification(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
-        self.inner.lock().unwrap().play_notification(asset_id, volume)
+    pub fn play_notification(
+        &self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
+        self.inner
+            .lock()
+            .unwrap()
+            .play_notification(asset_id, volume)
     }
 
-    pub fn play_background_audio(&self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
-        self.inner.lock().unwrap().play_background_audio(asset_id, volume)
+    pub fn play_background_audio(
+        &self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
+        self.inner
+            .lock()
+            .unwrap()
+            .play_background_audio(asset_id, volume)
     }
 
     pub fn stop_background_audio(&self) -> Result<()> {

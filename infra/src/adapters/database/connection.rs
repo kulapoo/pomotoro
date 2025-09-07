@@ -1,8 +1,10 @@
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use std::path::PathBuf;
+use diesel_migrations::{
+    EmbeddedMigrations, MigrationHarness, embed_migrations,
+};
 use domain::{Error, Result};
+use std::path::PathBuf;
 
 pub type DbConnection = SqliteConnection;
 pub type DbPool = r2d2::Pool<ConnectionManager<DbConnection>>;
@@ -12,7 +14,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 pub fn establish_connection(database_path: &PathBuf) -> Result<DbPool> {
     // Add SQLite pragmas for better concurrent access and test isolation
     let database_url = format!("sqlite://{}?mode=rwc", database_path.display());
-    
+
     let manager = ConnectionManager::<DbConnection>::new(&database_url);
     let pool = r2d2::Pool::builder()
         .max_size(10) // Increase for tests to avoid timeouts
@@ -21,17 +23,22 @@ pub fn establish_connection(database_path: &PathBuf) -> Result<DbPool> {
         .map_err(|e| Error::RepositoryError {
             message: format!("Failed to create connection pool: {}", e),
         })?;
-    
+
     Ok(pool)
 }
 
 #[derive(Debug)]
 struct ConnectionCustomizer;
 
-impl r2d2::CustomizeConnection<DbConnection, r2d2::Error> for ConnectionCustomizer {
-    fn on_acquire(&self, conn: &mut DbConnection) -> std::result::Result<(), r2d2::Error> {
+impl r2d2::CustomizeConnection<DbConnection, r2d2::Error>
+    for ConnectionCustomizer
+{
+    fn on_acquire(
+        &self,
+        conn: &mut DbConnection,
+    ) -> std::result::Result<(), r2d2::Error> {
         use diesel::sql_query;
-        
+
         // Set pragmas for better concurrency and performance
         sql_query("PRAGMA journal_mode = WAL")
             .execute(conn)
@@ -53,11 +60,12 @@ pub fn run_migrations(pool: &DbPool) -> Result<()> {
     let mut conn = pool.get().map_err(|e| Error::RepositoryError {
         message: format!("Failed to get connection from pool: {}", e),
     })?;
-    
-    conn.run_pending_migrations(MIGRATIONS)
-        .map_err(|e| Error::RepositoryError {
+
+    conn.run_pending_migrations(MIGRATIONS).map_err(|e| {
+        Error::RepositoryError {
             message: format!("Failed to run migrations: {}", e),
-        })?;
-    
+        }
+    })?;
+
     Ok(())
 }

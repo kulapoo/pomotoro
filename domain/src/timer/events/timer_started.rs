@@ -1,5 +1,5 @@
 use crate::timer::Phase;
-use crate::TimerId;
+use crate::{TaskId, TimerId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +8,7 @@ pub struct Started {
     pub timer_id: TimerId,
     pub phase: Phase,
     pub duration_seconds: u32,
-    pub active_entity_id: Option<String>,
+    pub active_entity_id: Option<TaskId>,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
@@ -29,8 +29,8 @@ impl Started {
             occurred_at: Utc::now(),
         }
     }
-    
-    pub fn with_active_entity(mut self, entity_id: Option<String>) -> Self {
+
+    pub fn with_active_entity(mut self, entity_id: Option<TaskId>) -> Self {
         self.active_entity_id = entity_id;
         self
     }

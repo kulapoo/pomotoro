@@ -1,5 +1,5 @@
-use domain::{Task, TaskId, TaskStatus};
 use domain::task::Builder as DomainTaskBuilder;
+use domain::{Task, TaskId, TaskStatus};
 
 /// Task fixtures for testing
 pub struct TaskFixtures;
@@ -106,7 +106,8 @@ impl TaskBuilder {
     }
 
     pub fn as_completed(mut self) -> Self {
-        self.builder = self.builder
+        self.builder = self
+            .builder
             .status(TaskStatus::Completed)
             .current_sessions(4)
             .max_sessions(4);
@@ -116,7 +117,6 @@ impl TaskBuilder {
     pub fn build(self) -> Task {
         self.builder.build().expect("Failed to build task")
     }
-
 }
 
 impl Default for TaskBuilder {

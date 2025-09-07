@@ -1,6 +1,6 @@
 use std::{any::TypeId, sync::Arc};
 
-use domain::{Result, TaskRepository};
+use domain::{ConfigRepository, Result, TaskRepository};
 
 use crate::adapters::events::EventSubscriber;
 use crate::adapters::timer::event_handlers::TimerResetHandler;
@@ -16,19 +16,24 @@ pub fn register_timer_handlers(
     emitter: Arc<dyn Emitter>,
     timer_srv: Arc<TimerTickService>,
     task_repo: Arc<dyn TaskRepository + Sync + Send>,
+    config_repo: Arc<dyn ConfigRepository + Sync + Send>,
 ) -> Result<()> {
-    event_bus.subscribe(Box::new(TimerStartedHandler::new(
+    event_bus.subscribe(Box::new(TimerTickHandler::new(
         emitter.clone(),
         timer_srv.clone(),
-        task_repo.clone(),
+        config_repo.clone(),
     )))?;
-    event_bus.subscribe(Box::new(TimerTickHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(TimerStatusChangedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TimerResetHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TimerStartedHandler::new(
+        emitter.clone(),
+        timer_srv.clone(),
+        task_repo.clone(),
+    )))?;
 
     Ok(())
 }

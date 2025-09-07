@@ -27,7 +27,10 @@ impl EventHandler for TaskStatusChangedHandler {
             event.as_any().downcast_ref::<domain::TaskStatusChanged>();
 
         self.emitter
-            .emit(domain::event_names::task::LIST_UPDATED, json!(task_status_changed))
+            .emit(
+                domain::event_names::task::LIST_UPDATED,
+                json!(task_status_changed),
+            )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(
                     "Failed to emit task status changed event: {e}"

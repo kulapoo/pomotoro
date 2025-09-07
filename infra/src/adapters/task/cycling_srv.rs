@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use async_trait::async_trait;
-use domain::{Result, TaskRepository, TaskId, Task, TaskCyclerService};
+use domain::{Result, Task, TaskCyclerService, TaskId, TaskRepository};
+use std::sync::Arc;
 
 pub struct DefaultCyclingService {
     task_repository: Arc<dyn TaskRepository>,
@@ -14,8 +14,10 @@ impl DefaultCyclingService {
 
 #[async_trait]
 impl TaskCyclerService for DefaultCyclingService {
-
-    async fn get_next_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
+    async fn get_next_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
         let active_tasks = self.task_repository.get_active_tasks().await?;
 
         if active_tasks.is_empty() {
@@ -26,22 +28,22 @@ impl TaskCyclerService for DefaultCyclingService {
             return Ok(active_tasks.into_iter().next());
         };
 
-        let current_index = active_tasks
-            .iter()
-            .position(|t| t.id() == current_id);
+        let current_index =
+            active_tasks.iter().position(|t| t.id() == current_id);
 
         match current_index {
             Some(idx) => {
                 let next_idx = (idx + 1) % active_tasks.len();
                 Ok(active_tasks.get(next_idx).cloned())
             }
-            None => {
-                Ok(active_tasks.first().cloned())
-            }
+            None => Ok(active_tasks.first().cloned()),
         }
     }
 
-    async fn get_previous_task(&self, current_task_id: Option<TaskId>) -> Result<Option<Task>> {
+    async fn get_previous_task(
+        &self,
+        current_task_id: Option<TaskId>,
+    ) -> Result<Option<Task>> {
         let active_tasks = self.task_repository.get_active_tasks().await?;
 
         if active_tasks.is_empty() {
@@ -52,9 +54,8 @@ impl TaskCyclerService for DefaultCyclingService {
             return Ok(active_tasks.last().cloned());
         };
 
-        let current_index = active_tasks
-            .iter()
-            .position(|t| t.id() == current_id);
+        let current_index =
+            active_tasks.iter().position(|t| t.id() == current_id);
 
         match current_index {
             Some(idx) => {
@@ -65,14 +66,14 @@ impl TaskCyclerService for DefaultCyclingService {
                 };
                 Ok(active_tasks.get(prev_idx).cloned())
             }
-            None => {
-                Ok(active_tasks.last().cloned())
-            }
+            None => Ok(active_tasks.last().cloned()),
         }
     }
 
     async fn get_default_task(&self) -> Result<Option<Task>> {
-        if let Some(default_task) = self.task_repository.get_default_task().await? {
+        if let Some(default_task) =
+            self.task_repository.get_default_task().await?
+        {
             return Ok(Some(default_task));
         }
 
@@ -88,65 +89,63 @@ impl TaskCyclerService for DefaultCyclingService {
         let tasks = self.task_repository.get_active_tasks().await?;
         Ok(!tasks.is_empty())
     }
-    
+
     async fn cycle_to_next_active_task(
         &self,
         current_task_id: Option<TaskId>,
     ) -> Result<Option<Task>> {
         self.get_next_task(current_task_id).await
     }
-    
+
     async fn get_active_task_queue(&self) -> Result<Vec<Task>> {
         self.task_repository.get_active_tasks().await
     }
-    
+
     async fn cycle_to_next_incomplete_task(
         &self,
         current_task_id: Option<TaskId>,
     ) -> Result<Option<Task>> {
-        let incomplete_tasks = self.task_repository.get_incomplete_tasks().await?;
-        
+        let incomplete_tasks =
+            self.task_repository.get_incomplete_tasks().await?;
+
         if incomplete_tasks.is_empty() {
             return Ok(None);
         }
-        
+
         let Some(current_id) = current_task_id else {
             return Ok(incomplete_tasks.into_iter().next());
         };
-        
-        let current_index = incomplete_tasks
-            .iter()
-            .position(|t| t.id() == current_id);
-        
+
+        let current_index =
+            incomplete_tasks.iter().position(|t| t.id() == current_id);
+
         match current_index {
             Some(idx) => {
                 let next_idx = (idx + 1) % incomplete_tasks.len();
                 Ok(incomplete_tasks.get(next_idx).cloned())
             }
-            None => {
-                Ok(incomplete_tasks.first().cloned())
-            }
+            None => Ok(incomplete_tasks.first().cloned()),
         }
     }
-    
+
     async fn cycle_to_previous_incomplete_task(
         &self,
         current_task_id: Option<TaskId>,
     ) -> Result<Option<Task>> {
-        let incomplete_tasks = self.task_repository.get_incomplete_tasks().await?;
-        
+        let incomplete_tasks =
+            self.task_repository.get_incomplete_tasks().await?;
+
         if incomplete_tasks.is_empty() {
             return Ok(None);
         }
-        
+
         let Some(current_id) = current_task_id else {
             return Ok(incomplete_tasks.last().cloned());
         };
-        
-        let current_index = incomplete_tasks
-            .iter()
-            .position(|t| t.id() == current_id);
-        
+
+        let current_index =
+            incomplete_tasks.iter().position(|t| t.id() == current_id);
+
         match current_index {
             Some(idx) => {
                 let prev_idx = if idx == 0 {
@@ -156,28 +155,29 @@ impl TaskCyclerService for DefaultCyclingService {
                 };
                 Ok(incomplete_tasks.get(prev_idx).cloned())
             }
-            None => {
-                Ok(incomplete_tasks.last().cloned())
-            }
+            None => Ok(incomplete_tasks.last().cloned()),
         }
     }
-    
+
     async fn get_incomplete_task_queue(&self) -> Result<Vec<Task>> {
         self.task_repository.get_incomplete_tasks().await
     }
-    
-    async fn get_task_cycle_position(&self, task_id: TaskId) -> Result<(usize, usize)> {
+
+    async fn get_task_cycle_position(
+        &self,
+        task_id: TaskId,
+    ) -> Result<(usize, usize)> {
         let active_tasks = self.task_repository.get_active_tasks().await?;
-        
+
         let position = active_tasks
             .iter()
             .position(|t| t.id() == task_id)
             .map(|p| p + 1)
             .unwrap_or(0);
-        
+
         Ok((position, active_tasks.len()))
     }
-    
+
     async fn validate_task_switch(&self, task_id: TaskId) -> Result<()> {
         if let Some(task) = self.task_repository.get_by_id(task_id).await? {
             if task.is_completed() {
@@ -196,8 +196,8 @@ impl TaskCyclerService for DefaultCyclingService {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::Mutex;
     use domain::{Task, TaskStatus};
+    use std::sync::Mutex;
 
     struct MockTaskRepository {
         tasks: Mutex<Vec<Task>>,
@@ -248,7 +248,10 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_by_status(&self, _status: TaskStatus) -> Result<Vec<Task>> {
+        async fn get_by_status(
+            &self,
+            _status: TaskStatus,
+        ) -> Result<Vec<Task>> {
             unimplemented!()
         }
 
@@ -258,13 +261,22 @@ mod tests {
 
         async fn get_default_task(&self) -> Result<Option<Task>> {
             if let Some(id) = self.default_task_id {
-                Ok(self.tasks.lock().unwrap().iter().find(|t| t.id() == id).cloned())
+                Ok(self
+                    .tasks
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .find(|t| t.id() == id)
+                    .cloned())
             } else {
                 Ok(None)
             }
         }
 
-        async fn search(&self, _options: domain::task::repository::SearchOptions) -> Result<Vec<Task>> {
+        async fn search(
+            &self,
+            _options: domain::task::repository::SearchOptions,
+        ) -> Result<Vec<Task>> {
             unimplemented!()
         }
 
@@ -364,7 +376,8 @@ mod tests {
         let task2 = create_test_task("2", "Task 2");
         let task2_id = task2.id();
 
-        let repo = Arc::new(MockTaskRepository::new(vec![task1, task2.clone()]));
+        let repo =
+            Arc::new(MockTaskRepository::new(vec![task1, task2.clone()]));
         let service = DefaultCyclingService::new(repo);
 
         let prev = service.get_previous_task(None).await.unwrap();
@@ -379,7 +392,7 @@ mod tests {
 
         let repo = Arc::new(
             MockTaskRepository::new(vec![task1, task2.clone()])
-                .with_default(task2_id)
+                .with_default(task2_id),
         );
         let service = DefaultCyclingService::new(repo);
 
@@ -401,9 +414,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_has_tasks() {
-        let repo_with_tasks = Arc::new(MockTaskRepository::new(vec![
-            create_test_task("1", "Task 1"),
-        ]));
+        let repo_with_tasks =
+            Arc::new(MockTaskRepository::new(vec![create_test_task(
+                "1", "Task 1",
+            )]));
         let service_with_tasks = DefaultCyclingService::new(repo_with_tasks);
         assert!(service_with_tasks.has_tasks().await.unwrap());
 

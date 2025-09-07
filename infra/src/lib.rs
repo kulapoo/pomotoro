@@ -5,22 +5,22 @@ mod schema;
 
 use commands::{
     add_custom_audio_asset, cleanup_finished_audio, clear_all_data,
-    complete_task_session, create_task, cycle_incomplete_task, debug_create_test_task, delete_task,
-    export_settings, filter_tasks_by_status, get_active_playbacks,
-    get_active_tasks, get_all_tasks, get_audio_library,
-    get_effective_audio_config, get_global_config,
-    get_incomplete_tasks, get_task, get_task_cycle_position,
+    complete_task_session, create_task, cycle_incomplete_task,
+    debug_create_test_task, delete_task, export_settings,
+    filter_tasks_by_status, get_active_playbacks, get_active_tasks,
+    get_all_tasks, get_audio_library, get_effective_audio_config,
+    get_global_config, get_incomplete_tasks, get_task, get_task_cycle_position,
     /*get_task_effective_settings,*/ get_tasks_by_tags, get_timer_state,
     import_settings, open_data_directory, pause_audio, pause_timer, play_audio,
     play_background_audio, play_notification_sound, remove_audio_asset,
-    request_notification_permission, reset_config_to_defaults, reset_task_sessions,
-    reset_task_settings_to_defaults, reset_timer, resume_audio,
-    save_global_config, search_tasks, search_tasks_fuzzy, set_audio_volume,
-    skip_timer, start_timer, stop_all_audio, stop_audio, stop_background_audio,
-    switch_timer_task_cmd, test_audio_preview, test_notification, update_appearance_config,
-    update_audio_config, update_general_config,
-    update_notification_config, update_storage_path, update_task,
-    update_task_settings, validate_storage_path,
+    request_notification_permission, reset_config_to_defaults,
+    reset_task_sessions, reset_task_settings_to_defaults, reset_timer,
+    resume_audio, save_global_config, search_tasks, search_tasks_fuzzy,
+    set_audio_volume, skip_timer, start_timer, stop_all_audio, stop_audio,
+    stop_background_audio, switch_timer_task_cmd, test_audio_preview,
+    test_notification, update_appearance_config, update_audio_config,
+    update_general_config, update_notification_config, update_storage_path,
+    update_task, update_task_settings, validate_storage_path,
 };
 use tauri::Manager;
 
@@ -55,10 +55,10 @@ pub fn run() {
             }
 
             let app_registry =
-            tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
-                .inspect_err(|e| {
-                    eprintln!("Failed to bootstrap app: {e}");
-                })?;
+                tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
+                    .inspect_err(|e| {
+                        eprintln!("Failed to bootstrap app: {e}");
+                    })?;
 
             //  repositories
             app.manage(app_registry.config_repository.clone());

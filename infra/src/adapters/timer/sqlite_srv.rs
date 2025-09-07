@@ -58,7 +58,7 @@ impl TimerTickService {
         }
     }
 
-    async fn save_state(&self) -> DomainResult<()> {
+    pub async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
         self.timer_repository
             .save(&*timer_guard)
@@ -126,11 +126,8 @@ impl TimerTickService {
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
         let config_clone = config.clone();
-        // Create a cloned service for the timer task
-        let service_for_timer = self.clone();
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
-            let mut tick_count = 0u32;
             loop {
                 interval.tick().await;
                 let should_continue = {
@@ -141,8 +138,6 @@ impl TimerTickService {
                     } else {
                         let continue_running = match timer.tick(&config_clone) {
                             Ok((phase_complete, events)) => {
-                                // Publish the events
-
                                 if !events.is_empty() {
                                     event_publisher_clone.publish_batch(events);
                                 }
@@ -153,21 +148,6 @@ impl TimerTickService {
                                 false
                             }
                         };
-
-                        // Save state every 10 seconds for persistence
-                        tick_count += 1;
-                        if tick_count % 10 == 0 {
-                            // Spawn save operation to avoid blocking the timer
-                            let service = service_for_timer.clone();
-                            tokio::spawn(async move {
-                                if let Err(e) = service.save_state().await {
-                                    eprintln!(
-                                        "Failed to save timer state: {e}"
-                                    );
-                                }
-                            });
-                        }
-
                         continue_running
                     }
                 };
@@ -180,19 +160,17 @@ impl TimerTickService {
 
         *self.cancel_handle.lock().await = Some(handle);
 
-        // Save initial state after starting
-        if let Err(e) = self.save_state().await {
-            return Err(e.to_string());
-        }
         Ok(())
     }
 
     /// Stop the timer tick loop
     pub async fn stop_timer_tick_loop(&self) -> DomainResult<()> {
         // Cancel the timer task
-        let mut cancel_guard = self.cancel_handle.lock().await;
-        if let Some(handle) = cancel_guard.take() {
-            handle.abort();
+        {
+            let mut cancel_guard = self.cancel_handle.lock().await;
+            if let Some(handle) = cancel_guard.take() {
+                handle.abort();
+            }
         }
         Ok(())
     }

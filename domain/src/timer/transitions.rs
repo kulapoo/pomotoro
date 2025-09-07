@@ -1,43 +1,55 @@
-use super::events::*;
+//! Timer state transition logic.
+//!
+//! This module encapsulates all state transition rules and validation,
+//! ensuring valid state changes and generating appropriate domain events.
+
+use super::events::{
+    BreakSessionCompleted, BreakSessionStarted, Paused, PhaseCompleted,
+    PhaseSkipped, Reset, Started, WorkSessionCompleted, WorkSessionStarted,
+};
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result, TimerId};
-use crate::{Event, TimerConfiguration};
+use crate::{EntityId, Event, TaskId, TimerConfiguration};
 
+/// Result of a state transition containing new state and generated events.
 #[derive(Debug)]
 pub struct TransitionResult {
     pub new_state: TimerState,
     pub events: Vec<Box<dyn Event>>,
 }
 
+/// Stateless service containing all timer state transition logic.
 pub struct StateTransitions;
 
 impl StateTransitions {
-    pub fn start(state: TimerState, timer_id: TimerId, configuration: &TimerConfiguration) -> Result<TransitionResult> {
+    /// Transitions from Idle to Working state.
+    /// 
+    /// # Errors
+    /// Returns error if not in Idle state.
+    pub fn start(
+        state: TimerState,
+        timer_id: TimerId,
+        configuration: &TimerConfiguration,
+        active_task_id: Option<TaskId>,
+    ) -> Result<TransitionResult> {
         match state {
             TimerState::Idle => {
-                let remaining_seconds = configuration.work_duration.as_secs() as u32;
+                let remaining_seconds =
+                    configuration.work_duration.as_secs() as u32;
                 let duration = configuration.work_duration.as_secs() as u32;
 
                 let events: Vec<Box<dyn Event>> = vec![
-                    Box::new(Started::new(
-                        timer_id,
-                        Phase::Work,
-                        duration,
-                        1,
-                    )),
+                    Box::new(
+                        Started::new(timer_id, Phase::Work, duration, 1)
+                            .with_active_entity(active_task_id),
+                    ),
                     Box::new(WorkSessionStarted::new(
-                        timer_id,
-                        duration,
-                        0,
-                        1,
-                        1,
+                        timer_id, duration, 0, 1, 1,
                     )),
                 ];
 
                 Ok(TransitionResult {
-                    new_state: TimerState::Working {
-                        remaining_seconds,
-                    },
+                    new_state: TimerState::Working { remaining_seconds },
                     events,
                 })
             }
@@ -48,7 +60,15 @@ impl StateTransitions {
         }
     }
 
-    pub fn pause(state: TimerState, timer_id: TimerId, _configuration: &TimerConfiguration) -> Result<TransitionResult> {
+    /// Transitions from any running state to Paused.
+    /// 
+    /// # Errors
+    /// Returns error if in Idle state.
+    pub fn pause(
+        state: TimerState,
+        timer_id: TimerId,
+        _configuration: &TimerConfiguration,
+    ) -> Result<TransitionResult> {
         match state {
             TimerState::Working {
                 remaining_seconds, ..
@@ -61,14 +81,12 @@ impl StateTransitions {
             } => {
                 let phase = Self::get_phase_from_state(&state);
 
-                let events: Vec<Box<dyn Event>> = vec![
-                    Box::new(Paused::new(
-                        timer_id,
-                        phase,
-                        remaining_seconds,
-                        1,
-                    )),
-                ];
+                let events: Vec<Box<dyn Event>> = vec![Box::new(Paused::new(
+                    timer_id,
+                    phase,
+                    remaining_seconds,
+                    1,
+                ))];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Paused {
@@ -89,17 +107,22 @@ impl StateTransitions {
         }
     }
 
-    pub fn resume(state: TimerState, timer_id: TimerId, _configuration: &TimerConfiguration) -> Result<TransitionResult> {
+    /// Resumes from Paused state to previous running state.
+    /// 
+    /// # Errors
+    /// Returns error if not paused.
+    pub fn resume(
+        state: TimerState,
+        timer_id: TimerId,
+        _configuration: &TimerConfiguration,
+    ) -> Result<TransitionResult> {
         match state {
             TimerState::Paused { paused_from, .. } => {
                 let phase = Self::get_phase_from_state(&paused_from);
                 let remaining = paused_from.remaining_seconds();
 
-                let events: Vec<Box<dyn Event>> = vec![
-                    Box::new(Started::new(
-                        timer_id, phase, remaining, 1,
-                    )),
-                ];
+                let events: Vec<Box<dyn Event>> =
+                    vec![Box::new(Started::new(timer_id, phase, remaining, 1))];
 
                 Ok(TransitionResult {
                     new_state: *paused_from,
@@ -113,14 +136,14 @@ impl StateTransitions {
         }
     }
 
-    pub fn reset(_state: TimerState, timer_id: TimerId, _configuration: &TimerConfiguration) -> Result<TransitionResult> {
-        let events: Vec<Box<dyn Event>> = vec![
-            Box::new(Reset::new(
-                timer_id,
-                Phase::Work,
-                1,
-            )),
-        ];
+    /// Resets timer to Idle state from any state.
+    pub fn reset(
+        _state: TimerState,
+        timer_id: TimerId,
+        _configuration: &TimerConfiguration,
+    ) -> Result<TransitionResult> {
+        let events: Vec<Box<dyn Event>> =
+            vec![Box::new(Reset::new(timer_id, Phase::Work, 1))];
 
         Ok(TransitionResult {
             new_state: TimerState::Idle,
@@ -128,11 +151,17 @@ impl StateTransitions {
         })
     }
 
-
-
-    pub fn complete_phase(state: TimerState, timer_id: TimerId, configuration: &TimerConfiguration, next_phase: Phase) -> Result<TransitionResult> {
+    /// Completes current phase and transitions to next.
+    /// 
+    /// Generates appropriate session completion and start events.
+    pub fn complete_phase(
+        state: TimerState,
+        timer_id: TimerId,
+        configuration: &TimerConfiguration,
+        next_phase: Phase,
+    ) -> Result<TransitionResult> {
         let from_phase = Self::get_phase_from_state(&state);
-        
+
         let duration = configuration.get_phase_duration_seconds(next_phase);
         let next_state = match next_phase {
             Phase::Work => TimerState::Working {
@@ -146,15 +175,9 @@ impl StateTransitions {
             },
         };
 
-        let mut events: Vec<Box<dyn Event>> = vec![
-            Box::new(PhaseCompleted::new(
-                timer_id,
-                from_phase,
-                next_phase,
-                0,
-                1,
-            )),
-        ];
+        let mut events: Vec<Box<dyn Event>> = vec![Box::new(
+            PhaseCompleted::new(timer_id, from_phase, next_phase, 0, 1),
+        )];
 
         match from_phase {
             Phase::Work => {
@@ -166,10 +189,7 @@ impl StateTransitions {
                     1,
                 )));
                 events.push(Box::new(BreakSessionStarted::new(
-                    timer_id,
-                    next_phase,
-                    duration,
-                    1,
+                    timer_id, next_phase, duration, 1,
                 )));
             }
             Phase::ShortBreak | Phase::LongBreak => {
@@ -181,11 +201,7 @@ impl StateTransitions {
                 )));
                 if next_phase == Phase::Work {
                     events.push(Box::new(WorkSessionStarted::new(
-                        timer_id,
-                        duration,
-                        0,
-                        1,
-                        1,
+                        timer_id, duration, 0, 1, 1,
                     )));
                 }
             }
@@ -197,7 +213,14 @@ impl StateTransitions {
         })
     }
 
-    pub fn skip_phase(state: TimerState, timer_id: TimerId, configuration: &TimerConfiguration) -> Result<TransitionResult> {
+    /// Skips current phase and starts next phase.
+    /// 
+    /// Similar to complete_phase but generates PhaseSkipped event.
+    pub fn skip_phase(
+        state: TimerState,
+        timer_id: TimerId,
+        configuration: &TimerConfiguration,
+    ) -> Result<TransitionResult> {
         match state {
             TimerState::Working { .. }
             | TimerState::ShortBreak { .. }
@@ -208,7 +231,12 @@ impl StateTransitions {
                     Phase::ShortBreak | Phase::LongBreak => Phase::Work,
                 };
 
-                let mut result = Self::complete_phase(state.clone(), timer_id, configuration, next_phase)?;
+                let mut result = Self::complete_phase(
+                    state.clone(),
+                    timer_id,
+                    configuration,
+                    next_phase,
+                )?;
 
                 result.events.retain(|event| {
                     let event_type = event.event_type();
@@ -235,7 +263,14 @@ impl StateTransitions {
         }
     }
 
-    pub fn tick(mut state: TimerState, _timer_id: TimerId, _configuration: &TimerConfiguration) -> Result<(TimerState, bool)> {
+    /// Decrements timer by one second.
+    /// 
+    /// Returns updated state and whether phase completed.
+    pub fn tick(
+        mut state: TimerState,
+        _timer_id: TimerId,
+        _configuration: &TimerConfiguration,
+    ) -> Result<(TimerState, bool)> {
         let phase_complete = match &mut state {
             TimerState::Working {
                 remaining_seconds, ..
@@ -259,7 +294,7 @@ impl StateTransitions {
         Ok((state, phase_complete))
     }
 
-
+    /// Extracts the phase from any timer state.
     fn get_phase_from_state(state: &TimerState) -> Phase {
         match state {
             TimerState::Idle => Phase::Work,
@@ -272,6 +307,7 @@ impl StateTransitions {
         }
     }
 
+    /// Validates if a transition is allowed from current state.
     pub fn can_transition(
         from: &TimerState,
         transition: TransitionType,
@@ -294,7 +330,9 @@ impl StateTransitions {
             (TimerState::ShortBreak { .. }, TransitionType::Pause) => true,
             (TimerState::ShortBreak { .. }, TransitionType::Reset) => true,
             (TimerState::ShortBreak { .. }, TransitionType::Skip) => true,
-            (TimerState::ShortBreak { .. }, TransitionType::CompletePhase) => true,
+            (TimerState::ShortBreak { .. }, TransitionType::CompletePhase) => {
+                true
+            }
             (
                 TimerState::ShortBreak {
                     remaining_seconds, ..
@@ -305,7 +343,9 @@ impl StateTransitions {
             (TimerState::LongBreak { .. }, TransitionType::Pause) => true,
             (TimerState::LongBreak { .. }, TransitionType::Reset) => true,
             (TimerState::LongBreak { .. }, TransitionType::Skip) => true,
-            (TimerState::LongBreak { .. }, TransitionType::CompletePhase) => true,
+            (TimerState::LongBreak { .. }, TransitionType::CompletePhase) => {
+                true
+            }
             (
                 TimerState::LongBreak {
                     remaining_seconds, ..
@@ -322,15 +362,24 @@ impl StateTransitions {
     }
 }
 
+/// Types of state transitions.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TransitionType {
+    /// Start timer from idle.
     Start,
+    /// Pause running timer.
     Pause,
+    /// Resume paused timer.
     Resume,
+    /// Reset to idle.
     Reset,
+    /// Complete current phase (remaining_seconds == 0).
     Complete,
+    /// Manually complete phase.
     CompletePhase,
+    /// Skip to next phase.
     Skip,
+    /// Decrement timer.
     Tick,
 }
 
@@ -343,7 +392,13 @@ mod tests {
         let state = TimerState::Idle;
         let config = crate::TimerConfiguration::default();
 
-        let result = StateTransitions::start(state, crate::TimerId::new(), &config).unwrap();
+        let result = StateTransitions::start(
+            state,
+            crate::TimerId::new(),
+            &config,
+            None,
+        )
+        .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
     }
 
@@ -354,7 +409,9 @@ mod tests {
         };
         let config = crate::TimerConfiguration::default();
 
-        let result = StateTransitions::pause(state, crate::TimerId::new(), &config).unwrap();
+        let result =
+            StateTransitions::pause(state, crate::TimerId::new(), &config)
+                .unwrap();
         assert!(matches!(result.new_state, TimerState::Paused { .. }));
     }
 
@@ -370,7 +427,9 @@ mod tests {
         };
         let config = crate::TimerConfiguration::default();
 
-        let result = StateTransitions::resume(paused, crate::TimerId::new(), &config).unwrap();
+        let result =
+            StateTransitions::resume(paused, crate::TimerId::new(), &config)
+                .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
     }
 
@@ -381,7 +440,13 @@ mod tests {
         };
         let config = crate::TimerConfiguration::default();
 
-        let result = StateTransitions::complete_phase(state, crate::TimerId::new(), &config, Phase::ShortBreak).unwrap();
+        let result = StateTransitions::complete_phase(
+            state,
+            crate::TimerId::new(),
+            &config,
+            Phase::ShortBreak,
+        )
+        .unwrap();
         assert!(matches!(result.new_state, TimerState::ShortBreak { .. }));
     }
 
@@ -392,7 +457,13 @@ mod tests {
         };
         let config = crate::TimerConfiguration::default();
 
-        let result = StateTransitions::complete_phase(state, crate::TimerId::new(), &config, Phase::LongBreak).unwrap();
+        let result = StateTransitions::complete_phase(
+            state,
+            crate::TimerId::new(),
+            &config,
+            Phase::LongBreak,
+        )
+        .unwrap();
         assert!(matches!(result.new_state, TimerState::LongBreak { .. }));
     }
 
@@ -403,12 +474,15 @@ mod tests {
         };
         let config = crate::TimerConfiguration::default();
 
-        let (new_state, complete) = StateTransitions::tick(state, crate::TimerId::new(), &config).unwrap();
+        let (new_state, complete) =
+            StateTransitions::tick(state, crate::TimerId::new(), &config)
+                .unwrap();
         assert!(!complete);
         assert_eq!(new_state.remaining_seconds(), 1);
 
         let (final_state, complete) =
-            StateTransitions::tick(new_state, crate::TimerId::new(), &config).unwrap();
+            StateTransitions::tick(new_state, crate::TimerId::new(), &config)
+                .unwrap();
         assert!(complete);
         assert_eq!(final_state.remaining_seconds(), 0);
     }

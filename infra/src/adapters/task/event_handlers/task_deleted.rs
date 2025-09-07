@@ -6,35 +6,34 @@ use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
-pub struct TaskCreatedHandler {
+pub struct TaskDeletedHandler {
     emitter: Arc<dyn Emitter>,
 }
 
-impl TaskCreatedHandler {
+impl TaskDeletedHandler {
     pub fn new(emitter: Arc<dyn Emitter>) -> Self {
-        TaskCreatedHandler { emitter }
+        TaskDeletedHandler { emitter }
     }
 }
 
 #[async_trait]
-impl EventHandler for TaskCreatedHandler {
+impl EventHandler for TaskDeletedHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<domain::TaskCreated>()
+        TypeId::of::<domain::TaskDeleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let task_created = event.as_any().downcast_ref::<domain::TaskCreated>();
+        let task_deleted = event.as_any().downcast_ref::<domain::TaskDeleted>();
 
         self.emitter
-            .emit(domain::event_names::task::TASK_CREATED, json!(task_created))
+            .emit(domain::event_names::task::TASK_DELETED, json!(task_deleted))
             .map_err(|e| domain::Error::EventPublishingError {
-                message: format!("Failed to emit task created event: {e}"),
+                message: format!("Failed to emit task updated event: {e}"),
             })?;
-
         self.emitter
-            .emit(domain::event_names::task::LIST_UPDATED, json!(task_created))
+            .emit(domain::event_names::task::LIST_UPDATED, json!(task_deleted))
             .map_err(|e| domain::Error::EventPublishingError {
-                message: format!("Failed to emit task created event: {e}"),
+                message: format!("Failed to emit task updated event: {e}"),
             })?;
         Ok(())
     }

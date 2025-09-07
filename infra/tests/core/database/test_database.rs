@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tempfile::TempDir;
 use uuid::Uuid;
 
-use domain::{Result, Error};
+use domain::{Error, Result};
 use infra::adapters::database::{DbPool, establish_connection, run_migrations};
 
 /// Test database instance with automatic cleanup
@@ -45,7 +45,7 @@ impl TestDatabase {
 
         // Create database path
         let db_path = temp_dir.path().join(format!("{}.db", test_id));
-        
+
         // Establish connection pool
         let pool = establish_connection(&db_path)?;
         let pool = Arc::new(pool);
@@ -98,7 +98,7 @@ mod tests {
             db_path = db.db_path.clone();
             assert!(db_path.exists());
         } // database is dropped here
-        
+
         // Database file should be cleaned up
         assert!(!db_path.exists());
     }

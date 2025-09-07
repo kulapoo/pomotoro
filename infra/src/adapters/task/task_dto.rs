@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
-use domain::{Result, Task, TaskId, Config, TaskStatus};
+use domain::{Config, Result, Task, TaskId, TaskStatus};
 use serde::{Deserialize, Serialize};
 
 /// Legacy config format for backward compatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LegacyTaskConfigDto {
-    pub work_duration: u64, // seconds
+    pub work_duration: u64,        // seconds
     pub short_break_duration: u64, // seconds
-    pub long_break_duration: u64, // seconds
+    pub long_break_duration: u64,  // seconds
     pub sessions_until_long_break: u8,
     pub enable_screen_blocking: bool,
     pub max_sessions_default: u8,
@@ -26,6 +26,7 @@ pub struct TaskDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<LegacyTaskConfigDto>, // For backward compatibility
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: String, // TaskStatus serialized as string
     pub default: bool,
@@ -43,6 +44,7 @@ impl From<Task> for TaskDto {
             settings: Some(task.config),
             config: None, // Only used for backward compatibility during deserialization
             created_at: task.created_at,
+            updated_at: task.updated_at,
             completed_at: task.completed_at,
             status: match task.status {
                 TaskStatus::Active => "Active".to_string(),
@@ -66,7 +68,6 @@ impl TryFrom<TaskDto> for Task {
                 message: format!("Invalid task ID: {}", dto.id),
             }
         })?;
-
 
         let status = match dto.status.as_str() {
             "Active" => TaskStatus::Active,
@@ -100,6 +101,7 @@ impl TryFrom<TaskDto> for Task {
             completed_at: dto.completed_at,
             status,
             default: dto.default,
+            updated_at: dto.updated_at,
         })
     }
 }

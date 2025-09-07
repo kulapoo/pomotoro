@@ -26,6 +26,11 @@ impl EventHandler for TaskUpdatedHandler {
         let task_updated = event.as_any().downcast_ref::<domain::TaskUpdated>();
 
         self.emitter
+            .emit(domain::event_names::task::TASK_UPDATED, json!(task_updated))
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!("Failed to emit task updated event: {e}"),
+            })?;
+        self.emitter
             .emit(domain::event_names::task::LIST_UPDATED, json!(task_updated))
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task updated event: {e}"),

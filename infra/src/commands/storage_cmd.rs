@@ -1,9 +1,9 @@
+use anyhow::Context;
 use anyhow::Result;
 use domain::ConfigRepository;
-use tauri::{State, command};
 use std::path::PathBuf;
-use anyhow::Context;
 use std::sync::Arc;
+use tauri::{State, command};
 
 #[command]
 pub async fn open_data_directory() -> Result<(), String> {
@@ -29,7 +29,8 @@ pub async fn open_data_directory() -> Result<(), String> {
 pub async fn clear_all_data(
     config_repo: State<'_, Arc<dyn ConfigRepository + Send + Sync>>,
 ) -> Result<(), String> {
-    config_repo.reset_to_defaults()
+    config_repo
+        .reset_to_defaults()
         .await
         .context("Failed to clear all data")
         .map_err(|e| e.to_string())?;
@@ -112,7 +113,8 @@ pub async fn update_storage_path(
 pub async fn export_settings(
     config_repo: State<'_, Arc<dyn ConfigRepository + Send + Sync>>,
 ) -> Result<String, String> {
-    let config = config_repo.get_config()
+    let config = config_repo
+        .get_config()
         .await
         .context("Failed to get current configuration")
         .map_err(|e| e.to_string())?;
@@ -133,11 +135,13 @@ pub async fn import_settings(
         .context("Failed to deserialize configuration")
         .map_err(|e| e.to_string())?;
 
-    config.validate()
+    config
+        .validate()
         .context("Invalid configuration")
         .map_err(|e| e.to_string())?;
 
-    config_repo.save_config(&config)
+    config_repo
+        .save_config(&config)
         .await
         .context("Failed to save imported configuration")
         .map_err(|e| e.to_string())?;

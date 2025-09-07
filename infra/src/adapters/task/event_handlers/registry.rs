@@ -2,11 +2,11 @@ use std::{any::TypeId, sync::Arc};
 
 use domain::Result;
 
-use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::events::EventSubscriber;
+use crate::adapters::events::app_emitter::Emitter;
 
 use super::{
-    TaskCompletedHandler, TaskCreatedHandler,
+    TaskCompletedHandler, TaskCreatedHandler, TaskDeletedHandler,
     TaskSessionCompletedHandler, TaskStatusChangedHandler,
     TaskSwitchWorkflowCompletedHandler, TaskUpdatedHandler,
 };
@@ -15,15 +15,13 @@ pub fn register_task_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     emitter: Arc<dyn Emitter>,
 ) -> Result<()> {
-    event_bus
-        .subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(TaskCompletedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskUpdatedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskDeletedHandler::new(emitter.clone())))?;
     event_bus
-        .subscribe(Box::new(TaskUpdatedHandler::new(emitter.clone())))?;
-    event_bus.subscribe(Box::new(TaskStatusChangedHandler::new(
-        emitter.clone(),
-    )))?;
+        .subscribe(Box::new(TaskStatusChangedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TaskSessionCompletedHandler::new(
         emitter.clone(),
     )))?;

@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result};
+use crate::{Config, Error, Result, TaskBuilder};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -14,16 +14,30 @@ pub struct Task {
     pub tags: Vec<String>,
     pub config: Config,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub status: Status,
     pub default: bool,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct TaskPatch {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub max_sessions: Option<u8>,
+    pub tags: Option<Vec<String>>,
+    pub config: Option<Config>,
+    pub status: Option<Status>,
+    pub default: Option<bool>,
+    pub current_sessions: Option<u8>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
 }
 
 impl Task {
     pub fn id(&self) -> Id {
         self.id
     }
-
 
     pub fn new_default() -> Result<Self> {
         use super::builder::Builder;
@@ -131,9 +145,40 @@ impl Task {
     pub fn reset_config(&mut self) {
         self.config = Config::default();
     }
+}
 
-    pub fn get_effective_audio_config(&self) -> crate::AudioConfig {
-        self.config.audio.clone()
+impl Task {
+    pub fn patch(&mut self, update: TaskPatch) {
+        if let Some(name) = update.name {
+            self.name = name;
+        }
+        if let Some(description) = update.description {
+            self.description = Some(description);
+        }
+        if let Some(max_sessions) = update.max_sessions {
+            self.max_sessions = max_sessions;
+        }
+        if let Some(tags) = update.tags {
+            self.tags = tags;
+        }
+        if let Some(default) = update.default {
+            self.default = default;
+        }
+        if let Some(updated_at) = update.updated_at {
+            self.created_at = updated_at;
+        }
+        if let Some(status) = update.status {
+            self.status = status;
+        }
+        if let Some(config) = update.config {
+            self.config = config;
+        }
+        if let Some(current_sessions) = update.current_sessions {
+            self.current_sessions = current_sessions;
+        }
+        if let Some(completed_at) = update.completed_at {
+            self.completed_at = Some(completed_at);
+        }
     }
 }
 

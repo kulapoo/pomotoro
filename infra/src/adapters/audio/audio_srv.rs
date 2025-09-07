@@ -46,7 +46,7 @@ impl RodioAudioService {
             active_playbacks: Arc::new(Mutex::new(HashMap::new())),
         })
     }
-    
+
     /// Resolve relative paths to absolute paths based on the current directory
     /// or the executable's directory
     fn resolve_audio_path(path: &Path) -> PathBuf {
@@ -54,32 +54,31 @@ impl RodioAudioService {
         if path.is_absolute() {
             return path.to_path_buf();
         }
-        
+
         // Try to resolve relative to current directory first
-        let from_cwd = std::env::current_dir()
-            .ok()
-            .map(|cwd| cwd.join(path));
-        
+        let from_cwd = std::env::current_dir().ok().map(|cwd| cwd.join(path));
+
         if let Some(ref p) = from_cwd {
             if p.exists() {
                 return p.clone();
             }
         }
-        
+
         // If not found, try relative to executable location
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 // In development, the executable might be in target/debug or target/release
                 // We need to go up to the project root
                 let mut current = exe_dir;
-                
+
                 // Look for the assets folder by traversing up
-                for _ in 0..5 {  // Limit traversal depth
+                for _ in 0..5 {
+                    // Limit traversal depth
                     let candidate = current.join(path);
                     if candidate.exists() {
                         return candidate;
                     }
-                    
+
                     // Also check if we need to go to parent
                     if let Some(parent) = current.parent() {
                         let parent_candidate = parent.join(path);
@@ -93,7 +92,7 @@ impl RodioAudioService {
                 }
             }
         }
-        
+
         // If all else fails, return the original path
         // (will likely fail when trying to open, but preserves original error message)
         path.to_path_buf()
@@ -127,10 +126,10 @@ impl RodioAudioService {
 
         // Resolve the audio file path
         let resolved_path = Self::resolve_audio_path(&asset.file_path);
-        
+
         let file = File::open(&resolved_path).map_err(|e| {
             eprintln!("Warning: Audio file not found: {} (resolved to: {}). Error: {}", 
-                asset.file_path.to_string_lossy(), 
+                asset.file_path.to_string_lossy(),
                 resolved_path.to_string_lossy(),
                 e);
             AudioError::InvalidFile(
@@ -323,10 +322,11 @@ impl RodioAudioService {
         _asset: &AudioAsset,
     ) -> std::result::Result<PlaybackHandle, AudioError> {
         let sink = Sink::connect_new(self.stream_handle.mixer());
-        
+
         let silent_samples: Vec<f32> = vec![0.0; 44100 / 10];
-        let source = rodio::buffer::SamplesBuffer::new(1, 44100, silent_samples);
-        
+        let source =
+            rodio::buffer::SamplesBuffer::new(1, 44100, silent_samples);
+
         sink.append(source);
         sink.set_volume(0.0);
 
@@ -399,12 +399,20 @@ impl AudioService for RodioAudioService {
         RodioAudioService::get_library(self)
     }
 
-    fn play_notification(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+    fn play_notification(
+        &mut self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
         RodioAudioService::play_notification(self, asset_id, volume)
             .map_err(|e| e.into())
     }
 
-    fn play_background_audio(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+    fn play_background_audio(
+        &mut self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
         RodioAudioService::play_background_audio(self, asset_id, volume)
             .map_err(|e| e.into())
     }

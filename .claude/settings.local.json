@@ -17,7 +17,9 @@
       "Bash(cargo run:*)",
       "Bash(cargo clippy:*)",
       "Bash(RUST_LOG=debug cargo test timer::test_start_timer)",
-      "Bash(export RUST_LOG=debug)"
+      "Bash(export RUST_LOG=debug)",
+      "Bash(rustc:*)",
+      "Bash(./test_timer_save)"
     ],
     "deny": [],
     "ask": [],

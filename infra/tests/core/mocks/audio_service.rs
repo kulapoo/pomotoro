@@ -1,8 +1,13 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
+use domain::{
+    Result,
+    audio::{
+        AudioAsset, AudioLibrary, AudioService, PlaybackHandle, PlaybackRequest,
+    },
+};
 use std::collections::HashMap;
 use std::ops::Deref;
-use domain::{Result, audio::{AudioService, AudioAsset, AudioLibrary, PlaybackRequest, PlaybackHandle}};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Mock audio service for testing
 pub struct MockAudioService {
@@ -63,16 +68,24 @@ impl MockAudioService {
 }
 
 impl AudioService for MockAudioService {
-    fn play_audio(&mut self, request: PlaybackRequest) -> Result<PlaybackHandle> {
+    fn play_audio(
+        &mut self,
+        request: PlaybackRequest,
+    ) -> Result<PlaybackHandle> {
         self.play_count.fetch_add(1, Ordering::SeqCst);
         let handle = PlaybackHandle {
-            id: format!("mock_playback_{}", self.play_count.load(Ordering::SeqCst)),
+            id: format!(
+                "mock_playback_{}",
+                self.play_count.load(Ordering::SeqCst)
+            ),
             asset_id: request.asset_id.clone(),
             is_playing: true,
             is_looped: request.looped,
             volume: request.volume,
         };
-        self.active_playbacks.lock().unwrap()
+        self.active_playbacks
+            .lock()
+            .unwrap()
             .insert(handle.id.clone(), handle.clone());
         Ok(handle)
     }
@@ -91,7 +104,9 @@ impl AudioService for MockAudioService {
 
     fn pause_audio(&mut self, playback_id: &str) -> Result<()> {
         self.pause_count.fetch_add(1, Ordering::SeqCst);
-        if let Some(handle) = self.active_playbacks.lock().unwrap().get_mut(playback_id) {
+        if let Some(handle) =
+            self.active_playbacks.lock().unwrap().get_mut(playback_id)
+        {
             handle.is_playing = false;
         }
         Ok(())
@@ -99,20 +114,27 @@ impl AudioService for MockAudioService {
 
     fn resume_audio(&mut self, playback_id: &str) -> Result<()> {
         self.resume_count.fetch_add(1, Ordering::SeqCst);
-        if let Some(handle) = self.active_playbacks.lock().unwrap().get_mut(playback_id) {
+        if let Some(handle) =
+            self.active_playbacks.lock().unwrap().get_mut(playback_id)
+        {
             handle.is_playing = true;
         }
         Ok(())
     }
 
     fn set_volume(&mut self, playback_id: &str, volume: f32) -> Result<()> {
-        self.volume_calls.lock().unwrap()
+        self.volume_calls
+            .lock()
+            .unwrap()
             .push((playback_id.to_string(), volume));
         Ok(())
     }
 
     fn get_active_playbacks(&self) -> Result<Vec<PlaybackHandle>> {
-        Ok(self.active_playbacks.lock().unwrap()
+        Ok(self
+            .active_playbacks
+            .lock()
+            .unwrap()
             .values()
             .cloned()
             .collect())
@@ -130,7 +152,11 @@ impl AudioService for MockAudioService {
         }
     }
 
-    fn play_notification(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+    fn play_notification(
+        &mut self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
         self.play_audio(PlaybackRequest {
             asset_id: asset_id.to_string(),
             volume,
@@ -140,7 +166,11 @@ impl AudioService for MockAudioService {
         })
     }
 
-    fn play_background_audio(&mut self, asset_id: &str, volume: f32) -> Result<PlaybackHandle> {
+    fn play_background_audio(
+        &mut self,
+        asset_id: &str,
+        volume: f32,
+    ) -> Result<PlaybackHandle> {
         self.play_audio(PlaybackRequest {
             asset_id: asset_id.to_string(),
             volume,
@@ -152,12 +182,15 @@ impl AudioService for MockAudioService {
 
     fn stop_background_audio(&mut self) -> Result<()> {
         // Stop all looped playbacks
-        let looped_ids: Vec<String> = self.active_playbacks.lock().unwrap()
+        let looped_ids: Vec<String> = self
+            .active_playbacks
+            .lock()
+            .unwrap()
             .iter()
             .filter(|(_, h)| h.is_looped)
             .map(|(id, _)| id.clone())
             .collect();
-        
+
         for id in looped_ids {
             self.stop_audio(&id)?;
         }
@@ -193,10 +226,10 @@ mod tests {
             fade_in_ms: None,
             fade_out_ms: None,
         };
-        
+
         service.play_audio(request.clone()).unwrap();
         service.play_audio(request).unwrap();
-        
+
         assert_eq!(service.play_count(), 2);
         assert_eq!(service.active_playback_count(), 2);
     }
@@ -204,14 +237,16 @@ mod tests {
     #[test]
     fn tracks_stop_operations() {
         let mut service = MockAudioService::new();
-        let handle = service.play_audio(PlaybackRequest {
-            asset_id: "test".to_string(),
-            volume: 0.5,
-            looped: false,
-            fade_in_ms: None,
-            fade_out_ms: None,
-        }).unwrap();
-        
+        let handle = service
+            .play_audio(PlaybackRequest {
+                asset_id: "test".to_string(),
+                volume: 0.5,
+                looped: false,
+                fade_in_ms: None,
+                fade_out_ms: None,
+            })
+            .unwrap();
+
         service.stop_audio(&handle.id).unwrap();
         assert_eq!(service.stop_count(), 1);
         assert_eq!(service.active_playback_count(), 0);
@@ -220,18 +255,20 @@ mod tests {
     #[test]
     fn resets_counts() {
         let mut service = MockAudioService::new();
-        service.play_audio(PlaybackRequest {
-            asset_id: "test".to_string(),
-            volume: 0.5,
-            looped: false,
-            fade_in_ms: None,
-            fade_out_ms: None,
-        }).unwrap();
-        
+        service
+            .play_audio(PlaybackRequest {
+                asset_id: "test".to_string(),
+                volume: 0.5,
+                looped: false,
+                fade_in_ms: None,
+                fade_out_ms: None,
+            })
+            .unwrap();
+
         service.stop_all_audio().unwrap();
         assert_eq!(service.play_count(), 1);
         assert_eq!(service.stop_count(), 1);
-        
+
         service.reset_counts();
         assert_eq!(service.play_count(), 0);
         assert_eq!(service.stop_count(), 0);

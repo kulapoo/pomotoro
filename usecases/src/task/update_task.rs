@@ -1,11 +1,11 @@
 use domain::{
-    AudioConfig, Error, EventPublisher, Result, Task, TaskId,
-    TaskRepository, TaskUpdated,
+    AudioConfig, Error, EventPublisher, Result, Task, TaskId, TaskRepository,
+    TaskUpdated,
 };
 use std::sync::Arc;
 use std::time::Duration;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct UpdateTaskCmd {
     pub id: String,
     pub name: Option<String>,
@@ -107,4 +107,3 @@ pub async fn update_task(
 
     Ok(task)
 }
-

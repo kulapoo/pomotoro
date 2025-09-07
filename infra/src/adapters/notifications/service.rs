@@ -14,14 +14,37 @@ pub struct NotificationContext {
 
 #[derive(Debug, Clone)]
 pub enum NotificationEvent {
-    PhaseCompleted { from: Phase, to: Phase },
-    SessionStarted { phase: Phase, task_name: Option<String> },
-    TaskCompleted { task_name: String, total_sessions: u32 },
-    TimerPaused { phase: Phase, remaining_seconds: u32 },
-    TimerResumed { phase: Phase, remaining_seconds: u32 },
-    WorkSessionCompleted { session_number: u32, task_name: Option<String> },
-    BreakStarted { break_type: Phase, duration_seconds: u32 },
-    BreakCompleted { break_type: Phase },
+    PhaseCompleted {
+        from: Phase,
+        to: Phase,
+    },
+    SessionStarted {
+        phase: Phase,
+        task_name: Option<String>,
+    },
+    TaskCompleted {
+        task_name: String,
+        total_sessions: u32,
+    },
+    TimerPaused {
+        phase: Phase,
+        remaining_seconds: u32,
+    },
+    TimerResumed {
+        phase: Phase,
+        remaining_seconds: u32,
+    },
+    WorkSessionCompleted {
+        session_number: u32,
+        task_name: Option<String>,
+    },
+    BreakStarted {
+        break_type: Phase,
+        duration_seconds: u32,
+    },
+    BreakCompleted {
+        break_type: Phase,
+    },
 }
 
 impl NotificationEvent {
@@ -47,8 +70,12 @@ impl NotificationEvent {
                         icon: None,
                     },
                 };
-                NotificationContext { title, body, icon: None }
-            },
+                NotificationContext {
+                    title,
+                    body,
+                    icon: None,
+                }
+            }
             NotificationEvent::SessionStarted { phase, task_name } => {
                 let title = match phase {
                     Phase::Work => "Focus Session Started".to_string(),
@@ -60,41 +87,56 @@ impl NotificationEvent {
                 } else {
                     format!("{:?} session has started", phase)
                 };
-                NotificationContext { title, body, icon: None }
-            },
-            NotificationEvent::TaskCompleted { task_name, total_sessions } => {
                 NotificationContext {
-                    title: "Task Completed!".to_string(),
-                    body: format!(
-                        "\"{}\" completed with {} sessions",
-                        task_name, total_sessions
-                    ),
+                    title,
+                    body,
                     icon: None,
                 }
+            }
+            NotificationEvent::TaskCompleted {
+                task_name,
+                total_sessions,
+            } => NotificationContext {
+                title: "Task Completed!".to_string(),
+                body: format!(
+                    "\"{}\" completed with {} sessions",
+                    task_name, total_sessions
+                ),
+                icon: None,
             },
-            NotificationEvent::TimerPaused { phase, remaining_seconds } => {
-                NotificationContext {
-                    title: "Timer Paused".to_string(),
-                    body: format!(
-                        "{:?} paused with {} minutes remaining",
-                        phase, remaining_seconds / 60
-                    ),
-                    icon: None,
-                }
+            NotificationEvent::TimerPaused {
+                phase,
+                remaining_seconds,
+            } => NotificationContext {
+                title: "Timer Paused".to_string(),
+                body: format!(
+                    "{:?} paused with {} minutes remaining",
+                    phase,
+                    remaining_seconds / 60
+                ),
+                icon: None,
             },
-            NotificationEvent::TimerResumed { phase, remaining_seconds } => {
-                NotificationContext {
-                    title: "Timer Resumed".to_string(),
-                    body: format!(
-                        "{:?} resumed with {} minutes remaining",
-                        phase, remaining_seconds / 60
-                    ),
-                    icon: None,
-                }
+            NotificationEvent::TimerResumed {
+                phase,
+                remaining_seconds,
+            } => NotificationContext {
+                title: "Timer Resumed".to_string(),
+                body: format!(
+                    "{:?} resumed with {} minutes remaining",
+                    phase,
+                    remaining_seconds / 60
+                ),
+                icon: None,
             },
-            NotificationEvent::WorkSessionCompleted { session_number, task_name } => {
+            NotificationEvent::WorkSessionCompleted {
+                session_number,
+                task_name,
+            } => {
                 let body = if let Some(name) = task_name {
-                    format!("Session {} completed for \"{}\"", session_number, name)
+                    format!(
+                        "Session {} completed for \"{}\"",
+                        session_number, name
+                    )
                 } else {
                     format!("Work session {} completed", session_number)
                 };
@@ -103,30 +145,53 @@ impl NotificationEvent {
                     body,
                     icon: None,
                 }
-            },
-            NotificationEvent::BreakStarted { break_type, duration_seconds } => {
+            }
+            NotificationEvent::BreakStarted {
+                break_type,
+                duration_seconds,
+            } => {
                 let duration_minutes = duration_seconds / 60;
                 let (title, body) = match break_type {
                     Phase::ShortBreak => (
                         "Short Break".to_string(),
-                        format!("Take {} minutes to rest and recharge", duration_minutes),
+                        format!(
+                            "Take {} minutes to rest and recharge",
+                            duration_minutes
+                        ),
                     ),
                     Phase::LongBreak => (
                         "Long Break".to_string(),
-                        format!("Take {} minutes to relax and refresh", duration_minutes),
+                        format!(
+                            "Take {} minutes to relax and refresh",
+                            duration_minutes
+                        ),
                     ),
-                    _ => return NotificationContext {
-                        title: "Break Started".to_string(),
-                        body: format!("Time for a {}-minute break", duration_minutes),
-                        icon: None,
-                    },
+                    _ => {
+                        return NotificationContext {
+                            title: "Break Started".to_string(),
+                            body: format!(
+                                "Time for a {}-minute break",
+                                duration_minutes
+                            ),
+                            icon: None,
+                        };
+                    }
                 };
-                NotificationContext { title, body, icon: None }
-            },
+                NotificationContext {
+                    title,
+                    body,
+                    icon: None,
+                }
+            }
             NotificationEvent::BreakCompleted { break_type } => {
                 let body = match break_type {
-                    Phase::ShortBreak => "Short break is over. Ready to focus?".to_string(),
-                    Phase::LongBreak => "Long break is over. Let's get back to work!".to_string(),
+                    Phase::ShortBreak => {
+                        "Short break is over. Ready to focus?".to_string()
+                    }
+                    Phase::LongBreak => {
+                        "Long break is over. Let's get back to work!"
+                            .to_string()
+                    }
                     _ => "Break is over".to_string(),
                 };
                 NotificationContext {
@@ -134,7 +199,7 @@ impl NotificationEvent {
                     body,
                     icon: None,
                 }
-            },
+            }
         }
     }
 }
@@ -163,41 +228,46 @@ impl NotificationService {
         }
     }
 
-    async fn should_send_notification(&self, event: &NotificationEvent) -> bool {
+    async fn should_send_notification(
+        &self,
+        event: &NotificationEvent,
+    ) -> bool {
         let config = self.config.read().await;
-        
+
         if !config.enable_desktop_notifications {
             return false;
         }
 
         match event {
-            NotificationEvent::PhaseCompleted { .. } |
-            NotificationEvent::WorkSessionCompleted { .. } |
-            NotificationEvent::BreakStarted { .. } |
-            NotificationEvent::BreakCompleted { .. } => {
+            NotificationEvent::PhaseCompleted { .. }
+            | NotificationEvent::WorkSessionCompleted { .. }
+            | NotificationEvent::BreakStarted { .. }
+            | NotificationEvent::BreakCompleted { .. } => {
                 config.show_phase_transition_notifications
-            },
+            }
             NotificationEvent::TaskCompleted { .. } => {
                 config.show_task_completion_notifications
-            },
-            NotificationEvent::SessionStarted { .. } |
-            NotificationEvent::TimerPaused { .. } |
-            NotificationEvent::TimerResumed { .. } => true,
+            }
+            NotificationEvent::SessionStarted { .. }
+            | NotificationEvent::TimerPaused { .. }
+            | NotificationEvent::TimerResumed { .. } => true,
         }
     }
 
     async fn ensure_permission(&self) -> Result<bool> {
         let mut cached = self.permission_granted.write().await;
-        
+
         if let Some(granted) = *cached {
             return Ok(granted);
         }
 
-        let permission = match self.app_handle.notification().permission_state() {
+        let permission = match self.app_handle.notification().permission_state()
+        {
             Ok(state) => match state {
                 PermissionState::Granted => true,
                 PermissionState::Denied => false,
-                PermissionState::Prompt | PermissionState::PromptWithRationale => {
+                PermissionState::Prompt
+                | PermissionState::PromptWithRationale => {
                     match self.app_handle.notification().request_permission() {
                         Ok(PermissionState::Granted) => true,
                         _ => false,
@@ -228,8 +298,9 @@ impl NotificationServiceTrait for NotificationService {
             let has_permission = self.ensure_permission().await?;
             if has_permission {
                 let context = event.to_context();
-                
-                let mut builder = self.app_handle
+
+                let mut builder = self
+                    .app_handle
                     .notification()
                     .builder()
                     .title(&context.title)
@@ -240,7 +311,7 @@ impl NotificationServiceTrait for NotificationService {
                 }
 
                 match builder.show() {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(e) => {
                         tracing::warn!("Failed to show notification: {}", e);
                     }
@@ -264,7 +335,7 @@ impl NotificationServiceTrait for NotificationService {
             return Ok(granted);
         }
         drop(cached);
-        
+
         self.ensure_permission().await
     }
 

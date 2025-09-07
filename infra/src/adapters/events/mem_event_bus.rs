@@ -1,11 +1,11 @@
 use super::EventHandler;
 use domain::{Event, EventPublisher};
-use tracing::{debug, error, warn};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::sync::Semaphore;
+use tracing::{debug, error, warn};
 
 use crate::adapters::events::EventSubscriber;
 
@@ -99,7 +99,9 @@ impl InMemoryEventBus {
         Self {
             handlers: Arc::new(Mutex::new(HashMap::new())),
             next_handler_id: Arc::new(AtomicU64::new(1)),
-            concurrency_limiter: Arc::new(Semaphore::new(max_concurrent_handlers)),
+            concurrency_limiter: Arc::new(Semaphore::new(
+                max_concurrent_handlers,
+            )),
         }
     }
 
@@ -186,6 +188,7 @@ impl EventSubscriber for InMemoryEventBus {
             let handle = match tokio::runtime::Handle::try_current() {
                 Ok(handle) => handle,
                 Err(_) => {
+                    println!("No tokio runtime available for event handler");
                     warn!("No tokio runtime available for event handler");
                     return;
                 }
@@ -203,6 +206,7 @@ impl EventSubscriber for InMemoryEventBus {
 
                 if let Err(e) = handler_clone.handle(event_box).await {
                     error!("Event handler error: {}", e);
+                    println!("Event handler error: {}", e);
                 }
                 // Permit is automatically released when dropped
             });
@@ -270,7 +274,10 @@ impl EventSubscriber for InMemoryEventBus {
         Ok(false)
     }
 
-    fn unsubscribe(&self, handler: Box<dyn EventHandler>) -> domain::Result<()> {
+    fn unsubscribe(
+        &self,
+        handler: Box<dyn EventHandler>,
+    ) -> domain::Result<()> {
         let event_type = handler.subscribes_to();
         let handler_name = handler.name();
 
@@ -670,9 +677,13 @@ mod tests {
                 TypeId::of::<TaskCreated>()
             }
 
-            async fn handle(&self, _event: Box<dyn Event>) -> domain::Result<()> {
+            async fn handle(
+                &self,
+                _event: Box<dyn Event>,
+            ) -> domain::Result<()> {
                 // Increment counter on entry
-                let current = self.execution_counter.fetch_add(1, Ordering::SeqCst) + 1;
+                let current =
+                    self.execution_counter.fetch_add(1, Ordering::SeqCst) + 1;
 
                 // Track maximum concurrent executions
                 let mut max = self.max_concurrent.load(Ordering::SeqCst);

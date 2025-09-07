@@ -1,4 +1,6 @@
-use domain::audio::{AudioAsset, AudioCategory, AudioLibrary, PlaybackRequest, PlaybackHandle};
+use domain::audio::{
+    AudioAsset, AudioCategory, AudioLibrary, PlaybackHandle, PlaybackRequest,
+};
 use std::path::PathBuf;
 
 /// Audio-related fixtures for testing
@@ -35,7 +37,10 @@ impl AudioFixtures {
         AudioAsset {
             id: format!("notif_{}", &name),
             name: name.clone(),
-            file_path: PathBuf::from(format!("/sounds/notifications/{}.mp3", name)),
+            file_path: PathBuf::from(format!(
+                "/sounds/notifications/{}.mp3",
+                name
+            )),
             category: AudioCategory::NotificationSound,
             duration_ms: Some(500),
         }
@@ -47,7 +52,10 @@ impl AudioFixtures {
         AudioAsset {
             id: format!("bg_{}", &name),
             name: name.clone(),
-            file_path: PathBuf::from(format!("/sounds/background/{}.mp3", name)),
+            file_path: PathBuf::from(format!(
+                "/sounds/background/{}.mp3",
+                name
+            )),
             category: AudioCategory::BackgroundAmbient,
             duration_ms: None,
         }
@@ -56,22 +64,25 @@ impl AudioFixtures {
     /// Create a test audio library with default sounds
     pub fn library() -> AudioLibrary {
         let mut library = AudioLibrary::new();
-        
+
         // Add notification sounds
         library.add_asset(Self::notification_sound("bell"));
         library.add_asset(Self::notification_sound("chime"));
         library.add_asset(Self::notification_sound("ding"));
-        
+
         // Add background sounds
         library.add_asset(Self::background_sound("rain"));
         library.add_asset(Self::background_sound("ocean"));
         library.add_asset(Self::background_sound("forest"));
-        
+
         library
     }
 
     /// Create a playback request
-    pub fn playback_request(asset_id: impl Into<String>, volume: f32) -> PlaybackRequest {
+    pub fn playback_request(
+        asset_id: impl Into<String>,
+        volume: f32,
+    ) -> PlaybackRequest {
         PlaybackRequest {
             asset_id: asset_id.into(),
             volume,
@@ -82,7 +93,10 @@ impl AudioFixtures {
     }
 
     /// Create a looped playback request (for background audio)
-    pub fn looped_playback_request(asset_id: impl Into<String>, volume: f32) -> PlaybackRequest {
+    pub fn looped_playback_request(
+        asset_id: impl Into<String>,
+        volume: f32,
+    ) -> PlaybackRequest {
         PlaybackRequest {
             asset_id: asset_id.into(),
             volume,
@@ -128,13 +142,17 @@ mod tests {
     fn creates_audio_library() {
         let library = AudioFixtures::library();
         assert_eq!(library.assets.len(), 6);
-        
-        let notifications: usize = library.assets.values()
+
+        let notifications: usize = library
+            .assets
+            .values()
             .filter(|a| a.category == AudioCategory::NotificationSound)
             .count();
         assert_eq!(notifications, 3);
-        
-        let background: usize = library.assets.values()
+
+        let background: usize = library
+            .assets
+            .values()
             .filter(|a| a.category == AudioCategory::BackgroundAmbient)
             .count();
         assert_eq!(background, 3);

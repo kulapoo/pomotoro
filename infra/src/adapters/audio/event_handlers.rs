@@ -1,16 +1,15 @@
 use async_trait::async_trait;
-use domain::{
-    ConfigRepository, Event, Phase, PlaybackRequest, Result,
-};
 use domain::timer::events::{
-    BreakSessionCompleted, BreakSessionStarted, Paused as TimerPaused, Started as TimerStarted,
-    Tick as TimerTick, WorkSessionCompleted, WorkSessionStarted,
+    BreakSessionCompleted, BreakSessionStarted, Paused as TimerPaused,
+    Started as TimerStarted, Tick as TimerTick, WorkSessionCompleted,
+    WorkSessionStarted,
 };
+use domain::{ConfigRepository, Event, Phase, PlaybackRequest, Result};
 use std::any::TypeId;
 use std::sync::Arc;
 
-use crate::adapters::events::{EventHandler, EventSubscriber};
 use super::AudioServiceWrapper;
+use crate::adapters::events::{EventHandler, EventSubscriber};
 
 pub struct WorkSessionStartedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
@@ -36,9 +35,11 @@ impl EventHandler for WorkSessionStartedAudioHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(_work_started) = event.as_any().downcast_ref::<WorkSessionStarted>() {
+        if let Some(_work_started) =
+            event.as_any().downcast_ref::<WorkSessionStarted>()
+        {
             let config = self.config_repository.get_config().await?;
-            
+
             if config.audio.muted {
                 return Ok(());
             }
@@ -49,15 +50,18 @@ impl EventHandler for WorkSessionStartedAudioHandler {
                 .unwrap_or_else(|| "bell".to_string());
 
             let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-            
+
             self.audio_service.play_audio(request)?;
 
             if config.audio.enable_background_audio {
                 if let Some(bg_sound) = config.audio.background_sound {
-                    let bg_request = PlaybackRequest::new(bg_sound, config.audio.volume * 0.5)?
-                        .with_loop()
-                        .with_fade_in(2000);
-                    
+                    let bg_request = PlaybackRequest::new(
+                        bg_sound,
+                        config.audio.volume * 0.5,
+                    )?
+                    .with_loop()
+                    .with_fade_in(2000);
+
                     self.audio_service.play_audio(bg_request)?;
                 }
             }
@@ -94,9 +98,11 @@ impl EventHandler for WorkSessionCompletedAudioHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(_work_completed) = event.as_any().downcast_ref::<WorkSessionCompleted>() {
+        if let Some(_work_completed) =
+            event.as_any().downcast_ref::<WorkSessionCompleted>()
+        {
             let config = self.config_repository.get_config().await?;
-            
+
             if config.audio.muted {
                 return Ok(());
             }
@@ -107,7 +113,7 @@ impl EventHandler for WorkSessionCompletedAudioHandler {
                 .unwrap_or_else(|| "chime".to_string());
 
             let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-            
+
             self.audio_service.play_audio(request)?;
 
             if config.audio.enable_background_audio {
@@ -146,9 +152,11 @@ impl EventHandler for BreakSessionStartedAudioHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(_break_started) = event.as_any().downcast_ref::<BreakSessionStarted>() {
+        if let Some(_break_started) =
+            event.as_any().downcast_ref::<BreakSessionStarted>()
+        {
             let config = self.config_repository.get_config().await?;
-            
+
             if config.audio.muted {
                 return Ok(());
             }
@@ -159,15 +167,18 @@ impl EventHandler for BreakSessionStartedAudioHandler {
                 .unwrap_or_else(|| "gentle-bell".to_string());
 
             let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-            
+
             self.audio_service.play_audio(request)?;
 
             if config.audio.enable_background_audio {
                 if let Some(bg_sound) = config.audio.background_sound {
-                    let bg_request = PlaybackRequest::new(bg_sound, config.audio.volume * 0.3)?
-                        .with_loop()
-                        .with_fade_in(2000);
-                    
+                    let bg_request = PlaybackRequest::new(
+                        bg_sound,
+                        config.audio.volume * 0.3,
+                    )?
+                    .with_loop()
+                    .with_fade_in(2000);
+
                     self.audio_service.play_audio(bg_request)?;
                 }
             }
@@ -204,9 +215,11 @@ impl EventHandler for BreakSessionCompletedAudioHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(_break_completed) = event.as_any().downcast_ref::<BreakSessionCompleted>() {
+        if let Some(_break_completed) =
+            event.as_any().downcast_ref::<BreakSessionCompleted>()
+        {
             let config = self.config_repository.get_config().await?;
-            
+
             if config.audio.muted {
                 return Ok(());
             }
@@ -217,7 +230,7 @@ impl EventHandler for BreakSessionCompletedAudioHandler {
                 .unwrap_or_else(|| "ding".to_string());
 
             let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-            
+
             self.audio_service.play_audio(request)?;
 
             if config.audio.enable_background_audio {
@@ -256,9 +269,11 @@ impl EventHandler for TimerStartedAudioHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(timer_started) = event.as_any().downcast_ref::<TimerStarted>() {
+        if let Some(timer_started) =
+            event.as_any().downcast_ref::<TimerStarted>()
+        {
             let config = self.config_repository.get_config().await?;
-            
+
             if config.audio.muted {
                 return Ok(());
             }
@@ -275,7 +290,7 @@ impl EventHandler for TimerStartedAudioHandler {
             };
 
             let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-            
+
             self.audio_service.play_audio(request)?;
         }
         Ok(())
@@ -311,7 +326,7 @@ impl EventHandler for TimerPausedAudioHandler {
 
     async fn handle(&self, _event: Box<dyn Event>) -> Result<()> {
         let config = self.config_repository.get_config().await?;
-        
+
         if config.audio.enable_background_audio {
             self.audio_service.stop_all_audio()?;
         }
@@ -348,15 +363,20 @@ impl EventHandler for TimerTickAudioHandler {
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(timer_tick) = event.as_any().downcast_ref::<TimerTick>() {
-            if timer_tick.remaining_seconds <= 3 && timer_tick.remaining_seconds > 0 {
+            if timer_tick.remaining_seconds <= 3
+                && timer_tick.remaining_seconds > 0
+            {
                 let config = self.config_repository.get_config().await?;
-                
+
                 if config.audio.muted {
                     return Ok(());
                 }
 
-                let request = PlaybackRequest::new("wooden-block".to_string(), config.audio.volume * 0.5)?;
-                
+                let request = PlaybackRequest::new(
+                    "wooden-block".to_string(),
+                    config.audio.volume * 0.5,
+                )?;
+
                 self.audio_service.play_audio(request)?;
             }
         }
@@ -377,32 +397,35 @@ pub fn register_audio_event_handlers(
         audio_service.clone(),
         config_repository.clone(),
     )));
-    
-    let _ = event_bus.subscribe(Box::new(WorkSessionCompletedAudioHandler::new(
-        audio_service.clone(),
-        config_repository.clone(),
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(BreakSessionStartedAudioHandler::new(
-        audio_service.clone(),
-        config_repository.clone(),
-    )));
-    
-    let _ = event_bus.subscribe(Box::new(BreakSessionCompletedAudioHandler::new(
-        audio_service.clone(),
-        config_repository.clone(),
-    )));
-    
+
+    let _ =
+        event_bus.subscribe(Box::new(WorkSessionCompletedAudioHandler::new(
+            audio_service.clone(),
+            config_repository.clone(),
+        )));
+
+    let _ =
+        event_bus.subscribe(Box::new(BreakSessionStartedAudioHandler::new(
+            audio_service.clone(),
+            config_repository.clone(),
+        )));
+
+    let _ =
+        event_bus.subscribe(Box::new(BreakSessionCompletedAudioHandler::new(
+            audio_service.clone(),
+            config_repository.clone(),
+        )));
+
     let _ = event_bus.subscribe(Box::new(TimerStartedAudioHandler::new(
         audio_service.clone(),
         config_repository.clone(),
     )));
-    
+
     let _ = event_bus.subscribe(Box::new(TimerPausedAudioHandler::new(
         audio_service.clone(),
         config_repository.clone(),
     )));
-    
+
     let _ = event_bus.subscribe(Box::new(TimerTickAudioHandler::new(
         audio_service.clone(),
         config_repository.clone(),
