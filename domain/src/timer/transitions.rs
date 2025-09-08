@@ -9,7 +9,7 @@ use super::events::{
 };
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result, TimerId};
-use crate::{EntityId, Event, TaskId, TimerConfiguration};
+use crate::{Event, TaskId, TimerConfiguration};
 
 /// Result of a state transition containing new state and generated events.
 #[derive(Debug)]
@@ -23,7 +23,7 @@ pub struct StateTransitions;
 
 impl StateTransitions {
     /// Transitions from Idle to Working state.
-    /// 
+    ///
     /// # Errors
     /// Returns error if not in Idle state.
     pub fn start(
@@ -44,7 +44,7 @@ impl StateTransitions {
                             .with_active_entity(active_task_id),
                     ),
                     Box::new(WorkSessionStarted::new(
-                        timer_id, duration, 0, 1, 1,
+                        timer_id, duration, 1,
                     )),
                 ];
 
@@ -61,7 +61,7 @@ impl StateTransitions {
     }
 
     /// Transitions from any running state to Paused.
-    /// 
+    ///
     /// # Errors
     /// Returns error if in Idle state.
     pub fn pause(
@@ -109,7 +109,7 @@ impl StateTransitions {
     }
 
     /// Resumes from Paused state to previous running state.
-    /// 
+    ///
     /// # Errors
     /// Returns error if not paused.
     pub fn resume(
@@ -153,7 +153,7 @@ impl StateTransitions {
     }
 
     /// Completes current phase and transitions to next.
-    /// 
+    ///
     /// Generates appropriate session completion and start events.
     pub fn complete_phase(
         state: TimerState,
@@ -185,8 +185,6 @@ impl StateTransitions {
                 events.push(Box::new(WorkSessionCompleted::new(
                     timer_id,
                     configuration.get_phase_duration_seconds(Phase::Work),
-                    0,
-                    1,
                     1,
                 )));
                 events.push(Box::new(BreakSessionStarted::new(
@@ -202,7 +200,7 @@ impl StateTransitions {
                 )));
                 if next_phase == Phase::Work {
                     events.push(Box::new(WorkSessionStarted::new(
-                        timer_id, duration, 0, 1, 1,
+                        timer_id, duration, 1,
                     )));
                 }
             }
@@ -215,7 +213,7 @@ impl StateTransitions {
     }
 
     /// Skips current phase and starts next phase.
-    /// 
+    ///
     /// Similar to complete_phase but generates PhaseSkipped event.
     pub fn skip_phase(
         state: TimerState,
@@ -227,6 +225,7 @@ impl StateTransitions {
             | TimerState::ShortBreak { .. }
             | TimerState::LongBreak { .. } => {
                 let from_phase = Self::get_phase_from_state(&state);
+
                 let next_phase = match from_phase {
                     Phase::Work => Phase::ShortBreak,
                     Phase::ShortBreak | Phase::LongBreak => Phase::Work,
@@ -265,7 +264,7 @@ impl StateTransitions {
     }
 
     /// Decrements timer by one second.
-    /// 
+    ///
     /// Returns updated state and whether phase completed.
     pub fn tick(
         mut state: TimerState,

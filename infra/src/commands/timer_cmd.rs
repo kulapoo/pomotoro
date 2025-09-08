@@ -1,8 +1,7 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use crate::adapters::{TaskRepositoryArc, TimerRepositoryArc};
 use anyhow::Context;
-use domain::{Phase, TaskId, TimerState, event_names::ui_listeners};
-use std::sync::Arc;
+use domain::{TimerState, event_names::ui_listeners};
 use tauri::{AppHandle, Emitter, State};
 use tracing::info;
 
@@ -198,10 +197,10 @@ pub async fn skip_timer(
     let task_id = task.id;
 
     let (_old_phase, new_phase) = skip_timer_phase(
-        task_id,
         task_repo.inner().clone(),
         timer_repo.inner().clone(),
         event_publisher.inner().clone(),
+        task_id,
     )
     .await
     .context(

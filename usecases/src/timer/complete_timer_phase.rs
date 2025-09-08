@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, Event, Phase, Result, TaskId, TaskRepository, TimerRepository,
+    Error, Event, EventPublisher, Phase, Result, TaskRepository,
+    TimerRepository,
 };
 
-pub async fn complete_work_session(
+pub async fn complete_timer_phase(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
-) -> Result<Vec<Box<dyn Event>>> {
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+) -> Result<()> {
     let mut timer = timer_repo.get().await?;
     let Some(task_id) = timer.active_task_id() else {
         return Err(Error::InvalidTaskParams {
@@ -31,7 +33,11 @@ pub async fn complete_work_session(
 
     timer_repo.save(&timer).await?;
 
-    Ok(events)
+    for event in events {
+        event_publisher.publish(event);
+    }
+
+    Ok(())
 }
 
 fn determine_next_break_type(task: &domain::Task) -> Phase {
@@ -47,7 +53,7 @@ fn determine_next_break_type(task: &domain::Task) -> Phase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::{Config, TaskBuilder};
+    use domain::{Config, TaskBuilder, TaskId};
 
     #[test]
     fn should_determine_short_break_after_first_session() {

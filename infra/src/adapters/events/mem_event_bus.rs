@@ -28,51 +28,6 @@ pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}
 /// # InMemoryEventBus - In-Memory Event Bus Implementation
 ///
 /// A simplified async event bus that bridges sync publish with async handlers.
-///
-/// ## Why Async is Needed
-///
-/// Event handlers often need to perform I/O operations:
-/// - Database writes (sqlx, diesel)
-/// - HTTP calls (reqwest, hyper)
-/// - Cache updates (redis)
-/// - File operations (tokio::fs)
-///
-/// Since modern Rust libraries are async-first, handlers must be async.
-/// But EventPublisher::publish() is sync (domain layer stays simple).
-/// So we spawn async tasks to bridge this gap.
-///
-/// ## Clean Architecture Placement
-///
-/// - **Location**: Infrastructure Layer
-/// - **Purpose**: Concrete implementation of EventPublisher abstraction
-/// - **Dependencies**: Depends on domain abstractions, not vice versa
-///
-/// ## Implementation Details
-///
-/// - Handlers are stored with metadata (id, name) to support unsubscribe operations
-/// - Each handler gets a unique ID for precise removal
-/// - Handler names enable searching and debugging
-/// - Handlers with duplicate names are allowed but have unique IDs
-///
-/// ## Thread Safety
-///
-/// - All operations use Mutex for thread-safe access
-/// - Lock poisoning will cause panics (fail-fast approach)
-/// - Consider using parking_lot::Mutex for production to avoid poisoning
-///
-/// ## Future Enhancements (TODOs)
-///
-/// ```rust,ignore
-/// // TODO: Add handler execution metrics and monitoring
-/// // TODO: Add dead letter queue for failed events
-/// // TODO: Add timeout protection for slow handlers
-/// // TODO: Add retry logic for transient failures
-/// // TODO: Add event replay capability
-/// // TODO: Add handler priority/ordering support
-/// // TODO: Add distributed event bus support (Redis, RabbitMQ)
-/// // TODO: Replace std::sync::Mutex with parking_lot::Mutex
-/// // TODO: Add proper async testing utilities instead of sleep()
-/// ```
 #[derive(Clone)]
 pub struct InMemoryEventBus {
     handlers: Arc<Mutex<HandlersMap>>,
@@ -200,6 +155,7 @@ impl EventSubscriber for InMemoryEventBus {
                     Ok(permit) => permit,
                     Err(_) => {
                         error!("Failed to acquire semaphore permit for event handler");
+                        println!("Failed to acquire semaphore permit for event handler");
                         return;
                     }
                 };

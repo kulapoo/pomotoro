@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result, TaskBuilder};
+use crate::{Config, Error, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {

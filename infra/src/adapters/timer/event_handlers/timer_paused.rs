@@ -1,7 +1,7 @@
 use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::{EventHandler, TimerTickService};
 use async_trait::async_trait;
-use domain::{Event, Result, TaskId, TimerRepository};
+use domain::{Event, Result};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;

@@ -39,7 +39,7 @@ async fn task_should_create_with_name() {
         &ctx.ui_simulator,
         event_names::task::TASK_CREATED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskCreated>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskCreated>());
 }
 
 #[tokio::test]
@@ -82,13 +82,13 @@ async fn task_should_have_unique_ids() {
         &ctx.ui_simulator,
         event_names::task::TASK_CREATED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskCreated>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskCreated>());
 
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
         event_names::task::TASK_CREATED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskCreated>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskCreated>());
 
     assert_ne!(&result1.clone().unwrap().id, &result2.clone().unwrap().id);
 
@@ -125,7 +125,7 @@ async fn task_should_find_task_by_id() {
         &ctx.ui_simulator,
         event_names::task::TASK_CREATED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskCreated>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskCreated>());
 
     // Retrieve the task by its ID
     let retrieved_task = ctx
@@ -182,7 +182,7 @@ async fn task_should_update_task() {
         &ctx.ui_simulator,
         event_names::task::TASK_UPDATED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskUpdated>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskUpdated>());
 
     assert_eq!(updated_task.name, "Updated Task");
 }
@@ -218,9 +218,10 @@ async fn task_should_delete_task() {
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+    assert_eq!(result, true);
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
         event_names::task::TASK_DELETED,
     );
-    assert_utils::assert_event_published(&ctx, TypeId::of::<TaskDeleted>());
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskDeleted>());
 }

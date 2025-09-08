@@ -35,7 +35,6 @@ pub enum NotificationEvent {
         remaining_seconds: u32,
     },
     WorkSessionCompleted {
-        session_number: u32,
         task_name: Option<String>,
     },
     BreakStarted {
@@ -129,16 +128,12 @@ impl NotificationEvent {
                 icon: None,
             },
             NotificationEvent::WorkSessionCompleted {
-                session_number,
                 task_name,
             } => {
                 let body = if let Some(name) = task_name {
-                    format!(
-                        "Session {} completed for \"{}\"",
-                        session_number, name
-                    )
+                    format!("Work session completed for \"{}\".", name)
                 } else {
-                    format!("Work session {} completed", session_number)
+                    "Work session completed.".to_string()
                 };
                 NotificationContext {
                     title: "Session Complete!".to_string(),

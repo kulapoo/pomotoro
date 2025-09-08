@@ -1,14 +1,12 @@
 use std::any::TypeId;
 
-use domain::{
-    Task, TaskId, TaskRepository, Timer, TimerRepository, TimerState,
-};
+use domain::{Task, TaskRepository, Timer, TimerRepository, TimerState};
 
 use crate::{AppContext, AppContextBuilder, UiSimulator};
 
 pub mod assert_utils {
     use super::*;
-    pub fn assert_event_published(ctx: &AppContext, event_type: TypeId) {
+    pub fn assert_event_subscribed(ctx: &AppContext, event_type: TypeId) {
         assert!(ctx.event_bus.has_event_type(event_type));
     }
 

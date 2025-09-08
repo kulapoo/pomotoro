@@ -7,8 +7,7 @@ use crate::core::{
     mocks::MockAppHandle,
 };
 use domain::{
-    ConfigRepository, EventPublisher, Result, Task, TaskRepository,
-    TimerRepository,
+    ConfigRepository, EventPublisher, Result, TaskRepository, TimerRepository,
 };
 
 /// Builder for customizing app context creation

@@ -1,5 +1,5 @@
-use crate::timer::Phase;
 use crate::TimerId;
+use crate::timer::Phase;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

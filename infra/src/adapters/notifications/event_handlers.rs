@@ -238,7 +238,6 @@ impl EventHandler for WorkSessionCompletedNotificationHandler {
                 };
 
             let notification_event = NotificationEvent::WorkSessionCompleted {
-                session_number: work_completed.session_count,
                 task_name,
             };
             self.notification_service

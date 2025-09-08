@@ -23,6 +23,7 @@ pub fn register_timer_handlers(
         timer_srv.clone(),
         config_repo.clone(),
     )))?;
+
     event_bus
         .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;

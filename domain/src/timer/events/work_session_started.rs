@@ -6,8 +6,6 @@ use crate::TimerId;
 pub struct WorkSessionStarted {
     pub timer_id: TimerId,
     pub duration_seconds: u32,
-    pub session_count: u32,
-    pub task_session_count: u32,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
@@ -16,15 +14,11 @@ impl WorkSessionStarted {
     pub fn new(
         timer_id: TimerId,
         duration_seconds: u32,
-        session_count: u32,
-        task_session_count: u32,
         version: u64,
     ) -> Self {
         Self {
             timer_id,
             duration_seconds,
-            session_count,
-            task_session_count,
             version,
             occurred_at: Utc::now(),
         }
