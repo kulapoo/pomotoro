@@ -34,8 +34,10 @@ impl TaskFixtures {
     }
 
     /// Create a task with default settings
-    pub fn with_defaults(name: impl Into<String>) -> Task {
-        DomainTaskBuilder::with_name_and_sessions(name.into(), 4)
+    pub fn with_defaults(name: impl Into<String>, sessions: u8) -> Task {
+        DomainTaskBuilder::default_task()
+            .max_sessions(sessions)
+            .name(name.into())
             .build()
             .expect("Failed to create task with defaults")
     }

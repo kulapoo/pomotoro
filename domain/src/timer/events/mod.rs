@@ -28,21 +28,18 @@ pub use work_session_started::WorkSessionStarted;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Event;
     use crate::timer::Phase;
+    use crate::{Event, TimerConfiguration};
     #[test]
     fn should_have_correct_event_types() {
-        let timer_started = Started::new(
-            crate::TimerId::new(),
-            Phase::Work,
-            1500,
-            1,
-        );
+        let timer_started =
+            Started::new(crate::TimerId::new(), Phase::Work, 1500, 1);
         let timer_paused = Paused::new(
             crate::TimerId::new(),
             Phase::Work,
             1200,
             2,
+            TimerConfiguration::default(),
         );
 
         assert_eq!(timer_started.event_type(), "Started");
@@ -53,12 +50,7 @@ mod tests {
 
     #[test]
     fn should_serialize_timer_started_event() {
-        let event = Started::new(
-            crate::TimerId::new(),
-            Phase::Work,
-            1500,
-            1,
-        );
+        let event = Started::new(crate::TimerId::new(), Phase::Work, 1500, 1);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Started = serde_json::from_str(&serialized).unwrap();
@@ -88,11 +80,8 @@ mod tests {
         let _old_entity_id = uuid::Uuid::new_v4().to_string();
         let _new_entity_id = uuid::Uuid::new_v4().to_string();
 
-        let event = ActiveTaskSwitched::new(
-            crate::TimerId::new(),
-            Phase::Work,
-            3,
-        );
+        let event =
+            ActiveTaskSwitched::new(crate::TimerId::new(), Phase::Work, 3);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: ActiveTaskSwitched =

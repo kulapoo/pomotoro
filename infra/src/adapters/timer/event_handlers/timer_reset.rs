@@ -32,7 +32,7 @@ impl EventHandler for TimerResetHandler {
 
         self.emitter
             .emit(
-                domain::event_names::ui_listeners::timer::TIMER_RESET,
+                domain::event_names::ui_listeners::timer::RESET,
                 json!(timer_reset),
             )
             .map_err(|e| domain::Error::EventPublishingError {

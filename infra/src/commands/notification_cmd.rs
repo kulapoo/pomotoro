@@ -44,6 +44,7 @@ pub async fn test_notification(
                 Phase::Work,
                 work_duration_seconds / 2,
                 1,
+                TimerConfiguration::default(),
             ))
         }
         _ => {

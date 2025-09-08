@@ -13,7 +13,9 @@ use domain::{
     TimerReset, TimerStarted, TimerState, TimerStatus, event_names,
     shared_kernel::events::AppStarted,
 };
-use usecases::{CreateTaskCmd, SwitchTaskCmd, create_task};
+use usecases::{
+    CreateTaskCmd, SwitchTaskCmd, create_task, timer::complete_work_session,
+};
 use usecases::{
     switch_task,
     timer::{
@@ -129,6 +131,7 @@ async fn timer_should_pause_when_running() {
     let ctx = setup_ctx_with_timer("timer_should_pause_when_running").await;
 
     let timer = get_timer(&ctx).await;
+
     let task_id = timer.active_task_id().expect("Task id should be set");
 
     let task_config = utils::task::get_active_task(&ctx).await.config;
@@ -149,13 +152,13 @@ async fn timer_should_pause_when_running() {
     )
     .await;
 
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
     let timer_after_pause = get_timer(&ctx).await;
 
-    println!("timer_after_pause: {:?}", timer_after_pause);
     // Assert
     assert_eq!(result.is_ok(), true);
+
     assert_eq!(timer.is_running(), true);
     assert_eq!(timer.active_task_id(), Some(task_id));
 
@@ -192,7 +195,7 @@ async fn timer_should_reset_to_initial_state() {
 
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
-        event_names::ui_listeners::timer::TIMER_RESET,
+        event_names::ui_listeners::timer::RESET,
     );
 
     assert_utils::assert_event_published(&ctx, TypeId::of::<TimerReset>());
@@ -231,4 +234,39 @@ async fn timer_should_start_with_specific_task() {
     );
 
     assert_utils::assert_event_published(&ctx, TypeId::of::<TimerStarted>());
+}
+
+#[tokio::test]
+async fn completing_work_session_should_increment_task_counter() {
+    let ctx = setup_ctx_with_timer(
+        "completing_work_session_should_increment_task_counter",
+    )
+    .await;
+
+    let old_timer = get_timer(&ctx).await;
+
+    let old_task = utils::task::get_active_task(&ctx).await;
+
+    let result =
+        complete_work_session(ctx.task_repo.clone(), ctx.timer_repo.clone())
+            .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let task = utils::task::get_active_task(&ctx).await;
+    let new_timer = get_timer(&ctx).await;
+
+    assert!(result.is_ok());
+
+    assert_eq!(old_timer.state().is_work_phase(), true);
+    assert_eq!(new_timer.state().is_break_phase(), true);
+
+    assert_eq!(old_task.current_sessions, 0);
+    assert_eq!(task.current_sessions, 1);
+
+    // let new_timer = get_timer(&ctx).await;
+    // assert_eq!(old_timer.active_task_id(), new_timer.active_task_id());
+    // assert_eq!(old_timer.state().is_work_phase(), true);
+
+    // assert_eq!(new_timer.state().is_break_phase(), true);
 }

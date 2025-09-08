@@ -46,7 +46,6 @@ pub async fn pause_timer_session(
 
     // Execute domain logic: pause the timer
     let events = timer.pause(&task.config.timer)?;
-    
     // Save the timer state
     timer_repo.save(&timer).await?;
 
@@ -87,7 +86,7 @@ pub async fn resume_timer_session(
 
     // Execute domain logic: resume the timer
     let events = timer.resume(&task.config.timer)?;
-    
+
     // Save the timer state
     timer_repo.save(&timer).await?;
 

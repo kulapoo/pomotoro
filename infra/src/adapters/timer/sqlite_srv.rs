@@ -199,7 +199,9 @@ impl TimerTickService {
                 message: e.to_string(),
             }
         })?;
-        *self.timer.lock().await = loaded_timer;
+        {
+            *self.timer.lock().await = loaded_timer;
+        }
         Ok(())
     }
 

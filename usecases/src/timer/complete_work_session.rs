@@ -1,26 +1,25 @@
+use std::sync::Arc;
+
 use domain::{
-    Error, Event, Phase, Result, TaskId, TaskRepository,
-    TimerRepository,
+    Error, Event, Phase, Result, TaskId, TaskRepository, TimerRepository,
 };
 
-pub struct CompleteWorkSessionRequest {
-    pub task_id: TaskId,
-}
-
-pub async fn execute(
-    task_repo: &dyn TaskRepository,
-    timer_repo: &dyn TimerRepository,
-    request: CompleteWorkSessionRequest,
+pub async fn complete_work_session(
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
 ) -> Result<Vec<Box<dyn Event>>> {
-    let mut task =
-        task_repo.get_by_id(request.task_id).await?.ok_or_else(|| {
-            Error::TaskNotFound {
-                id: request.task_id.to_string(),
-            }
-        })?;
-
-    // Get the single timer instance
     let mut timer = timer_repo.get().await?;
+    let Some(task_id) = timer.active_task_id() else {
+        return Err(Error::InvalidTaskParams {
+            message: ("No active task".to_string()),
+        });
+    };
+
+    let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+        Error::TaskNotFound {
+            id: task_id.as_str(),
+        }
+    })?;
 
     task.increment_session()?;
 
@@ -29,6 +28,7 @@ pub async fn execute(
     let events = timer.complete_phase(next_phase, &task.config.timer)?;
 
     task_repo.update(task).await?;
+
     timer_repo.save(&timer).await?;
 
     Ok(events)

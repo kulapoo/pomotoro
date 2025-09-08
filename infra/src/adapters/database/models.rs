@@ -123,6 +123,7 @@ pub struct TimerDb {
     pub current_phase: String,
     pub remaining_seconds: i32,
     pub is_running: bool,
+    pub state: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -159,12 +160,22 @@ impl From<Timer> for TimerDb {
         }
         .to_string();
 
+        // Store the timer state as a simple string
+        let state = match timer.state() {
+            TimerState::Idle => "Idle".to_string(),
+            TimerState::Working { .. } => "Working".to_string(),
+            TimerState::ShortBreak { .. } => "ShortBreak".to_string(),
+            TimerState::LongBreak { .. } => "LongBreak".to_string(),
+            TimerState::Paused { .. } => "Paused".to_string(),
+        };
+
         Self {
             id: timer.id().to_string(),
             active_task_id: timer.active_task_id().map(|id| id.to_string()),
             current_phase,
             remaining_seconds: timer.state().remaining_seconds() as i32,
             is_running: timer.state().is_running(),
+            state,
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
         }
@@ -193,18 +204,40 @@ impl TryFrom<TimerDb> for Timer {
             None
         };
 
-        let state = match db.current_phase.as_str() {
-            "work" | "Work" if !db.is_running => TimerState::Idle,
-            "work" | "Work" => TimerState::Working {
+        // Deserialize the timer state from simple string
+        let state = match db.state.as_str() {
+            "Idle" => TimerState::Idle,
+            "Working" => TimerState::Working {
                 remaining_seconds: db.remaining_seconds as u32,
             },
-            "short_break" | "ShortBreak" => TimerState::ShortBreak {
+            "ShortBreak" => TimerState::ShortBreak {
                 remaining_seconds: db.remaining_seconds as u32,
             },
-            "long_break" | "LongBreak" => TimerState::LongBreak {
+            "LongBreak" => TimerState::LongBreak {
                 remaining_seconds: db.remaining_seconds as u32,
             },
-            _ => TimerState::Idle,
+            "Paused" => {
+                // Determine what state it was paused from based on current_phase
+                let paused_from = match db.current_phase.as_str() {
+                    "work" | "Work" => Box::new(TimerState::Working {
+                        remaining_seconds: db.remaining_seconds as u32,
+                    }),
+                    "short_break" | "ShortBreak" => Box::new(TimerState::ShortBreak {
+                        remaining_seconds: db.remaining_seconds as u32,
+                    }),
+                    "long_break" | "LongBreak" => Box::new(TimerState::LongBreak {
+                        remaining_seconds: db.remaining_seconds as u32,
+                    }),
+                    _ => Box::new(TimerState::Working {
+                        remaining_seconds: db.remaining_seconds as u32,
+                    }),
+                };
+                TimerState::Paused {
+                    paused_from,
+                    remaining_seconds: db.remaining_seconds as u32,
+                }
+            },
+            _ => TimerState::Idle, // Default to Idle for unknown states
         };
 
         let mut timer = Timer::with_state(timer_id, state);

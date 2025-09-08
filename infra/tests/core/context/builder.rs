@@ -94,13 +94,23 @@ impl AppContextBuilder {
             AppContext::with_name(self.name.as_deref()).await?
         };
 
+        let config = ConfigFixtures::default();
+
+        if self.with_default_config {
+            ctx.config_repo.save_config(&config).await?;
+        }
+
         (*ctx.ui_simulator).clone().start_listen_to_events();
         // Ensure the single timer exists (it should be auto-created by the repository)
         let _ = ctx.timer_repo.get().await?;
 
         // Add default task if requested
         if self.with_default_task {
-            let task = TaskFixtures::default_task();
+            let task = TaskFixtures::with_defaults(
+                "Default Task",
+                config.timer.sessions_until_long_break,
+            );
+
             ctx.task_repo.create(task).await?;
         }
 
@@ -114,10 +124,6 @@ impl AppContextBuilder {
         }
 
         // Add default config if requested
-        if self.with_default_config {
-            let config = ConfigFixtures::default();
-            ctx.config_repo.save_config(&config).await?;
-        }
 
         let task = ctx
             .task_repo
@@ -126,13 +132,11 @@ impl AppContextBuilder {
             .ok_or(domain::Error::DefaultTaskNotFound)?;
 
         // Switch to the default task
-        let mut timer = ctx.timer_repo.get().await?;
-        timer.set_active_task(task.id);
-        ctx.timer_repo.save(&timer).await?;
 
         if self.with_timer_started {
             ctx.timer_tick_service
                 .update_timer(|timer| {
+                    timer.set_active_task(task.id);
                     let events =
                         timer.start(&task.config.timer).map_err(|e| {
                             domain::Error::RepositoryError {
@@ -149,6 +153,10 @@ impl AppContextBuilder {
                 .start_timer_tick_loop(Some(&task))
                 .await
                 .map_err(|e| domain::Error::RepositoryError { message: e })?;
+        } else {
+            let mut timer = ctx.timer_repo.get().await?;
+            timer.set_active_task(task.id);
+            ctx.timer_repo.save(&timer).await?;
         }
 
         Ok(ctx)

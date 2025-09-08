@@ -67,7 +67,7 @@ impl StateTransitions {
     pub fn pause(
         state: TimerState,
         timer_id: TimerId,
-        _configuration: &TimerConfiguration,
+        configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Working {
@@ -86,6 +86,7 @@ impl StateTransitions {
                     phase,
                     remaining_seconds,
                     1,
+                    configuration.clone(),
                 ))];
 
                 Ok(TransitionResult {

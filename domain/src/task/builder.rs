@@ -57,6 +57,8 @@ impl Builder {
             .description("Default pomodoro task for focused work".to_string())
             .tags(vec!["focus".to_string()])
             .status(Status::Active)
+            .current_sessions(0)
+            .max_sessions(4)
             .default(true)
     }
 

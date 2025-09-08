@@ -50,7 +50,8 @@ pub mod task {
     pub async fn get_active_task(ctx: &AppContext) -> Task {
         let timer = timer::get_timer(ctx).await;
 
-        let active_task_id = timer.active_task_id().unwrap();
+        let active_task_id =
+            timer.active_task_id().expect("Active task ID is not set");
 
         let task = if let Some(task) = ctx
             .task_repo

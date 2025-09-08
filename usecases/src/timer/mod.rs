@@ -8,9 +8,7 @@ pub mod switch_timer_task;
 
 // #[cfg(test)]
 // mod tests;
-pub use complete_work_session::{
-    CompleteWorkSessionRequest, execute as complete_work_session,
-};
+pub use complete_work_session::complete_work_session;
 pub use get_timer_state::get_timer_state;
 pub use pause_timer_session::{pause_timer_session, resume_timer_session};
 pub use reset_timer_session::reset_timer_session;

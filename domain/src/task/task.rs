@@ -66,7 +66,6 @@ impl Task {
         if self.is_completed() {
             return Err(Error::TaskAlreadyCompleted);
         }
-
         self.current_sessions += 1;
         if self.current_sessions >= self.max_sessions {
             self.status = Status::Completed;

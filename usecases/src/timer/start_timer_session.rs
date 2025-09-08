@@ -29,7 +29,6 @@ pub async fn start_timer_session(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: StartTimerSessionCmd,
 ) -> Result<()> {
-    // Closure that preserves error context
     let to_invalid_task_data =
         |msg: String| domain::Error::InvalidTaskParams { message: msg };
 
@@ -49,19 +48,14 @@ pub async fn start_timer_session(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
 
-    // Set the active task
     timer.set_active_task(task_id);
 
-    // Execute domain logic: start the timer
     let events = timer.start(&task.config.timer)?;
 
-    // timer.star
-    // Save the timer state
     timer_repo.save(&timer).await?;
-    // Publish domain events
+
     for event in events {
         event_publisher.publish(event);
     }

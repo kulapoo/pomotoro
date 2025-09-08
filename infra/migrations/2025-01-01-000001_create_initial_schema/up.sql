@@ -5,6 +5,7 @@ CREATE TABLE timers (
     current_phase TEXT NOT NULL DEFAULT 'work',
     remaining_seconds INTEGER NOT NULL DEFAULT 1500,
     is_running BOOLEAN NOT NULL DEFAULT FALSE,
+    state TEXT NOT NULL DEFAULT 'Idle', -- Stores the timer state
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -57,14 +58,16 @@ INSERT INTO timers (
     current_phase,
     remaining_seconds,
     is_running,
+    state,
     created_at,
     updated_at
 ) VALUES (
     '00000000-0000-0000-0000-000000000001',
     NULL,
     'work',
-    1500,
+    0,
     FALSE,
+    'Idle',
     datetime('now'),
     datetime('now')
 );

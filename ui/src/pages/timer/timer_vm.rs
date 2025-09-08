@@ -1,15 +1,16 @@
 use crate::components::{ErrorInfo, handle_command_error};
-use domain::{Phase, TimerState, TimerStatus, TimerTick, TimerConfiguration, event_names, Task, TaskId};
 use domain::event_names::ui_listeners::timer as timer_event_names;
+use domain::{
+    Phase, Task, TaskId, TimerConfiguration, TimerState, TimerStatus,
+    TimerTick, event_names,
+};
+use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
-use js_sys;
 
-use crate::utils::{
-    ViewModel, invoke_command, invoke_command_no_args
-};
+use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 
 #[wasm_bindgen]
 extern "C" {
@@ -36,7 +37,8 @@ impl ViewModel for TimerViewModel {
 
     fn new() -> Self {
         let (timer_state, set_timer_state) = signal(TimerState::default());
-        let (timer_config, set_timer_config) = signal(TimerConfiguration::default());
+        let (timer_config, set_timer_config) =
+            signal(TimerConfiguration::default());
         let (active_task, set_active_task) = signal(None::<Task>);
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
@@ -78,7 +80,8 @@ impl TimerViewModel {
     }
 
     pub fn get_active_task_name(&self) -> String {
-        self.active_task.get()
+        self.active_task
+            .get()
             .map(|t| t.name.clone())
             .unwrap_or_else(|| "No Task Selected".to_string())
     }
@@ -89,9 +92,16 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         Effect::new(move |_| {
-            Self::setup_initial_state(set_timer_state, set_active_task, set_error_state);
+            Self::setup_initial_state(
+                set_timer_state,
+                set_active_task,
+                set_error_state,
+            );
             Self::setup_timer_tick_listener(set_timer_state);
-            Self::setup_timer_state_updated_listener(set_timer_state, set_active_task);
+            Self::setup_timer_state_updated_listener(
+                set_timer_state,
+                set_active_task,
+            );
             Self::setup_phase_event_listeners(set_timer_state, set_active_task);
         });
     }
@@ -113,12 +123,15 @@ impl TimerViewModel {
                         // The timer state represents the current timer session
                     } else {
                         web_sys::console::error_1(
-                            &"Failed to parse initial timer state".into()
+                            &"Failed to parse initial timer state".into(),
                         );
                     }
                 }
                 Err(error) => {
-                    let error_str = format!("Failed to get initial timer state: {:?}", error);
+                    let error_str = format!(
+                        "Failed to get initial timer state: {:?}",
+                        error
+                    );
                     web_sys::console::error_1(&error_str.clone().into());
                     handle_command_error(error_str, set_error_state);
                 }
@@ -136,7 +149,9 @@ impl TimerViewModel {
                     serde_wasm_bindgen::from_value::<TimerTick>(payload)
                 {
                     set_timer_state.update(|state| {
-                        *state = state.with_remaining_seconds(timer_tick.remaining_seconds);
+                        *state = state.with_remaining_seconds(
+                            timer_tick.remaining_seconds,
+                        );
                     });
                 }
             });
@@ -147,7 +162,10 @@ impl TimerViewModel {
         });
     }
 
-    fn setup_timer_state_updated_listener(set_timer_state: WriteSignal<TimerState>, _set_active_task: WriteSignal<Option<Task>>) {
+    fn setup_timer_state_updated_listener(
+        set_timer_state: WriteSignal<TimerState>,
+        _set_active_task: WriteSignal<Option<Task>>,
+    ) {
         spawn_local(async move {
             let callback = Closure::new(move |event: JsValue| {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
@@ -170,7 +188,10 @@ impl TimerViewModel {
         });
     }
 
-    fn setup_phase_event_listeners(set_timer_state: WriteSignal<TimerState>, _set_active_task: WriteSignal<Option<Task>>) {
+    fn setup_phase_event_listeners(
+        set_timer_state: WriteSignal<TimerState>,
+        _set_active_task: WriteSignal<Option<Task>>,
+    ) {
         // Listen for phase completed events
         spawn_local(async move {
             let callback = Closure::new(move |event: JsValue| {
@@ -179,11 +200,14 @@ impl TimerViewModel {
 
                 // Log phase completion for debugging
                 web_sys::console::log_1(
-                    &format!("Phase completed event received: {:?}", payload).into()
+                    &format!("Phase completed event received: {:?}", payload)
+                        .into(),
                 );
-                
+
                 // Update timer state if provided in the event
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -200,11 +224,14 @@ impl TimerViewModel {
 
                 // Log phase skip for debugging
                 web_sys::console::log_1(
-                    &format!("Phase skipped event received: {:?}", payload).into()
+                    &format!("Phase skipped event received: {:?}", payload)
+                        .into(),
                 );
-                
+
                 // Update timer state if provided in the event
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -221,11 +248,13 @@ impl TimerViewModel {
 
                 // Log status change for debugging
                 web_sys::console::log_1(
-                    &format!("Timer status changed: {:?}", payload).into()
+                    &format!("Timer status changed: {:?}", payload).into(),
                 );
-                
+
                 // Update timer state if provided in the event
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -235,7 +264,10 @@ impl TimerViewModel {
         });
     }
 
-    async fn fetch_task_details(entity_id: String, set_active_task: WriteSignal<Option<Task>>) {
+    async fn fetch_task_details(
+        entity_id: String,
+        set_active_task: WriteSignal<Option<Task>>,
+    ) {
         if let Ok(task_id) = TaskId::from_string(&entity_id) {
             #[derive(serde::Serialize)]
             struct GetTaskArgs {
@@ -247,13 +279,20 @@ impl TimerViewModel {
             };
 
             if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
-                if let Ok(result) = invoke_command(event_names::task::GET, args_value).await {
+                if let Ok(result) =
+                    invoke_command(event_names::task::GET, args_value).await
+                {
                     // Try to parse the TaskDto from task_vm.rs
-                    if let Ok(task_dto) = serde_wasm_bindgen::from_value::<crate::pages::task::TaskDto>(result.clone()) {
+                    if let Ok(task_dto) = serde_wasm_bindgen::from_value::<
+                        crate::pages::task::TaskDto,
+                    >(result.clone())
+                    {
                         if let Ok(task) = task_dto.to_task() {
                             set_active_task.set(Some(task));
                         }
-                    } else if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                    } else if let Ok(task) =
+                        serde_wasm_bindgen::from_value::<Task>(result)
+                    {
                         set_active_task.set(Some(task));
                     }
                 }
@@ -268,8 +307,8 @@ impl TimerViewModel {
 
         spawn_local(async move {
             let command = match current_state.status() {
-                TimerStatus::Running => event_names::timer::PAUSE,
-                _ => event_names::timer::START,
+                TimerStatus::Running => event_names::commands::timer::PAUSE,
+                _ => event_names::commands::timer::START,
             };
 
             match invoke_command_no_args(command).await {
@@ -280,12 +319,17 @@ impl TimerViewModel {
                         set_timer_state.set(state);
                     } else {
                         web_sys::console::error_1(
-                            &format!("Failed to parse timer state from {}", command).into()
+                            &format!(
+                                "Failed to parse timer state from {}",
+                                command
+                            )
+                            .into(),
                         );
                     }
                 }
                 Err(error) => {
-                    let error_str = format!("Failed to execute {}: {:?}", command, error);
+                    let error_str =
+                        format!("Failed to execute {}: {:?}", command, error);
                     web_sys::console::error_1(&error_str.clone().into());
                     handle_command_error(error_str, set_error_state);
                 }
@@ -298,7 +342,7 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            match invoke_command_no_args(event_names::timer::RESET).await {
+            match invoke_command_no_args(event_names::commands::timer::RESET).await {
                 Ok(result) => {
                     if let Ok(state) =
                         serde_wasm_bindgen::from_value::<TimerState>(result)
@@ -306,12 +350,13 @@ impl TimerViewModel {
                         set_timer_state.set(state);
                     } else {
                         web_sys::console::error_1(
-                            &"Failed to parse timer state from reset".into()
+                            &"Failed to parse timer state from reset".into(),
                         );
                     }
                 }
                 Err(error) => {
-                    let error_str = format!("Failed to reset timer: {:?}", error);
+                    let error_str =
+                        format!("Failed to reset timer: {:?}", error);
                     web_sys::console::error_1(&error_str.clone().into());
                     handle_command_error(error_str, set_error_state);
                 }
@@ -327,8 +372,11 @@ impl TimerViewModel {
             match invoke_command_no_args(event_names::timer::SKIP_PHASE).await {
                 Ok(result) => {
                     // skip_phase returns (Phase, Phase, TimerState) tuple
-                    if let Ok((_, _, state)) =
-                        serde_wasm_bindgen::from_value::<(Phase, Phase, TimerState)>(result)
+                    if let Ok((_, _, state)) = serde_wasm_bindgen::from_value::<(
+                        Phase,
+                        Phase,
+                        TimerState,
+                    )>(result)
                     {
                         set_timer_state.set(state);
                     } else {
@@ -338,7 +386,8 @@ impl TimerViewModel {
                     }
                 }
                 Err(error) => {
-                    let error_str = format!("Failed to skip phase: {:?}", error);
+                    let error_str =
+                        format!("Failed to skip phase: {:?}", error);
                     web_sys::console::error_1(&error_str.clone().into());
                     handle_command_error(error_str, set_error_state);
                 }
@@ -409,7 +458,8 @@ impl TimerViewModel {
     pub fn get_session_display(&self) -> String {
         if let Some(task) = self.active_task.get() {
             let config = self.timer_config.get();
-            let sessions_until_long_break = config.sessions_until_long_break as u32;
+            let sessions_until_long_break =
+                config.sessions_until_long_break as u32;
             format!(
                 "Session {}/{}",
                 (task.current_sessions % sessions_until_long_break as u8) + 1,

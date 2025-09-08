@@ -45,6 +45,8 @@ impl EventHandler for TimerStartedHandler {
             },
         )?;
 
+        self.timer_srv.load_state().await?;
+
         let task = self.task_repository.get_by_id(task_id).await?;
 
         self.timer_srv

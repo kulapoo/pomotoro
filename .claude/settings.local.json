@@ -19,7 +19,10 @@
       "Bash(RUST_LOG=debug cargo test timer::test_start_timer)",
       "Bash(export RUST_LOG=debug)",
       "Bash(rustc:*)",
-      "Bash(./test_timer_save)"
+      "Bash(./test_timer_save)",
+      "Bash(cargo fix:*)",
+      "Bash(diesel migration generate:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": [],
