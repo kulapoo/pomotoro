@@ -22,11 +22,12 @@
       "Bash(./test_timer_save)",
       "Bash(cargo fix:*)",
       "Bash(diesel migration generate:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(timeout 30 cargo test --test main timer)"
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "plan"
   },
   "hooks": {
     "PostToolUse": [

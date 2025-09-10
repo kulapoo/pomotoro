@@ -1,17 +1,18 @@
-use std::{any::TypeId, time::Duration};
+use std::{any::TypeId, ops::Deref, time::Duration};
 
 use crate::{
     AppContextBuilder,
     utils::{
         self, assert_utils,
-        setup::{setup_ctx, setup_ctx_with_timer},
+        setup::{setup_ctx, setup_ctx_with_existing_db, setup_ctx_with_timer},
+        task::get_active_task,
         timer::{get_timer, get_timer_state},
     },
 };
 use domain::{
-    Phase, PhaseCompleted, TaskRepository, TaskStatus, TimerPaused,
-    TimerRepository, TimerReset, TimerStarted, TimerState, TimerStatus,
-    event_names, shared_kernel::events::AppStarted,
+    Phase, PhaseCompleted, PhaseSkipped, TaskRepository, TaskStatus,
+    TimerPaused, TimerRepository, TimerReset, TimerStarted, TimerState,
+    TimerStatus, TimerTick, event_names, shared_kernel::events::AppStarted,
 };
 use usecases::{
     CreateTaskCmd, SwitchTaskCmd, create_task,
@@ -134,15 +135,6 @@ async fn timer_should_pause_when_running() {
     let timer = get_timer(&ctx).await;
 
     let task_id = timer.active_task_id().expect("Task id should be set");
-
-    let task_config = utils::task::get_active_task(&ctx).await.config;
-
-    let task_config = task_config
-        .timer
-        .with_work_duration(Duration::from_secs(60))
-        .expect("Failed to create timer configuration");
-
-    timer.remaining_seconds(Some(&task_config));
 
     // Act
     let result = pause_timer_session(
@@ -274,12 +266,41 @@ async fn timer_should_complete_phase() {
 }
 
 #[tokio::test]
-async fn timer_should_increment_timer_counter() {
-    let ctx =
-        setup_ctx_with_timer("timer_should_increment_timer_counter").await;
+async fn timer_should_skip_phase() {
+    let ctx = setup_ctx_with_timer("timer_should_skip_phase").await;
 
     let old_timer = get_timer(&ctx).await;
+    let old_task = utils::task::get_active_task(&ctx).await;
 
+    let skip_timer_result = skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        old_task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let new_timer = get_timer(&ctx).await;
+    let new_task = utils::task::get_active_task(&ctx).await;
+
+    assert!(skip_timer_result.is_ok());
+
+    assert_eq!(old_timer.state().is_work_phase(), true);
+    assert_eq!(new_timer.state().is_break_phase(), true);
+
+    assert_eq!(old_task.current_sessions, 0);
+    assert_eq!(new_task.current_sessions, 1);
+
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<PhaseSkipped>());
+}
+
+#[tokio::test]
+async fn timer_should_decrement_timer_counter() {
+    let ctx =
+        setup_ctx_with_timer("timer_should_increment_timer_counter").await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     let old_task = utils::task::get_active_task(&ctx).await;
 
     let pause_timer_result = pause_timer_session(
@@ -290,8 +311,129 @@ async fn timer_should_increment_timer_counter() {
     )
     .await;
 
+    ctx.timer_tick_service
+        .load_state()
+        .await
+        .expect("Failed to load timer");
+
+    let new_timer = ctx.timer_tick_service.get_current_timer().await;
+
+    assert!(pause_timer_result.is_ok());
+
+    let pause_from = new_timer.pause_from().expect("Pause from should be set");
+
+    let pause_from_remaining_seconds = pause_from.remaining_seconds();
+
+    assert_eq!(
+        new_timer.state().remaining_seconds(),
+        pause_from_remaining_seconds
+    );
+}
+
+#[tokio::test]
+async fn timer_state_should_persist_across_restarts() {
+    let ctx =
+        setup_ctx_with_timer("timer_state_should_persist_across_restarts")
+            .await;
+
+    ctx.timer_tick_service
+        .update_timer(|timer| {
+            timer.set_remaining_seconds(60 * 10);
+            Ok(())
+        })
+        .await
+        .expect("Failed to update timer");
+
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    let task = utils::task::get_active_task(&ctx).await;
-    let new_timer = get_timer(&ctx).await;
+    let ctx = setup_ctx_with_existing_db(ctx.db).await;
+
+    let timer = get_timer(&ctx).await;
+
+    assert_eq!(timer.state().remaining_seconds(), 600);
+
+    assert_eq!(timer.state().is_running(), true);
+}
+
+#[tokio::test]
+async fn timer_should_publish_events_on_all_state_changes() {
+    let ctx = setup_ctx_with_timer(
+        "timer_should_publish_events_on_all_state_changes",
+    )
+    .await;
+
+    let timer = get_timer(&ctx).await;
+
+    let _ = pause_timer_session(
+        timer.active_task_id().expect("Task id should be set"),
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await;
+
+    let _ = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(
+                timer.active_task_id().expect("Task id should be set"),
+            ),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    assert_eq!(timer.state().is_running(), true);
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::STATUS_CHANGED,
+    );
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::PAUSE,
+    );
+
+    let _ = reset_timer_session(
+        timer.active_task_id().expect("Task id should be set"),
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await;
+
+    let _ = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(
+                timer.active_task_id().expect("Task id should be set"),
+            ),
+        },
+    )
+    .await;
+
+    let _ = complete_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::RESET,
+    );
+
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::PHASE_COMPLETED,
+    );
 }

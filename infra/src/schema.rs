@@ -4,10 +4,9 @@ diesel::table! {
     timers (id) {
         id -> Text,
         active_task_id -> Nullable<Text>,
-        current_phase -> Text,
-        remaining_seconds -> Integer,
-        is_running -> Bool,
         state -> Text,
+        paused_from -> Nullable<Text>,
+        remaining_seconds -> Integer,
         created_at -> Text,
         updated_at -> Text,
     }

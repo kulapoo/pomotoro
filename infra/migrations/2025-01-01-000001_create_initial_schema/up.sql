@@ -2,10 +2,9 @@
 CREATE TABLE timers (
     id TEXT PRIMARY KEY NOT NULL,
     active_task_id TEXT, -- Reference to the currently active task
-    current_phase TEXT NOT NULL DEFAULT 'work',
+    state TEXT NOT NULL DEFAULT 'Idle', -- Stores the timer state: Idle, Working, ShortBreak, LongBreak, Paused
+    paused_from TEXT, -- Stores what state it was paused from (Working, ShortBreak, LongBreak)
     remaining_seconds INTEGER NOT NULL DEFAULT 1500,
-    is_running BOOLEAN NOT NULL DEFAULT FALSE,
-    state TEXT NOT NULL DEFAULT 'Idle', -- Stores the timer state
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -55,19 +54,17 @@ CREATE INDEX idx_session_history_completed_at ON session_history(completed_at);
 INSERT INTO timers (
     id,
     active_task_id,
-    current_phase,
-    remaining_seconds,
-    is_running,
     state,
+    paused_from,
+    remaining_seconds,
     created_at,
     updated_at
 ) VALUES (
     '00000000-0000-0000-0000-000000000001',
     NULL,
-    'work',
-    0,
-    FALSE,
     'Idle',
+    NULL,
+    0,
     datetime('now'),
     datetime('now')
 );

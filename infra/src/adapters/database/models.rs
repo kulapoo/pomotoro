@@ -1,9 +1,6 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use domain::{
-    Task, TaskId, TaskStatus, Timer, TimerId,
-    timer::{Phase, TimerState},
-};
+use domain::{Task, TaskId, TaskStatus, Timer, TimerId, timer::TimerState};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -120,10 +117,9 @@ impl TryFrom<TaskDb> for Task {
 pub struct TimerDb {
     pub id: String,
     pub active_task_id: Option<String>,
-    pub current_phase: String,
-    pub remaining_seconds: i32,
-    pub is_running: bool,
     pub state: String,
+    pub paused_from: Option<String>,
+    pub remaining_seconds: i32,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -153,29 +149,30 @@ pub struct SessionHistoryDb {
 
 impl From<Timer> for TimerDb {
     fn from(timer: Timer) -> Self {
-        let current_phase = match timer.state().phase() {
-            Phase::Work => "work",
-            Phase::ShortBreak => "short_break",
-            Phase::LongBreak => "long_break",
-        }
-        .to_string();
-
-        // Store the timer state as a simple string
-        let state = match timer.state() {
-            TimerState::Idle => "Idle".to_string(),
-            TimerState::Working { .. } => "Working".to_string(),
-            TimerState::ShortBreak { .. } => "ShortBreak".to_string(),
-            TimerState::LongBreak { .. } => "LongBreak".to_string(),
-            TimerState::Paused { .. } => "Paused".to_string(),
+        // Determine the state and paused_from values
+        let (state, paused_from) = match timer.state() {
+            TimerState::Idle => ("Idle".to_string(), None),
+            TimerState::Working { .. } => ("Working".to_string(), None),
+            TimerState::ShortBreak { .. } => ("ShortBreak".to_string(), None),
+            TimerState::LongBreak { .. } => ("LongBreak".to_string(), None),
+            TimerState::Paused { paused_from, .. } => {
+                let paused_from_str = match paused_from.as_ref() {
+                    TimerState::Working { .. } => "Working",
+                    TimerState::ShortBreak { .. } => "ShortBreak",
+                    TimerState::LongBreak { .. } => "LongBreak",
+                    _ => "Working", // Default fallback
+                }
+                .to_string();
+                ("Paused".to_string(), Some(paused_from_str))
+            }
         };
 
         Self {
             id: timer.id().to_string(),
             active_task_id: timer.active_task_id().map(|id| id.to_string()),
-            current_phase,
-            remaining_seconds: timer.state().remaining_seconds() as i32,
-            is_running: timer.state().is_running(),
             state,
+            paused_from,
+            remaining_seconds: timer.state().remaining_seconds() as i32,
             created_at: Utc::now().to_rfc3339(),
             updated_at: Utc::now().to_rfc3339(),
         }
@@ -217,15 +214,15 @@ impl TryFrom<TimerDb> for Timer {
                 remaining_seconds: db.remaining_seconds as u32,
             },
             "Paused" => {
-                // Determine what state it was paused from based on current_phase
-                let paused_from = match db.current_phase.as_str() {
-                    "work" | "Work" => Box::new(TimerState::Working {
+                // Determine what state it was paused from based on paused_from field
+                let paused_from = match db.paused_from.as_deref() {
+                    Some("Working") => Box::new(TimerState::Working {
                         remaining_seconds: db.remaining_seconds as u32,
                     }),
-                    "short_break" | "ShortBreak" => Box::new(TimerState::ShortBreak {
+                    Some("ShortBreak") => Box::new(TimerState::ShortBreak {
                         remaining_seconds: db.remaining_seconds as u32,
                     }),
-                    "long_break" | "LongBreak" => Box::new(TimerState::LongBreak {
+                    Some("LongBreak") => Box::new(TimerState::LongBreak {
                         remaining_seconds: db.remaining_seconds as u32,
                     }),
                     _ => Box::new(TimerState::Working {
@@ -236,7 +233,7 @@ impl TryFrom<TimerDb> for Timer {
                     paused_from,
                     remaining_seconds: db.remaining_seconds as u32,
                 }
-            },
+            }
             _ => TimerState::Idle, // Default to Idle for unknown states
         };
 

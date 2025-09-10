@@ -70,6 +70,13 @@ impl Timer {
         self.active_task_id
     }
 
+    pub fn pause_from(&self) -> Option<&TimerState> {
+        match &self.state {
+            TimerState::Paused { paused_from, .. } => Some(&paused_from),
+            _ => None,
+        }
+    }
+
     pub fn set_active_task(&mut self, task_id: TaskId) {
         self.active_task_id = Some(task_id);
     }
@@ -251,6 +258,10 @@ impl Timer {
                 .unwrap_or(25 * 60),
             _ => self.state.remaining_seconds(),
         }
+    }
+
+    pub fn set_remaining_seconds(&mut self, seconds: u32) {
+        self.state = self.state.with_remaining_seconds(seconds);
     }
 
     pub fn is_running(&self) -> bool {

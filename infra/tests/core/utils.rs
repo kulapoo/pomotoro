@@ -24,6 +24,8 @@ pub mod assert_utils {
 }
 
 pub mod setup {
+    use crate::TestDatabase;
+
     use super::*;
     pub async fn setup_ctx(name: &str) -> AppContext {
         let builder = AppContextBuilder::new()
@@ -37,6 +39,14 @@ pub mod setup {
         let builder = AppContextBuilder::new()
             .with_name(name)
             .with_timer_started()
+            .with_standard_fixtures();
+
+        builder.build().await.expect("Failed to build test context")
+    }
+
+    pub async fn setup_ctx_with_existing_db(db: TestDatabase) -> AppContext {
+        let builder = AppContextBuilder::new()
+            .with_existing_db(db)
             .with_standard_fixtures();
 
         builder.build().await.expect("Failed to build test context")
