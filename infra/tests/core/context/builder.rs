@@ -124,15 +124,17 @@ impl AppContextBuilder {
 
         // Add default config if requested
 
-        let task = ctx
-            .task_repo
-            .get_default_task()
-            .await?
-            .ok_or(domain::Error::DefaultTaskNotFound)?;
+
 
         // Switch to the default task
 
         if self.with_timer_started {
+            let task = ctx
+                .task_repo
+                .get_default_task()
+                .await?
+                .ok_or(domain::Error::DefaultTaskNotFound)?;
+
             ctx.timer_tick_service
                 .update_timer(|timer| {
                     timer.set_active_task(task.id);
@@ -152,10 +154,6 @@ impl AppContextBuilder {
                 .start_timer_tick_loop(Some(&task))
                 .await
                 .map_err(|e| domain::Error::RepositoryError { message: e })?;
-        } else {
-            let mut timer = ctx.timer_repo.get().await?;
-            timer.set_active_task(task.id);
-            ctx.timer_repo.save(&timer).await?;
         }
 
         Ok(ctx)
