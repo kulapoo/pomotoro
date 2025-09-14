@@ -93,11 +93,11 @@ impl AppContextBuilder {
             AppContext::with_name(self.name.as_deref()).await?
         };
 
-        let config = ConfigFixtures::default();
 
-        if self.with_default_config {
-            ctx.config_repo.save_config(&config).await?;
-        }
+        let config = ConfigFixtures::default();
+        ctx.config_repo.save_config(&config).await?;
+
+
 
         (*ctx.ui_simulator).clone().start_listen_to_events();
         // Ensure the single timer exists (it should be auto-created by the repository)

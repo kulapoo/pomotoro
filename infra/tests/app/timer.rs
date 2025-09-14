@@ -43,9 +43,34 @@ async fn timer_should_start_from_idle_state() {
     // arrange
     let ctx = setup_ctx("timer_should_start_from_idle_state").await;
 
+    let task = ctx.task_repo.get_default_task().await.expect("Task should be created");
+
+    let task_id = task.expect("Task should be created").id;
+
+    let timer_srv = ctx.timer_tick_service.clone();
+
+    timer_srv.update_timer(|timer| {
+        timer.set_active_task(task_id);
+        Ok(())
+    })
+    .await
+    .expect("Failed to update timer");
+
     let timer = get_timer(&ctx).await;
-    let task_id = timer.active_task_id().expect("Task id should be set");
+
     let timer_idle_state = timer.state().clone();
+
+    let _ = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task_id),
+        },
+    )
+    .await;
+
+
     // act
     let result = start_timer_session(
         ctx.task_repo.clone(),
@@ -58,6 +83,9 @@ async fn timer_should_start_from_idle_state() {
     .await;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+
+    println!("result {:?}", result);
 
     // assert
     assert!(result.is_ok());
