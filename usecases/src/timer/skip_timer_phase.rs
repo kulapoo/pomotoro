@@ -31,7 +31,7 @@ pub async fn skip_timer_phase(
     task_id: TaskId,
 ) -> Result<(Phase, Phase)> {
     // Get the task for its configuration
-    let task = task_repo.get_by_id(task_id).await?.ok_or(
+    let mut task = task_repo.get_by_id(task_id).await?.ok_or(
         domain::Error::TaskNotFound {
             id: task_id.as_str(),
         },
@@ -42,6 +42,11 @@ pub async fn skip_timer_phase(
     let old_phase = timer.get_current_phase();
 
     let events = timer.skip_phase(&task.config.timer)?;
+
+    task.increment_session()?;
+
+    task_repo.update(task).await?;
+
     timer_repo.save(&timer).await?;
 
     let new_phase = timer.get_current_phase();
