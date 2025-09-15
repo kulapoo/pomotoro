@@ -105,6 +105,7 @@ impl Timer {
         )?;
 
         self.state = result.new_state;
+
         Ok(result.events)
     }
 
