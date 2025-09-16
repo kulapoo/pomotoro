@@ -10,9 +10,10 @@ use crate::{
     },
 };
 use domain::{
-    Phase, PhaseCompleted, PhaseSkipped, TaskRepository, TaskStatus,
-    TimerPaused, TimerRepository, TimerReset, TimerStarted, TimerState,
-    TimerStatus, TimerTick, event_names, shared_kernel::events::AppStarted,
+    Phase, PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository,
+    TaskStatus, TimerPaused, TimerRepository, TimerReset, TimerStarted,
+    TimerState, TimerStatus, TimerTick, event_names,
+    shared_kernel::events::AppStarted,
 };
 use usecases::{
     CreateTaskCmd, SwitchTaskCmd, create_task,
@@ -441,5 +442,28 @@ async fn timer_should_publish_events_on_all_state_changes() {
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
         event_names::ui_listeners::timer::PHASE_COMPLETED,
+    );
+}
+
+#[tokio::test]
+async fn task_queue_should_return_next_incomplete_task() {
+    let ctx =
+        setup_ctx_with_timer("timer_should_start_with_default_task").await;
+
+    let task_queue = ctx
+        .task_cycling_service
+        .get_incomplete_task_queue()
+        .await
+        .expect("Task queue should be set");
+
+    assert_eq!(task_queue.len(), 1);
+    assert_eq!(
+        task_queue[0].id,
+        ctx.task_repo
+            .get_default_task()
+            .await
+            .unwrap()
+            .expect("Task should be set")
+            .id
     );
 }
