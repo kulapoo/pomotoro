@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, Event, EventPublisher, Phase, Result, TaskRepository,
+    Error, EventPublisher, Phase, Result, TaskRepository,
     TimerRepository,
 };
 

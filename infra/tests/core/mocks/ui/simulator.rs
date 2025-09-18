@@ -26,7 +26,7 @@ fn register_events(
         task_events::LIST_UPDATED,
         task_events::ACTIVE_CHANGED,
         task_events::PROGRESS_UPDATED,
-        config_events::SETTINGS_UPDATED,
+        config_events::CONFIG_UPDATED,
         config_events::THEME_CHANGED,
         app_events::APP_STARTED,
         app_events::APP_EXITED,

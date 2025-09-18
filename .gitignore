@@ -9,3 +9,4 @@ ai_contexts
 /infra/tmp/
 /infra/dist/
 /docs/.obsidian
+/docs/**/.obsidian

@@ -30,7 +30,7 @@ pub use timer::{
 };
 
 pub use config::{
-    AppearanceConfig, AudioConfig, Config, ConfigRepository, GeneralConfig,
+    AppearanceConfig, AudioConfig, Config, ConfigRepository, ConfigUpdated, GeneralConfig,
     NotificationConfig, NotificationPosition, TaskCyclingBehavior, Theme,
 };
 

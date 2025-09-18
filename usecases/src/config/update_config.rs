@@ -1,11 +1,13 @@
 use domain::{
-    AppearanceConfig, AudioConfig, Config, ConfigRepository, EventPublisher,
-    GeneralConfig, NotificationConfig, Result,
+    AppearanceConfig, AudioConfig, Config, ConfigRepository, ConfigUpdated,
+    EventPublisher, GeneralConfig, NotificationConfig, Result,
+    TimerConfiguration,
 };
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UpdateConfigCmd {
+    pub timer: Option<TimerConfiguration>,
     pub general: Option<GeneralConfig>,
     pub audio: Option<AudioConfig>,
     pub notification: Option<NotificationConfig>,
@@ -13,8 +15,8 @@ pub struct UpdateConfigCmd {
 }
 
 pub async fn update_config(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: UpdateConfigCmd,
 ) -> Result<Config> {
     let mut config = match config_repo.config_exists().await? {
@@ -46,14 +48,14 @@ pub async fn update_config(
 
     config_repo.save_config(&config).await?;
 
-    // TODO: Publish ConfigUpdated event when domain events are implemented
+    event_publisher.publish(Box::new(ConfigUpdated::new(config.clone())));
 
     Ok(config)
 }
 
 pub async fn update_full_config(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     new_config: Config,
 ) -> Result<Config> {
     new_config.validate()?;
@@ -66,11 +68,12 @@ pub async fn update_full_config(
 }
 
 pub async fn update_general_config(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     general_config: GeneralConfig,
 ) -> Result<Config> {
     let cmd = UpdateConfigCmd {
+        timer: None,
         general: Some(general_config),
         audio: None,
         notification: None,
@@ -81,11 +84,12 @@ pub async fn update_general_config(
 }
 
 pub async fn update_audio_config(
-    config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     audio_config: AudioConfig,
 ) -> Result<Config> {
     let cmd = UpdateConfigCmd {
+        timer: None,
         general: None,
         audio: Some(audio_config),
         notification: None,

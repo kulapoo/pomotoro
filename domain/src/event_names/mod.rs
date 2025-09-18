@@ -27,7 +27,7 @@ pub mod task {
 
 pub mod config {
     pub use super::commands::config::*;
-    pub use super::ui_listeners::config::*;
+    pub use super::ui_listeners::config::{CONFIG_UPDATED as CONFIG_UPDATED_UI, THEME_CHANGED};
 }
 
 pub mod app {
