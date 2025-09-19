@@ -25,7 +25,8 @@ pub async fn update_config(
     };
 
     if let Some(timer) = cmd.timer {
-        // Timer configuration doesn't have a validate method yet
+        // Validate timer configuration
+        timer.validate()?;
         config.timer = timer;
     }
 

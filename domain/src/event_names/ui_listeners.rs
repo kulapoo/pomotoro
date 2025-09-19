@@ -17,6 +17,7 @@ pub mod task {
 
 pub mod config {
     pub const CONFIG_UPDATED: &str = "config:config_updated";
+    pub const CONFIG_RESET: &str = "config:config_reset";
     pub const THEME_CHANGED: &str = "config:theme_changed";
 }
 

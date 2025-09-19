@@ -7,6 +7,7 @@ use crate::adapters::{
     InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
     SqliteTaskRepository, SqliteTimerRepository, TimerTickService,
     audio::{AudioServiceWrapper, register_audio_event_handlers},
+    config::register_config_handlers,
     establish_connection,
     events::{
         EventSubscriber,
@@ -56,6 +57,8 @@ pub async fn register_handlers(
     .context("Failed to register timer event handlers")?;
     register_task_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register task event handlers")?;
+    register_config_handlers(event_bus.clone(), emitter.clone())
+        .context("Failed to register config event handlers")?;
     register_notification_handlers(
         event_bus.clone(),
         app_handle,

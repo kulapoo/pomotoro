@@ -1,13 +1,15 @@
-use domain::{Config, ConfigRepository, EventPublisher, Result};
+use domain::{Config, ConfigRepository, EventPublisher, Result, config::events::ConfigReset};
 use std::sync::Arc;
 
 pub async fn reset_config(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
     let default_config = config_repo.reset_to_defaults().await?;
 
-    // TODO: Publish ConfigReset event when domain events are implemented
+    // Publish ConfigReset event
+    let event = ConfigReset::new(default_config.clone());
+    event_publisher.publish(Box::new(event));
 
     Ok(default_config)
 }

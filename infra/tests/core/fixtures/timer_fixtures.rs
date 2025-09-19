@@ -16,13 +16,13 @@ impl TimerFixtures {
         .expect("Failed to create timer configuration")
     }
 
-    /// Create a fast timer config for testing (seconds instead of minutes)
+    /// Create a fast timer config for testing (minimum allowed values)
     pub fn fast_config() -> TimerConfiguration {
         TimerConfiguration::new(
-            Duration::from_secs(5), // 5 seconds work
-            Duration::from_secs(2), // 2 seconds short break
-            Duration::from_secs(3), // 3 seconds long break
-            2,                      // 2 sessions until long break
+            Duration::from_secs(60), // 1 minute work (minimum allowed)
+            Duration::from_secs(60), // 1 minute short break (minimum allowed)
+            Duration::from_secs(60), // 1 minute long break (minimum allowed)
+            2,                       // 2 sessions until long break
         )
         .expect("Failed to create fast timer configuration")
     }
@@ -95,8 +95,10 @@ mod tests {
     fn creates_fast_timer_config() {
         let config = TimerFixtures::fast_config();
 
-        assert_eq!(config.work_duration, Duration::from_secs(5));
-        assert_eq!(config.short_break_duration, Duration::from_secs(2));
+        assert_eq!(config.work_duration, Duration::from_secs(60));
+        assert_eq!(config.short_break_duration, Duration::from_secs(60));
+        assert_eq!(config.long_break_duration, Duration::from_secs(60));
+        assert_eq!(config.sessions_until_long_break, 2);
     }
 
     #[test]

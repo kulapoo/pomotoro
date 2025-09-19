@@ -12,4 +12,4 @@ pub use audio::AudioConfig;
 pub use general::{GeneralConfig, TaskCyclingBehavior};
 pub use notification::{NotificationConfig, NotificationPosition};
 pub use repo::ConfigRepository;
-pub use events::ConfigUpdated;
+pub use events::{ConfigUpdated, ConfigReset};

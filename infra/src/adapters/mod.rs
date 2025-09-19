@@ -22,6 +22,7 @@
 //! - `storage/`: File storage management
 
 pub mod audio;
+pub mod config;
 pub mod database;
 pub mod events;
 pub mod notifications;

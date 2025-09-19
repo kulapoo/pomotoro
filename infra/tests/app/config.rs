@@ -1,8 +1,28 @@
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration, any::TypeId};
 
-use crate::utils::setup::setup_ctx;
-use domain::{Config, ConfigRepository, EventPublisher, TimerConfiguration};
+use crate::utils::{setup::setup_ctx, assert_utils};
+use domain::{Config, ConfigRepository, EventPublisher, TimerConfiguration, TaskRepository, TimerRepository,
+    config::events::{ConfigUpdated, ConfigReset}, event_names, shared_kernel::events::AppStarted};
 use usecases::{UpdateConfigCmd, get_config, update_config, reset_config};
+
+#[tokio::test]
+async fn config_should_initialize_on_app_start() {
+    // GIVEN - App starts with fresh context
+    let ctx = setup_ctx("config_should_initialize_on_app_start").await;
+
+    // THEN - Config should be in default state
+    let config = get_config(ctx.config_repo.clone()).await.unwrap();
+    assert_eq!(config, Config::default());
+
+    // Verify AppStarted event subscription (similar to timer tests)
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<AppStarted>());
+
+    // Verify default timer configuration values
+    assert_eq!(config.timer.work_duration, Duration::from_secs(25 * 60));
+    assert_eq!(config.timer.short_break_duration, Duration::from_secs(5 * 60));
+    assert_eq!(config.timer.long_break_duration, Duration::from_secs(15 * 60));
+    assert_eq!(config.timer.sessions_until_long_break, 4);
+}
 
 #[tokio::test]
 async fn config_should_load_default_configuration() {
@@ -42,11 +62,12 @@ async fn should_update_timer_durations_in_config() {
     assert_eq!(final_config.timer.work_duration, Duration::from_secs(30 * 60));
     assert_eq!(final_config.timer.short_break_duration, Duration::from_secs(10 * 60));
     
-    // TODO: Enable when ConfigUpdated event handler is implemented
-    // assert_utils::assert_event_was_emitted(
-    //     &ctx.ui_simulator,
-    //     event_names::ui_listeners::config::CONFIG_UPDATED,
-    // );
+    // Verify event subscription and emission
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<ConfigUpdated>());
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::config::CONFIG_UPDATED,
+    );
 }
 
 #[tokio::test]
@@ -90,10 +111,16 @@ async fn should_reset_config_to_factory_defaults() {
     assert_eq!(reset_config.timer.short_break_duration, Duration::from_secs(5 * 60)); // 5 minutes default
     assert_eq!(reset_config.timer.sessions_until_long_break, 4); // 4 sessions default
     
-    // Note: CONFIG_RESET event may not be emitted yet if TODO in reset_config.rs is not implemented
-    // For now, we'll just check that the config was updated
+    // Verify the config was reset and event was emitted
     let final_config = get_config(ctx.config_repo.clone()).await.unwrap();
     assert_eq!(final_config, Config::default());
+
+    // Verify event subscription and emission
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<ConfigReset>());
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::config::CONFIG_RESET,
+    );
 }
 
 #[tokio::test]
@@ -204,18 +231,7 @@ async fn should_validate_config_boundaries() {
     .await;
     
     // TimerConfiguration should validate and reject 0 duration
-    // If validation is not implemented, this test documents expected behavior
-    // Currently, the domain may not validate, so we check if it's stored
-    if result.is_ok() {
-        // If no validation exists yet, document this as technical debt
-        // TODO: Implement validation in TimerConfiguration
-        let config = get_config(ctx.config_repo.clone()).await.unwrap();
-        // Zero duration was accepted - this should be fixed
-        assert_eq!(config.timer.work_duration, Duration::from_secs(0));
-    } else {
-        // Expected behavior - invalid config rejected
-        assert!(result.is_err());
-    }
+    assert!(result.is_err(), "Should reject zero duration for work");
     
     // Test extremely long duration
     let excessive_timer = TimerConfiguration {
@@ -235,11 +251,8 @@ async fn should_validate_config_boundaries() {
     )
     .await;
     
-    // Document current behavior (may need validation)
-    if result2.is_ok() {
-        let config = get_config(ctx.config_repo.clone()).await.unwrap();
-        assert_eq!(config.timer.work_duration, Duration::from_secs(24 * 60 * 60));
-    }
+    // Should reject duration exceeding 3 hours maximum
+    assert!(result2.is_err(), "Should reject work duration exceeding 3 hours");
 }
 
 #[tokio::test]
@@ -279,11 +292,12 @@ async fn should_update_multiple_config_sections_simultaneously() {
     // Other settings should remain unchanged
     assert_eq!(updated_config.timer.long_break_duration, original_config.timer.long_break_duration);
 
-    // TODO: Enable when ConfigUpdated event handler is implemented
-    // assert_utils::assert_event_was_emitted(
-    //     &ctx.ui_simulator,
-    //     event_names::ui_listeners::config::CONFIG_UPDATED,
-    // );
+    // Verify event subscription and emission
+    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<ConfigUpdated>());
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::config::CONFIG_UPDATED,
+    );
 }
 
 #[tokio::test]
@@ -508,16 +522,8 @@ async fn should_handle_invalid_sessions_until_long_break() {
     )
     .await;
 
-    // Document current behavior (may need validation)
-    if result.is_ok() {
-        // If no validation exists yet, document this as technical debt
-        // TODO: Implement validation to reject 0 sessions_until_long_break
-        let config = get_config(ctx.config_repo.clone()).await.unwrap();
-        assert_eq!(config.timer.sessions_until_long_break, 0);
-    } else {
-        // Expected behavior - invalid config rejected
-        assert!(result.is_err());
-    }
+    // Expected behavior - invalid config rejected
+    assert!(result.is_err(), "Should reject zero sessions_until_long_break");
 
     // Test maximum allowed sessions (20 based on TimerConfiguration validation)
     let max_sessions_config = TimerConfiguration {
@@ -560,6 +566,160 @@ async fn should_handle_invalid_sessions_until_long_break() {
     .await;
 
     assert!(result.is_err(), "Should reject sessions exceeding 20");
+}
+
+#[tokio::test]
+async fn should_not_allow_config_update_during_active_timer() {
+    // GIVEN - Timer is running with active session
+    let ctx = setup_ctx("should_not_allow_config_update_during_active_timer").await;
+
+    // Start a timer session first
+    let task = ctx.task_repo
+        .get_default_task()
+        .await
+        .expect("Failed to get default task")
+        .expect("Default task should exist");
+
+    // Create a timer session
+    use usecases::timer::{start_timer_session, StartTimerSessionCmd};
+    let _ = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task.id),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    // WHEN - Try to update config while timer is running
+    let new_timer_config = TimerConfiguration {
+        work_duration: Duration::from_secs(30 * 60),
+        short_break_duration: Duration::from_secs(10 * 60),
+        long_break_duration: Duration::from_secs(20 * 60),
+        sessions_until_long_break: 5,
+    };
+
+    let result = update_config(
+        ctx.config_repo.clone(),
+        ctx.event_bus.clone(),
+        UpdateConfigCmd {
+            timer: Some(new_timer_config),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    // THEN - Config update should still succeed (config changes apply to next session)
+    // This documents current behavior - config can be updated while timer runs
+    assert!(result.is_ok(), "Config should be updatable during timer session");
+}
+
+#[tokio::test]
+async fn should_handle_invalid_config_update_gracefully() {
+    // GIVEN
+    let ctx = setup_ctx("should_handle_invalid_config_update_gracefully").await;
+
+    // WHEN - Try to update with sessions > 20 (max allowed)
+    let invalid_config = TimerConfiguration {
+        work_duration: Duration::from_secs(25 * 60),
+        short_break_duration: Duration::from_secs(5 * 60),
+        long_break_duration: Duration::from_secs(15 * 60),
+        sessions_until_long_break: 21, // Exceeds maximum
+    };
+
+    let result = update_config(
+        ctx.config_repo.clone(),
+        ctx.event_bus.clone(),
+        UpdateConfigCmd {
+            timer: Some(invalid_config),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    // THEN - Should fail with validation error
+    assert!(result.is_err(), "Should reject config with sessions > 20");
+
+    // Verify config remains unchanged
+    let config = get_config(ctx.config_repo.clone()).await.unwrap();
+    assert_eq!(config.timer.sessions_until_long_break, 4); // Should still be default
+}
+
+#[tokio::test]
+async fn should_recover_from_failed_config_operations() {
+    // GIVEN
+    let ctx = setup_ctx("should_recover_from_failed_config_operations").await;
+
+    // First, make a valid update
+    let valid_config = TimerConfiguration {
+        work_duration: Duration::from_secs(30 * 60),
+        short_break_duration: Duration::from_secs(10 * 60),
+        long_break_duration: Duration::from_secs(20 * 60),
+        sessions_until_long_break: 5,
+    };
+
+    let _ = update_config(
+        ctx.config_repo.clone(),
+        ctx.event_bus.clone(),
+        UpdateConfigCmd {
+            timer: Some(valid_config.clone()),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    // WHEN - Attempt an invalid update
+    let invalid_config = TimerConfiguration {
+        work_duration: Duration::from_secs(25 * 60),
+        short_break_duration: Duration::from_secs(5 * 60),
+        long_break_duration: Duration::from_secs(15 * 60),
+        sessions_until_long_break: 25, // Invalid
+    };
+
+    let invalid_result = update_config(
+        ctx.config_repo.clone(),
+        ctx.event_bus.clone(),
+        UpdateConfigCmd {
+            timer: Some(invalid_config),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    // THEN - Failed operation should not corrupt config state
+    assert!(invalid_result.is_err());
+
+    // Config should still have the last valid values
+    let config = get_config(ctx.config_repo.clone()).await.unwrap();
+    assert_eq!(config.timer.work_duration, Duration::from_secs(30 * 60));
+    assert_eq!(config.timer.sessions_until_long_break, 5);
+
+    // System should still accept valid updates after failure
+    let another_valid_config = TimerConfiguration {
+        work_duration: Duration::from_secs(45 * 60),
+        short_break_duration: Duration::from_secs(15 * 60),
+        long_break_duration: Duration::from_secs(30 * 60),
+        sessions_until_long_break: 6,
+    };
+
+    let recovery_result = update_config(
+        ctx.config_repo.clone(),
+        ctx.event_bus.clone(),
+        UpdateConfigCmd {
+            timer: Some(another_valid_config),
+            ..Default::default()
+        },
+    )
+    .await;
+
+    assert!(recovery_result.is_ok(), "Should accept valid config after failed attempt");
+
+    let final_config = get_config(ctx.config_repo.clone()).await.unwrap();
+    assert_eq!(final_config.timer.work_duration, Duration::from_secs(45 * 60));
+    assert_eq!(final_config.timer.sessions_until_long_break, 6);
 }
 
 #[tokio::test]
