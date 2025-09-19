@@ -17,6 +17,8 @@ impl Config {
     pub fn validate(&self) -> Result<()> {
         self.timer.validate()?;
         self.audio.validate()?;
+        self.general.validate()?;
+        self.appearance.validate()?;
 
         if self.notification.auto_dismiss_delay_seconds > 300 {
             return Err(Error::InvalidDuration {

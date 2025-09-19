@@ -23,7 +23,10 @@
       "Bash(cargo fix:*)",
       "Bash(diesel migration generate:*)",
       "Bash(git restore:*)",
-      "Bash(timeout 30 cargo test --test main timer)"
+      "Bash(timeout 30 cargo test --test main timer)",
+      "Bash(RUST_BACKTRACE=1 cargo test --package infra config_changes_should_apply_to_new_timer_sessions -- --nocapture)",
+      "Bash(RUST_LOG=debug cargo test --package infra config_changes_should_apply_to_new_timer_sessions -- --nocapture)",
+      "Bash(RUST_BACKTRACE=1 cargo test --package infra --test main should_handle_invalid_sessions_until_long_break -- --nocapture)"
     ],
     "deny": [],
     "ask": [],

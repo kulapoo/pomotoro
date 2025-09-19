@@ -24,6 +24,11 @@ pub async fn update_config(
         false => Config::default(),
     };
 
+    if let Some(timer) = cmd.timer {
+        // Timer configuration doesn't have a validate method yet
+        config.timer = timer;
+    }
+
     if let Some(general) = cmd.general {
         general.validate()?;
         config.general = general;

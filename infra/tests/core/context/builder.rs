@@ -94,8 +94,14 @@ impl AppContextBuilder {
         };
 
 
-        let config = ConfigFixtures::default();
-        ctx.config_repo.save_config(&config).await?;
+        // Only save default config if explicitly requested or if no config exists
+        let config = if self.with_default_config || !ctx.config_repo.config_exists().await? {
+            let config = ConfigFixtures::default();
+            ctx.config_repo.save_config(&config).await?;
+            config
+        } else {
+            ctx.config_repo.get_config().await?
+        };
 
 
 

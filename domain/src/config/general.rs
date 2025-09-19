@@ -1,4 +1,4 @@
-use crate::Result;
+use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -41,6 +41,18 @@ impl Default for GeneralConfig {
 
 impl GeneralConfig {
     pub fn validate(&self) -> Result<()> {
+        if self.persistence_interval_seconds == 0 {
+            return Err(Error::InvalidDuration {
+                duration: self.persistence_interval_seconds,
+            });
+        }
+
+        if self.persistence_interval_seconds > 3600 {
+            return Err(Error::InvalidDuration {
+                duration: self.persistence_interval_seconds,
+            });
+        }
+
         Ok(())
     }
 }
