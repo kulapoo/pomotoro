@@ -2,9 +2,9 @@ use domain::{Config, TaskId};
 use serde::{Deserialize, Serialize};
 use tauri::{State, command};
 
-use crate::adapters::{
-    TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
-};
+use crate::adapters::events::mem_event_bus::EventPublisherArc;
+use std::sync::Arc;
+use domain::TaskRepository;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateTaskSettingsCmd {
@@ -20,7 +20,7 @@ pub struct TaskSettingsResponse {
 
 #[command]
 pub async fn update_task_settings(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
     cmd: UpdateTaskSettingsCmd,
 ) -> Result<TaskSettingsResponse, String> {
@@ -44,7 +44,7 @@ pub async fn update_task_settings(
 
 #[command]
 pub async fn reset_task_settings_to_defaults(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
     task_id: String,
 ) -> Result<TaskSettingsResponse, String> {

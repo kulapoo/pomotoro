@@ -1,5 +1,7 @@
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
-use crate::adapters::{TaskRepositoryArc, TimerRepositoryArc};
+use crate::adapters::TimerRepositoryArc;
+use std::sync::Arc;
+use domain::TaskRepository;
 use anyhow::Context;
 use domain::{TimerState, event_names::ui_listeners};
 use tauri::{AppHandle, Emitter, State};
@@ -27,7 +29,7 @@ pub async fn get_timer_state(
 
 #[tauri::command]
 pub async fn start_timer(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
@@ -93,7 +95,7 @@ pub async fn start_timer(
 
 #[tauri::command]
 pub async fn pause_timer(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
@@ -134,7 +136,7 @@ pub async fn pause_timer(
 
 #[tauri::command]
 pub async fn reset_timer(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
@@ -175,7 +177,7 @@ pub async fn reset_timer(
 
 #[tauri::command]
 pub async fn skip_timer(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
@@ -224,7 +226,7 @@ pub async fn skip_timer(
 #[tauri::command]
 pub async fn switch_timer_task_cmd(
     task_id: String,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,

@@ -1,21 +1,39 @@
 use std::time::Duration;
 
-use domain::{Config, TimerConfiguration};
-use usecases::{CreateTaskCmd, create_task};
+use domain::{Config, TimerConfiguration, TimerState, TimerStatus};
+use usecases::{
+    CreateTaskCmd, create_task,
+    timer::{StartTimerSessionCmd, complete_timer_phase, start_timer_session},
+};
 
-use crate::utils::setup::setup_ctx;
+use crate::utils::{setup::setup_ctx, task::get_active_task, timer::get_timer};
 
 #[tokio::test]
 async fn timer_should_complete_full_pomodoro_cycle() {
     let ctx = setup_ctx("timer_should_complete_full_pomodoro_cycle").await;
 
+    // AAA
+
+    // Arrange
     // TODO: 1. Configure test with specific Pomodoro settings
     //    - Set work_duration (e.g., 25 minutes or shorter for testing)
     //    - Set short_break_duration (e.g., 5 minutes or shorter for testing)
     //    - Set long_break_duration (e.g., 15 minutes or shorter for testing)
     //    - Set sessions_before_long_break (e.g., 4)
 
-    let mut task1 = create_task(
+    let default_config = Config {
+        timer: TimerConfiguration::new(
+            Duration::from_secs(25 * 60),
+            Duration::from_secs(5 * 60),
+            Duration::from_secs(15 * 60),
+            4,
+        )
+        .expect("Failed to create timer configuration"),
+        ..Default::default()
+    };
+
+    // Act
+    let task1_result = create_task(
         ctx.task_repo.clone(),
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
@@ -24,21 +42,56 @@ async fn timer_should_complete_full_pomodoro_cycle() {
             description: None,
             max_sessions: 4,
             tags: Vec::new(),
-            config: None,
+            config: Some(default_config),
         },
     )
-    .await
-    .expect("Failed to create task");
+    .await;
+
+    let task1_id = task1_result.clone().expect("Failed to create task").id;
+
+    let session0_timer_is_idle = get_timer(&ctx).await.state().is_idle();
 
     // TODO: 2. Start the timer
     //    - Call timer.start() or equivalent
     //    - Assert timer is in Working state
     //    - Assert current session is 1
 
+    let timer_session1_result = start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task1_id),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let session1_timer_is_work_phase_before_completion =
+        get_timer(&ctx).await.state().is_work_phase();
+
+    let session1_timer_status = get_timer(&ctx).await.state().status();
+
     // TODO: 3. Complete first work session
     //    - Mock/advance time by work_duration
     //    - Verify timer transitions to ShortBreak state
     //    - Assert session count remains at 1 (or increments based on logic)
+
+    let session1_result = complete_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let session1_timer_is_break_phase =
+        get_timer(&ctx).await.state().is_break_phase();
+
+    let session1_task_current_sessions =
+        get_active_task(&ctx).await.current_sessions;
 
     // TODO: 4. Complete first short break
     //    - Mock/advance time by short_break_duration
@@ -66,4 +119,17 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     // TODO: 9. Clean up test resources
     //    - Stop timer if needed
     //    - Clean up any test database or state
+
+    // Assert
+
+    assert_eq!(task1_result.is_ok(), true);
+    assert_eq!(timer_session1_result.is_ok(), true);
+
+    assert_eq!(session0_timer_is_idle, true);
+
+    assert_eq!(session1_result.is_ok(), true);
+    assert_eq!(session1_timer_status, TimerStatus::Running);
+    assert_eq!(session1_timer_is_work_phase_before_completion, true);
+    assert_eq!(session1_timer_is_break_phase, true);
+    assert_eq!(session1_task_current_sessions, 1);
 }

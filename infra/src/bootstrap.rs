@@ -140,6 +140,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     usecases::bootstrap(
         timer_repository.clone(),
         task_repository.clone(),
+        config_repository.clone(),
         event_publisher.clone(),
     )
     .await

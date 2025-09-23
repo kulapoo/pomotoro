@@ -30,7 +30,7 @@ pub mod task;
 pub mod timer;
 
 // Task infrastructure
-pub use task::{SqliteTaskRepository, TaskDto, TaskRepositoryArc};
+pub use task::{SqliteTaskRepository, TaskDto};
 
 // Timer infrastructure
 pub use timer::{SqliteTimerRepository, TimerTickService};

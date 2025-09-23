@@ -1,9 +1,10 @@
 use crate::adapters::{
-    TaskRepositoryArc, events::mem_event_bus::EventPublisherArc,
-    task::task_dto::TaskDto,
+    events::mem_event_bus::EventPublisherArc, task::task_dto::TaskDto,
 };
 use anyhow::{Context, anyhow};
-use domain::{AudioConfig, Task, TaskId};
+use domain::{
+    AudioConfig, Config, ConfigRepository, Task, TaskId, TaskRepository,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,7 +17,7 @@ pub struct CreateTaskRequest {
     pub description: Option<String>,
     pub max_sessions: u8,
     pub tags: Vec<String>,
-    pub audio_config: Option<AudioConfig>,
+    pub config: Option<Config>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -37,7 +38,8 @@ pub struct UpdateTaskRequest {
 #[tauri::command]
 pub async fn create_task(
     request: CreateTaskRequest,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
+    config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     println!("=== CREATE_TASK DEBUG START ===");
@@ -54,12 +56,14 @@ pub async fn create_task(
         description: request.description,
         max_sessions: request.max_sessions,
         tags: request.tags,
+        config: request.config,
     };
 
     println!("Command created: {:?}", cmd);
 
     match usecases::task::create_task(
         task_repo.inner().clone(),
+        config_repo.inner().clone(),
         event_publisher.inner().clone(),
         cmd,
     )
@@ -95,7 +99,7 @@ pub async fn create_task(
 #[tauri::command]
 pub async fn get_task(
     id: String,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Option<TaskDto>, String> {
     let query = GetTaskQuery { id: id.clone() };
     let result = usecases::task::get_task(&task_repo, query)
@@ -107,7 +111,7 @@ pub async fn get_task(
 
 #[tauri::command]
 pub async fn get_all_tasks(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<TaskDto>, String> {
     let query = GetTasksQuery {
         tags: None,
@@ -123,7 +127,7 @@ pub async fn get_all_tasks(
 
 #[tauri::command]
 pub async fn get_active_tasks(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<TaskDto>, String> {
     let tasks = task_repo
         .get_active_tasks()
@@ -136,7 +140,7 @@ pub async fn get_active_tasks(
 #[tauri::command]
 pub async fn update_task(
     request: UpdateTaskRequest,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     let cmd = UpdateTaskCmd {
@@ -167,7 +171,7 @@ pub async fn update_task(
 #[tauri::command]
 pub async fn delete_task(
     id: String,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
     let cmd = DeleteTaskCmd { id: id.clone() };
@@ -184,7 +188,7 @@ pub async fn delete_task(
 #[tauri::command]
 pub async fn get_tasks_by_tags(
     tags: Vec<String>,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
     task_repo
         .get_by_tags(&tags)
@@ -194,39 +198,9 @@ pub async fn get_tasks_by_tags(
 }
 
 #[tauri::command]
-pub async fn complete_task_session(
-    task_id: String,
-    task_repo: State<'_, TaskRepositoryArc>,
-    event_publisher: State<'_, EventPublisherArc>,
-) -> Result<Task, String> {
-    let _result = usecases::task::complete_session(
-        &task_repo,
-        &event_publisher,
-        &task_id,
-    )
-    .await
-    .with_context(|| {
-        format!("Failed to complete session for task: {}", task_id)
-    })
-    .map_err(|e| e.to_string())?;
-
-    let task_id = domain::TaskId::from_string(&task_id)
-        .map_err(|_| anyhow!("Invalid task ID: {}", task_id))
-        .map_err(|e| e.to_string())?;
-
-    task_repo
-        .get_by_id(task_id)
-        .await
-        .context("Failed to retrieve task after session completion")
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| anyhow!("Task not found after completing session"))
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub async fn reset_task_sessions(
     task_id: String,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Task, String> {
     usecases::task::reset_sessions(&task_repo, &task_id)
         .await
@@ -262,7 +236,7 @@ pub struct SearchTasksRequest {
 #[tauri::command]
 pub async fn search_tasks(
     request: SearchTasksRequest,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
     let query = SearchTasksQuery {
         query: request.query,
@@ -283,7 +257,7 @@ pub async fn search_tasks(
 #[tauri::command]
 pub async fn search_tasks_fuzzy(
     query: String,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
     usecases::task::search_tasks_fuzzy(&task_repo, query)
         .await
@@ -301,7 +275,7 @@ pub struct FilterTasksRequest {
 #[tauri::command]
 pub async fn filter_tasks_by_status(
     request: FilterTasksRequest,
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
     let query = FilterTasksByStatusQuery {
         status: request.status,
@@ -381,7 +355,7 @@ pub async fn get_task_cycle_position(
 
 #[tauri::command]
 pub async fn get_incomplete_tasks(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
     task_repo
         .get_incomplete_tasks()
@@ -392,7 +366,8 @@ pub async fn get_incomplete_tasks(
 
 #[tauri::command]
 pub async fn debug_create_test_task(
-    task_repo: State<'_, TaskRepositoryArc>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
+    config_repo: State<'_, Arc<dyn ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     println!("=== DEBUG TEST TASK CREATION ===");
@@ -402,8 +377,8 @@ pub async fn debug_create_test_task(
         description: Some("A test task for debugging".to_string()),
         max_sessions: 3,
         tags: vec!["debug".to_string(), "test".to_string()],
-        audio_config: None,
+        config: None,
     };
 
-    create_task(request, task_repo, event_publisher).await
+    create_task(request, task_repo, config_repo, event_publisher).await
 }

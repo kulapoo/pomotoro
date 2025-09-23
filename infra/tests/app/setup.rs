@@ -14,6 +14,7 @@ async fn setup() -> Result<()> {
     bootstrap(
         ctx.timer_repo.clone(),
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
     )
     .await

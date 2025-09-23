@@ -21,12 +21,14 @@ async fn task_should_create_with_name() {
 
     let result = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: task.name,
             description: task.description,
             max_sessions: task.max_sessions,
             tags: task.tags,
+            config: None,
         },
     )
     .await;
@@ -51,24 +53,28 @@ async fn task_should_have_unique_ids() {
 
     let result1 = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: task1.name,
             description: task1.description,
             max_sessions: task1.max_sessions,
             tags: task1.tags,
+            config: None,
         },
     )
     .await;
 
     let result2 = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: task2.name,
             description: task2.description,
             max_sessions: task2.max_sessions,
             tags: task2.tags,
+            config: None,
         },
     )
     .await;
@@ -107,12 +113,14 @@ async fn task_should_find_task_by_id() {
     // Create task from fixture data
     let created_task = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: fixture.name.clone(),
             description: fixture.description.clone(),
             max_sessions: fixture.max_sessions,
             tags: fixture.tags.clone(),
+            config: None,
         },
     )
     .await
@@ -153,12 +161,14 @@ async fn task_should_update_task() {
 
     let created_task = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: fixture.name,
             description: fixture.description,
             max_sessions: fixture.max_sessions,
             tags: fixture.tags,
+            config: None,
         },
     )
     .await
@@ -195,12 +205,14 @@ async fn task_should_delete_task() {
 
     let created_task = create_task(
         ctx.task_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
             name: fixture.name,
             description: fixture.description,
             max_sessions: fixture.max_sessions,
             tags: fixture.tags,
+            config: None,
         },
     )
     .await

@@ -1,6 +1,6 @@
 use domain::{
     Config, ConfigRepository, EventPublisher, Result, Task, TaskBuilder,
-    TaskCreated, TaskRepository, TimerConfiguration,
+    TaskCreated, TaskRepository,
 };
 use std::sync::Arc;
 
