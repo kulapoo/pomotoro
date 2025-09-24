@@ -18,7 +18,7 @@ pub async fn get_task(
     query: GetTaskQuery,
 ) -> Result<Task> {
     let task_id =
-        TaskId::from_string(&query.id).map_err(|_| Error::TaskNotFound {
+        TaskId::from_string(&query.id).map_err(|_| Error::TaskIdInvalid {
             id: query.id.clone(),
         })?;
 
@@ -26,6 +26,18 @@ pub async fn get_task(
         .get_by_id(task_id)
         .await?
         .ok_or(Error::TaskNotFound { id: query.id })
+}
+
+pub async fn get_task_by_id(
+    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
+    task_id: TaskId,
+) -> Result<Task> {
+    task_repo
+        .get_by_id(task_id)
+        .await?
+        .ok_or(Error::TaskNotFound {
+            id: task_id.to_string(),
+        })
 }
 
 pub async fn get_tasks(
@@ -65,4 +77,3 @@ pub async fn get_tasks_by_status(
 ) -> Result<Vec<Task>> {
     task_repo.get_by_status(status).await
 }
-

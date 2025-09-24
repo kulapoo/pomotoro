@@ -6,6 +6,9 @@ pub enum Error {
     #[error("Task not found: {id}")]
     TaskNotFound { id: String },
 
+    #[error("Task ID invalid: {id}")]
+    TaskIdInvalid { id: String },
+
     #[error("Invalid task params: {message}")]
     InvalidTaskParams { message: String },
 

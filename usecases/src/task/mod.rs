@@ -1,3 +1,4 @@
+pub mod complete_session;
 pub mod create_task;
 pub mod cycle_incomplete_task;
 pub mod cycle_task;
@@ -12,6 +13,7 @@ pub mod switch_task;
 pub mod update_task;
 pub mod update_task_settings;
 
+pub use complete_session::{SessionCompletionResult, complete_session};
 pub use create_task::{CreateTaskCmd, create_task};
 pub use cycle_incomplete_task::{
     CycleDirection, CycleIncompleteTaskQuery, IncompleteCycleResult,

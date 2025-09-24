@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, EventPublisher, Phase, Result, TaskRepository,
-    TimerRepository,
+    Error, EventPublisher, Phase, Result, TaskRepository, TimerRepository,
 };
 
 pub async fn complete_timer_phase(

@@ -1,8 +1,10 @@
 use domain::{
-    Error, EventPublisher, Result, TaskCompleted, TaskId, TaskRepository,
+    Error, EventPublisher, Result, TaskCompleted, TaskRepository,
     TaskSessionCompleted,
 };
 use std::sync::Arc;
+
+use crate::get_task;
 
 #[derive(Debug, Clone)]
 pub struct SessionCompletionResult {
@@ -16,22 +18,20 @@ pub async fn complete_session(
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     task_id: &str,
 ) -> Result<SessionCompletionResult> {
-    let task_id =
-        TaskId::from_string(task_id).map_err(|_| Error::TaskNotFound {
+    let mut task = get_task(
+        task_repo,
+        super::GetTaskQuery {
             id: task_id.to_string(),
-        })?;
-
-    let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
-        Error::TaskNotFound {
-            id: task_id.to_string(),
-        }
-    })?;
+        },
+    )
+    .await?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
     }
 
     task.increment_session()?;
+
     let is_task_completed = task.is_completed();
 
     task_repo.update(task.clone()).await?;
@@ -61,22 +61,4 @@ pub async fn complete_session(
         sessions_completed: task.current_sessions,
         total_sessions: task.max_sessions,
     })
-}
-
-pub async fn can_complete_session(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    task_id: &str,
-) -> Result<bool> {
-    let task_id =
-        TaskId::from_string(task_id).map_err(|_| Error::TaskNotFound {
-            id: task_id.to_string(),
-        })?;
-
-    let task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
-        Error::TaskNotFound {
-            id: task_id.to_string(),
-        }
-    })?;
-
-    Ok(!task.is_completed())
 }
