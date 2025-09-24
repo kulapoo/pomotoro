@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct DeleteTaskCmd {
-    pub id: String,
+    pub id: TaskId,
 }
 
 pub async fn delete_task(
@@ -13,13 +13,10 @@ pub async fn delete_task(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: DeleteTaskCmd,
 ) -> Result<bool> {
-    let task_id = TaskId::from_string(&cmd.id)
-        .map_err(|_| Error::TaskNotFound { id: cmd.id.clone() })?;
-
     let task = task_repo
-        .get_by_id(task_id)
+        .get_by_id(cmd.id)
         .await?
-        .ok_or_else(|| Error::TaskNotFound { id: cmd.id.clone() })?;
+        .ok_or_else(|| Error::TaskNotFound { id: cmd.id.to_string() })?;
 
     if task.name == "Focus Session"
         && task.description
@@ -31,7 +28,7 @@ pub async fn delete_task(
         });
     }
 
-    let deleted = task_repo.delete(task_id).await?;
+    let deleted = task_repo.delete(cmd.id).await?;
 
     if deleted {
         let deleted_event = TaskDeleted::new(task.id, 1);

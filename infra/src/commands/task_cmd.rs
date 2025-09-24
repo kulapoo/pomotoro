@@ -101,8 +101,10 @@ pub async fn get_task(
     id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Option<TaskDto>, String> {
-    let query = GetTaskQuery { id: id.clone() };
-    let result = usecases::task::get_task(&task_repo, query)
+    let task_id = TaskId::from_string(&id)
+        .map_err(|_| format!("Invalid task ID: {}", id))?;
+
+    let result = usecases::task::get_task_by_id(&task_repo, task_id)
         .await
         .with_context(|| format!("Failed to get task with id: {}", id))
         .map_err(|e| e.to_string())?;
@@ -144,7 +146,7 @@ pub async fn update_task(
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
     let cmd = UpdateTaskCmd {
-        id: request.id.to_string(),
+        id: request.id,
         name: request.name,
         description: request.description,
         max_sessions: request.max_sessions,
@@ -174,7 +176,10 @@ pub async fn delete_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
-    let cmd = DeleteTaskCmd { id: id.clone() };
+    let task_id = TaskId::from_string(&id)
+        .map_err(|_| format!("Invalid task ID: {}", id))?;
+
+    let cmd = DeleteTaskCmd { id: task_id };
     usecases::task::delete_task(
         task_repo.inner().clone(),
         event_publisher.inner().clone(),
@@ -202,19 +207,18 @@ pub async fn reset_task_sessions(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Task, String> {
-    usecases::task::reset_sessions(&task_repo, &task_id)
+    let task_id_parsed = domain::TaskId::from_string(&task_id)
+        .map_err(|_| format!("Invalid task ID: {}", task_id))?;
+
+    usecases::task::reset_sessions(&task_repo, task_id_parsed)
         .await
         .with_context(|| {
             format!("Failed to reset sessions for task: {}", task_id)
         })
         .map_err(|e| e.to_string())?;
 
-    let task_id = domain::TaskId::from_string(&task_id)
-        .map_err(|_| anyhow!("Invalid task ID: {}", task_id))
-        .map_err(|e| e.to_string())?;
-
     task_repo
-        .get_by_id(task_id)
+        .get_by_id(task_id_parsed)
         .await
         .context("Failed to retrieve task after resetting sessions")
         .map_err(|e| e.to_string())?

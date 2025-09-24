@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SetDefaultTaskCmd {
-    pub task_id: String,
+    pub task_id: TaskId,
 }
 
 pub async fn set_default_task(
@@ -13,14 +13,9 @@ pub async fn set_default_task(
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
     cmd: SetDefaultTaskCmd,
 ) -> Result<Task> {
-    let task_id =
-        TaskId::from_string(&cmd.task_id).map_err(|_| Error::TaskNotFound {
-            id: cmd.task_id.clone(),
-        })?;
-
-    let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+    let mut task = task_repo.get_by_id(cmd.task_id).await?.ok_or_else(|| {
         Error::TaskNotFound {
-            id: cmd.task_id.clone(),
+            id: cmd.task_id.to_string(),
         }
     })?;
 

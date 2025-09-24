@@ -136,7 +136,7 @@ async fn timer_should_prevent_task_switch_while_timer_is_running() {
         ctx.task_cycling_service.clone(),
         ctx.event_bus.clone(),
         SwitchTaskCmd {
-            task_id: task_id.as_str(),
+            task_id,
         },
     )
     .await;

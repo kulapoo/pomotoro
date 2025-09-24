@@ -178,7 +178,7 @@ async fn task_should_update_task() {
         ctx.task_repo.clone(),
         ctx.event_bus.clone(),
         UpdateTaskCmd {
-            id: created_task.id().to_string(),
+            id: created_task.id(),
             name: Some("Updated Task".to_string()),
             ..Default::default()
         },
@@ -222,7 +222,7 @@ async fn task_should_delete_task() {
         ctx.task_repo.clone(),
         ctx.event_bus.clone(),
         DeleteTaskCmd {
-            id: created_task.id().to_string(),
+            id: created_task.id(),
         },
     )
     .await

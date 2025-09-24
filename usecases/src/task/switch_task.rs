@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SwitchTaskCmd {
-    pub task_id: String,
+    pub task_id: TaskId,
 }
 
 /// Switch to a different task
@@ -18,15 +18,10 @@ pub async fn switch_task(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTaskCmd,
 ) -> Result<()> {
-    let task_id =
-        TaskId::from_string(&cmd.task_id).map_err(|_| Error::TaskNotFound {
-            id: cmd.task_id.clone(),
-        })?;
-
     // Get the target task
-    let task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+    let task = task_repo.get_by_id(cmd.task_id).await?.ok_or_else(|| {
         Error::TaskNotFound {
-            id: cmd.task_id.clone(),
+            id: cmd.task_id.to_string(),
         }
     })?;
 
@@ -44,16 +39,16 @@ pub async fn switch_task(
         });
     }
 
-    cycling_service.validate_task_switch(task_id).await?;
+    cycling_service.validate_task_switch(cmd.task_id).await?;
 
     // Update the timer's active task
     let previous_task_id = timer.active_task_id();
-    timer.set_active_task(task_id);
+    timer.set_active_task(cmd.task_id);
     timer_repo.save(&timer).await?;
 
     let switch_event = TaskSwitchWorkflowCompleted::new(
         previous_task_id,
-        task_id,
+        cmd.task_id,
         format!("Switched to task: {}", task.name),
         1,
     );

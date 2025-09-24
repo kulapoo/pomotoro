@@ -7,7 +7,7 @@ use std::time::Duration;
 
 #[derive(Debug, Default, Clone)]
 pub struct UpdateTaskCmd {
-    pub id: String,
+    pub id: TaskId,
     pub name: Option<String>,
     pub description: Option<String>,
     pub max_sessions: Option<u8>,
@@ -25,13 +25,10 @@ pub async fn update_task(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: UpdateTaskCmd,
 ) -> Result<Task> {
-    let task_id = TaskId::from_string(&cmd.id)
-        .map_err(|_| Error::TaskNotFound { id: cmd.id.clone() })?;
-
     let mut task = task_repo
-        .get_by_id(task_id)
+        .get_by_id(cmd.id)
         .await?
-        .ok_or_else(|| Error::TaskNotFound { id: cmd.id.clone() })?;
+        .ok_or_else(|| Error::TaskNotFound { id: cmd.id.to_string() })?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);

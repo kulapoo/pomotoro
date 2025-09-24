@@ -50,7 +50,7 @@ pub async fn bootstrap(
         task_repo.clone(),
         event_publisher.clone(),
         switch_timer_task::SwitchTimerTaskCmd {
-            task_id: task.id.to_string(),
+            task_id: task.id,
         },
     )
     .await?;

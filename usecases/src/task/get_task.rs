@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct GetTaskQuery {
-    pub id: String,
+    pub id: TaskId,
 }
 
 #[derive(Debug, Clone)]
@@ -11,21 +11,6 @@ pub struct GetTasksQuery {
     pub tags: Option<Vec<String>>,
     pub status: Option<TaskStatus>,
     pub active_only: bool,
-}
-
-pub async fn get_task(
-    task_repo: &Arc<dyn TaskRepository + Send + Sync>,
-    query: GetTaskQuery,
-) -> Result<Task> {
-    let task_id =
-        TaskId::from_string(&query.id).map_err(|_| Error::TaskIdInvalid {
-            id: query.id.clone(),
-        })?;
-
-    task_repo
-        .get_by_id(task_id)
-        .await?
-        .ok_or(Error::TaskNotFound { id: query.id })
 }
 
 pub async fn get_task_by_id(

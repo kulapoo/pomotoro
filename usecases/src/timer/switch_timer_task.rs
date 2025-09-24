@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SwitchTimerTaskCmd {
-    pub task_id: String,
+    pub task_id: TaskId,
 }
 
 /// Switch the active task for the timer
@@ -29,16 +29,11 @@ pub async fn switch_timer_task(
     _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTimerTaskCmd,
 ) -> Result<()> {
-    let task_id =
-        TaskId::from_string(&cmd.task_id).map_err(|_| Error::TaskNotFound {
-            id: cmd.task_id.clone(),
-        })?;
-
     // Verify task exists and is not completed
     let task = task_repo
-        .get_by_id(task_id)
+        .get_by_id(cmd.task_id)
         .await?
-        .ok_or(Error::TaskNotFound { id: cmd.task_id })?;
+        .ok_or(Error::TaskNotFound { id: cmd.task_id.to_string() })?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);
@@ -48,7 +43,7 @@ pub async fn switch_timer_task(
     let mut timer = timer_repo.get().await?;
     
     // Execute domain logic: switch the active task
-    timer.set_active_task(task_id);
+    timer.set_active_task(cmd.task_id);
     
     // Save the timer state
     timer_repo.save(&timer).await?;

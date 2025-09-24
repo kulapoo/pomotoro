@@ -233,7 +233,10 @@ pub async fn switch_timer_task_cmd(
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
-    let cmd = SwitchTimerTaskCmd { task_id };
+    let task_id_parsed = domain::TaskId::from_string(&task_id)
+        .map_err(|_| format!("Invalid task ID: {}", task_id))?;
+
+    let cmd = SwitchTimerTaskCmd { task_id: task_id_parsed };
 
     switch_timer_task(
         timer_repo.inner().clone(),

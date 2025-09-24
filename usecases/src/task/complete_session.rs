@@ -1,10 +1,10 @@
 use domain::{
-    Error, EventPublisher, Result, TaskCompleted, TaskRepository,
+    Error, EventPublisher, Result, TaskCompleted, TaskId, TaskRepository,
     TaskSessionCompleted,
 };
 use std::sync::Arc;
 
-use crate::get_task;
+use crate::get_task_by_id;
 
 #[derive(Debug, Clone)]
 pub struct SessionCompletionResult {
@@ -16,13 +16,11 @@ pub struct SessionCompletionResult {
 pub async fn complete_session(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
-    task_id: &str,
+    task_id: TaskId,
 ) -> Result<SessionCompletionResult> {
-    let mut task = get_task(
+    let mut task = get_task_by_id(
         task_repo,
-        super::GetTaskQuery {
-            id: task_id.to_string(),
-        },
+        task_id,
     )
     .await?;
 

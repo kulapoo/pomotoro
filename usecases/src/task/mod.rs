@@ -25,7 +25,7 @@ pub use cycle_task::{
 };
 pub use delete_task::{DeleteTaskCmd, delete_task};
 pub use get_task::{
-    GetTaskQuery, GetTasksQuery, get_task, get_task_by_tags, get_tasks,
+    GetTaskQuery, GetTasksQuery, get_task_by_id, get_task_by_tags, get_tasks,
     get_tasks_by_status,
 };
 pub use get_task_queue::{
