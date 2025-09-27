@@ -22,9 +22,17 @@ pub async fn complete_timer_phase(
         }
     })?;
 
-    task.increment_session()?;
+    // Get the current phase before completing it
+    let current_phase = timer.get_current_phase();
 
-    let next_phase = determine_next_break_type(&task);
+    // Only increment session when completing a Work phase
+    let next_phase = if current_phase == Phase::Work {
+        task.increment_session()?;
+        determine_next_break_type(&task)
+    } else {
+        // After a break, always go back to Work
+        Phase::Work
+    };
 
     let events = timer.complete_phase(next_phase, &task.config.timer)?;
 

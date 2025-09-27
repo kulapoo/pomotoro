@@ -43,7 +43,10 @@ pub async fn skip_timer_phase(
 
     let events = timer.skip_phase(&task.config.timer)?;
 
-    task.increment_session()?;
+    // Only increment session when skipping a Work phase
+    if old_phase == Phase::Work {
+        task.increment_session()?;
+    }
 
     task_repo.update(task).await?;
 

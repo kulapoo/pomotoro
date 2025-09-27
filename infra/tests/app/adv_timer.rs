@@ -128,8 +128,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     assert_eq!(timer_session1_result.is_ok(), true);
     assert_eq!(session1_timer_is_work_phase_before_completion, true);
     assert_eq!(session1_timer_status, TimerStatus::Running);
-    assert_eq!(task_1_current_sessions, 1);
+    assert_eq!(task_1_current_sessions, 0); // Session not incremented when starting, only when completing
     assert_eq!(session1_result.is_ok(), true);
     assert_eq!(session1_timer_is_break_phase, true);
-    assert_eq!(task_2_current_sessions, 2);
+    assert_eq!(task_2_current_sessions, 1); // First work session completed, so now 1
 }
