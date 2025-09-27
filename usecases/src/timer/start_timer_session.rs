@@ -36,13 +36,17 @@ pub async fn start_timer_session(
         to_invalid_task_data("Task ID is required".to_string())
     })?;
 
-    let task =
+    let mut task =
         task_repo
             .get_by_id(task_id)
             .await?
             .ok_or(Error::TaskNotFound {
                 id: task_id.as_str(),
             })?;
+
+    task.increment_session()?;
+
+    task_repo.update(task.clone()).await?;
 
     if task.is_completed() {
         return Err(Error::TaskAlreadyCompleted);

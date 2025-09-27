@@ -1,4 +1,4 @@
-use std::{any::TypeId, ops::Deref, time::Duration};
+use std::{any::TypeId, time::Duration};
 
 use crate::{
     AppContextBuilder,
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use domain::{
-    Phase, PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository,
+    PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository,
     TaskStatus, TimerPaused, TimerRepository, TimerReset, TimerStarted,
     TimerState, TimerStatus, TimerTick, event_names,
     shared_kernel::events::AppStarted,
@@ -135,9 +135,7 @@ async fn timer_should_prevent_task_switch_while_timer_is_running() {
         ctx.timer_repo.clone(),
         ctx.task_cycling_service.clone(),
         ctx.event_bus.clone(),
-        SwitchTaskCmd {
-            task_id,
-        },
+        SwitchTaskCmd { task_id },
     )
     .await;
 

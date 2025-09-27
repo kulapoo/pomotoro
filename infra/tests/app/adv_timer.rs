@@ -73,6 +73,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     let session1_timer_status = get_timer(&ctx).await.state().status();
 
+    let task_1_current_sessions = get_active_task(&ctx).await.current_sessions;
+
     // TODO: 3. Complete first work session
     //    - Mock/advance time by work_duration
     //    - Verify timer transitions to ShortBreak state
@@ -90,8 +92,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     let session1_timer_is_break_phase =
         get_timer(&ctx).await.state().is_break_phase();
 
-    let session1_task_current_sessions =
-        get_active_task(&ctx).await.current_sessions;
+    let task_2_current_sessions = get_active_task(&ctx).await.current_sessions;
 
     // TODO: 4. Complete first short break
     //    - Mock/advance time by short_break_duration
@@ -123,13 +124,12 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     // Assert
 
     assert_eq!(task1_result.is_ok(), true);
-    assert_eq!(timer_session1_result.is_ok(), true);
-
     assert_eq!(session0_timer_is_idle, true);
-
-    assert_eq!(session1_result.is_ok(), true);
-    assert_eq!(session1_timer_status, TimerStatus::Running);
+    assert_eq!(timer_session1_result.is_ok(), true);
     assert_eq!(session1_timer_is_work_phase_before_completion, true);
+    assert_eq!(session1_timer_status, TimerStatus::Running);
+    assert_eq!(task_1_current_sessions, 1);
+    assert_eq!(session1_result.is_ok(), true);
     assert_eq!(session1_timer_is_break_phase, true);
-    assert_eq!(session1_task_current_sessions, 1);
+    assert_eq!(task_2_current_sessions, 2);
 }
