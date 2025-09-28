@@ -30,6 +30,7 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 - [Rust](https://rustup.rs/) (latest stable)
 - [Trunk](https://trunkrs.dev/): `cargo install trunk`
 
+
 #### Linux
 
 For Debian-based distributions, you'll need to install the following packages:
@@ -44,6 +45,8 @@ sudo apt install libwebkit2gtk-4.1-dev \
   libssl-dev \
   libayatana-appindicator3-dev \
   librsvg2-dev
+
+sudo apt install libasound2-dev
 ```
 
 
