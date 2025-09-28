@@ -1,22 +1,17 @@
-use std::{any::TypeId, time::Duration};
+use std::any::TypeId;
 
-use crate::{
-    AppContextBuilder,
-    utils::{
+use crate::utils::{
         self, assert_utils,
         setup::{setup_ctx, setup_ctx_with_existing_db, setup_ctx_with_timer},
-        task::get_active_task,
         timer::{get_timer, get_timer_state},
-    },
-};
+    };
 use domain::{
-    PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository,
-    TaskStatus, TimerPaused, TimerRepository, TimerReset, TimerStarted,
-    TimerState, TimerStatus, TimerTick, event_names,
+    PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository, TimerPaused, TimerReset, TimerStarted,
+    TimerState, TimerStatus, event_names,
     shared_kernel::events::AppStarted,
 };
 use usecases::{
-    CreateTaskCmd, SwitchTaskCmd, create_task,
+    SwitchTaskCmd,
     timer::{complete_timer_phase, skip_timer_phase},
 };
 use usecases::{

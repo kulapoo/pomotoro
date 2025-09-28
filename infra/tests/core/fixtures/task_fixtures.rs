@@ -1,5 +1,5 @@
 use domain::task::Builder as DomainTaskBuilder;
-use domain::{Task, TaskId, TaskStatus};
+use domain::{Config, Task, TaskId, TaskStatus};
 
 /// Task fixtures for testing
 pub struct TaskFixtures;
@@ -113,6 +113,11 @@ impl TaskBuilder {
             .status(TaskStatus::Completed)
             .current_sessions(4)
             .max_sessions(4);
+        self
+    }
+
+    pub fn config(mut self, config: Config) -> Self {
+        self.builder = self.builder.config(config);
         self
     }
 

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration, any::TypeId};
 
 use crate::utils::{setup::setup_ctx, assert_utils};
-use domain::{Config, ConfigRepository, EventPublisher, TimerConfiguration, TaskRepository, TimerRepository,
+use domain::{Config, ConfigRepository, EventPublisher, TimerConfiguration, TaskRepository,
     config::events::{ConfigUpdated, ConfigReset}, event_names, shared_kernel::events::AppStarted};
 use usecases::{UpdateConfigCmd, get_config, update_config, reset_config};
 
