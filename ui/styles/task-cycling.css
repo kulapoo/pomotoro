@@ -1,111 +1,122 @@
+/* Task Cycling Controls */
 .task-cycle-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--bg-secondary, #f5f5f5);
-    border-radius: 8px;
-    margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
 }
 
+/* Cycle Position */
 .cycle-position {
-    font-size: 14px;
-    color: var(--text-secondary, #666);
-    font-weight: 500;
+  font-size: 0.875rem;
+  color: #718096;
+  font-weight: 500;
 }
 
+/* Cycle Buttons Container */
 .cycle-buttons {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: 0.5rem;
 }
 
+/* Cycle Button */
 .cycle-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid var(--border-color, #ddd);
-    background: white;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #cbd5e0;
+  background: #ffffff;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #2d3748;
 }
 
 .cycle-button:hover:not(:disabled) {
-    background: var(--bg-hover, #f0f0f0);
-    border-color: var(--primary-color, #4a90e2);
-    transform: scale(1.05);
+  background: #f7fafc;
+  border-color: #4a90e2;
+  transform: translateY(-1px);
 }
 
 .cycle-button:active:not(:disabled) {
-    transform: scale(0.95);
+  transform: translateY(0);
 }
 
 .cycle-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .cycle-button svg {
-    width: 20px;
-    height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
+/* Task Completion Indicator */
 .task-completion-indicator {
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin: 8px 0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+  transition: all 0.2s ease;
 }
 
 .task-completion-indicator.task-complete {
-    background: var(--success-bg, #e6f7e6);
-    border: 1px solid var(--success-border, #52c41a);
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
 }
 
 .task-completion-indicator.task-incomplete {
-    background: var(--info-bg, #e6f4ff);
-    border: 1px solid var(--info-border, #1890ff);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
 }
 
 .task-completion-indicator.task-no-selection {
-    background: var(--neutral-bg, #f5f5f5);
-    border: 1px solid var(--neutral-border, #d9d9d9);
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
 }
 
+/* Completion Progress */
 .completion-progress {
-    width: 100%;
-    height: 4px;
-    background: var(--progress-bg, #e0e0e0);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 8px;
+  width: 100%;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
 }
 
 .progress-bar {
-    height: 100%;
-    background: var(--primary-color, #4a90e2);
-    border-radius: 2px;
-    transition: width 0.3s ease;
+  height: 100%;
+  background: #4a90e2;
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
+/* Completion Text */
 .completion-text {
-    font-size: 13px;
-    color: var(--text-secondary, #666);
-    font-weight: 500;
+  font-size: 0.8rem;
+  color: #718096;
+  font-weight: 500;
 }
 
+/* Task List Item */
 .task-list-item {
-    position: relative;
+  position: relative;
 }
 
 .task-list-item.task-complete::before {
-    content: '✓';
-    position: absolute;
-    left: -20px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--success-color, #52c41a);
-    font-weight: bold;
+  content: '✓';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #48bb78;
+  font-weight: bold;
+  font-size: 1rem;
 }
