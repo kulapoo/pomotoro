@@ -1,9 +1,10 @@
-use crate::pages::task::{TaskCreationForm, TasksViewModel};
-use leptos::callback::Callback;
+use crate::pages::task::{TaskCreationForm, TaskUpdateForm, TasksViewModel};
+use domain::Task;
 use leptos::prelude::*;
 
 #[component]
 pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
+    let (editing_task, set_editing_task) = signal(None::<Task>);
     view! {
         <div class="task-list-container">
             <div class="task-actions">
@@ -12,11 +13,25 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                         view! {
                             <TaskCreationForm
                                 vm=vm
-                                on_close=Callback::new(move |_| vm.with_value(|v| v.set_creating_task(false)))
+                                on_close={move || vm.with_value(|v| v.set_creating_task(false))}
                             />
                         }
                     }}
                 </Show>
+
+                <Show when=move || editing_task.get().is_some()>
+                    {move || {
+                        let task = editing_task.get().expect("editing_task should be Some");
+                        view! {
+                            <TaskUpdateForm
+                                vm=vm
+                                task=task
+                                on_close={move || set_editing_task.set(None)}
+                            />
+                        }
+                    }}
+                </Show>
+
                 <Show when=move || !vm.with_value(|v| v.is_creating_task())>
                     <button
                         class="btn btn-add-task"
@@ -52,6 +67,10 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                 children=move |task| {
                                     let task_id = task.id;
                                     let is_active = active_task_id == Some(task_id);
+                                    let task_name_for_delete = task.name.clone();
+                                    let task_for_edit = task.clone();
+                                    let task_status_for_button = task.status.clone();
+                                    let task_status_for_disabled = task.status.clone();
 
                                     let progress_percentage = if task.max_sessions > 0 {
                                         (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
@@ -68,13 +87,11 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                     };
 
                                     view! {
-                                        <div
-                                            class=task_classes
-                                            on:click=move |_| {
+                                        <div class=task_classes>
+                                            <div class="task-content" on:click=move |_| {
                                                 vm.with_value(|v| v.switch_active_task(task_id));
-                                            }
-                                        >
-                                                            <div class="task-header">
+                                            }>
+                                                <div class="task-header">
                                                 <h3>{task.name.clone()}</h3>
                                                 <span class={format!("task-status status-{}", 
                                                     match &task.status {
@@ -129,14 +146,44 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                                         ></div>
                                                     </div>
                                                 </div>
-                                                <button class="btn-select" disabled=move || task.status == domain::TaskStatus::Completed>
+                                                <button class="btn-select" disabled=move || task_status_for_disabled == domain::TaskStatus::Completed>
                                                     {if is_active { 
                                                         "Currently Active" 
-                                                    } else if task.status == domain::TaskStatus::Completed {
+                                                    } else if task_status_for_button == domain::TaskStatus::Completed {
                                                         "Task Completed"
                                                     } else { 
                                                         "Select Task" 
                                                     }}
+                                                </button>
+                                            </div>
+                                            </div>
+
+                                            <div class="task-actions">
+                                                <button
+                                                    class="btn-icon btn-edit"
+                                                    title="Edit Task"
+                                                    on:click=move |ev| {
+                                                        ev.stop_propagation();
+                                                        set_editing_task.set(Some(task_for_edit.clone()));
+                                                    }
+                                                >
+                                                    "✏️"
+                                                </button>
+                                                <button
+                                                    class="btn-icon btn-delete"
+                                                    title="Delete Task"
+                                                    on:click=move |ev| {
+                                                        ev.stop_propagation();
+                                                        if web_sys::window()
+                                                            .unwrap()
+                                                            .confirm_with_message(&format!("Are you sure you want to delete '{}'?", task_name_for_delete))
+                                                            .unwrap_or(false)
+                                                        {
+                                                            vm.with_value(|v| v.delete_task(task_id));
+                                                        }
+                                                    }
+                                                >
+                                                    "🗑️"
                                                 </button>
                                             </div>
                                         </div>

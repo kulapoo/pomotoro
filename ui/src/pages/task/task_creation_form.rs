@@ -1,14 +1,16 @@
 use crate::pages::task::TasksViewModel;
-use leptos::callback::Callback;
 use leptos::prelude::*;
 use domain::TimerConfiguration;
 use std::time::Duration;
 
 #[component]
-pub fn TaskCreationForm(
+pub fn TaskCreationForm<F>(
     vm: StoredValue<TasksViewModel>,
-    on_close: Callback<()>,
-) -> impl IntoView {
+    on_close: F,
+) -> impl IntoView
+where
+    F: Fn() + 'static + Copy,
+{
     let (task_name, set_task_name) = signal(String::new());
     let (task_description, set_task_description) = signal(String::new());
     let (max_sessions, set_max_sessions) = signal(4u32);
@@ -115,7 +117,7 @@ pub fn TaskCreationForm(
         set_timeout(
             move || {
                 set_is_creating.set(false);
-                on_close.run(());
+                on_close();
             },
             std::time::Duration::from_millis(500),
         );
@@ -286,7 +288,7 @@ pub fn TaskCreationForm(
 
                 <button
                     class="btn btn-secondary"
-                    on:click=move |_| on_close.run(())
+                    on:click=move |_| on_close()
                     prop:disabled=move || is_creating.get()
                 >
                     "Cancel"
