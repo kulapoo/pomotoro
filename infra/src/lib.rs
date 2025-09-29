@@ -1,6 +1,7 @@
 pub mod adapters;
 mod bootstrap;
 pub mod commands;
+mod init_guard;
 mod schema;
 
 use commands::{
@@ -22,9 +23,112 @@ use commands::{
     update_general_config, update_notification_config, update_storage_path,
     update_task, update_task_settings, validate_storage_path,
 };
-use tauri::Manager;
+use std::sync::Arc;
+use tauri::{Emitter, Manager};
+use tokio::sync::{Mutex, RwLock};
 
-use crate::bootstrap::bootstrap;
+use crate::bootstrap::{bootstrap, AppRegistry};
+
+/// Represents the initialization state of the application
+#[derive(Clone)]
+pub enum InitState {
+    NotStarted,
+    Initializing,
+    Ready(Arc<AppRegistry>),
+    Failed(String),
+}
+
+/// Wrapper for lazy initialization of the application state
+#[derive(Clone)]
+pub struct AppState {
+    init_state: Arc<RwLock<InitState>>,
+    init_mutex: Arc<Mutex<()>>,
+}
+
+impl AppState {
+    fn new() -> Self {
+        Self {
+            init_state: Arc::new(RwLock::new(InitState::NotStarted)),
+            init_mutex: Arc::new(Mutex::new(())),
+        }
+    }
+
+    /// Ensures the app is initialized, initializing it if necessary
+    pub async fn ensure_initialized(
+        &self,
+        app_handle: tauri::AppHandle,
+    ) -> Result<Arc<AppRegistry>, String> {
+        // Fast path: check if already initialized
+        {
+            let state = self.init_state.read().await;
+            match &*state {
+                InitState::Ready(registry) => return Ok(registry.clone()),
+                InitState::Failed(err) => return Err(err.clone()),
+                _ => {}
+            }
+        }
+
+        // Slow path: need to initialize
+        let _guard = self.init_mutex.lock().await;
+
+        // Double-check after acquiring mutex
+        {
+            let state = self.init_state.read().await;
+            match &*state {
+                InitState::Ready(registry) => return Ok(registry.clone()),
+                InitState::Failed(err) => return Err(err.clone()),
+                _ => {}
+            }
+        }
+
+        // Set state to initializing
+        {
+            let mut state = self.init_state.write().await;
+            *state = InitState::Initializing;
+        }
+
+        // Perform initialization
+        match bootstrap(app_handle.clone()).await {
+            Ok(registry) => {
+                let registry = Arc::new(registry);
+
+                // Store all the managed state in Tauri
+                app_handle.manage(registry.config_repository.clone());
+                app_handle.manage(registry.task_repository.clone());
+                app_handle.manage(registry.timer_repository.clone());
+                app_handle.manage(registry.audio_service.clone());
+                app_handle.manage(registry.timer_tick_service.clone());
+                app_handle.manage(registry.task_cycling_service.clone());
+                app_handle.manage(registry.event_publisher.clone());
+
+                // Update state to ready
+                {
+                    let mut state = self.init_state.write().await;
+                    *state = InitState::Ready(registry.clone());
+                }
+
+                Ok(registry)
+            }
+            Err(err) => {
+                let error_msg = format!("Failed to bootstrap app: {}", err);
+                eprintln!("{}", error_msg);
+
+                // Update state to failed
+                {
+                    let mut state = self.init_state.write().await;
+                    *state = InitState::Failed(error_msg.clone());
+                }
+
+                Err(error_msg)
+            }
+        }
+    }
+
+    /// Gets the current initialization state without blocking
+    pub async fn get_state(&self) -> InitState {
+        self.init_state.read().await.clone()
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -35,7 +139,6 @@ pub fn run() {
     #[cfg(debug_assertions)]
     {
         let devtools = tauri_plugin_devtools::init();
-
         builder = builder.plugin(devtools);
     }
 
@@ -44,38 +147,63 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
-            #[cfg(debug_assertions)] // only include this code on debug builds
+            // Create the app state for lazy initialization
+            let app_state = AppState::new();
+            app.manage(app_state.clone());
+
+            // Get the app handle for async initialization
+            let app_handle = app.handle().clone();
+
+            // Spawn the initialization in the background
+            tauri::async_runtime::spawn(async move {
+                // Small delay to ensure window is fully created
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                // Initialize the app
+                match app_state.ensure_initialized(app_handle.clone()).await {
+                    Ok(_registry) => {
+                        println!("Application initialized successfully");
+
+                        // Emit an event to notify the frontend that initialization is complete
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.emit("app:initialized", ());
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("Failed to initialize application: {}", err);
+
+                        // Emit an error event to the frontend
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.emit("app:initialization-failed", err);
+                        }
+                    }
+                }
+            });
+
+            // Optional: Open devtools in debug mode with better timing
+            #[cfg(debug_assertions)]
             {
-                let webview = app.get_webview_window("main").unwrap();
-                webview.open_devtools();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_secs(10));
-                    webview.close_devtools();
+                let app_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    // Wait a bit for the window to be ready
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        window.open_devtools();
+
+                        // Auto-close after 10 seconds if desired
+                        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+                        window.close_devtools();
+                    }
                 });
             }
-
-            let app_registry =
-                tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
-                    .inspect_err(|e| {
-                        eprintln!("Failed to bootstrap app: {e}");
-                    })?;
-
-            //  repositories
-            app.manage(app_registry.config_repository.clone());
-            app.manage(app_registry.task_repository.clone());
-            app.manage(app_registry.timer_repository.clone());
-
-            // services
-            app.manage(app_registry.audio_service);
-            app.manage(app_registry.timer_tick_service.clone());
-            app.manage(app_registry.task_cycling_service.clone());
-
-            // events
-            app.manage(app_registry.event_publisher.clone());
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Add initialization check command
+            check_initialization,
+            // Existing commands
             get_timer_state,
             start_timer,
             pause_timer,
@@ -134,4 +262,17 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Command to check if the app is initialized
+#[tauri::command]
+async fn check_initialization(
+    app_state: tauri::State<'_, AppState>,
+) -> Result<bool, String> {
+    match app_state.get_state().await {
+        InitState::Ready(_) => Ok(true),
+        InitState::Failed(err) => Err(err),
+        InitState::Initializing => Ok(false),
+        InitState::NotStarted => Ok(false),
+    }
 }

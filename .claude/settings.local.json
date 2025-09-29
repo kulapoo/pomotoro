@@ -12,7 +12,14 @@
       "Bash(grep:*)",
       "Bash(xargs ls:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(trunk build:*)",
+      "Bash(just dev:*)",
+      "Bash(echo $DISPLAY)",
+      "Bash(curl -I http://localhost:1420)",
+      "Bash(RUST_LOG=debug timeout 3 /home/jpt/src/oss/pomotoro/target/debug/infra)",
+      "Bash(wmctrl:*)",
+      "Bash(xwininfo:*)"
     ],
     "deny": [],
     "ask": [],
