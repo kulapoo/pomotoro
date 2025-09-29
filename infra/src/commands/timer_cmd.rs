@@ -31,23 +31,23 @@ pub async fn start_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    app_handle: AppHandle,
+    _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
-    let current_state = app_get_timer_state(timer_repo_arc.clone())
+    let current_timer = timer_repo_arc
+        .get()
         .await
-        .context("infra::commands::timer_cmd::start_timer - Failed to get current timer state")
+        .context("infra::commands::timer_cmd::start_timer - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
+    let current_state = current_timer.state();
+
     if current_state.status() == domain::TimerStatus::Paused {
-        // Get the first active task
-        let active_tasks = task_repo
-            .get_active_tasks()
-            .await
-            .map_err(|e| e.to_string())?;
-        let task = active_tasks.first().ok_or("No active task")?;
-        let task_id = task.id;
+        // Get the active task ID from the timer
+        let task_id = current_timer
+            .active_task_id()
+            .ok_or("No active task in timer")?;
 
         // Resume the paused timer
         usecases::timer::resume_timer_session(
@@ -101,18 +101,16 @@ pub async fn pause_timer(
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
-    let _current_state = app_get_timer_state(timer_repo_arc.clone())
+    let current_timer = timer_repo_arc
+        .get()
         .await
-        .context("infra::commands::timer_cmd::pause_timer - Failed to get current timer state")
+        .context("infra::commands::timer_cmd::pause_timer - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
-    // Get the first active task
-    let active_tasks = task_repo
-        .get_active_tasks()
-        .await
-        .map_err(|e| e.to_string())?;
-    let task = active_tasks.first().ok_or("No active task")?;
-    let task_id = task.id;
+    // Get the active task ID from the timer
+    let task_id = current_timer
+        .active_task_id()
+        .ok_or("No active task in timer")?;
 
     pause_timer_session(
         task_id,
@@ -140,19 +138,17 @@ pub async fn reset_timer(
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
-    // Get current timer state to find active task
-    let _current_state = app_get_timer_state(timer_repo_arc.clone())
+    // Get current timer to find active task
+    let current_timer = timer_repo_arc
+        .get()
         .await
-        .context("infra::commands::timer_cmd::reset_timer - Failed to get current timer state")
+        .context("infra::commands::timer_cmd::reset_timer - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
-    // Get the first active task
-    let active_tasks = task_repo
-        .get_active_tasks()
-        .await
-        .map_err(|e| e.to_string())?;
-    let task = active_tasks.first().ok_or("No active task")?;
-    let task_id = task.id;
+    // Get the active task ID from the timer
+    let task_id = current_timer
+        .active_task_id()
+        .ok_or("No active task in timer")?;
 
     reset_timer_session(
         task_id,
@@ -182,18 +178,16 @@ pub async fn skip_phase(
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
-    let _current_state = app_get_timer_state(timer_repo_arc.clone())
+    let current_timer = timer_repo_arc
+        .get()
         .await
-        .context("infra::commands::timer_cmd::skip_phase - Failed to get current timer state")
+        .context("infra::commands::timer_cmd::skip_phase - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
-    // Get the first active task
-    let active_tasks = task_repo
-        .get_active_tasks()
-        .await
-        .map_err(|e| e.to_string())?;
-    let task = active_tasks.first().ok_or("No active task")?;
-    let task_id = task.id;
+    // Get the active task ID from the timer
+    let task_id = current_timer
+        .active_task_id()
+        .ok_or("No active task in timer")?;
 
     let (_old_phase, new_phase) = skip_timer_phase(
         task_repo.inner().clone(),
