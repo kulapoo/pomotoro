@@ -25,11 +25,22 @@
       "Bash(sqlite3:*)",
       "Bash(./target/release/infra)",
       "Bash(RUST_BACKTRACE=1 ./target/release/infra)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(echo $HOME)",
+      "Bash(python3:*)",
+      "Bash(RUST_BACKTRACE=1 timeout 3 ./target/release/infra)",
+      "Bash(cargo run:*)",
+      "Bash(RUST_BACKTRACE=1 cargo run --bin infra)",
+      "Bash(RUST_LOG=debug cargo run --bin infra)",
+      "Bash(env RUST_LOG=debug cargo run --bin infra)",
+      "Bash(timeout 3 cargo run --bin infra)",
+      "Bash(cargo tauri dev:*)",
+      "Bash(chmod:*)",
+      "Bash(/home/jpt/src/oss/pomotoro/test_pause.sh:*)"
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "plan"
+    "defaultMode": "bypassPermissions"
   },
   "hooks": {
     "PostToolUse": [

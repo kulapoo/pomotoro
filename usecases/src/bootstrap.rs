@@ -73,7 +73,18 @@ pub async fn bootstrap(
     println!("Bootstrap: Using task: {:?}", task.id);
 
     // Try to get the timer
-    let timer = timer_repo.get().await?;
+    println!("Bootstrap: Getting timer from repository...");
+    let timer = match timer_repo.get().await {
+        Ok(timer) => {
+            println!("Bootstrap: Successfully got timer");
+            timer
+        },
+        Err(e) => {
+            eprintln!("Bootstrap: Failed to get timer: {:?}", e);
+            eprintln!("Bootstrap: Full error details: {}", e);
+            return Err(e.into());
+        }
+    };
 
     println!("Bootstrap: Current timer state: idle={}", timer.is_idle());
 

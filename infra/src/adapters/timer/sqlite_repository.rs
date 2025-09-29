@@ -23,7 +23,7 @@ impl TimerRepository for SqliteTimerRepository {
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TIMER_ID.to_string();
+        let timer_id = DEFAULT_TIMER_ID.as_str();
 
         let timer_db = timers::table
             .filter(timers::id.eq(&timer_id))
@@ -59,7 +59,7 @@ impl TimerRepository for SqliteTimerRepository {
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TIMER_ID.to_string();
+        let timer_id = DEFAULT_TIMER_ID.as_str();
 
         // Try to update first
         let updated =

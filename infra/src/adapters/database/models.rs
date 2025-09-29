@@ -191,12 +191,16 @@ impl TryFrom<TimerDb> for Timer {
         let timer_id = TimerId::from_uuid(timer_uuid);
 
         let active_task_id = if let Some(task_id_str) = db.active_task_id {
-            let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| {
-                domain::Error::SerializationError {
-                    message: format!("Invalid task ID: {}", e),
-                }
-            })?;
-            Some(TaskId::from_uuid(task_uuid))
+            if task_id_str.is_empty() {
+                None
+            } else {
+                let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| {
+                    domain::Error::SerializationError {
+                        message: format!("Invalid task ID: {}", e),
+                    }
+                })?;
+                Some(TaskId::from_uuid(task_uuid))
+            }
         } else {
             None
         };

@@ -2,7 +2,7 @@ use crate::components::{ErrorInfo, handle_command_error};
 use domain::event_names::ui_listeners::timer as timer_event_names;
 use domain::{
     Phase, Task, TaskId, TimerConfiguration, TimerState, TimerStatus,
-    TimerTick, event_names,
+    TimerTick,
 };
 use js_sys;
 use leptos::prelude::*;
@@ -112,7 +112,8 @@ impl TimerViewModel {
         set_error_state: WriteSignal<Option<ErrorInfo>>,
     ) {
         spawn_local(async move {
-            match invoke_command_no_args(event_names::timer::GET_STATE).await {
+            // Use the actual Tauri command name
+            match invoke_command_no_args("get_timer_state").await {
                 Ok(result) => {
                     if let Ok(state) =
                         serde_wasm_bindgen::from_value::<TimerState>(result)
@@ -279,8 +280,9 @@ impl TimerViewModel {
             };
 
             if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
+                // Use the actual Tauri command name
                 if let Ok(result) =
-                    invoke_command(event_names::task::GET, args_value).await
+                    invoke_command("get_task", args_value).await
                 {
                     // Try to parse the TaskDto from task_vm.rs
                     if let Ok(task_dto) = serde_wasm_bindgen::from_value::<
@@ -306,9 +308,11 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
+            // Use the actual Tauri command names, not the event name constants
             let command = match current_state.status() {
-                TimerStatus::Running => event_names::commands::timer::PAUSE,
-                _ => event_names::commands::timer::START,
+                TimerStatus::Running => "pause_timer",
+                TimerStatus::Paused => "start_timer",  // Resume when paused
+                _ => "start_timer",  // Start when idle
             };
 
             match invoke_command_no_args(command).await {
@@ -342,7 +346,8 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            match invoke_command_no_args(event_names::commands::timer::RESET).await {
+            // Use the actual Tauri command name
+            match invoke_command_no_args("reset_timer").await {
                 Ok(result) => {
                     if let Ok(state) =
                         serde_wasm_bindgen::from_value::<TimerState>(result)
@@ -365,34 +370,10 @@ impl TimerViewModel {
     }
 
     pub fn complete_phase(&self) {
-        let set_timer_state = self.set_timer_state;
-        let set_error_state = self.set_error_state;
-        let set_active_task = self.set_active_task;
-
-        spawn_local(async move {
-            match invoke_command_no_args(event_names::timer::PHASE_COMPLETE).await {
-                Ok(result) => {
-                    // Parse the result to get the updated timer state
-                    if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
-                        set_timer_state.set(state);
-                    } else if let Ok((_, _, state)) = serde_wasm_bindgen::from_value::<(
-                        Phase,
-                        Phase,
-                        TimerState,
-                    )>(result.clone()) {
-                        set_timer_state.set(state);
-                    }
-
-                    // Check if we need to cycle to the next task
-                    Self::check_task_cycle(set_active_task).await;
-                }
-                Err(error) => {
-                    let error_str = format!("Failed to complete phase: {:?}", error);
-                    web_sys::console::error_1(&error_str.clone().into());
-                    handle_command_error(error_str, set_error_state);
-                }
-            }
-        });
+        // Phase completion happens automatically through the timer tick mechanism
+        // This method is kept for compatibility but doesn't need to do anything
+        // as the backend timer service handles phase transitions automatically
+        web_sys::console::log_1(&"Phase completion is handled automatically by the backend".into());
     }
 
     pub fn skip_phase(&self) {
@@ -400,7 +381,8 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            match invoke_command_no_args(event_names::timer::SKIP_PHASE).await {
+            // Use the actual Tauri command name
+            match invoke_command_no_args("skip_phase").await {
                 Ok(result) => {
                     // skip_phase returns TimerState
                     if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
@@ -437,7 +419,8 @@ impl TimerViewModel {
             };
 
             if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
-                match invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args_value).await {
+                // Use the actual Tauri command name
+                match invoke_command("switch_timer_task_cmd", args_value).await {
                     Ok(result) => {
                         // Update the timer state and active task
                         if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
@@ -459,15 +442,18 @@ impl TimerViewModel {
 
     async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
         // Check if current task has reached max sessions and needs to cycle
-        match invoke_command_no_args(event_names::task::GET_ACTIVE).await {
+        // Use the actual Tauri command name
+        match invoke_command_no_args("get_active_tasks").await {
             Ok(result) => {
-                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
-                    // Check if task completed its max sessions
-                    if task.current_sessions >= task.max_sessions {
-                        // Cycle to next incomplete task
-                        Self::cycle_to_next_task(set_active_task).await;
-                    } else {
-                        set_active_task.set(Some(task));
+                if let Ok(tasks) = serde_wasm_bindgen::from_value::<Vec<Task>>(result) {
+                    if let Some(task) = tasks.first() {
+                        // Check if task completed its max sessions
+                        if task.current_sessions >= task.max_sessions {
+                            // Cycle to next incomplete task
+                            Self::cycle_to_next_task(set_active_task).await;
+                        } else {
+                            set_active_task.set(Some(task.clone()));
+                        }
                     }
                 }
             }
@@ -478,7 +464,8 @@ impl TimerViewModel {
     }
 
     async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
-        match invoke_command_no_args(event_names::task::CYCLE_INCOMPLETE_TASK).await {
+        // Use the actual Tauri command name
+        match invoke_command_no_args("cycle_incomplete_task").await {
             Ok(result) => {
                 if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
                     set_active_task.set(Some(task));
@@ -492,10 +479,11 @@ impl TimerViewModel {
     }
 
     async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
-        match invoke_command_no_args(event_names::task::GET_ACTIVE).await {
+        // Use the actual Tauri command name
+        match invoke_command_no_args("get_active_tasks").await {
             Ok(result) => {
-                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
-                    set_active_task.set(Some(task));
+                if let Ok(tasks) = serde_wasm_bindgen::from_value::<Vec<Task>>(result) {
+                    set_active_task.set(tasks.first().cloned());
                 }
             }
             Err(_) => {

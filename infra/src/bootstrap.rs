@@ -144,7 +144,12 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         event_publisher.clone(),
     )
     .await
-    .context("Failed to bootstrap app")?;
+    .map_err(|e| {
+        eprintln!("Bootstrap error chain:");
+        eprintln!("  Root cause: {:?}", e);
+        eprintln!("  Display: {}", e);
+        anyhow::anyhow!("Failed to bootstrap application: {}", e)
+    })?;
 
     let ctx = AppRegistry {
         task_repository,
