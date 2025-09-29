@@ -176,7 +176,7 @@ pub async fn reset_timer(
 }
 
 #[tauri::command]
-pub async fn skip_timer(
+pub async fn skip_phase(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
@@ -187,7 +187,7 @@ pub async fn skip_timer(
     // Get current timer state to find active task
     let _current_state = app_get_timer_state(timer_repo_arc.clone())
         .await
-        .context("infra::commands::timer_cmd::skip_timer - Failed to get current timer state")
+        .context("infra::commands::timer_cmd::skip_phase - Failed to get current timer state")
         .map_err(|e| e.to_string())?;
 
     // Get the first active task
@@ -206,7 +206,7 @@ pub async fn skip_timer(
     )
     .await
     .context(
-        "infra::commands::timer_cmd::skip_timer - Failed to skip to next phase",
+        "infra::commands::timer_cmd::skip_phase - Failed to skip to next phase",
     )
     .map_err(|e| e.to_string())?;
 

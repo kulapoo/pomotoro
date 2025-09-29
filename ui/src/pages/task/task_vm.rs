@@ -1,7 +1,7 @@
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 use chrono::{DateTime, Utc};
 use domain::event_names::ui_listeners::task as task_event_names;
-use domain::{Config, Task, TaskId, TaskStatus, TimerState, event_names};
+use domain::{Config, Task, TaskId, TaskStatus, TimerConfiguration, TimerState, event_names};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -159,18 +159,18 @@ impl TasksViewModel {
         let set_tasks = self.set_tasks;
         let set_active_task = self.set_active_task;
 
-        // Listen for task list updates
+        // Listen for TaskCreated event
         spawn_local(async move {
             let callback = Closure::new(move |event: JsValue| {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
                 web_sys::console::log_1(
-                    &format!("Task list updated event received: {:?}", payload)
+                    &format!("TaskCreated event received: {:?}", payload)
                         .into(),
                 );
 
-                // Refetch all tasks when list is updated
+                // Refetch all tasks when a new task is created
                 let set_tasks_clone = set_tasks;
                 spawn_local(async move {
                     refetch_all_tasks(
@@ -181,7 +181,88 @@ impl TasksViewModel {
                 });
             });
 
-            listen(task_event_names::LIST_UPDATED, &callback).await;
+            listen(event_names::task::TASK_CREATED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for TaskUpdated event
+        let set_tasks_for_update = self.set_tasks;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("TaskUpdated event received: {:?}", payload)
+                        .into(),
+                );
+
+                // Refetch all tasks when a task is updated
+                let set_tasks_clone = set_tasks_for_update;
+                spawn_local(async move {
+                    refetch_all_tasks(
+                        set_tasks_clone,
+                        event_names::task::GET_ALL,
+                    )
+                    .await;
+                });
+            });
+
+            listen(event_names::task::TASK_UPDATED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for TaskDeleted event
+        let set_tasks_for_delete = self.set_tasks;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("TaskDeleted event received: {:?}", payload)
+                        .into(),
+                );
+
+                // Refetch all tasks when a task is deleted
+                let set_tasks_clone = set_tasks_for_delete;
+                spawn_local(async move {
+                    refetch_all_tasks(
+                        set_tasks_clone,
+                        event_names::task::GET_ALL,
+                    )
+                    .await;
+                });
+            });
+
+            listen(event_names::task::TASK_DELETED, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for TaskCompleted event
+        let set_tasks_for_complete = self.set_tasks;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("TaskCompleted event received: {:?}", payload)
+                        .into(),
+                );
+
+                // Refetch all tasks when a task is completed
+                let set_tasks_clone = set_tasks_for_complete;
+                spawn_local(async move {
+                    refetch_all_tasks(
+                        set_tasks_clone,
+                        event_names::task::GET_ALL,
+                    )
+                    .await;
+                });
+            });
+
+            listen(event_names::task::TASK_COMPLETED, &callback).await;
             callback.forget();
         });
 
@@ -345,6 +426,114 @@ impl TasksViewModel {
         self.set_selected_task.set(task_id);
     }
 
+    pub fn create_task_full(
+        &self,
+        name: String,
+        description: Option<String>,
+        max_sessions: usize,
+        tags: Vec<String>,
+        custom_config: Option<TimerConfiguration>,
+    ) {
+        let set_tasks = self.set_tasks;
+        let set_is_creating = self.set_is_creating;
+        let tasks = self.tasks;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct CreateTaskRequest {
+                name: String,
+                description: Option<String>,
+                max_sessions: u8,
+                tags: Vec<String>,
+                timer_config: Option<TimerConfiguration>,
+            }
+
+            #[derive(serde::Serialize)]
+            struct CreateTaskArgs {
+                request: CreateTaskRequest,
+            }
+
+            let request = CreateTaskRequest {
+                name: name.clone(),
+                description,
+                max_sessions: max_sessions as u8,
+                tags,
+                timer_config: custom_config,
+            };
+
+            let args = CreateTaskArgs { request };
+
+            match to_value(&args) {
+                Ok(args_value) => {
+                    web_sys::console::log_1(
+                        &format!(
+                            "Invoking create_task with args: {:?}",
+                            args_value
+                        )
+                        .into(),
+                    );
+                    match invoke_command(event_names::task::CREATE, args_value)
+                        .await
+                    {
+                        Ok(result) => {
+                            web_sys::console::log_1(
+                                &format!("Create task result: {:?}", result)
+                                    .into(),
+                            );
+                            // First try to deserialize as TaskDto
+                            match from_value::<TaskDto>(result.clone()) {
+                                Ok(task_dto) => {
+                                    web_sys::console::log_1(&format!("Successfully deserialized TaskDto: {}", task_dto.name).into());
+                                    // Convert TaskDto to Task
+                                    match task_dto.to_task() {
+                                        Ok(new_task) => {
+                                            web_sys::console::log_1(&format!("Successfully created task: {}", new_task.name).into());
+                                            let mut current_tasks =
+                                                tasks.get_untracked();
+                                            current_tasks.push(new_task);
+                                            set_tasks.set(current_tasks);
+                                            set_is_creating.set(false);
+                                        }
+                                        Err(e) => {
+                                            web_sys::console::error_1(&format!("Failed to convert TaskDto to Task: {}", e).into());
+                                            // Still refetch to ensure consistency
+                                            refetch_all_tasks(
+                                                set_tasks,
+                                                event_names::task::GET_ALL,
+                                            )
+                                            .await;
+                                            set_is_creating.set(false);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    web_sys::console::error_1(&format!("Failed to deserialize TaskDto. Result was: {:?}, Error: {:?}", result, e).into());
+                                    // Try to refetch all tasks to ensure we have the latest list
+                                    refetch_all_tasks(
+                                        set_tasks,
+                                        event_names::task::GET_ALL,
+                                    )
+                                    .await;
+                                    set_is_creating.set(false);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            web_sys::console::error_1(&format!("Failed to invoke create_task command: {:?}", e).into());
+                            set_is_creating.set(false);
+                        }
+                    }
+                }
+                Err(e) => {
+                    web_sys::console::error_1(
+                        &format!("Failed to serialize args: {:?}", e).into(),
+                    );
+                    set_is_creating.set(false);
+                }
+            }
+        });
+    }
+
     pub fn create_task(&self, name: String, description: String) {
         let set_tasks = self.set_tasks;
         let set_is_creating = self.set_is_creating;
@@ -453,70 +642,167 @@ impl TasksViewModel {
     pub fn update_task(
         &self,
         task_id: TaskId,
-        name: String,
-        description: String,
+        name: Option<String>,
+        description: Option<String>,
+        max_sessions: Option<usize>,
+        tags: Option<Vec<String>>,
+        timer_config: Option<TimerConfiguration>,
     ) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
-            struct UpdateTaskArgs {
-                id: TaskId,
-                name: String,
-                description: String,
+            struct UpdateTaskRequest {
+                id: String,
+                name: Option<String>,
+                description: Option<String>,
+                max_sessions: Option<u8>,
+                tags: Option<Vec<String>>,
+                timer_config: Option<TimerConfiguration>,
             }
 
-            let args = UpdateTaskArgs {
-                id: task_id,
+            #[derive(serde::Serialize)]
+            struct UpdateTaskArgs {
+                request: UpdateTaskRequest,
+            }
+
+            let request = UpdateTaskRequest {
+                id: task_id.to_string(),
                 name,
                 description,
+                max_sessions: max_sessions.map(|s| s as u8),
+                tags,
+                timer_config,
             };
 
+            let args = UpdateTaskArgs { request };
+
             if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) =
-                    invoke_command(event_names::task::UPDATE, args_value).await
-                {
-                    if let Ok(updated_task) = from_value::<Task>(result) {
-                        let mut current_tasks = tasks.get_untracked();
-                        if let Some(index) =
-                            current_tasks.iter().position(|t| t.id == task_id)
-                        {
-                            current_tasks[index] = updated_task;
-                            set_tasks.set(current_tasks);
+                web_sys::console::log_1(
+                    &format!(
+                        "Invoking update_task with args: {:?}",
+                        args_value
+                    )
+                    .into(),
+                );
+
+                match invoke_command(event_names::task::UPDATE, args_value).await {
+                    Ok(result) => {
+                        web_sys::console::log_1(
+                            &format!("Update task result: {:?}", result)
+                                .into(),
+                        );
+
+                        // Try to deserialize as TaskDto first
+                        match from_value::<TaskDto>(result.clone()) {
+                            Ok(task_dto) => {
+                                match task_dto.to_task() {
+                                    Ok(updated_task) => {
+                                        let mut current_tasks = tasks.get_untracked();
+                                        if let Some(index) =
+                                            current_tasks.iter().position(|t| t.id == task_id)
+                                        {
+                                            current_tasks[index] = updated_task;
+                                            set_tasks.set(current_tasks);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        web_sys::console::error_1(&format!("Failed to convert TaskDto to Task: {}", e).into());
+                                        // Still refetch to ensure consistency
+                                        refetch_all_tasks(
+                                            set_tasks,
+                                            event_names::task::GET_ALL,
+                                        )
+                                        .await;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                web_sys::console::error_1(&format!("Failed to deserialize TaskDto: {:?}", e).into());
+                                // Try to refetch all tasks to ensure we have the latest list
+                                refetch_all_tasks(
+                                    set_tasks,
+                                    event_names::task::GET_ALL,
+                                )
+                                .await;
+                            }
                         }
+                    }
+                    Err(e) => {
+                        web_sys::console::error_1(&format!("Failed to invoke update_task command: {:?}", e).into());
                     }
                 }
             }
         });
     }
 
-    pub fn delete_task(&self, task_id: TaskId) {
+    pub fn delete_task(&self, task_id: TaskId) -> bool {
+        // Show confirmation dialog
+        let task_name = self.tasks
+            .get()
+            .iter()
+            .find(|t| t.id == task_id)
+            .map(|t| t.name.clone())
+            .unwrap_or_else(|| "this task".to_string());
+
+        let confirmed = leptos::prelude::window()
+            .confirm_with_message(&format!("Are you sure you want to delete \"{}\"?", task_name))
+            .unwrap_or(false);
+
+        if !confirmed {
+            return false;
+        }
+
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
         let set_selected_task = self.set_selected_task;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
-            struct DeleteTaskArgs {
+            struct DeleteTaskRequest {
                 id: String,
             }
 
-            let args = DeleteTaskArgs {
+            #[derive(serde::Serialize)]
+            struct DeleteTaskArgs {
+                request: DeleteTaskRequest,
+            }
+
+            let request = DeleteTaskRequest {
                 id: task_id.to_string(),
             };
 
+            let args = DeleteTaskArgs { request };
+
             if let Ok(args_value) = to_value(&args) {
-                if (invoke_command(event_names::task::DELETE, args_value).await)
-                    .is_ok()
-                {
-                    let mut current_tasks = tasks.get_untracked();
-                    current_tasks.retain(|t| t.id != task_id);
-                    set_tasks.set(current_tasks);
-                    set_selected_task.set(None);
+                web_sys::console::log_1(
+                    &format!(
+                        "Invoking delete_task with args: {:?}",
+                        args_value
+                    )
+                    .into(),
+                );
+
+                match invoke_command(event_names::task::DELETE, args_value).await {
+                    Ok(_result) => {
+                        web_sys::console::log_1(
+                            &format!("Successfully deleted task: {:?}", task_id)
+                                .into(),
+                        );
+                        let mut current_tasks = tasks.get_untracked();
+                        current_tasks.retain(|t| t.id != task_id);
+                        set_tasks.set(current_tasks);
+                        set_selected_task.set(None);
+                    }
+                    Err(e) => {
+                        web_sys::console::error_1(&format!("Failed to delete task: {:?}", e).into());
+                    }
                 }
             }
         });
+
+        true
     }
 
     pub fn switch_active_task(&self, task_id: TaskId) {

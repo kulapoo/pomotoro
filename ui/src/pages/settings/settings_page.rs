@@ -153,13 +153,13 @@ pub fn SettingsPage() -> impl IntoView {
                     match config_opt {
                         Some(config) => {
                             match active_tab.get() {
-                                "timer" => view! { <div class="settings-section"><p>"Timer settings have been moved to individual tasks"</p></div> }.into_any(),
+                                "timer" => view! { <TimerSettings config=config vm=vm_stored /> }.into_any(),
                                 "notifications" => view! { <NotificationSettings config=config vm=vm_stored /> }.into_any(),
                                 "audio" => view! { <AudioSettings config=config vm=vm_stored /> }.into_any(),
                                 "appearance" => view! { <AppearanceSettings config=config vm=vm_stored /> }.into_any(),
                                 "general" => view! { <GeneralSettings config=config vm=vm_stored /> }.into_any(),
                                 "storage" => view! { <StorageSettings vm=vm_stored /> }.into_any(),
-                                _ => view! { <div class="settings-section"><p>"Timer settings have been moved to individual tasks"</p></div> }.into_any()
+                                _ => view! { <TimerSettings config=config vm=vm_stored /> }.into_any()
                             }
                         },
                         None => {
@@ -183,6 +183,115 @@ pub fn SettingsPage() -> impl IntoView {
     }
 }
 
+
+#[component]
+fn TimerSettings(
+    #[allow(unused)] config: Config,
+    vm: StoredValue<SettingsViewModel>
+) -> impl IntoView {
+    let work_duration = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.timer.work_duration.as_secs() / 60).unwrap_or(25)
+    });
+    let short_break_duration = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.timer.short_break_duration.as_secs() / 60).unwrap_or(5)
+    });
+    let long_break_duration = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.timer.long_break_duration.as_secs() / 60).unwrap_or(15)
+    });
+    let sessions_until_long_break = move || vm.with_value(|v| {
+        v.get_config().map(|c| c.timer.sessions_until_long_break).unwrap_or(4)
+    });
+
+    view! {
+        <div class="settings-section">
+            <h3 class="section-title">"Timer Settings"</h3>
+
+            <div class="setting-group">
+                <label class="setting-label">"Work Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=work_duration
+                    min="1"
+                    max="90"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(25);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.timer.work_duration = std::time::Duration::from_secs(value * 60);
+                                v.update_timer(cfg.timer);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of work sessions (1-90 minutes)"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Short Break Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=short_break_duration
+                    min="1"
+                    max="30"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(5);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.timer.short_break_duration = std::time::Duration::from_secs(value * 60);
+                                v.update_timer(cfg.timer);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of short breaks (1-30 minutes)"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Long Break Duration (minutes)"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=long_break_duration
+                    min="5"
+                    max="60"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(15);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.timer.long_break_duration = std::time::Duration::from_secs(value * 60);
+                                v.update_timer(cfg.timer);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Duration of long breaks (5-60 minutes)"</span>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">"Sessions Until Long Break"</label>
+                <input
+                    type="number"
+                    class="setting-input"
+                    value=sessions_until_long_break
+                    min="2"
+                    max="10"
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse::<u8>().unwrap_or(4);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.timer.sessions_until_long_break = value;
+                                v.update_timer(cfg.timer);
+                            }
+                        });
+                    }
+                />
+                <span class="setting-help">"Number of work sessions before a long break (2-10)"</span>
+            </div>
+        </div>
+    }
+}
 
 #[component]
 fn NotificationSettings(

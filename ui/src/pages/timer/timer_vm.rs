@@ -364,6 +364,37 @@ impl TimerViewModel {
         });
     }
 
+    pub fn complete_phase(&self) {
+        let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
+        let set_active_task = self.set_active_task;
+
+        spawn_local(async move {
+            match invoke_command_no_args(event_names::timer::PHASE_COMPLETE).await {
+                Ok(result) => {
+                    // Parse the result to get the updated timer state
+                    if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
+                        set_timer_state.set(state);
+                    } else if let Ok((_, _, state)) = serde_wasm_bindgen::from_value::<(
+                        Phase,
+                        Phase,
+                        TimerState,
+                    )>(result.clone()) {
+                        set_timer_state.set(state);
+                    }
+
+                    // Check if we need to cycle to the next task
+                    Self::check_task_cycle(set_active_task).await;
+                }
+                Err(error) => {
+                    let error_str = format!("Failed to complete phase: {:?}", error);
+                    web_sys::console::error_1(&error_str.clone().into());
+                    handle_command_error(error_str, set_error_state);
+                }
+            }
+        });
+    }
+
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;
         let set_error_state = self.set_error_state;
@@ -393,6 +424,89 @@ impl TimerViewModel {
                 }
             }
         });
+    }
+
+    pub fn switch_task(&self, task_id: TaskId) {
+        let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
+        let set_error_state = self.set_error_state;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct SwitchTaskArgs {
+                task_id: String,
+            }
+
+            let args = SwitchTaskArgs {
+                task_id: task_id.to_string(),
+            };
+
+            if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
+                match invoke_command(event_names::timer::SWITCH_ACTIVE_TASK, args_value).await {
+                    Ok(result) => {
+                        // Update the timer state and active task
+                        if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
+                            set_timer_state.set(state);
+                        }
+
+                        // Fetch the new active task
+                        Self::fetch_active_task(set_active_task).await;
+                    }
+                    Err(error) => {
+                        let error_str = format!("Failed to switch task: {:?}", error);
+                        web_sys::console::error_1(&error_str.clone().into());
+                        handle_command_error(error_str, set_error_state);
+                    }
+                }
+            }
+        });
+    }
+
+    async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
+        // Check if current task has reached max sessions and needs to cycle
+        match invoke_command_no_args(event_names::task::GET_ACTIVE).await {
+            Ok(result) => {
+                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                    // Check if task completed its max sessions
+                    if task.current_sessions >= task.max_sessions {
+                        // Cycle to next incomplete task
+                        Self::cycle_to_next_task(set_active_task).await;
+                    } else {
+                        set_active_task.set(Some(task));
+                    }
+                }
+            }
+            Err(e) => {
+                web_sys::console::error_1(&format!("Failed to check task cycle: {:?}", e).into());
+            }
+        }
+    }
+
+    async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
+        match invoke_command_no_args(event_names::task::CYCLE_INCOMPLETE_TASK).await {
+            Ok(result) => {
+                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                    set_active_task.set(Some(task));
+                    web_sys::console::log_1(&format!("Cycled to next task").into());
+                }
+            }
+            Err(e) => {
+                web_sys::console::error_1(&format!("Failed to cycle task: {:?}", e).into());
+            }
+        }
+    }
+
+    async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
+        match invoke_command_no_args(event_names::task::GET_ACTIVE).await {
+            Ok(result) => {
+                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                    set_active_task.set(Some(task));
+                }
+            }
+            Err(_) => {
+                set_active_task.set(None);
+            }
+        }
     }
 
     pub fn get_phase_name(&self) -> String {

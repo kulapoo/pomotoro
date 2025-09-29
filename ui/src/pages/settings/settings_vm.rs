@@ -1,12 +1,25 @@
 use domain::event_names;
 use domain::event_names::commands::{audio, storage};
+use domain::event_names::ui_listeners::config as config_event_names;
+use domain::event_names::config::CONFIG_UPDATED_UI;
 use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen::to_value;
+use serde_wasm_bindgen::{to_value, from_value};
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use js_sys;
 
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
+    async fn listen(
+        event: &str,
+        callback: &Closure<dyn Fn(JsValue)>,
+    ) -> JsValue;
+}
 
 pub struct SettingsViewModel {
     pub config: ReadSignal<Option<Config>>,
@@ -30,6 +43,7 @@ impl ViewModel for SettingsViewModel {
         };
 
         vm.load_config();
+        vm.setup_event_listeners();
         vm
     }
 
@@ -172,6 +186,29 @@ impl SettingsViewModel {
             config.audio = audio;
             self.save_config(config);
         }
+    }
+
+    pub fn update_timer(&self, timer: TimerConfiguration) {
+        let set_config = self.set_config;
+        let set_is_saving = self.set_is_saving;
+
+        set_is_saving.set(true);
+
+        spawn_local(async move {
+            if let Ok(args) = to_value(&timer) {
+                if let Ok(result) =
+                    invoke_command(event_names::config::UPDATE_TIMINGS, args)
+                        .await
+                {
+                    if let Ok(config) =
+                        serde_wasm_bindgen::from_value::<Config>(result)
+                    {
+                        set_config.set(Some(config));
+                    }
+                }
+            }
+            set_is_saving.set(false);
+        });
     }
 
     pub fn reset_to_defaults(&self) {
@@ -324,6 +361,104 @@ impl SettingsViewModel {
     pub fn clear_all_data(&self) {
         spawn_local(async move {
             let _ = invoke_command_no_args(storage::CLEAR_ALL_DATA).await;
+        });
+    }
+
+    fn setup_event_listeners(&self) {
+        let set_config = self.set_config;
+
+        // Listen for ConfigUpdated events
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("ConfigUpdated event received: {:?}", payload).into(),
+                );
+
+                // Update the config when it changes
+                if let Ok(new_config) = from_value::<Config>(payload) {
+                    set_config.set(Some(new_config));
+                } else {
+                    // If parsing fails, reload the config from backend
+                    let set_config_clone = set_config;
+                    spawn_local(async move {
+                        match invoke_command_no_args(event_names::config::GET_GLOBAL).await {
+                            Ok(result) => {
+                                if let Ok(config) = from_value::<Config>(result) {
+                                    set_config_clone.set(Some(config));
+                                }
+                            }
+                            Err(e) => {
+                                web_sys::console::error_1(&format!("Failed to reload config: {:?}", e).into());
+                            }
+                        }
+                    });
+                }
+            });
+
+            listen(CONFIG_UPDATED_UI, &callback).await;
+            callback.forget();
+        });
+
+        // Listen for ConfigReset events
+        let set_config_for_reset = self.set_config;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                web_sys::console::log_1(&"ConfigReset event received".into());
+
+                // Reload the default config
+                let set_config_clone = set_config_for_reset;
+                spawn_local(async move {
+                    match invoke_command_no_args(event_names::config::GET_GLOBAL).await {
+                        Ok(result) => {
+                            if let Ok(config) = from_value::<Config>(result) {
+                                set_config_clone.set(Some(config));
+                                web_sys::console::log_1(&"Config reset to defaults".into());
+                            }
+                        }
+                        Err(e) => {
+                            web_sys::console::error_1(&format!("Failed to reload config after reset: {:?}", e).into());
+                        }
+                    }
+                });
+            });
+
+            // Assuming there's a CONFIG_RESET event name
+            listen("config_reset", &callback).await;
+            callback.forget();
+        });
+
+        // Listen for theme changes
+        let config_for_theme = self.config;
+        let set_config_for_theme = self.set_config;
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(
+                    &format!("Theme changed event received: {:?}", payload).into(),
+                );
+
+                // Update just the theme in the config
+                if let Ok(theme_str) = from_value::<String>(payload) {
+                    let theme = match theme_str.as_str() {
+                        "Light" => Theme::Light,
+                        "Dark" => Theme::Dark,
+                        _ => Theme::System,
+                    };
+
+                    if let Some(mut current_config) = config_for_theme.get_untracked() {
+                        current_config.appearance.theme = theme;
+                        set_config_for_theme.set(Some(current_config));
+                    }
+                }
+            });
+
+            listen(config_event_names::THEME_CHANGED, &callback).await;
+            callback.forget();
         });
     }
 }
