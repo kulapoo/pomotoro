@@ -20,7 +20,12 @@
       "Bash(RUST_LOG=debug timeout 3 /home/jpt/src/oss/pomotoro/target/debug/infra)",
       "Bash(wmctrl:*)",
       "Bash(xwininfo:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Read(//home/jpt/.local/share/pomotoro/**)",
+      "Bash(sqlite3:*)",
+      "Bash(./target/release/infra)",
+      "Bash(RUST_BACKTRACE=1 ./target/release/infra)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": [],

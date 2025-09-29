@@ -17,7 +17,6 @@ use usecases::timer::{
 #[tauri::command]
 pub async fn get_timer_state(
     timer_repo: State<'_, TimerRepositoryArc>,
-    _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -32,7 +31,7 @@ pub async fn start_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
+    app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -98,7 +97,6 @@ pub async fn pause_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -139,7 +137,6 @@ pub async fn reset_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -180,7 +177,7 @@ pub async fn skip_phase(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
+    app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -211,7 +208,7 @@ pub async fn skip_phase(
     .map_err(|e| e.to_string())?;
 
     // Send tauri event with new phase information
-    _app_handle
+    app_handle
         .emit(ui_listeners::timer::PHASE_SKIPPED, new_phase)
         .map_err(|e| e.to_string())?;
 
@@ -229,7 +226,6 @@ pub async fn switch_timer_task_cmd(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    _app_handle: AppHandle,
 ) -> Result<TimerState, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 

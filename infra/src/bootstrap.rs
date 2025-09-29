@@ -144,7 +144,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         event_publisher.clone(),
     )
     .await
-    .context("Failed to reset timer state")?;
+    .context("Failed to bootstrap app")?;
 
     let ctx = AppRegistry {
         task_repository,
