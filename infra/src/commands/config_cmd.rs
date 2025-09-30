@@ -86,6 +86,7 @@ pub async fn update_general_config(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Config, String> {
+    log::info!("Received update_general_config command with preferences: {:?}", preferences);
     log::info!("Updating general configuration: {:?}", preferences);
 
     let mut config = config_repo
@@ -129,6 +130,7 @@ pub async fn update_notification_config(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Config, String> {
+    log::info!("Received update_notification_config command with preferences: {:?}", preferences);
     log::info!("Updating notification configuration: {:?}", preferences);
 
     let mut config = config_repo
@@ -172,6 +174,7 @@ pub async fn update_appearance_config(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<Config, String> {
+    log::info!("Received update_appearance_config command with preferences: {:?}", preferences);
     log::info!("Updating appearance configuration: {:?}", preferences);
 
     let mut config = config_repo
