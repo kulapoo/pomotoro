@@ -117,7 +117,7 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&general) {
+            if let Ok(args) = to_value(&serde_json::json!({ "preferences": general })) {
                 if let Ok(result) =
                     invoke_command(event_names::config::UPDATE_GENERAL, args)
                         .await
@@ -140,7 +140,7 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&notifications) {
+            if let Ok(args) = to_value(&serde_json::json!({ "preferences": notifications })) {
                 if let Ok(result) = invoke_command(
                     event_names::config::UPDATE_NOTIFICATIONS,
                     args,
@@ -165,7 +165,7 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&appearance) {
+            if let Ok(args) = to_value(&serde_json::json!({ "preferences": appearance })) {
                 if let Ok(result) =
                     invoke_command(event_names::config::UPDATE_APPEARANCE, args)
                         .await
@@ -195,7 +195,7 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&timer) {
+            if let Ok(args) = to_value(&serde_json::json!({ "timer": timer })) {
                 if let Ok(result) =
                     invoke_command(event_names::config::UPDATE_TIMINGS, args)
                         .await
