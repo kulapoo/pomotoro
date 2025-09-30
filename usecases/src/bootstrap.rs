@@ -4,7 +4,6 @@ use domain::{
     ConfigRepository, EventPublisher, Result, TaskRepository, TimerRepository,
     shared_kernel::events::AppStarted,
 };
-use tracing::{debug, error, info, warn};
 
 use crate::{
     task::{CreateTaskCmd, SetDefaultTaskCmd, create_task, set_default_task},
