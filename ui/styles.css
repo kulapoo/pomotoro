@@ -1625,37 +1625,4 @@ h4 { font-size: 1.125rem; }
   }
 }
 
-/* Dark mode support for system preference */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #8b9cff;
-    --primary-hover: #7688e8;
-    --dark: #f8fafc;
-    --gray: #cbd5e0;
-    --light-gray: #334155;
-    --lighter-gray: #1e293b;
-    --white: #0f172a;
-    --background: #0f172a;
-  }
-
-  body {
-    color: var(--dark);
-  }
-
-  .sidebar {
-    background: rgba(15, 23, 42, 0.95);
-    border-right-color: rgba(51, 65, 85, 0.5);
-  }
-
-  .card,
-  .task-item,
-  .modal-content,
-  .settings-container {
-    background: rgba(30, 41, 59, 0.98);
-    border-color: rgba(51, 65, 85, 0.5);
-  }
-
-  .btn-primary {
-    box-shadow: 0 4px 15px rgba(139, 156, 255, 0.3);
-  }
-}
+/* Dark mode disabled - using light theme only */

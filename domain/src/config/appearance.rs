@@ -28,7 +28,7 @@ fn default_true() -> bool {
 impl Default for AppearanceConfig {
     fn default() -> Self {
         Self {
-            theme: Theme::System,
+            theme: Theme::Light,  // Changed from System to Light
             show_seconds_in_display: true,
             always_on_top: false,
             compact_mode: false,

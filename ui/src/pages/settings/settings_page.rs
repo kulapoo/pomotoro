@@ -127,12 +127,7 @@ pub fn SettingsPage() -> impl IntoView {
                 >
                     "Audio"
                 </button>
-                <button
-                    class=move || if active_tab.get() == "appearance" { "tab-button active" } else { "tab-button" }
-                    on:click=move |_| set_active_tab.set("appearance")
-                >
-                    "Appearance"
-                </button>
+                // Appearance tab disabled - using light theme only
                 <button
                     class=move || if active_tab.get() == "general" { "tab-button active" } else { "tab-button" }
                     on:click=move |_| set_active_tab.set("general")
@@ -156,7 +151,7 @@ pub fn SettingsPage() -> impl IntoView {
                                 "timer" => view! { <TimerSettings config=config vm=vm_stored /> }.into_any(),
                                 "notifications" => view! { <NotificationSettings config=config vm=vm_stored /> }.into_any(),
                                 "audio" => view! { <AudioSettings config=config vm=vm_stored /> }.into_any(),
-                                "appearance" => view! { <AppearanceSettings config=config vm=vm_stored /> }.into_any(),
+                                // "appearance" => disabled - using light theme only
                                 "general" => view! { <GeneralSettings config=config vm=vm_stored /> }.into_any(),
                                 "storage" => view! { <StorageSettings vm=vm_stored /> }.into_any(),
                                 _ => view! { <TimerSettings config=config vm=vm_stored /> }.into_any()
