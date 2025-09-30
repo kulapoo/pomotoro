@@ -6,11 +6,10 @@
 }
 
 :root {
-  /* Modern, vibrant color palette with gradients */
+  /* Modern color palette without gradients */
   --primary: #5e72e4;
   --primary-hover: #4c63d2;
   --primary-light: #8b9cff;
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --secondary: #64748b;
   --secondary-hover: #475569;
   --success: #10b981;
@@ -22,7 +21,7 @@
   --light-gray: #e2e8f0;
   --lighter-gray: #f8fafc;
   --white: #ffffff;
-  --background-gradient: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  --background: #f8fafc;
 
   /* Consistent spacing */
   --spacing-xs: 0.25rem;
@@ -53,7 +52,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: var(--background-gradient);
+  background: var(--background);
   color: var(--dark);
   line-height: 1.6;
   min-height: 100vh;
@@ -104,10 +103,7 @@ h4 { font-size: 1.125rem; }
 .sidebar-title {
   font-size: 1.25rem;
   font-weight: 700;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
   letter-spacing: -0.5px;
 }
 
@@ -152,12 +148,12 @@ h4 { font-size: 1.125rem; }
 }
 
 .nav-item:hover {
-  background: linear-gradient(90deg, var(--lighter-gray) 0%, rgba(248, 250, 252, 0.5) 100%);
+  background: var(--lighter-gray);
   transform: translateX(4px);
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(94, 114, 228, 0.1) 0%, rgba(94, 114, 228, 0.05) 100%);
+  background: rgba(94, 114, 228, 0.1);
   color: var(--primary);
   font-weight: 600;
 }
@@ -170,7 +166,7 @@ h4 { font-size: 1.125rem; }
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  background: var(--primary-gradient);
+  background: var(--primary);
   border-radius: 0 2px 2px 0;
 }
 
@@ -292,13 +288,13 @@ h4 { font-size: 1.125rem; }
 }
 
 .btn-primary {
-  background: var(--primary-gradient);
+  background: var(--primary);
   color: var(--white);
   box-shadow: 0 4px 15px rgba(94, 114, 228, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5968d9 0%, #6f4fb8 100%);
+  background: var(--primary-hover);
   box-shadow: 0 6px 20px rgba(94, 114, 228, 0.4);
   transform: translateY(-3px);
 }
@@ -314,7 +310,7 @@ h4 { font-size: 1.125rem; }
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
+  background: var(--success);
   color: var(--white);
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
@@ -363,7 +359,7 @@ h4 { font-size: 1.125rem; }
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--primary-gradient);
+  background: var(--primary);
   transform: scaleX(0);
   transition: transform 0.3s ease;
 }
@@ -480,7 +476,7 @@ h4 { font-size: 1.125rem; }
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--primary-gradient);
+  background: var(--primary);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s ease;
@@ -497,7 +493,7 @@ h4 { font-size: 1.125rem; }
 }
 
 .task-item.active-task {
-  background: linear-gradient(135deg, rgba(94, 114, 228, 0.05) 0%, rgba(139, 156, 255, 0.05) 100%);
+  background: rgba(94, 114, 228, 0.05);
   border-color: var(--primary);
   border-width: 2px;
   box-shadow: 0 0 20px rgba(94, 114, 228, 0.15);
@@ -565,7 +561,7 @@ h4 { font-size: 1.125rem; }
 
 .task-tag {
   padding: var(--spacing-xs) var(--spacing-sm);
-  background: linear-gradient(135deg, var(--lighter-gray) 0%, rgba(248, 250, 252, 0.6) 100%);
+  background: var(--lighter-gray);
   border: 1px solid rgba(226, 232, 240, 0.5);
   border-radius: 9999px;
   font-size: 0.75rem;
@@ -596,7 +592,7 @@ h4 { font-size: 1.125rem; }
 
 .progress-fill {
   height: 100%;
-  background: var(--primary-gradient);
+  background: var(--primary);
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -609,7 +605,7 @@ h4 { font-size: 1.125rem; }
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: rgba(255, 255, 255, 0.3);
   animation: shimmer 2s infinite;
 }
 
@@ -625,9 +621,9 @@ h4 { font-size: 1.125rem; }
   color: var(--gray);
 }
 
-/* Enhanced Timer Display with gradient background */
+/* Enhanced Timer Display */
 .timer-container {
-  background: linear-gradient(135deg, var(--white) 0%, rgba(248, 250, 252, 0.9) 100%);
+  background: var(--white);
   border: 1px solid rgba(226, 232, 240, 0.3);
   border-radius: 1.5rem;
   padding: calc(var(--spacing-xl) * 1.5);
@@ -658,10 +654,7 @@ h4 { font-size: 1.125rem; }
 .timer-display {
   font-size: 4.5rem;
   font-weight: 200;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
   margin: var(--spacing-xl) 0;
   font-variant-numeric: tabular-nums;
   letter-spacing: 2px;
@@ -906,7 +899,7 @@ h4 { font-size: 1.125rem; }
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
+  background: var(--primary);
   border-radius: 5px;
   border: 2px solid var(--lighter-gray);
 }
@@ -944,7 +937,7 @@ h4 { font-size: 1.125rem; }
 }
 
 .tasks-header {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+  background: var(--white);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   margin-bottom: var(--spacing-xl);
@@ -969,10 +962,7 @@ h4 { font-size: 1.125rem; }
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: var(--spacing-lg);
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
   display: inline-block;
   letter-spacing: -0.5px;
   position: relative;
@@ -1022,21 +1012,21 @@ h4 { font-size: 1.125rem; }
 }
 
 .stat-badge.active {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(52, 211, 153, 0.05) 100%);
+  background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.3);
 }
 
 .stat-badge.active::before {
-  background: linear-gradient(90deg, var(--success) 0%, var(--success-light) 100%);
+  background: var(--success);
 }
 
 .stat-badge.completed {
-  background: linear-gradient(135deg, rgba(94, 114, 228, 0.08) 0%, rgba(139, 156, 255, 0.05) 100%);
+  background: rgba(94, 114, 228, 0.08);
   border-color: rgba(94, 114, 228, 0.3);
 }
 
 .stat-badge.completed::before {
-  background: var(--primary-gradient);
+  background: var(--primary);
 }
 
 .stat-badge h4 {
@@ -1051,10 +1041,7 @@ h4 { font-size: 1.125rem; }
 .stat-badge .stat-number {
   font-size: 2.5rem;
   font-weight: 700;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
   line-height: 1;
   margin-bottom: var(--spacing-xs);
 }
@@ -1091,11 +1078,10 @@ h4 { font-size: 1.125rem; }
   width: 100%;
   padding: var(--spacing-md) var(--spacing-lg);
   padding-left: calc(var(--spacing-xl) * 1.5);
-  border: 2px solid transparent;
+  border: 2px solid var(--primary);
   border-radius: calc(var(--radius-lg) * 1.5);
   font-size: 1rem;
-  background: linear-gradient(var(--white), var(--white)) padding-box,
-              var(--primary-gradient) border-box;
+  background: var(--white);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--dark);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -1181,7 +1167,7 @@ h4 { font-size: 1.125rem; }
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-sm) var(--spacing-md);
-  background: linear-gradient(90deg, rgba(94, 114, 228, 0.05) 0%, rgba(139, 156, 255, 0.03) 100%);
+  background: rgba(94, 114, 228, 0.05);
   border-left: 3px solid var(--primary);
   border-radius: var(--radius-sm);
 }
@@ -1200,7 +1186,7 @@ h4 { font-size: 1.125rem; }
 .tasks-container .empty-state {
   text-align: center;
   padding: calc(var(--spacing-xl) * 3) var(--spacing-xl);
-  background: linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
+  background: var(--lighter-gray);
   border-radius: var(--radius-lg);
   border: 2px dashed rgba(226, 232, 240, 0.5);
   margin: var(--spacing-xl) 0;
@@ -1231,7 +1217,7 @@ h4 { font-size: 1.125rem; }
 
 /* Add Task Button */
 .btn-add-task {
-  background: var(--primary-gradient);
+  background: var(--primary);
   color: var(--white);
   padding: var(--spacing-md) var(--spacing-xl);
   border: none;
@@ -1312,7 +1298,7 @@ h4 { font-size: 1.125rem; }
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--primary-gradient);
+  background: var(--primary);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.3s ease;
@@ -1360,7 +1346,7 @@ h4 { font-size: 1.125rem; }
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-md) var(--spacing-lg);
-  background: linear-gradient(90deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
+  background: var(--lighter-gray);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: var(--shadow-sm);
@@ -1541,7 +1527,7 @@ h4 { font-size: 1.125rem; }
     top: var(--spacing-md);
     left: var(--spacing-md);
     z-index: 1000;
-    background: var(--primary-gradient);
+    background: var(--primary);
     color: white;
     border: none;
     width: 40px;
@@ -1643,7 +1629,7 @@ h4 { font-size: 1.125rem; }
     --light-gray: #334155;
     --lighter-gray: #1e293b;
     --white: #0f172a;
-    --background-gradient: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    --background: #0f172a;
   }
 
   body {
