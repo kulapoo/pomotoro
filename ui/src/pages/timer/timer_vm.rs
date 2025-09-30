@@ -108,7 +108,7 @@ impl TimerViewModel {
 
     fn setup_initial_state(
         set_timer_state: WriteSignal<TimerState>,
-        _set_active_task: WriteSignal<Option<Task>>,
+        set_active_task: WriteSignal<Option<Task>>,
         set_error_state: WriteSignal<Option<ErrorInfo>>,
     ) {
         spawn_local(async move {
@@ -120,8 +120,8 @@ impl TimerViewModel {
                     {
                         set_timer_state.set(state.clone());
 
-                        // Active task should be managed at the application level
-                        // The timer state represents the current timer session
+                        // Also fetch the active task
+                        Self::fetch_active_task(set_active_task).await;
                     } else {
                         web_sys::console::error_1(
                             &"Failed to parse initial timer state".into(),
@@ -165,7 +165,7 @@ impl TimerViewModel {
 
     fn setup_timer_state_updated_listener(
         set_timer_state: WriteSignal<TimerState>,
-        _set_active_task: WriteSignal<Option<Task>>,
+        set_active_task: WriteSignal<Option<Task>>,
     ) {
         spawn_local(async move {
             let callback = Closure::new(move |event: JsValue| {
@@ -177,9 +177,11 @@ impl TimerViewModel {
                 {
                     set_timer_state.set(state.clone());
 
-                    // Timer state update may include current task info
-                    // The task info should come from the timer state or a separate query
-                    // For now, keep the active task as it was
+                    // Fetch updated active task info
+                    let set_active_task_clone = set_active_task;
+                    spawn_local(async move {
+                        Self::fetch_active_task(set_active_task_clone).await;
+                    });
                 }
             });
 

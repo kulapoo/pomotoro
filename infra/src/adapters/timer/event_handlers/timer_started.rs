@@ -45,7 +45,9 @@ impl EventHandler for TimerStartedHandler {
             },
         )?;
 
-        self.timer_srv.load_state().await?;
+        // Don't reload state here - the timer was just updated by the use case
+        // and reloading would overwrite the correct in-memory state
+        // self.timer_srv.load_state().await?;
 
         let task = self.task_repository.get_by_id(task_id).await?;
 

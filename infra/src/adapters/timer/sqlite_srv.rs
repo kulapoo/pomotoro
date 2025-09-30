@@ -106,6 +106,12 @@ impl TimerTickService {
         &self,
         task: Option<&Task>,
     ) -> Result<(), String> {
+        // Reload timer from repository to ensure we have the latest state
+        // This is crucial because the use case just saved the timer
+        self.load_state().await.map_err(|e| {
+            format!("Failed to reload timer state: {}", e)
+        })?;
+
         // Get configuration from task or default from config repository
         let config = if let Some(task) = task {
             task.config.timer.clone()

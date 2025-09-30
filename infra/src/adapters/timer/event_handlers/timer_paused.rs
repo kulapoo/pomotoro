@@ -34,7 +34,8 @@ impl EventHandler for TimerPausedHandler {
                 message: format!("Failed to pause timer"),
             })?;
 
-        self.timer_srv.load_state().await?;
+        // Don't reload state here - the timer was just updated by the use case
+        // self.timer_srv.load_state().await?;
 
         self.timer_srv.stop_timer_tick_loop().await?;
 

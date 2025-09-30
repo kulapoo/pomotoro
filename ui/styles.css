@@ -388,12 +388,10 @@ h4 { font-size: 1.125rem; }
 
 /* Task item action buttons (edit, delete, reset) */
 .task-item > .task-actions {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
   display: flex;
   gap: var(--spacing-xs);
-  margin: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .btn-icon {
@@ -467,6 +465,9 @@ h4 { font-size: 1.125rem; }
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
 }
 
 .task-item::after {
@@ -502,6 +503,11 @@ h4 { font-size: 1.125rem; }
 .task-item.completed-task {
   opacity: 0.7;
   background: var(--lighter-gray);
+}
+
+.task-content {
+  flex: 1;
+  min-width: 0; /* Allows text truncation */
 }
 
 .task-header {
