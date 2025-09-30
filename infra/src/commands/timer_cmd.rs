@@ -3,7 +3,7 @@ use crate::adapters::TimerRepositoryArc;
 use std::sync::Arc;
 use domain::TaskRepository;
 use anyhow::Context;
-use domain::{TimerState, event_names::ui_listeners};
+use domain::{TimerInfo, event_names::ui_listeners};
 use tauri::{AppHandle, Emitter, State};
 use log::{debug, info};
 
@@ -17,7 +17,7 @@ use usecases::timer::{
 #[tauri::command(rename_all = "snake_case")]
 pub async fn get_timer_state(
     timer_repo: State<'_, TimerRepositoryArc>,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     app_get_timer_state(timer_repo_arc)
@@ -32,7 +32,7 @@ pub async fn start_timer(
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     let current_timer = timer_repo_arc
@@ -117,7 +117,7 @@ pub async fn pause_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
@@ -126,6 +126,22 @@ pub async fn pause_timer(
         .await
         .context("infra::commands::timer_cmd::pause_timer - Failed to get current timer")
         .map_err(|e| e.to_string())?;
+
+    // Check if the timer can be paused
+    let current_state = current_timer.state();
+    if current_state.status() == domain::TimerStatus::Idle {
+        debug!("Cannot pause timer - timer is idle");
+        return Err("Timer is not running. Start a timer first.".to_string());
+    }
+
+    if current_state.status() == domain::TimerStatus::Paused {
+        debug!("Timer is already paused");
+        // Return current state instead of error
+        return app_get_timer_state(timer_repo_arc)
+            .await
+            .context("infra::commands::timer_cmd - Failed to get timer state")
+            .map_err(|e| e.to_string());
+    }
 
     // Get the active task ID from the timer
     let task_id = current_timer
@@ -157,7 +173,7 @@ pub async fn reset_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer to find active task
@@ -196,7 +212,7 @@ pub async fn skip_phase(
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     app_handle: AppHandle,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
@@ -237,12 +253,12 @@ pub async fn skip_phase(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn switch_timer_task_cmd(
+pub async fn switch_active_task(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerState, String> {
+) -> Result<TimerInfo, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     let task_id_parsed = domain::TaskId::from_string(&task_id)

@@ -117,6 +117,7 @@ pub trait EntityMarker: 'static {
 /// # Ok::<(), uuid::Error>(())
 /// ```
 #[derive(Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct EntityId<T: EntityMarker> {
     uuid: Uuid,
     #[serde(skip)]

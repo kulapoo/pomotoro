@@ -1,7 +1,7 @@
 use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
 use domain::event_names::ui_listeners::task as task_event_names;
-use domain::{Task, TaskId, TimerState, event_names};
+use domain::{Task, TaskId, event_names};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -235,23 +235,73 @@ impl TaskDirectoryViewModel {
     fn load_initial_data(&self) {
         let set_tasks = self.set_tasks;
         let set_active_task = self.set_active_task;
+        let tasks = self.tasks;
 
         spawn_local(async move {
             if let Ok(result) = invoke_command_no_args(event_names::task::GET_ALL).await {
                 if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
-                    let mut tasks = Vec::new();
+                    let mut task_list = Vec::new();
                     for dto in task_dto_list {
                         if let Ok(task) = dto.to_task() {
-                            tasks.push(task);
+                            task_list.push(task);
                         }
                     }
-                    set_tasks.set(tasks);
+                    set_tasks.set(task_list);
                 }
             }
 
             if let Ok(result) = invoke_command_no_args(event_names::timer::GET_STATE).await {
-                if let Ok(_timer_state) = from_value::<TimerState>(result) {
-                    // Handle active task if needed
+                web_sys::console::log_1(&format!("Timer state result: {:?}", result).into());
+
+                // Try to extract TimerInfo which includes both state and active_task_id
+                if let Ok(timer_info) = from_value::<serde_json::Value>(result) {
+                    web_sys::console::log_1(&format!("Timer info parsed: {:?}", timer_info).into());
+
+                    if let Some(active_task_id) = timer_info.get("active_task_id") {
+                        web_sys::console::log_1(&format!("Active task ID from timer: {:?}", active_task_id).into());
+
+                        if !active_task_id.is_null() {
+                            // Handle both string format and object format (for backwards compatibility)
+                            let task_id_str = if let Some(id_str) = active_task_id.as_str() {
+                                Some(id_str.to_string())
+                            } else if let Some(uuid_obj) = active_task_id.as_object() {
+                                // Handle old format: {"uuid": "..."}
+                                uuid_obj.get("uuid").and_then(|v| v.as_str()).map(|s| s.to_string())
+                            } else {
+                                None
+                            };
+
+                            if let Some(task_id_str) = task_id_str {
+                                if let Ok(task_id) = domain::TaskId::from_string(&task_id_str) {
+                                    // Find the active task in the tasks list we just loaded
+                                    let tasks_list = tasks.get_untracked();
+                                    let active_task = tasks_list.iter().find(|t| t.id == task_id).cloned();
+
+                                    if let Some(ref task) = active_task {
+                                        web_sys::console::log_1(&format!("Found active task: {}", task.name).into());
+                                    } else {
+                                        web_sys::console::log_1(&format!("Active task not found in task list for ID: {}", task_id).into());
+                                    }
+
+                                    set_active_task.set(active_task);
+                                } else {
+                                    web_sys::console::error_1(&"Failed to parse task ID string".into());
+                                    set_active_task.set(None);
+                                }
+                            } else {
+                                web_sys::console::error_1(&"Active task ID is not a string".into());
+                                set_active_task.set(None);
+                            }
+                        } else {
+                            web_sys::console::log_1(&"Active task ID is null".into());
+                            set_active_task.set(None);
+                        }
+                    } else {
+                        web_sys::console::log_1(&"No active_task_id field in timer info".into());
+                        set_active_task.set(None);
+                    }
+                } else {
+                    web_sys::console::error_1(&"Failed to parse timer info as JSON".into());
                     set_active_task.set(None);
                 }
             }
@@ -342,23 +392,23 @@ impl TaskDirectoryViewModel {
         spawn_local(async move {
             web_sys::console::log_1(&format!("Switching to task: {:?}", task_id).into());
 
-            let args_obj = js_sys::Object::new();
+            #[derive(Serialize)]
+            struct SwitchTaskArgs {
+                task_id: String,
+            }
 
-            if let Ok(task_id_value) = to_value(&task_id) {
-                js_sys::Reflect::set(
-                    &args_obj,
-                    &JsValue::from_str("taskId"),
-                    &task_id_value,
-                )
-                .unwrap();
+            let args = SwitchTaskArgs {
+                task_id: task_id.to_string(),
+            };
 
+            if let Ok(args_value) = to_value(&args) {
                 web_sys::console::log_1(
-                    &format!("Invoking switch_active_task with args: {:?}", args_obj).into(),
+                    &format!("Invoking switch_active_task with args: {:?}", args_value).into(),
                 );
 
                 match invoke_command(
                     event_names::timer::SWITCH_ACTIVE_TASK,
-                    args_obj.into(),
+                    args_value,
                 )
                 .await
                 {
@@ -366,7 +416,11 @@ impl TaskDirectoryViewModel {
                         web_sys::console::log_1(
                             &format!("Switch task result: {:?}", result).into(),
                         );
-                        if let Ok(_timer_state) = from_value::<TimerState>(result) {
+                        // The result now contains TimerInfo with both state and active_task_id
+                        if let Ok(timer_info) = from_value::<serde_json::Value>(result) {
+                            web_sys::console::log_1(
+                                &format!("Timer info received: {:?}", timer_info).into(),
+                            );
                             let active_id = task_id;
                             let task_list = tasks.get_untracked();
                             let active_task = task_list

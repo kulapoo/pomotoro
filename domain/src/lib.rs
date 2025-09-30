@@ -25,7 +25,7 @@ pub use timer::{
     PhaseCompleted, PhaseSkipped, Reset as TimerReset, Result as TimerResult,
     SessionFlowReset, Started as TimerStarted, StateTransitions,
     Status as TimerStatus, StatusChanged as TimerStatusChanged,
-    Tick as TimerTick, Timer, TimerId, TimerRepository, TimerState,
+    Tick as TimerTick, Timer, TimerId, TimerInfo, TimerRepository, TimerState,
     TransitionResult, TransitionType, WorkSessionCompleted, WorkSessionStarted,
 };
 

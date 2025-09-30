@@ -1,4 +1,4 @@
-use domain::{Result, TimerState, TimerRepository};
+use domain::{Result, TimerInfo, TimerRepository};
 use std::sync::Arc;
 
 /// Get the current timer state
@@ -10,17 +10,17 @@ use std::sync::Arc;
 /// ## Business Rules
 ///
 /// - Always loads the latest state from persistence
-/// - Returns complete timer state information
+/// - Returns complete timer state information including active task
 ///
 /// ## Dependencies
 ///
 /// - TimerRepository: For timer persistence
 pub async fn get_timer_state(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
-) -> Result<TimerState> {
+) -> Result<TimerInfo> {
     // Load the timer aggregate
     let timer = timer_repo.get().await?;
-    
-    // Return the timer's state
-    Ok(timer.state().clone())
+
+    // Return the complete timer information
+    Ok(TimerInfo::from_timer(&timer))
 }

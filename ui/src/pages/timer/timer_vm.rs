@@ -115,12 +115,33 @@ impl TimerViewModel {
             // Use the actual Tauri command name
             match invoke_command_no_args("get_timer_state").await {
                 Ok(result) => {
-                    if let Ok(state) =
-                        serde_wasm_bindgen::from_value::<TimerState>(result)
-                    {
-                        set_timer_state.set(state.clone());
+                    // Now the result is TimerInfo containing both state and active_task_id
+                    if let Ok(timer_info) = serde_wasm_bindgen::from_value::<serde_json::Value>(result.clone()) {
+                        // Extract timer state
+                        if let Some(state_val) = timer_info.get("state") {
+                            if let Ok(state) = serde_json::from_value::<TimerState>(state_val.clone()) {
+                                set_timer_state.set(state.clone());
+                            }
+                        }
 
-                        // Also fetch the active task
+                        // Extract active task ID and fetch the task
+                        if let Some(active_task_id) = timer_info.get("active_task_id") {
+                            if !active_task_id.is_null() {
+                                if let Some(task_id_str) = active_task_id.as_str() {
+                                    // Fetch the specific task by ID
+                                    Self::fetch_task_by_id(task_id_str, set_active_task).await;
+                                } else {
+                                    set_active_task.set(None);
+                                }
+                            } else {
+                                set_active_task.set(None);
+                            }
+                        } else {
+                            set_active_task.set(None);
+                        }
+                    } else if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
+                        // Fallback: try parsing as just TimerState for backwards compatibility
+                        set_timer_state.set(state.clone());
                         Self::fetch_active_task(set_active_task).await;
                     } else {
                         web_sys::console::error_1(
@@ -413,14 +434,32 @@ impl TimerViewModel {
 
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             // Use the actual Tauri command name
             match invoke_command_no_args("skip_phase").await {
                 Ok(result) => {
-                    // skip_phase returns TimerState
-                    if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
+                    // skip_phase now returns TimerInfo
+                    if let Ok(timer_info) = serde_wasm_bindgen::from_value::<serde_json::Value>(result.clone()) {
+                        // Extract timer state
+                        if let Some(state_val) = timer_info.get("state") {
+                            if let Ok(state) = serde_json::from_value::<TimerState>(state_val.clone()) {
+                                set_timer_state.set(state);
+                            }
+                        }
+
+                        // Extract active task ID and fetch the task
+                        if let Some(active_task_id) = timer_info.get("active_task_id") {
+                            if !active_task_id.is_null() {
+                                if let Some(task_id_str) = active_task_id.as_str() {
+                                    Self::fetch_task_by_id(task_id_str, set_active_task).await;
+                                }
+                            }
+                        }
+                    } else if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result) {
+                        // Fallback for backwards compatibility
                         set_timer_state.set(state);
                     } else {
                         web_sys::console::error_1(
@@ -455,15 +494,30 @@ impl TimerViewModel {
 
             if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
                 // Use the actual Tauri command name
-                match invoke_command("switch_timer_task_cmd", args_value).await {
+                match invoke_command("switch_active_task", args_value).await {
                     Ok(result) => {
-                        // Update the timer state and active task
-                        if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
-                            set_timer_state.set(state);
-                        }
+                        // Now the result is TimerInfo containing both state and active_task_id
+                        if let Ok(timer_info) = serde_wasm_bindgen::from_value::<serde_json::Value>(result.clone()) {
+                            // Extract timer state
+                            if let Some(state_val) = timer_info.get("state") {
+                                if let Ok(state) = serde_json::from_value::<TimerState>(state_val.clone()) {
+                                    set_timer_state.set(state);
+                                }
+                            }
 
-                        // Fetch the new active task
-                        Self::fetch_active_task(set_active_task).await;
+                            // Extract active task ID and fetch the task
+                            if let Some(active_task_id) = timer_info.get("active_task_id") {
+                                if !active_task_id.is_null() {
+                                    if let Some(task_id_str) = active_task_id.as_str() {
+                                        Self::fetch_task_by_id(task_id_str, set_active_task).await;
+                                    }
+                                }
+                            }
+                        } else if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(result.clone()) {
+                            // Fallback for backwards compatibility
+                            set_timer_state.set(state);
+                            Self::fetch_active_task(set_active_task).await;
+                        }
                     }
                     Err(error) => {
                         let error_str = format!("Failed to switch task: {:?}", error);
@@ -476,18 +530,22 @@ impl TimerViewModel {
     }
 
     async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
+        use crate::pages::task::types::TaskDto;
+
         // Check if current task has reached max sessions and needs to cycle
         // Use the actual Tauri command name
         match invoke_command_no_args("get_active_tasks").await {
             Ok(result) => {
-                if let Ok(tasks) = serde_wasm_bindgen::from_value::<Vec<Task>>(result) {
-                    if let Some(task) = tasks.first() {
-                        // Check if task completed its max sessions
-                        if task.current_sessions >= task.max_sessions {
-                            // Cycle to next incomplete task
-                            Self::cycle_to_next_task(set_active_task).await;
-                        } else {
-                            set_active_task.set(Some(task.clone()));
+                if let Ok(task_dtos) = serde_wasm_bindgen::from_value::<Vec<TaskDto>>(result) {
+                    if let Some(task_dto) = task_dtos.first() {
+                        if let Ok(task) = task_dto.to_task() {
+                            // Check if task completed its max sessions
+                            if task.current_sessions >= task.max_sessions {
+                                // Cycle to next incomplete task
+                                Self::cycle_to_next_task(set_active_task).await;
+                            } else {
+                                set_active_task.set(Some(task));
+                            }
                         }
                     }
                 }
@@ -499,10 +557,18 @@ impl TimerViewModel {
     }
 
     async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
+        use crate::pages::task::types::TaskDto;
+
         // Use the actual Tauri command name
         match invoke_command_no_args("cycle_incomplete_task").await {
             Ok(result) => {
-                if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                if let Ok(task_dto) = serde_wasm_bindgen::from_value::<TaskDto>(result.clone()) {
+                    if let Ok(task) = task_dto.to_task() {
+                        set_active_task.set(Some(task));
+                        web_sys::console::log_1(&format!("Cycled to next task").into());
+                    }
+                } else if let Ok(task) = serde_wasm_bindgen::from_value::<Task>(result) {
+                    // Fallback for backwards compatibility
                     set_active_task.set(Some(task));
                     web_sys::console::log_1(&format!("Cycled to next task").into());
                 }
@@ -514,15 +580,75 @@ impl TimerViewModel {
     }
 
     async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
+        use crate::pages::task::types::TaskDto;
+
         // Use the actual Tauri command name
         match invoke_command_no_args("get_active_tasks").await {
             Ok(result) => {
-                if let Ok(tasks) = serde_wasm_bindgen::from_value::<Vec<Task>>(result) {
-                    set_active_task.set(tasks.first().cloned());
+                if let Ok(task_dtos) = serde_wasm_bindgen::from_value::<Vec<TaskDto>>(result) {
+                    if let Some(task_dto) = task_dtos.first() {
+                        if let Ok(task) = task_dto.to_task() {
+                            set_active_task.set(Some(task));
+                        } else {
+                            set_active_task.set(None);
+                        }
+                    } else {
+                        set_active_task.set(None);
+                    }
+                } else {
+                    set_active_task.set(None);
                 }
             }
             Err(_) => {
                 set_active_task.set(None);
+            }
+        }
+    }
+
+    async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option<Task>>) {
+        use serde::Serialize;
+        use serde_wasm_bindgen::to_value;
+        use crate::pages::task::types::TaskDto;
+
+        #[derive(Serialize)]
+        struct GetTaskArgs {
+            id: String,
+        }
+
+        let args = GetTaskArgs {
+            id: task_id.to_string(),
+        };
+
+        if let Ok(args_value) = to_value(&args) {
+            match invoke_command("get_task", args_value).await {
+                Ok(result) => {
+                    // get_task returns Option<TaskDto>
+                    if let Ok(task_dto_opt) = serde_wasm_bindgen::from_value::<Option<TaskDto>>(result) {
+                        if let Some(task_dto) = task_dto_opt {
+                            // Convert TaskDto to Task
+                            match task_dto.to_task() {
+                                Ok(task) => {
+                                    web_sys::console::log_1(&format!("Timer page: Loaded active task: {}", task.name).into());
+                                    set_active_task.set(Some(task));
+                                }
+                                Err(e) => {
+                                    web_sys::console::error_1(&format!("Timer page: Failed to convert TaskDto to Task: {}", e).into());
+                                    set_active_task.set(None);
+                                }
+                            }
+                        } else {
+                            web_sys::console::log_1(&"Timer page: Task not found".into());
+                            set_active_task.set(None);
+                        }
+                    } else {
+                        web_sys::console::error_1(&"Timer page: Failed to parse task response".into());
+                        set_active_task.set(None);
+                    }
+                }
+                Err(e) => {
+                    web_sys::console::error_1(&format!("Timer page: Failed to fetch task by ID: {:?}", e).into());
+                    set_active_task.set(None);
+                }
             }
         }
     }

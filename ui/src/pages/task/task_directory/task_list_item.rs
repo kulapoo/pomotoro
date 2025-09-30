@@ -16,6 +16,7 @@ where
     let task_for_edit = task.clone();
     let task_status_for_button = task.status.clone();
     let task_status_for_disabled = task.status.clone();
+    let task_status_for_onclick = task.status.clone();
 
     let progress_percentage = if task.max_sessions > 0 {
         (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
@@ -91,7 +92,16 @@ where
                             ></div>
                         </div>
                     </div>
-                    <button class="btn-select" disabled=move || task_status_for_disabled == TaskStatus::Completed>
+                    <button
+                        class="btn-select"
+                        disabled=move || is_active || task_status_for_disabled == TaskStatus::Completed
+                        on:click=move |ev| {
+                            ev.stop_propagation();
+                            if !is_active && task_status_for_onclick != TaskStatus::Completed {
+                                vm.with_value(|v| v.switch_active_task(task_id));
+                            }
+                        }
+                    >
                         {if is_active {
                             "Currently Active"
                         } else if task_status_for_button == TaskStatus::Completed {
