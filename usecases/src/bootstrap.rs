@@ -4,6 +4,7 @@ use domain::{
     ConfigRepository, EventPublisher, Result, TaskRepository, TimerRepository,
     shared_kernel::events::AppStarted,
 };
+use log::{debug, error, info};
 
 use crate::{
     task::{CreateTaskCmd, SetDefaultTaskCmd, create_task, set_default_task},
@@ -19,11 +20,11 @@ pub async fn bootstrap(
     // Try to get or create default task
     let task = match task_repo.get_default_task().await {
         Ok(Some(task)) => {
-            println!("Bootstrap: Found existing default task: {:?}", task.id);
+            info!("Found existing default task: {:?}", task.id);
             task
         },
         Ok(None) => {
-            println!("Bootstrap: No default task found, creating one...");
+            info!("No default task found, creating one...");
             let cmd = CreateTaskCmd {
                 name: "Default Task".to_string(),
                 description: None,
@@ -40,12 +41,12 @@ pub async fn bootstrap(
             .await {
                 Ok(task) => task,
                 Err(e) => {
-                    eprintln!("Bootstrap: Failed to create default task: {:?}", e);
+                    error!("Failed to create default task: {:?}", e);
                     return Err(e);
                 }
             };
 
-            println!("Bootstrap: Created task: {:?}", created_task.id);
+            info!("Created default task: {:?}", created_task.id);
 
             // Mark the created task as default
             let set_default_cmd = SetDefaultTaskCmd {
@@ -59,45 +60,45 @@ pub async fn bootstrap(
             .await {
                 Ok(task) => task,
                 Err(e) => {
-                    eprintln!("Bootstrap: Failed to set default task: {:?}", e);
+                    error!("Failed to set default task: {:?}", e);
                     return Err(e);
                 }
             }
         },
         Err(e) => {
-            eprintln!("Bootstrap: Error getting default task: {:?}", e);
+            error!("Error getting default task: {:?}", e);
             return Err(e);
         }
     };
 
-    println!("Bootstrap: Using task: {:?}", task.id);
+    debug!("Using task: {:?}", task.id);
 
     // Try to get the timer
-    println!("Bootstrap: Getting timer from repository...");
+    debug!("Getting timer from repository...");
     let timer = match timer_repo.get().await {
         Ok(timer) => {
-            println!("Bootstrap: Successfully got timer");
+            debug!("Successfully got timer");
             timer
         },
         Err(e) => {
-            eprintln!("Bootstrap: Failed to get timer: {:?}", e);
-            eprintln!("Bootstrap: Full error details: {}", e);
+            error!("Failed to get timer: {:?}", e);
+            error!("Full error details: {}", e);
             return Err(e.into());
         }
     };
 
-    println!("Bootstrap: Current timer state: idle={}", timer.is_idle());
+    debug!("Current timer state: idle={}", timer.is_idle());
 
     // Reset timer if needed
     if !timer.is_idle() {
-        println!("Bootstrap: Timer is not idle, resetting...");
+        info!("Timer is not idle, resetting...");
         let mut timer = timer;
         if let Err(e) = timer.reset(&task.config.timer) {
-            eprintln!("Bootstrap: Failed to reset timer: {:?}", e);
+            error!("Failed to reset timer: {:?}", e);
             return Err(e.into());
         }
         timer_repo.save(&timer).await?;
-        println!("Bootstrap: Timer reset successfully");
+        info!("Timer reset successfully");
     }
 
     // Determine which task to use for the timer
@@ -106,14 +107,14 @@ pub async fn bootstrap(
         Some(task.clone())
     } else {
         // Default task is completed, try to find any incomplete task
-        println!("Bootstrap: Default task is completed, looking for incomplete tasks...");
+        info!("Default task is completed, looking for incomplete tasks...");
         match task_repo.get_incomplete_tasks().await {
             Ok(incomplete_tasks) if !incomplete_tasks.is_empty() => {
-                println!("Bootstrap: Found {} incomplete tasks, using the first one", incomplete_tasks.len());
+                info!("Found {} incomplete tasks, using the first one", incomplete_tasks.len());
                 Some(incomplete_tasks.into_iter().next().unwrap())
             },
             _ => {
-                println!("Bootstrap: No incomplete tasks found");
+                info!("No incomplete tasks found");
                 None
             }
         }
@@ -121,7 +122,7 @@ pub async fn bootstrap(
 
     // Switch to the selected task if we found one
     if let Some(active_task) = task_for_timer {
-        println!("Bootstrap: Switching timer to task {:?}", active_task.id);
+        info!("Switching timer to task {:?}", active_task.id);
         if let Err(e) = switch_timer_task(
             timer_repo.clone(),
             task_repo.clone(),
@@ -131,16 +132,16 @@ pub async fn bootstrap(
             },
         )
         .await {
-            eprintln!("Bootstrap: Failed to switch timer task: {:?}", e);
+            error!("Failed to switch timer task: {:?}", e);
             // Don't fail bootstrap if we can't switch to the task
             // The user can select a different task from the UI
-            eprintln!("Bootstrap: Continuing without active task. User can select a task from UI.");
+            info!("Continuing without active task. User can select a task from UI.");
         } else {
-            println!("Bootstrap: Timer task switched successfully to: {}", active_task.name);
+            info!("Timer task switched successfully to: {}", active_task.name);
         }
     } else {
-        println!("Bootstrap: No suitable task found for timer");
-        println!("Bootstrap: User can create a new task or select one from the UI");
+        info!("No suitable task found for timer");
+        info!("User can create a new task or select one from the UI");
     }
 
     let app_started = AppStarted::new(

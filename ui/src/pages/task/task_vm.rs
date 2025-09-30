@@ -749,7 +749,9 @@ impl TasksViewModel {
         let confirmed = leptos::prelude::window()
             .confirm_with_message(&format!("Are you sure you want to delete \"{}\"?", task_name))
             .unwrap_or(false);
-
+        web_sys::console::log_1(
+            &format!("Confirmed: {:?}", confirmed).into(),
+        );
         if !confirmed {
             return false;
         }
@@ -759,21 +761,14 @@ impl TasksViewModel {
         let set_selected_task = self.set_selected_task;
 
         spawn_local(async move {
-            #[derive(serde::Serialize)]
-            struct DeleteTaskRequest {
+            #[derive(Serialize)]
+            struct DeleteTaskArgs {
                 id: String,
             }
 
-            #[derive(serde::Serialize)]
-            struct DeleteTaskArgs {
-                request: DeleteTaskRequest,
-            }
-
-            let request = DeleteTaskRequest {
+            let args = DeleteTaskArgs {
                 id: task_id.to_string(),
             };
-
-            let args = DeleteTaskArgs { request };
 
             if let Ok(args_value) = to_value(&args) {
                 web_sys::console::log_1(

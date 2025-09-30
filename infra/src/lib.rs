@@ -34,13 +34,32 @@ pub fn run() {
     let mut builder = tauri::Builder::default();
 
     // only enable instrumentation in development builds
-    #[cfg(debug_assertions)]
-    {
-        let devtools = tauri_plugin_devtools::init();
-        builder = builder.plugin(devtools);
-    }
+    // #[cfg(debug_assertions)]
+    // {
+    //     let devtools = tauri_plugin_devtools::init();
+    //     builder = builder.plugin(devtools);
+    // }
 
     builder
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("pomotoro".to_string()),
+                    }),
+                ])
+                .level(log::LevelFilter::Info)
+                .filter(|metadata| {
+                    // Filter out noisy logs from dependencies
+                    !metadata.target().starts_with("tauri::manager")
+                        && !metadata.target().starts_with("tracing::span")
+                        && !metadata.target().starts_with("wry::webkitgtk")
+                        && !metadata.target().starts_with("r2d2")
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_fs::init())
@@ -66,7 +85,7 @@ pub fn run() {
                     app.manage(registry.task_cycling_service.clone());
                     app.manage(registry.event_publisher.clone());
 
-                    println!("Application initialized successfully");
+                    log::info!("Application initialized successfully");
 
                     // Emit an event to notify the frontend that initialization is complete
                     if let Some(window) = app.get_webview_window("main") {
@@ -75,7 +94,7 @@ pub fn run() {
                 }
                 Err(err) => {
                     let error_msg = format!("Failed to bootstrap app: {}", err);
-                    eprintln!("{}", error_msg);
+                    log::error!("{}", error_msg);
 
                     // Emit an error event to the frontend
                     if let Some(window) = app.get_webview_window("main") {

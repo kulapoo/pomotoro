@@ -39,7 +39,13 @@
       "Bash(/home/jpt/src/oss/pomotoro/test_pause.sh:*)",
       "Bash(cargo tree:*)",
       "WebSearch",
-      "WebFetch(domain:v2.tauri.app)"
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(RUST_LOG=debug timeout 5 cargo run --bin infra)",
+      "Bash(RUST_BACKTRACE=1 timeout 5 cargo run --bin infra)",
+      "Bash(RUST_BACKTRACE=full cargo run --bin infra)",
+      "Bash(env RUST_BACKTRACE=full cargo run --bin infra)",
+      "Bash(timeout 2 cargo run --bin infra)",
+      "Bash(timeout 5 cargo run --bin infra)"
     ],
     "deny": [],
     "ask": [],

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use domain::EventPublisher;
 use std::sync::Arc;
-use tracing::info;
+use log::info;
 
 use crate::adapters::{
     InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
@@ -67,7 +67,7 @@ pub async fn register_handlers(
     )
     .await
     .inspect_err(|e| {
-        eprintln!("Error in register_notification_handlers: {:?}", e)
+        log::error!("Error in register_notification_handlers: {:?}", e)
     })
     .context("Failed to register notification event handlers")?;
     register_audio_event_handlers(event_bus, audio_service, config_repository)
@@ -101,7 +101,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     let task_repository: Arc<dyn domain::TaskRepository + Send + Sync> =
         Arc::new(SqliteTaskRepository::new(db_pool.clone()));
 
-    info!("Bootstraping Pomotoro...");
+    info!("Bootstrapping Pomotoro...");
 
     let event_bus = Arc::new(InMemoryEventBus::new());
     let event_publisher: Arc<dyn EventPublisher + Send + Sync + 'static> =
@@ -145,9 +145,9 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     )
     .await
     .map_err(|e| {
-        eprintln!("Bootstrap error chain:");
-        eprintln!("  Root cause: {:?}", e);
-        eprintln!("  Display: {}", e);
+        log::error!("Bootstrap error chain:");
+        log::error!("  Root cause: {:?}", e);
+        log::error!("  Display: {}", e);
         anyhow::anyhow!("Failed to bootstrap application: {}", e)
     })?;
 

@@ -18,16 +18,6 @@ pub async fn delete_task(
         .await?
         .ok_or_else(|| Error::TaskNotFound { id: cmd.id.to_string() })?;
 
-    if task.name == "Focus Session"
-        && task.description
-            == Some("Default pomodoro task for focused work".to_string())
-    {
-        return Err(Error::InvalidStateTransition {
-            from: "default_task".to_string(),
-            to: "deleted".to_string(),
-        });
-    }
-
     let deleted = task_repo.delete(cmd.id).await?;
 
     if deleted {

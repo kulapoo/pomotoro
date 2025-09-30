@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::State;
+use log::{debug, info};
 use usecases::task::*;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -22,7 +23,7 @@ pub struct CreateTaskRequest {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UpdateTaskRequest {
-    pub id: TaskId,
+    pub id: String,
     pub name: Option<String>,
     pub description: Option<String>,
     pub max_sessions: Option<u8>,
@@ -42,14 +43,8 @@ pub async fn create_task(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
-    println!("=== CREATE_TASK DEBUG START ===");
-    println!("Request: {:?}", request);
-    println!(
-        "Name: '{}', Sessions: {}",
-        request.name, request.max_sessions
-    );
-    println!("Description: {:?}", request.description);
-    println!("Tags: {:?}", request.tags);
+    debug!("Creating task: name='{}', sessions={}, tags={:?}",
+           request.name, request.max_sessions, request.tags);
 
     let cmd = CreateTaskCmd {
         name: request.name.clone(),
@@ -58,8 +53,6 @@ pub async fn create_task(
         tags: request.tags,
         config: request.config,
     };
-
-    println!("Command created: {:?}", cmd);
 
     match usecases::task::create_task(
         task_repo.inner().clone(),
@@ -70,27 +63,11 @@ pub async fn create_task(
     .await
     {
         Ok(task) => {
-            println!("Task creation SUCCESS: {:?}", task);
-            println!("Task ID: {}", task.id);
-            println!("Task Name: '{}'", task.name);
-
-            // Let's test the serialization
-            match serde_json::to_string(&task) {
-                Ok(json_str) => {
-                    println!("Task serializes to JSON: {}", json_str);
-                }
-                Err(e) => {
-                    println!("Task JSON serialization FAILED: {:?}", e);
-                }
-            }
-
-            println!("=== CREATE_TASK DEBUG END (SUCCESS) ===");
+            info!("Created task: id={}, name='{}'", task.id, task.name);
             Ok(TaskDto::from(task))
         }
         Err(e) => {
-            println!("Task creation FAILED: {:?}", e);
-            println!("Error message: {}", e);
-            println!("=== CREATE_TASK DEBUG END (FAILED) ===");
+            log::error!("Failed to create task '{}': {}", request.name, e);
             Err(format!("Failed to create task '{}': {}", request.name, e))
         }
     }
@@ -145,8 +122,11 @@ pub async fn update_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<TaskDto, String> {
+    let task_id = TaskId::from_string(&request.id)
+        .map_err(|_| format!("Invalid task ID: {}", request.id))?;
+
     let cmd = UpdateTaskCmd {
-        id: request.id,
+        id: task_id,
         name: request.name,
         description: request.description,
         max_sessions: request.max_sessions,
@@ -165,8 +145,11 @@ pub async fn update_task(
         cmd,
     )
     .await
-    .with_context(|| format!("Failed to update task with id: {}", request.id))
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| {
+        let error_msg = format!("Failed to update task with id {}: {:?}", request.id, e);
+        log::error!("{}", error_msg);
+        error_msg
+    })?;
     Ok(TaskDto::from(task))
 }
 
@@ -176,6 +159,8 @@ pub async fn delete_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
+    info!("Deleting tae tae task: id={}", id);
+
     let task_id = TaskId::from_string(&id)
         .map_err(|_| format!("Invalid task ID: {}", id))?;
 

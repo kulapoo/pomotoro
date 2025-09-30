@@ -5,7 +5,7 @@ use domain::TaskRepository;
 use anyhow::Context;
 use domain::{TimerState, event_names::ui_listeners};
 use tauri::{AppHandle, Emitter, State};
-use tracing::info;
+use log::{debug, info};
 
 use usecases::timer::{
     StartTimerSessionCmd, SwitchTimerTaskCmd,
@@ -49,6 +49,8 @@ pub async fn start_timer(
             .active_task_id()
             .ok_or("No active task in timer")?;
 
+        debug!("Resuming paused timer for task {}", task_id);
+
         // Resume the paused timer
         usecases::timer::resume_timer_session(
             task_id,
@@ -59,6 +61,8 @@ pub async fn start_timer(
         .await
         .context("infra::commands::timer_cmd::start_timer - Failed to resume paused timer")
         .map_err(|e| e.to_string())?;
+
+        info!("Resumed timer for task {}", task_id);
     } else {
         // Try to get an active task, or any incomplete task for starting
         let active_tasks = task_repo
@@ -67,6 +71,7 @@ pub async fn start_timer(
             .map_err(|e| e.to_string())?;
 
         let task = if let Some(active_task) = active_tasks.first() {
+            debug!("Using active task: {}", active_task.id);
             active_task.clone()
         } else {
             // No active tasks, try to get any incomplete task
@@ -82,7 +87,7 @@ pub async fn start_timer(
         };
 
         let task_id = task.id;
-        info!("Started timer, {}", task_id);
+        info!("Starting timer for task {}", task_id);
 
         let cmd = StartTimerSessionCmd {
             task_id: Some(task_id),
@@ -126,6 +131,8 @@ pub async fn pause_timer(
     let task_id = current_timer
         .active_task_id()
         .ok_or("No active task in timer")?;
+
+    info!("Pausing timer for task {}", task_id);
 
     pause_timer_session(
         task_id,

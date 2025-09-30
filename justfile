@@ -1,8 +1,16 @@
 # Pomotoro Development Commands
 
-# Run development server
+# Run development server with info-level logging
 dev:
-    cd infra && RUST_LOG=infra=info cargo tauri dev
+    cd infra && RUST_LOG=info cargo tauri dev
+
+# Run development server with debug-level logging
+dev-debug:
+    cd infra && RUST_LOG=debug cargo tauri dev
+
+# Run development server with trace-level logging (very verbose)
+dev-trace:
+    cd infra && RUST_LOG=trace cargo tauri dev
 
 # Build for production
 build:
