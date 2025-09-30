@@ -27,22 +27,25 @@ impl EventHandler for TimerPausedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let timer_paused = event
+        let _timer_paused = event
             .as_any()
             .downcast_ref::<domain::TimerPaused>()
             .ok_or(domain::Error::EventHandlingError {
                 message: format!("Failed to pause timer"),
             })?;
 
-        // Don't reload state here - the timer was just updated by the use case
-        // self.timer_srv.load_state().await?;
+        // Load the current state to get the full TimerState
+        self.timer_srv.load_state().await?;
 
         self.timer_srv.stop_timer_tick_loop().await?;
+
+        // Get the current timer state to emit to UI
+        let timer = self.timer_srv.get_current_timer().await;
 
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::PAUSE,
-                json!(timer_paused),
+                json!(timer.state()),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer paused event: {e}"),

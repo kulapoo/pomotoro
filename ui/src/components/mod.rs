@@ -9,4 +9,4 @@ pub mod task_cycle_controls;
 pub mod task_settings;
 
 pub use error_toast::{ErrorInfo, ErrorToast, handle_command_error};
-pub use sidebar::{NavigationSection, Sidebar};
+pub use sidebar::Sidebar;

@@ -1,9 +1,9 @@
-use crate::pages::task::TasksViewModel;
+use super::TaskDirectoryViewModel;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
 #[component]
-pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
+pub fn TaskFilter(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
     let handle_search = move |ev: leptos::ev::Event| {
         if let Some(target) = ev.target() {
             let input_elem = target.unchecked_into::<web_sys::HtmlInputElement>();
@@ -11,7 +11,7 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
             vm.with_value(|v| v.search_tasks(query));
         }
     };
-    
+
     let handle_sort_change = move |ev: leptos::ev::Event| {
         if let Some(target) = ev.target() {
             let select = target.unchecked_into::<web_sys::HtmlSelectElement>();
@@ -19,7 +19,7 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
             vm.with_value(|v| v.set_sort(sort_by));
         }
     };
-    
+
     let handle_status_change = move |ev: leptos::ev::Event| {
         if let Some(target) = ev.target() {
             let select = target.unchecked_into::<web_sys::HtmlSelectElement>();
@@ -27,7 +27,7 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
             vm.with_value(|v| v.set_status_filter(status));
         }
     };
-    
+
     view! {
         <div class="task-search-container">
             <div class="search-wrapper">
@@ -49,7 +49,7 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     </svg>
                 </div>
             </div>
-            
+
             <div class="filter-controls">
                 <div class="filter-group">
                     <label for="sort-select">Sort by:</label>
@@ -65,7 +65,7 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                         <option value="status">Status</option>
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
                     <label for="status-select">Status:</label>
                     <select
@@ -82,13 +82,13 @@ pub fn TaskSearch(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                     </select>
                 </div>
             </div>
-            
+
             <div class="search-stats">
                 {move || {
                     let total = vm.with_value(|v| v.get_tasks().len());
                     let query = vm.with_value(|v| v.get_search_query());
                     let status = vm.with_value(|v| v.get_status_filter());
-                    
+
                     if !query.is_empty() || status != "all" {
                         view! {
                             <span class="stats-text">

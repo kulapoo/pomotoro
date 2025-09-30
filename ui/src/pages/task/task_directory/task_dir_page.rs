@@ -1,10 +1,10 @@
-use crate::pages::task::{TaskList, TaskSearch, TasksViewModel};
+use super::{TaskDirectoryViewModel, TaskList, TaskFilter};
 use crate::utils::ViewModel;
 use leptos::prelude::*;
 
 #[component]
-pub fn TaskPage() -> impl IntoView {
-    let vm = StoredValue::new(TasksViewModel::new());
+pub fn TaskDirectoryPage() -> impl IntoView {
+    let vm = StoredValue::new(TaskDirectoryViewModel::new());
 
     view! {
         <div class="tasks-container">
@@ -33,7 +33,7 @@ pub fn TaskPage() -> impl IntoView {
                     }}
                 </div>
             </div>
-            <TaskSearch vm=vm />
+            <TaskFilter vm=vm />
             <TaskList vm=vm />
         </div>
     }

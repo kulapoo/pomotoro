@@ -1,4 +1,6 @@
 use leptos::prelude::*;
+use leptos_router::components::A;
+use leptos_router::hooks::use_location;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum NavigationSection {
@@ -8,24 +10,22 @@ pub enum NavigationSection {
 }
 
 #[component]
-pub fn Sidebar(
-    current_section: ReadSignal<NavigationSection>,
-    set_current_section: WriteSignal<NavigationSection>,
-    #[prop(optional)] is_collapsed: Option<ReadSignal<bool>>,
-    #[prop(optional)] set_is_collapsed: Option<WriteSignal<bool>>,
-) -> impl IntoView {
-    let (collapsed, set_collapsed) =
-        if let (Some(collapsed), Some(set_collapsed)) =
-            (is_collapsed, set_is_collapsed)
-        {
-            (collapsed, set_collapsed)
-        } else {
-            let (local_collapsed, local_set_collapsed) = signal(false);
-            (local_collapsed, local_set_collapsed)
-        };
+pub fn Sidebar() -> impl IntoView {
+    let (collapsed, set_collapsed) = signal(false);
+    let location = use_location();
 
     let toggle_sidebar = move |_| {
         set_collapsed.update(|collapsed| *collapsed = !*collapsed);
+    };
+
+    // Determine active section based on current path
+    let is_active = move |path: &'static str| {
+        let pathname = location.pathname.get();
+        if path == "/timer" && (pathname == "/" || pathname == "/timer") {
+            true
+        } else {
+            pathname.starts_with(path)
+        }
     };
 
     view! {
@@ -35,35 +35,23 @@ pub fn Sidebar(
                 <button class="toggle-btn" on:click=toggle_sidebar>"☰"</button>
             </div>
             <ul class="nav-menu">
-                <li
-                    class={move || format!(
-                        "nav-item {}",
-                        if current_section.get() == NavigationSection::Timer { "active" } else { "" }
-                    )}
-                    on:click=move |_| set_current_section.set(NavigationSection::Timer)
-                >
-                    <span class="nav-icon">"⏱️"</span>
-                    <span class="nav-text">"Timer"</span>
+                <li class={move || format!("nav-item {}", if is_active("/timer") { "active" } else { "" })}>
+                    <A href="/timer">
+                        <span class="nav-icon">"⏱️"</span>
+                        <span class="nav-text">"Timer"</span>
+                    </A>
                 </li>
-                <li
-                    class={move || format!(
-                        "nav-item {}",
-                        if current_section.get() == NavigationSection::Tasks { "active" } else { "" }
-                    )}
-                    on:click=move |_| set_current_section.set(NavigationSection::Tasks)
-                >
-                    <span class="nav-icon">"📝"</span>
-                    <span class="nav-text">"Tasks"</span>
+                <li class={move || format!("nav-item {}", if is_active("/tasks") { "active" } else { "" })}>
+                    <A href="/tasks">
+                        <span class="nav-icon">"📝"</span>
+                        <span class="nav-text">"Tasks"</span>
+                    </A>
                 </li>
-                <li
-                    class={move || format!(
-                        "nav-item {}",
-                        if current_section.get() == NavigationSection::Settings { "active" } else { "" }
-                    )}
-                    on:click=move |_| set_current_section.set(NavigationSection::Settings)
-                >
-                    <span class="nav-icon">"⚙️"</span>
-                    <span class="nav-text">"Settings"</span>
+                <li class={move || format!("nav-item {}", if is_active("/settings") { "active" } else { "" })}>
+                    <A href="/settings">
+                        <span class="nav-icon">"⚙️"</span>
+                        <span class="nav-text">"Settings"</span>
+                    </A>
                 </li>
             </ul>
         </nav>

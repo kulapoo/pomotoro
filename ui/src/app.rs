@@ -1,29 +1,50 @@
 use leptos::prelude::*;
+use leptos_router::components::{Route, Router, Routes};
+use leptos_router::path;
 
-use crate::components::{NavigationSection, Sidebar};
-use crate::pages::{SettingsPage, TaskPage, TimerPage};
+use crate::components::Sidebar;
+use crate::pages::{SettingsPage, TaskDirectoryPage, TaskFormPage, TimerPage};
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (current_section, set_current_section) =
-        signal(NavigationSection::Timer);
+    view! {
+        <Router>
+            <AppLayout />
+        </Router>
+    }
+}
 
-    let render_content = move || match current_section.get() {
-        NavigationSection::Timer => view! { <TimerPage /> }.into_any(),
-        NavigationSection::Tasks => view! { <TaskPage /> }.into_any(),
-        NavigationSection::Settings => view! { <SettingsPage /> }.into_any(),
-    };
-
+#[component]
+fn AppLayout() -> impl IntoView {
     view! {
         <>
-            <Sidebar
-                current_section=current_section
-                set_current_section=set_current_section
-            />
+            <Sidebar />
 
             <main class="main-content" id="mainContent">
-                {render_content}
+                <Routes fallback=|| view! { <NotFound /> }>
+                    // Root redirects to timer
+                    <Route path=path!("/") view=|| view! { <TimerPage /> } />
+                    <Route path=path!("/timer") view=|| view! { <TimerPage /> } />
+
+                    // Task routes - all in one place
+                    <Route path=path!("/tasks") view=|| view! { <TaskDirectoryPage /> } />
+                    <Route path=path!("/tasks/new") view=|| view! { <TaskFormPage /> } />
+                    <Route path=path!("/tasks/:id/edit") view=|| view! { <TaskFormPage /> } />
+
+                    // Settings route
+                    <Route path=path!("/settings") view=|| view! { <SettingsPage /> } />
+                </Routes>
             </main>
         </>
+    }
+}
+
+#[component]
+fn NotFound() -> impl IntoView {
+    view! {
+        <div class="not-found">
+            <h1>"404"</h1>
+            <p>"Page not found"</p>
+        </div>
     }
 }

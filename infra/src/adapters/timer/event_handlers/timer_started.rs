@@ -45,9 +45,8 @@ impl EventHandler for TimerStartedHandler {
             },
         )?;
 
-        // Don't reload state here - the timer was just updated by the use case
-        // and reloading would overwrite the correct in-memory state
-        // self.timer_srv.load_state().await?;
+        // Load the current state to get the full TimerState
+        self.timer_srv.load_state().await?;
 
         let task = self.task_repository.get_by_id(task_id).await?;
 
@@ -58,10 +57,13 @@ impl EventHandler for TimerStartedHandler {
                 message: format!("Failed to start timer tick loop: {e}"),
             })?;
 
+        // Get the current timer state to emit to UI
+        let timer = self.timer_srv.get_current_timer().await;
+
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::STATUS_CHANGED,
-                json!(timer_started),
+                json!(timer.state()),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}"),
