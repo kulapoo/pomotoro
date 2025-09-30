@@ -159,6 +159,26 @@ pub fn TaskList(vm: StoredValue<TasksViewModel>) -> impl IntoView {
                                             </div>
 
                                             <div class="task-actions">
+                                                {if task.status == domain::TaskStatus::Completed {
+                                                    view! {
+                                                        <button
+                                                            class="btn-icon btn-reset"
+                                                            title="Reset to Queued"
+                                                            on:click=move |ev| {
+                                                                ev.stop_propagation();
+                                                                let reset_sessions = web_sys::window()
+                                                                    .unwrap()
+                                                                    .confirm_with_message("Reset session count to 0?")
+                                                                    .unwrap_or(false);
+                                                                vm.with_value(|v| v.reset_task_to_queued(task_id, reset_sessions));
+                                                            }
+                                                        >
+                                                            "🔄"
+                                                        </button>
+                                                    }.into_any()
+                                                } else {
+                                                    ().into_any()
+                                                }}
                                                 <button
                                                     class="btn-icon btn-edit"
                                                     title="Edit Task"

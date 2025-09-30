@@ -8,7 +8,7 @@ mod task;
 #[cfg(test)]
 mod test_builder;
 
-pub use self::task::Task;
+pub use self::task::{Task, TaskPatch};
 pub use builder::Builder;
 pub use cycling_srv::CyclerService;
 pub use events::{

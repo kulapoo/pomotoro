@@ -1121,4 +1121,93 @@ impl TasksViewModel {
             }
         });
     }
+
+    pub fn reset_task_to_queued(&self, task_id: TaskId, reset_sessions: bool) {
+        let set_tasks = self.set_tasks;
+        let tasks = self.tasks;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct ResetTaskStatusArgs {
+                task_id: String,
+                reset_sessions: bool,
+            }
+
+            let args = ResetTaskStatusArgs {
+                task_id: task_id.to_string(),
+                reset_sessions,
+            };
+
+            if let Ok(args_value) = to_value(&args) {
+                web_sys::console::log_1(
+                    &format!(
+                        "Invoking reset_task_status with args: {:?}",
+                        args_value
+                    )
+                    .into(),
+                );
+
+                match invoke_command("reset_task_status", args_value).await {
+                    Ok(result) => {
+                        web_sys::console::log_1(
+                            &format!("Reset task status result: {:?}", result)
+                                .into(),
+                        );
+
+                        // Try to deserialize as TaskDto first
+                        match from_value::<TaskDto>(result.clone()) {
+                            Ok(task_dto) => {
+                                match task_dto.to_task() {
+                                    Ok(updated_task) => {
+                                        web_sys::console::log_1(
+                                            &format!(
+                                                "Successfully reset task: id={}, status={:?}",
+                                                updated_task.id, updated_task.status
+                                            )
+                                            .into(),
+                                        );
+                                        let mut current_tasks = tasks.get_untracked();
+                                        if let Some(index) =
+                                            current_tasks.iter().position(|t| t.id == task_id)
+                                        {
+                                            current_tasks[index] = updated_task;
+                                            set_tasks.set(current_tasks);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        web_sys::console::error_1(
+                                            &format!("Failed to convert TaskDto to Task: {}", e)
+                                                .into(),
+                                        );
+                                        // Still refetch to ensure consistency
+                                        refetch_all_tasks(
+                                            set_tasks,
+                                            event_names::task::GET_ALL,
+                                        )
+                                        .await;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                web_sys::console::error_1(
+                                    &format!("Failed to deserialize TaskDto: {:?}", e).into(),
+                                );
+                                // Try to refetch all tasks to ensure we have the latest list
+                                refetch_all_tasks(set_tasks, event_names::task::GET_ALL)
+                                    .await;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        web_sys::console::error_1(
+                            &format!("Failed to invoke reset_task_status command: {:?}", e)
+                                .into(),
+                        );
+                    }
+                }
+            } else {
+                web_sys::console::error_1(&"Failed to serialize args".into());
+            }
+        });
+    }
 }
