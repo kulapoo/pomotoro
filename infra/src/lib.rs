@@ -21,7 +21,7 @@ use commands::{
     stop_background_audio, switch_timer_task_cmd, test_audio_preview,
     test_notification, update_appearance_config, update_audio_config,
     update_general_config, update_notification_config, update_storage_path,
-    update_task, update_task_settings, validate_storage_path,
+    update_task, update_task_settings, update_timing_config, validate_storage_path,
 };
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
@@ -156,6 +156,7 @@ pub fn run() {
             update_notification_config,
             update_appearance_config,
             update_audio_config,
+            update_timing_config,
             get_effective_audio_config,
             update_task_settings,
             reset_task_settings_to_defaults,
