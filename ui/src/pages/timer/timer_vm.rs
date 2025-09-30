@@ -306,28 +306,61 @@ impl TimerViewModel {
         let current_state = self.timer_state.get_untracked();
         let set_timer_state = self.set_timer_state;
         let set_error_state = self.set_error_state;
+        let active_task = self.active_task.get_untracked();
 
         spawn_local(async move {
-            // Use the actual Tauri command names, not the event name constants
-            let command = match current_state.status() {
-                TimerStatus::Running => "pause_timer",
-                TimerStatus::Paused => "start_timer",  // Resume when paused
-                _ => "start_timer",  // Start when idle
+            // Determine the correct command based on current state
+            let command = if current_state.is_running() {
+                // Timer is running, pause it
+                "pause_timer"
+            } else {
+                // Timer is idle or paused, start/resume it
+                // The backend start_timer handles resume automatically when paused
+                "start_timer"
             };
 
-            match invoke_command_no_args(command).await {
+            // Log the action for debugging
+            web_sys::console::log_1(
+                &format!("Executing timer command: {} (current state: {:?})",
+                        command, current_state.status()).into()
+            );
+
+            // For start_timer, we need to pass task_id if available
+            let result = if command == "start_timer" && active_task.is_some() {
+                #[derive(serde::Serialize)]
+                struct StartTimerArgs {
+                    task_id: Option<String>,
+                }
+
+                let args = StartTimerArgs {
+                    task_id: active_task.map(|t| t.id.to_string()),
+                };
+
+                if let Ok(args_value) = serde_wasm_bindgen::to_value(&args) {
+                    invoke_command(command, args_value).await
+                } else {
+                    invoke_command_no_args(command).await
+                }
+            } else {
+                invoke_command_no_args(command).await
+            };
+
+            match result {
                 Ok(result) => {
+                    // Try to parse the timer state from the response
                     if let Ok(state) =
-                        serde_wasm_bindgen::from_value::<TimerState>(result)
+                        serde_wasm_bindgen::from_value::<TimerState>(result.clone())
                     {
+                        let status = state.status();
                         set_timer_state.set(state);
+                        web_sys::console::log_1(
+                            &format!("Timer state updated after {}: {:?}",
+                                    command, status).into()
+                        );
                     } else {
-                        web_sys::console::error_1(
-                            &format!(
-                                "Failed to parse timer state from {}",
-                                command
-                            )
-                            .into(),
+                        // Some commands might not return state directly
+                        web_sys::console::log_1(
+                            &format!("{} command executed successfully", command).into()
                         );
                     }
                 }

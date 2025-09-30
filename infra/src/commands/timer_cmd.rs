@@ -60,12 +60,27 @@ pub async fn start_timer(
         .context("infra::commands::timer_cmd::start_timer - Failed to resume paused timer")
         .map_err(|e| e.to_string())?;
     } else {
-        // Get the first active task for starting
+        // Try to get an active task, or any incomplete task for starting
         let active_tasks = task_repo
             .get_active_tasks()
             .await
             .map_err(|e| e.to_string())?;
-        let task = active_tasks.first().ok_or("No active task")?;
+
+        let task = if let Some(active_task) = active_tasks.first() {
+            active_task.clone()
+        } else {
+            // No active tasks, try to get any incomplete task
+            let incomplete_tasks = task_repo
+                .get_incomplete_tasks()
+                .await
+                .map_err(|e| e.to_string())?;
+
+            incomplete_tasks
+                .first()
+                .ok_or("No tasks available. Please create a task first.")?
+                .clone()
+        };
+
         let task_id = task.id;
         info!("Started timer, {}", task_id);
 

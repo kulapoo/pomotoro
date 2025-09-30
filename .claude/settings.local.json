@@ -36,7 +36,10 @@
       "Bash(timeout 3 cargo run --bin infra)",
       "Bash(cargo tauri dev:*)",
       "Bash(chmod:*)",
-      "Bash(/home/jpt/src/oss/pomotoro/test_pause.sh:*)"
+      "Bash(/home/jpt/src/oss/pomotoro/test_pause.sh:*)",
+      "Bash(cargo tree:*)",
+      "WebSearch",
+      "WebFetch(domain:v2.tauri.app)"
     ],
     "deny": [],
     "ask": [],

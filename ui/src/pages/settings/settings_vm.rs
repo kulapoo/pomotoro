@@ -405,7 +405,7 @@ impl SettingsViewModel {
         // Listen for ConfigReset events
         let set_config_for_reset = self.set_config;
         spawn_local(async move {
-            let callback = Closure::new(move |event: JsValue| {
+            let callback = Closure::new(move |_event: JsValue| {
                 web_sys::console::log_1(&"ConfigReset event received".into());
 
                 // Reload the default config

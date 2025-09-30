@@ -4,6 +4,7 @@ use domain::{
     ConfigRepository, EventPublisher, Result, TaskRepository, TimerRepository,
     shared_kernel::events::AppStarted,
 };
+use tracing::{debug, error, info, warn};
 
 use crate::{
     task::{CreateTaskCmd, SetDefaultTaskCmd, create_task, set_default_task},
@@ -100,21 +101,48 @@ pub async fn bootstrap(
         println!("Bootstrap: Timer reset successfully");
     }
 
-    // Switch to the default task
-    println!("Bootstrap: Switching timer to task {:?}", task.id);
-    if let Err(e) = switch_timer_task(
-        timer_repo.clone(),
-        task_repo.clone(),
-        event_publisher.clone(),
-        switch_timer_task::SwitchTimerTaskCmd {
-            task_id: task.id,
-        },
-    )
-    .await {
-        eprintln!("Bootstrap: Failed to switch timer task: {:?}", e);
-        return Err(e);
+    // Determine which task to use for the timer
+    let task_for_timer = if !task.is_completed() {
+        // Use the default task if it's not completed
+        Some(task.clone())
+    } else {
+        // Default task is completed, try to find any incomplete task
+        println!("Bootstrap: Default task is completed, looking for incomplete tasks...");
+        match task_repo.get_incomplete_tasks().await {
+            Ok(incomplete_tasks) if !incomplete_tasks.is_empty() => {
+                println!("Bootstrap: Found {} incomplete tasks, using the first one", incomplete_tasks.len());
+                Some(incomplete_tasks.into_iter().next().unwrap())
+            },
+            _ => {
+                println!("Bootstrap: No incomplete tasks found");
+                None
+            }
+        }
+    };
+
+    // Switch to the selected task if we found one
+    if let Some(active_task) = task_for_timer {
+        println!("Bootstrap: Switching timer to task {:?}", active_task.id);
+        if let Err(e) = switch_timer_task(
+            timer_repo.clone(),
+            task_repo.clone(),
+            event_publisher.clone(),
+            switch_timer_task::SwitchTimerTaskCmd {
+                task_id: active_task.id,
+            },
+        )
+        .await {
+            eprintln!("Bootstrap: Failed to switch timer task: {:?}", e);
+            // Don't fail bootstrap if we can't switch to the task
+            // The user can select a different task from the UI
+            eprintln!("Bootstrap: Continuing without active task. User can select a task from UI.");
+        } else {
+            println!("Bootstrap: Timer task switched successfully to: {}", active_task.name);
+        }
+    } else {
+        println!("Bootstrap: No suitable task found for timer");
+        println!("Bootstrap: User can create a new task or select one from the UI");
     }
-    println!("Bootstrap: Timer task switched successfully");
 
     let app_started = AppStarted::new(
         1,
