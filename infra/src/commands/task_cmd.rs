@@ -36,7 +36,7 @@ pub struct UpdateTaskRequest {
     pub audio_config: Option<AudioConfig>,
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_task(
     request: CreateTaskRequest,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -73,7 +73,7 @@ pub async fn create_task(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_task(
     id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -88,7 +88,7 @@ pub async fn get_task(
     Ok(Some(TaskDto::from(result)))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_all_tasks(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<TaskDto>, String> {
@@ -104,7 +104,7 @@ pub async fn get_all_tasks(
     Ok(tasks.into_iter().map(TaskDto::from).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_active_tasks(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<TaskDto>, String> {
@@ -116,7 +116,7 @@ pub async fn get_active_tasks(
     Ok(tasks.into_iter().map(TaskDto::from).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_task(
     request: UpdateTaskRequest,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -153,7 +153,7 @@ pub async fn update_task(
     Ok(TaskDto::from(task))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_task(
     id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -175,7 +175,7 @@ pub async fn delete_task(
     .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tasks_by_tags(
     tags: Vec<String>,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -187,7 +187,7 @@ pub async fn get_tasks_by_tags(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_task_sessions(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -219,7 +219,7 @@ pub async fn reset_task_sessions(
     Ok(task)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_task_status(
     task_id: String,
     reset_sessions: bool,
@@ -272,7 +272,7 @@ pub struct SearchTasksRequest {
     pub offset: Option<usize>,
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn search_tasks(
     request: SearchTasksRequest,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -293,7 +293,7 @@ pub async fn search_tasks(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn search_tasks_fuzzy(
     query: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -311,7 +311,7 @@ pub struct FilterTasksRequest {
     pub offset: Option<usize>,
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn filter_tasks_by_status(
     request: FilterTasksRequest,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
@@ -342,7 +342,7 @@ pub struct CycleIncompleteTaskResponse {
     pub has_more_tasks: bool,
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn cycle_incomplete_task(
     request: CycleIncompleteTaskRequest,
     cycling_service: State<
@@ -378,7 +378,7 @@ pub async fn cycle_incomplete_task(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_task_cycle_position(
     task_id: String,
     cycling_service: State<
@@ -392,7 +392,7 @@ pub async fn get_task_cycle_position(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_incomplete_tasks(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<Vec<Task>, String> {
@@ -403,7 +403,7 @@ pub async fn get_incomplete_tasks(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn debug_create_test_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     config_repo: State<'_, Arc<dyn ConfigRepository + Send + Sync>>,

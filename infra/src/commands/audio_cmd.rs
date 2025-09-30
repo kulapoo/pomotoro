@@ -5,14 +5,14 @@ use tauri::State;
 
 type AudioServiceState<'a> = State<'a, AudioServiceWrapper>;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_audio_library(
     audio_service: AudioServiceState<'_>,
 ) -> Result<AudioLibrary, String> {
     Ok(audio_service.get_library())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn play_audio(
     request: PlaybackRequest,
     audio_service: AudioServiceState<'_>,
@@ -23,7 +23,7 @@ pub async fn play_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn stop_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
@@ -36,7 +36,7 @@ pub async fn stop_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn pause_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
@@ -49,7 +49,7 @@ pub async fn pause_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn resume_audio(
     handle_id: String,
     audio_service: AudioServiceState<'_>,
@@ -62,7 +62,7 @@ pub async fn resume_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_audio_volume(
     handle_id: String,
     volume: f32,
@@ -79,7 +79,7 @@ pub async fn set_audio_volume(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_active_playbacks(
     audio_service: AudioServiceState<'_>,
 ) -> Result<Vec<PlaybackHandle>, String> {
@@ -89,7 +89,7 @@ pub async fn get_active_playbacks(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn stop_all_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
@@ -99,7 +99,7 @@ pub async fn stop_all_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn play_notification_sound(
     asset_id: String,
     volume: f32,
@@ -113,7 +113,7 @@ pub async fn play_notification_sound(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn play_background_audio(
     asset_id: String,
     volume: f32,
@@ -127,7 +127,7 @@ pub async fn play_background_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn stop_background_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
@@ -137,7 +137,7 @@ pub async fn stop_background_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn add_custom_audio_asset(
     asset: AudioAsset,
     audio_service: AudioServiceState<'_>,
@@ -146,7 +146,7 @@ pub async fn add_custom_audio_asset(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn remove_audio_asset(
     asset_id: String,
     audio_service: AudioServiceState<'_>,
@@ -154,7 +154,7 @@ pub async fn remove_audio_asset(
     Ok(audio_service.remove_asset(&asset_id))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn cleanup_finished_audio(
     audio_service: AudioServiceState<'_>,
 ) -> Result<(), String> {
@@ -164,7 +164,7 @@ pub async fn cleanup_finished_audio(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn test_audio_preview(
     asset_id: String,
     volume: f32,

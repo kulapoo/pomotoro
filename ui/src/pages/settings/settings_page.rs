@@ -420,7 +420,7 @@ fn NotificationSettings(
                     class="setting-input"
                     value=auto_dismiss_delay
                     min="1"
-                    max="30"
+                    max="300"
                     on:input=move |ev| {
                         let value = event_target_value(&ev).parse::<u32>().unwrap_or(5);
                         vm.with_value(|v| {

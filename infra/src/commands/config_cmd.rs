@@ -7,7 +7,7 @@ use domain::{
 use std::sync::Arc;
 use tauri::State;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_global_config(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
 ) -> Result<Config, String> {
@@ -23,7 +23,7 @@ pub async fn get_global_config(
         })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_global_config(
     config: Config,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
@@ -55,7 +55,7 @@ pub async fn save_global_config(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_config_to_defaults(
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
@@ -80,7 +80,7 @@ pub async fn reset_config_to_defaults(
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_general_config(
     preferences: GeneralConfig,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
@@ -123,7 +123,7 @@ pub async fn update_general_config(
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_notification_config(
     preferences: NotificationConfig,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
@@ -166,7 +166,7 @@ pub async fn update_notification_config(
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_appearance_config(
     preferences: AppearanceConfig,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
@@ -209,7 +209,7 @@ pub async fn update_appearance_config(
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_audio_config(
     _task_id: TaskId,
     audio_config: AudioConfig,
@@ -253,7 +253,7 @@ pub async fn update_audio_config(
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_effective_audio_config(
     _task_id: TaskId,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,
@@ -272,7 +272,7 @@ pub async fn get_effective_audio_config(
     Ok(config.audio)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_timing_config(
     timer: domain::TimerConfiguration,
     config_repo: State<'_, Arc<dyn domain::ConfigRepository + Send + Sync>>,

@@ -14,7 +14,7 @@ use usecases::timer::{
     switch_timer_task,
 };
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_timer_state(
     timer_repo: State<'_, TimerRepositoryArc>,
 ) -> Result<TimerState, String> {
@@ -26,7 +26,7 @@ pub async fn get_timer_state(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn start_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
@@ -112,7 +112,7 @@ pub async fn start_timer(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn pause_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
@@ -152,7 +152,7 @@ pub async fn pause_timer(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
@@ -190,7 +190,7 @@ pub async fn reset_timer(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn skip_phase(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
@@ -236,7 +236,7 @@ pub async fn skip_phase(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn switch_timer_task_cmd(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,

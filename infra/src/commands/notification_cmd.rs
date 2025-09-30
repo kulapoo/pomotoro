@@ -6,7 +6,7 @@ use domain::{
 use std::sync::Arc;
 use tauri::State;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn test_notification(
     event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
     notification_type: String,
@@ -59,7 +59,7 @@ pub async fn test_notification(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn request_notification_permission() -> Result<bool, String> {
     Ok(true)
 }
