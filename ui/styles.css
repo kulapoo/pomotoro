@@ -314,6 +314,71 @@ h4 { font-size: 1.125rem; }
   justify-content: flex-end;
 }
 
+/* Task item action buttons (edit, delete, reset) */
+.task-item > .task-actions {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-xs);
+  margin: 0;
+}
+
+.btn-icon {
+  background: var(--lighter-gray);
+  border: 1px solid var(--light-gray);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+}
+
+.btn-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-icon:active {
+  transform: translateY(0);
+}
+
+.btn-reset {
+  background: rgba(74, 144, 226, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-reset:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.btn-edit {
+  background: rgba(237, 137, 54, 0.1);
+  border-color: var(--warning);
+}
+
+.btn-edit:hover {
+  background: var(--warning);
+  transform: translateY(-2px);
+}
+
+.btn-delete {
+  background: rgba(229, 62, 62, 0.1);
+  border-color: var(--danger);
+}
+
+.btn-delete:hover {
+  background: var(--danger);
+  transform: translateY(-2px);
+}
+
 .task-list {
   display: flex;
   flex-direction: column;
