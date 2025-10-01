@@ -97,13 +97,18 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&config) {
-                if let Ok(result) =
+            match to_value(&config) {
+                Ok(args) => {
                     invoke_command(event_names::config::SAVE_GLOBAL, args).await
-                {
-                    if serde_wasm_bindgen::from_value::<()>(result).is_ok() {
-                        set_config.set(Some(config));
-                    }
+                        .ok()
+                        .and_then(|result| serde_wasm_bindgen::from_value::<()>(result).ok())
+                        .map(|_| set_config.set(Some(config)))
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to save config".into());
+                        });
+                }
+                Err(_) => {
+                    web_sys::console::error_1(&"Failed to serialize config for saving".into());
                 }
             }
             set_is_saving.set(false);
@@ -117,16 +122,18 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&serde_json::json!({ "preferences": general })) {
-                if let Ok(result) =
-                    invoke_command(event_names::config::UPDATE_GENERAL, args)
-                        .await
-                {
-                    if let Ok(config) =
-                        serde_wasm_bindgen::from_value::<Config>(result)
-                    {
-                        set_config.set(Some(config));
-                    }
+            match to_value(&serde_json::json!({ "preferences": general })) {
+                Ok(args) => {
+                    invoke_command(event_names::config::UPDATE_GENERAL, args).await
+                        .ok()
+                        .and_then(|result| serde_wasm_bindgen::from_value::<Config>(result).ok())
+                        .map(|config| set_config.set(Some(config)))
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to update general config".into());
+                        });
+                }
+                Err(_) => {
+                    web_sys::console::error_1(&"Failed to serialize general config".into());
                 }
             }
             set_is_saving.set(false);
@@ -140,18 +147,18 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&serde_json::json!({ "preferences": notifications })) {
-                if let Ok(result) = invoke_command(
-                    event_names::config::UPDATE_NOTIFICATIONS,
-                    args,
-                )
-                .await
-                {
-                    if let Ok(config) =
-                        serde_wasm_bindgen::from_value::<Config>(result)
-                    {
-                        set_config.set(Some(config));
-                    }
+            match to_value(&serde_json::json!({ "preferences": notifications })) {
+                Ok(args) => {
+                    invoke_command(event_names::config::UPDATE_NOTIFICATIONS, args).await
+                        .ok()
+                        .and_then(|result| serde_wasm_bindgen::from_value::<Config>(result).ok())
+                        .map(|config| set_config.set(Some(config)))
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to update notification preferences".into());
+                        });
+                }
+                Err(_) => {
+                    web_sys::console::error_1(&"Failed to serialize notification preferences".into());
                 }
             }
             set_is_saving.set(false);
@@ -165,16 +172,18 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&serde_json::json!({ "preferences": appearance })) {
-                if let Ok(result) =
-                    invoke_command(event_names::config::UPDATE_APPEARANCE, args)
-                        .await
-                {
-                    if let Ok(config) =
-                        serde_wasm_bindgen::from_value::<Config>(result)
-                    {
-                        set_config.set(Some(config));
-                    }
+            match to_value(&serde_json::json!({ "preferences": appearance })) {
+                Ok(args) => {
+                    invoke_command(event_names::config::UPDATE_APPEARANCE, args).await
+                        .ok()
+                        .and_then(|result| serde_wasm_bindgen::from_value::<Config>(result).ok())
+                        .map(|config| set_config.set(Some(config)))
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to update appearance config".into());
+                        });
+                }
+                Err(_) => {
+                    web_sys::console::error_1(&"Failed to serialize appearance config".into());
                 }
             }
             set_is_saving.set(false);
@@ -195,16 +204,18 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(args) = to_value(&serde_json::json!({ "timer": timer })) {
-                if let Ok(result) =
-                    invoke_command(event_names::config::UPDATE_TIMINGS, args)
-                        .await
-                {
-                    if let Ok(config) =
-                        serde_wasm_bindgen::from_value::<Config>(result)
-                    {
-                        set_config.set(Some(config));
-                    }
+            match to_value(&serde_json::json!({ "timer": timer })) {
+                Ok(args) => {
+                    invoke_command(event_names::config::UPDATE_TIMINGS, args).await
+                        .ok()
+                        .and_then(|result| serde_wasm_bindgen::from_value::<Config>(result).ok())
+                        .map(|config| set_config.set(Some(config)))
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to update timer configuration".into());
+                        });
+                }
+                Err(_) => {
+                    web_sys::console::error_1(&"Failed to serialize timer configuration".into());
                 }
             }
             set_is_saving.set(false);
@@ -218,16 +229,13 @@ impl SettingsViewModel {
         set_is_saving.set(true);
 
         spawn_local(async move {
-            if let Ok(result) =
-                invoke_command_no_args(event_names::config::RESET_TO_DEFAULTS)
-                    .await
-            {
-                if let Ok(config) =
-                    serde_wasm_bindgen::from_value::<Config>(result)
-                {
-                    set_config.set(Some(config));
-                }
-            }
+            invoke_command_no_args(event_names::config::RESET_TO_DEFAULTS).await
+                .ok()
+                .and_then(|result| serde_wasm_bindgen::from_value::<Config>(result).ok())
+                .map(|config| set_config.set(Some(config)))
+                .unwrap_or_else(|| {
+                    web_sys::console::error_1(&"Failed to reset config to defaults".into());
+                });
             set_is_saving.set(false);
         });
     }
@@ -298,8 +306,13 @@ impl SettingsViewModel {
                                         // Save to backend
                                         set_is_saving.set(true);
                                         spawn_local(async move {
-                                            if let Ok(args) = to_value(&config) {
-                                                let _ = invoke_command(event_names::config::SAVE_GLOBAL, args).await;
+                                            match to_value(&config) {
+                                                Ok(args) => {
+                                                    let _ = invoke_command(event_names::config::SAVE_GLOBAL, args).await;
+                                                }
+                                                Err(_) => {
+                                                    web_sys::console::error_1(&"Failed to serialize imported config".into());
+                                                }
                                             }
                                             set_is_saving.set(false);
                                         });
@@ -378,24 +391,22 @@ impl SettingsViewModel {
                 );
 
                 // Update the config when it changes
-                if let Ok(new_config) = from_value::<Config>(payload) {
-                    set_config.set(Some(new_config));
-                } else {
-                    // If parsing fails, reload the config from backend
-                    let set_config_clone = set_config;
-                    spawn_local(async move {
-                        match invoke_command_no_args(event_names::config::GET_GLOBAL).await {
-                            Ok(result) => {
-                                if let Ok(config) = from_value::<Config>(result) {
-                                    set_config_clone.set(Some(config));
-                                }
-                            }
-                            Err(e) => {
-                                web_sys::console::error_1(&format!("Failed to reload config: {:?}", e).into());
-                            }
-                        }
+                from_value::<Config>(payload)
+                    .ok()
+                    .map(|new_config| set_config.set(Some(new_config)))
+                    .unwrap_or_else(|| {
+                        // If parsing fails, reload the config from backend
+                        let set_config_clone = set_config;
+                        spawn_local(async move {
+                            invoke_command_no_args(event_names::config::GET_GLOBAL).await
+                                .ok()
+                                .and_then(|result| from_value::<Config>(result).ok())
+                                .map(|config| set_config_clone.set(Some(config)))
+                                .unwrap_or_else(|| {
+                                    web_sys::console::error_1(&"Failed to reload config after update".into());
+                                });
+                        });
                     });
-                }
             });
 
             listen(CONFIG_UPDATED_UI, &callback).await;
@@ -411,17 +422,16 @@ impl SettingsViewModel {
                 // Reload the default config
                 let set_config_clone = set_config_for_reset;
                 spawn_local(async move {
-                    match invoke_command_no_args(event_names::config::GET_GLOBAL).await {
-                        Ok(result) => {
-                            if let Ok(config) = from_value::<Config>(result) {
-                                set_config_clone.set(Some(config));
-                                web_sys::console::log_1(&"Config reset to defaults".into());
-                            }
-                        }
-                        Err(e) => {
-                            web_sys::console::error_1(&format!("Failed to reload config after reset: {:?}", e).into());
-                        }
-                    }
+                    invoke_command_no_args(event_names::config::GET_GLOBAL).await
+                        .ok()
+                        .and_then(|result| from_value::<Config>(result).ok())
+                        .map(|config| {
+                            set_config_clone.set(Some(config));
+                            web_sys::console::log_1(&"Config reset to defaults".into());
+                        })
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(&"Failed to reload config after reset".into());
+                        });
                 });
             });
 
@@ -443,18 +453,24 @@ impl SettingsViewModel {
                 );
 
                 // Update just the theme in the config
-                if let Ok(theme_str) = from_value::<String>(payload) {
-                    let theme = match theme_str.as_str() {
-                        "Light" => Theme::Light,
-                        "Dark" => Theme::Dark,
-                        _ => Theme::System,
-                    };
+                from_value::<String>(payload)
+                    .ok()
+                    .map(|theme_str| {
+                        let theme = match theme_str.as_str() {
+                            "Light" => Theme::Light,
+                            "Dark" => Theme::Dark,
+                            _ => Theme::System,
+                        };
 
-                    if let Some(mut current_config) = config_for_theme.get_untracked() {
-                        current_config.appearance.theme = theme;
-                        set_config_for_theme.set(Some(current_config));
-                    }
-                }
+                        config_for_theme.get_untracked()
+                            .map(|mut current_config| {
+                                current_config.appearance.theme = theme;
+                                set_config_for_theme.set(Some(current_config));
+                            });
+                    })
+                    .unwrap_or_else(|| {
+                        web_sys::console::error_1(&"Failed to parse theme change event".into());
+                    });
             });
 
             listen(config_event_names::THEME_CHANGED, &callback).await;

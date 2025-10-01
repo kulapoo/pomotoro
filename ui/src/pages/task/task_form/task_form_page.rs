@@ -33,18 +33,18 @@ pub fn TaskFormPage() -> impl IntoView {
     if let Some(id) = task_id() {
         spawn_local(async move {
             // Fetch all tasks and find the one we need
-            if let Ok(result) = invoke_command_no_args(domain::event_names::task::GET_ALL).await {
-                if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
-                    for dto in task_dto_list {
-                        if let Ok(fetched_task) = dto.to_task() {
-                            if fetched_task.id == id {
-                                set_task.set(Some(fetched_task));
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            invoke_command_no_args(domain::event_names::task::GET_ALL).await
+                .ok()
+                .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
+                .and_then(|task_dto_list| {
+                    task_dto_list.into_iter()
+                        .filter_map(|dto| dto.to_task().ok())
+                        .find(|fetched_task| fetched_task.id == id)
+                })
+                .map(|fetched_task| set_task.set(Some(fetched_task)))
+                .unwrap_or_else(|| {
+                    web_sys::console::error_1(&format!("Failed to fetch task with id: {}", id).into());
+                });
             set_is_loading.set(false);
         });
     } else {

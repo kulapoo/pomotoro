@@ -3,13 +3,13 @@ use crate::adapters::TimerRepositoryArc;
 use std::sync::Arc;
 use domain::TaskRepository;
 use anyhow::Context;
-use domain::{TimerInfo, event_names::ui_listeners};
+use domain::{Timer, event_names::ui_listeners};
 use tauri::{AppHandle, Emitter, State};
 use log::{debug, info};
 
 use usecases::timer::{
     StartTimerSessionCmd, SwitchTimerTaskCmd,
-    get_timer_state as app_get_timer_state, pause_timer_session,
+    pause_timer_session,
     reset_timer_session, skip_timer_phase, start_timer_session,
     switch_timer_task,
 };
@@ -17,10 +17,11 @@ use usecases::timer::{
 #[tauri::command(rename_all = "snake_case")]
 pub async fn get_timer_state(
     timer_repo: State<'_, TimerRepositoryArc>,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo_arc
+        .get()
         .await
         .context("infra::commands::timer_cmd::get_timer_state - Failed to retrieve timer state")
         .map_err(|e| e.to_string())
@@ -32,7 +33,7 @@ pub async fn start_timer(
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     _app_handle: AppHandle,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     let current_timer = timer_repo_arc
@@ -104,7 +105,8 @@ pub async fn start_timer(
         .map_err(|e| e.to_string())?;
     }
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo.inner().clone()
+        .get()
         .await
         .context(
             "infra::commands::timer_cmd - Failed to get updated timer state",
@@ -117,7 +119,7 @@ pub async fn pause_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
@@ -137,7 +139,8 @@ pub async fn pause_timer(
     if current_state.status() == domain::TimerStatus::Paused {
         debug!("Timer is already paused");
         // Return current state instead of error
-        return app_get_timer_state(timer_repo_arc)
+        return timer_repo_arc
+            .get()
             .await
             .context("infra::commands::timer_cmd - Failed to get timer state")
             .map_err(|e| e.to_string());
@@ -160,7 +163,8 @@ pub async fn pause_timer(
     .context("infra::commands::timer_cmd::pause_timer - Failed to toggle pause state")
     .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo_arc
+        .get()
         .await
         .context(
             "infra::commands::timer_cmd - Failed to get updated timer state",
@@ -173,7 +177,7 @@ pub async fn reset_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer to find active task
@@ -198,7 +202,8 @@ pub async fn reset_timer(
     .context("infra::commands::timer_cmd::reset_timer - Failed to reset timer to initial state")
     .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo_arc
+        .get()
         .await
         .context(
             "infra::commands::timer_cmd - Failed to get updated timer state",
@@ -212,7 +217,7 @@ pub async fn skip_phase(
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
     app_handle: AppHandle,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     // Get current timer state to find active task
@@ -244,7 +249,8 @@ pub async fn skip_phase(
         .emit(ui_listeners::timer::PHASE_SKIPPED, new_phase)
         .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo_arc
+        .get()
         .await
         .context(
             "infra::commands::timer_cmd - Failed to get updated timer state",
@@ -258,7 +264,7 @@ pub async fn switch_active_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TimerInfo, String> {
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
     let task_id_parsed = domain::TaskId::from_string(&task_id)
@@ -276,7 +282,8 @@ pub async fn switch_active_task(
     .context("infra::commands::timer_cmd::switch_timer_task - Failed to switch timer task")
     .map_err(|e| e.to_string())?;
 
-    app_get_timer_state(timer_repo_arc)
+    timer_repo_arc
+        .get()
         .await
         .context(
             "infra::commands::timer_cmd - Failed to get updated timer state",

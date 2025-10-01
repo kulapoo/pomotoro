@@ -1,12 +1,12 @@
 use crate::pages::task::types::TaskDto;
-use crate::utils::{ViewModel, invoke_command, invoke_command_no_args, invoke};
+use crate::utils::{ViewModel, invoke_command_no_args, invoke};
 use domain::event_names::{ui_listeners::task as task_event_names, commands};
 use domain::{Task, TaskId};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde::Serialize;
-use serde_wasm_bindgen::{from_value, to_value};
+use serde_wasm_bindgen::from_value;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -21,17 +21,17 @@ extern "C" {
 
 // Helper function to refetch all tasks
 async fn refetch_all_tasks(set_tasks: WriteSignal<Vec<Task>>, command: &str) {
-    if let Ok(result) = invoke_command_no_args(command).await {
-        if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
-            let mut tasks = Vec::new();
-            for dto in task_dto_list {
-                if let Ok(task) = dto.to_task() {
-                    tasks.push(task);
-                }
-            }
-            set_tasks.set(tasks);
-        }
-    }
+    let tasks = invoke_command_no_args(command).await
+        .ok()
+        .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
+        .map(|task_dto_list| {
+            task_dto_list.into_iter()
+                .filter_map(|dto| dto.to_task().ok())
+                .collect()
+        })
+        .unwrap_or_default();
+
+    set_tasks.set(tasks);
 }
 
 pub struct TaskDirectoryViewModel {
@@ -238,73 +238,73 @@ impl TaskDirectoryViewModel {
         let tasks = self.tasks;
 
         spawn_local(async move {
-            if let Ok(result) = invoke_command_no_args(commands::task::GET_ALL).await {
-                if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
-                    let mut task_list = Vec::new();
-                    for dto in task_dto_list {
-                        if let Ok(task) = dto.to_task() {
-                            task_list.push(task);
-                        }
-                    }
-                    set_tasks.set(task_list);
-                }
-            }
+            let task_list = invoke_command_no_args(commands::task::GET_ALL).await
+                .ok()
+                .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
+                .map(|task_dto_list| {
+                    task_dto_list.into_iter()
+                        .filter_map(|dto| dto.to_task().ok())
+                        .collect()
+                })
+                .unwrap_or_default();
 
-            if let Ok(result) = invoke_command_no_args(commands::timer::GET_STATE).await {
-                web_sys::console::log_1(&format!("Timer state result: {:?}", result).into());
+            set_tasks.set(task_list);
 
-                // Try to extract TimerInfo which includes both state and active_task_id
-                if let Ok(timer_info) = from_value::<serde_json::Value>(result) {
-                    web_sys::console::log_1(&format!("Timer info parsed: {:?}", timer_info).into());
+            // Get timer state and extract active task
+            invoke_command_no_args(commands::timer::GET_STATE).await
+                .ok()
+                .and_then(|result| {
+                    web_sys::console::log_1(&format!("Timer state result: {:?}", result).into());
+                    from_value::<serde_json::Value>(result).ok()
+                })
+                .and_then(|timer| {
+                    web_sys::console::log_1(&format!("Timer parsed: {:?}", timer).into());
 
-                    if let Some(active_task_id) = timer_info.get("active_task_id") {
-                        web_sys::console::log_1(&format!("Active task ID from timer: {:?}", active_task_id).into());
+                    timer.get("active_task_id")
+                        .and_then(|active_task_id| {
+                            web_sys::console::log_1(&format!("Active task ID from timer: {:?}", active_task_id).into());
 
-                        if !active_task_id.is_null() {
-                            // Handle both string format and object format (for backwards compatibility)
-                            let task_id_str = if let Some(id_str) = active_task_id.as_str() {
-                                Some(id_str.to_string())
-                            } else if let Some(uuid_obj) = active_task_id.as_object() {
-                                // Handle old format: {"uuid": "..."}
-                                uuid_obj.get("uuid").and_then(|v| v.as_str()).map(|s| s.to_string())
-                            } else {
-                                None
-                            };
-
-                            if let Some(task_id_str) = task_id_str {
-                                if let Ok(task_id) = domain::TaskId::from_string(&task_id_str) {
-                                    // Find the active task in the tasks list we just loaded
-                                    let tasks_list = tasks.get_untracked();
-                                    let active_task = tasks_list.iter().find(|t| t.id == task_id).cloned();
-
-                                    if let Some(ref task) = active_task {
-                                        web_sys::console::log_1(&format!("Found active task: {}", task.name).into());
-                                    } else {
-                                        web_sys::console::log_1(&format!("Active task not found in task list for ID: {}", task_id).into());
-                                    }
-
-                                    set_active_task.set(active_task);
-                                } else {
-                                    web_sys::console::error_1(&"Failed to parse task ID string".into());
-                                    set_active_task.set(None);
-                                }
-                            } else {
-                                web_sys::console::error_1(&"Active task ID is not a string".into());
-                                set_active_task.set(None);
+                            if active_task_id.is_null() {
+                                web_sys::console::log_1(&"Active task ID is null".into());
+                                return None;
                             }
-                        } else {
-                            web_sys::console::log_1(&"Active task ID is null".into());
-                            set_active_task.set(None);
-                        }
-                    } else {
-                        web_sys::console::log_1(&"No active_task_id field in timer info".into());
-                        set_active_task.set(None);
-                    }
-                } else {
-                    web_sys::console::error_1(&"Failed to parse timer info as JSON".into());
+
+                            // Handle both string format and object format (for backwards compatibility)
+                            active_task_id.as_str()
+                                .map(|s| s.to_string())
+                                .or_else(|| {
+                                    active_task_id.as_object()
+                                        .and_then(|obj| obj.get("uuid"))
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string())
+                                })
+                        })
+                })
+                .and_then(|task_id_str| {
+                    domain::TaskId::from_string(&task_id_str)
+                        .ok()
+                        .and_then(|task_id| {
+                            let tasks_list = tasks.get_untracked();
+                            let active_task = tasks_list.iter().find(|t| t.id == task_id).cloned();
+
+                            if let Some(ref task) = active_task {
+                                web_sys::console::log_1(&format!("Found active task: {}", task.name).into());
+                            } else {
+                                web_sys::console::log_1(&format!("Active task not found in task list for ID: {}", task_id).into());
+                            }
+
+                            Some(active_task)
+                        })
+                        .or_else(|| {
+                            web_sys::console::error_1(&"Failed to parse task ID string".into());
+                            None
+                        })
+                })
+                .map(|active_task| set_active_task.set(active_task))
+                .unwrap_or_else(|| {
+                    web_sys::console::log_1(&"No active_task_id field in timer info or parsing failed".into());
                     set_active_task.set(None);
-                }
-            }
+                });
         });
     }
 
@@ -360,26 +360,23 @@ impl TaskDirectoryViewModel {
                 id: task_id.to_string(),
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                web_sys::console::log_1(
-                    &format!("Invoking delete_task with args: {:?}", args_value).into(),
-                );
+            web_sys::console::log_1(
+                &format!("Invoking delete_task for task_id: {:?}", task_id).into(),
+            );
 
-                match invoke_command(commands::task::DELETE, args_value).await {
-                    Ok(_result) => {
-                        web_sys::console::log_1(
-                            &format!("Successfully deleted task: {:?}", task_id).into(),
-                        );
-                        let mut current_tasks = tasks.get_untracked();
-                        current_tasks.retain(|t| t.id != task_id);
-                        set_tasks.set(current_tasks);
-                        set_selected_task.set(None);
-                    }
-                    Err(e) => {
-                        web_sys::console::error_1(&format!("Failed to delete task: {:?}", e).into());
-                    }
-                }
-            }
+            invoke(commands::task::DELETE, args).await
+                .map(|_result| {
+                    web_sys::console::log_1(
+                        &format!("Successfully deleted task: {:?}", task_id).into(),
+                    );
+                    let mut current_tasks = tasks.get_untracked();
+                    current_tasks.retain(|t| t.id != task_id);
+                    set_tasks.set(current_tasks);
+                    set_selected_task.set(None);
+                })
+                .unwrap_or_else(|e| {
+                    web_sys::console::error_1(&format!("Failed to delete task: {:?}", e).into());
+                });
         });
 
         true
@@ -401,23 +398,18 @@ impl TaskDirectoryViewModel {
                 task_id: task_id.to_string(),
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                web_sys::console::log_1(
-                    &format!("Invoking switch_active_task with args: {:?}", args_value).into(),
-                );
+            web_sys::console::log_1(
+                &format!("Invoking switch_active_task for task_id: {:?}", task_id).into(),
+            );
 
-                match invoke_command(
-                    commands::timer::SWITCH_ACTIVE_TASK,
-                    args_value,
-                )
-                .await
-                {
-                    Ok(result) => {
-                        web_sys::console::log_1(
-                            &format!("Switch task result: {:?}", result).into(),
-                        );
-                        // The result now contains TimerInfo with both state and active_task_id
-                        if let Ok(timer_info) = from_value::<serde_json::Value>(result) {
+            invoke(commands::timer::SWITCH_ACTIVE_TASK, args).await
+                .map(|result| {
+                    web_sys::console::log_1(
+                        &format!("Switch task result: {:?}", result).into(),
+                    );
+                    // The result now contains TimerInfo with both state and active_task_id
+                    from_value::<serde_json::Value>(result)
+                        .map(|timer_info| {
                             web_sys::console::log_1(
                                 &format!("Timer info received: {:?}", timer_info).into(),
                             );
@@ -432,17 +424,18 @@ impl TaskDirectoryViewModel {
                             web_sys::console::log_1(
                                 &format!("Active task set to: {:?}", task_name).into(),
                             );
-                        }
-                    }
-                    Err(e) => {
-                        web_sys::console::error_1(
-                            &format!("Failed to switch task: {:?}", e).into(),
-                        );
-                    }
-                }
-            } else {
-                web_sys::console::error_1(&"Failed to serialize task ID".into());
-            }
+                        })
+                        .unwrap_or_else(|e| {
+                            web_sys::console::error_1(
+                                &format!("Failed to parse timer info: {:?}", e).into(),
+                            );
+                        });
+                })
+                .unwrap_or_else(|e| {
+                    web_sys::console::error_1(
+                        &format!("Failed to switch task: {:?}", e).into(),
+                    );
+                });
         });
     }
 
@@ -478,13 +471,13 @@ impl TaskDirectoryViewModel {
                 sort_order: Some("asc".to_string()),
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) = invoke_command(commands::task::SEARCH, args_value).await {
-                    if let Ok(task_list) = from_value::<Vec<Task>>(result) {
-                        set_filtered.set(task_list);
-                    }
-                }
-            }
+            invoke(commands::task::SEARCH, args).await
+                .ok()
+                .and_then(|result| from_value::<Vec<Task>>(result).ok())
+                .map(|task_list| set_filtered.set(task_list))
+                .unwrap_or_else(|| {
+                    web_sys::console::error_1(&"Failed to search tasks".into());
+                });
         });
     }
 
@@ -510,6 +503,84 @@ impl TaskDirectoryViewModel {
         self.status_filter.get()
     }
 
+    pub fn cycle_to_next_incomplete_task(&self) {
+        let set_tasks = self.set_tasks;
+        let tasks = self.tasks;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct CycleArgs {
+                current_task_id: Option<String>,
+                direction: String,
+            }
+
+            let current_id = tasks.get_untracked().first().map(|t| t.id.to_string());
+
+            let args = CycleArgs {
+                current_task_id: current_id,
+                direction: "next".to_string(),
+            };
+
+            #[derive(serde::Deserialize)]
+            struct CycleResult {
+                task: Option<Task>,
+                position: usize,
+                total_incomplete: usize,
+            }
+
+            invoke(commands::task::CYCLE_INCOMPLETE_TASK, args).await
+                .ok()
+                .and_then(|result| from_value::<CycleResult>(result).ok())
+                .map(|_cycle_result| {
+                    spawn_local(async move {
+                        refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
+                    });
+                })
+                .unwrap_or_else(|| {
+                    web_sys::console::error_1(&"Failed to cycle to next incomplete task".into());
+                });
+        });
+    }
+
+    pub fn cycle_to_previous_incomplete_task(&self) {
+        let set_tasks = self.set_tasks;
+        let tasks = self.tasks;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct CycleArgs {
+                current_task_id: Option<String>,
+                direction: String,
+            }
+
+            let current_id = tasks.get_untracked().first().map(|t| t.id.to_string());
+
+            let args = CycleArgs {
+                current_task_id: current_id,
+                direction: "previous".to_string(),
+            };
+
+            #[derive(serde::Deserialize)]
+            struct CycleResult {
+                task: Option<Task>,
+                position: usize,
+                total_incomplete: usize,
+            }
+
+            invoke(commands::task::CYCLE_INCOMPLETE_TASK, args).await
+                .ok()
+                .and_then(|result| from_value::<CycleResult>(result).ok())
+                .map(|_cycle_result| {
+                    spawn_local(async move {
+                        refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
+                    });
+                })
+                .unwrap_or_else(|| {
+                    web_sys::console::error_1(&"Failed to cycle to previous incomplete task".into());
+                });
+        });
+    }
+
     pub fn reset_task_to_queued(&self, task_id: TaskId, reset_sessions: bool) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
@@ -526,53 +597,53 @@ impl TaskDirectoryViewModel {
                 reset_sessions,
             };
 
-            match invoke(commands::task::RESET_STATUS, args).await {
-                Ok(result) => {
+            invoke(commands::task::RESET_STATUS, args).await
+                .map(|result| {
                     web_sys::console::log_1(
                         &format!("Reset task status result: {:?}", result).into(),
                     );
 
-                        match from_value::<TaskDto>(result.clone()) {
-                            Ok(task_dto) => {
-                                match task_dto.to_task() {
-                                    Ok(updated_task) => {
-                                        web_sys::console::log_1(
-                                            &format!(
-                                                "Successfully reset task: id={}, status={:?}",
-                                                updated_task.id, updated_task.status
-                                            )
-                                            .into(),
-                                        );
-                                        let mut current_tasks = tasks.get_untracked();
-                                        if let Some(index) =
-                                            current_tasks.iter().position(|t| t.id == task_id)
-                                        {
-                                            current_tasks[index] = updated_task;
-                                            set_tasks.set(current_tasks);
-                                        }
+                    from_value::<TaskDto>(result.clone())
+                        .ok()
+                        .and_then(|task_dto| {
+                            task_dto.to_task()
+                                .map(|updated_task| {
+                                    web_sys::console::log_1(
+                                        &format!(
+                                            "Successfully reset task: id={}, status={:?}",
+                                            updated_task.id, updated_task.status
+                                        )
+                                        .into(),
+                                    );
+                                    let mut current_tasks = tasks.get_untracked();
+                                    if let Some(index) =
+                                        current_tasks.iter().position(|t| t.id == task_id)
+                                    {
+                                        current_tasks[index] = updated_task;
+                                        set_tasks.set(current_tasks);
                                     }
-                                    Err(e) => {
-                                        web_sys::console::error_1(
-                                            &format!("Failed to convert TaskDto to Task: {}", e).into(),
-                                        );
-                                        refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                web_sys::console::error_1(
-                                    &format!("Failed to deserialize TaskDto: {:?}", e).into(),
-                                );
+                                })
+                                .map_err(|e| {
+                                    web_sys::console::error_1(
+                                        &format!("Failed to convert TaskDto to Task: {}", e).into(),
+                                    );
+                                })
+                                .ok()
+                        })
+                        .unwrap_or_else(|| {
+                            web_sys::console::error_1(
+                                &format!("Failed to deserialize TaskDto").into(),
+                            );
+                            spawn_local(async move {
                                 refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        web_sys::console::error_1(
-                            &format!("Failed to invoke reset_task_status command: {:?}", e).into(),
-                        );
-                    }
-                }
+                            });
+                        });
+                })
+                .unwrap_or_else(|e| {
+                    web_sys::console::error_1(
+                        &format!("Failed to invoke reset_task_status command: {:?}", e).into(),
+                    );
+                });
         });
     }
 }

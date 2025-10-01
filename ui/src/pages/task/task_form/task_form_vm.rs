@@ -21,8 +21,6 @@ pub struct TaskFormViewModel {
     set_is_creating: WriteSignal<bool>,
     current_task: ReadSignal<Option<Task>>,
     set_current_task: WriteSignal<Option<Task>>,
-    cycle_position: ReadSignal<(usize, usize)>,
-    set_cycle_position: WriteSignal<(usize, usize)>,
 }
 
 impl ViewModel for TaskFormViewModel {
@@ -31,15 +29,12 @@ impl ViewModel for TaskFormViewModel {
     fn new() -> Self {
         let (is_creating, set_is_creating) = signal(false);
         let (current_task, set_current_task) = signal(None::<Task>);
-        let (cycle_position, set_cycle_position) = signal((0, 0));
 
         let vm = Self {
             is_creating,
             set_is_creating,
             current_task,
             set_current_task,
-            cycle_position,
-            set_cycle_position,
         };
 
         vm.setup_event_listeners();
@@ -80,11 +75,13 @@ impl TaskFormViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
-                if let Ok(task_dto) = from_value::<TaskDto>(payload) {
-                    if let Ok(task) = task_dto.to_task() {
-                        set_current_task.set(Some(task));
-                    }
-                }
+                from_value::<TaskDto>(payload)
+                    .ok()
+                    .and_then(|task_dto| task_dto.to_task().ok())
+                    .map(|task| set_current_task.set(Some(task)))
+                    .unwrap_or_else(|| {
+                        web_sys::console::error_1(&"Failed to parse TaskUpdated event payload".into());
+                    });
             });
 
             listen(commands::task::TASK_UPDATED, &callback).await;
@@ -143,46 +140,46 @@ impl TaskFormViewModel {
 
             let args = CreateTaskArgs { request };
 
-            match invoke(commands::task::CREATE, args).await {
-                Ok(result) => {
+            invoke(commands::task::CREATE, args).await
+                .map(|result| {
                     web_sys::console::log_1(
                         &format!("Create task result: {:?}", result).into(),
                     );
-                    match from_value::<TaskDto>(result.clone()) {
-                        Ok(task_dto) => {
+
+                    from_value::<TaskDto>(result.clone())
+                        .ok()
+                        .and_then(|task_dto| {
                             web_sys::console::log_1(
                                 &format!("Successfully deserialized TaskDto: {}", task_dto.name).into()
                             );
-                            match task_dto.to_task() {
-                                Ok(new_task) => {
+
+                            task_dto.to_task()
+                                .map(|new_task| {
                                     web_sys::console::log_1(
                                         &format!("Successfully created task: {}", new_task.name).into()
                                     );
-                                    set_is_creating.set(false);
-                                }
-                                Err(e) => {
+                                })
+                                .map_err(|e| {
                                     web_sys::console::error_1(
                                         &format!("Failed to convert TaskDto to Task: {}", e).into()
                                     );
-                                    set_is_creating.set(false);
-                                }
-                            }
-                        }
-                        Err(e) => {
+                                })
+                                .ok()
+                        })
+                        .unwrap_or_else(|| {
                             web_sys::console::error_1(
-                                &format!("Failed to deserialize TaskDto: {:?}", e).into()
+                                &format!("Failed to deserialize TaskDto").into()
                             );
-                            set_is_creating.set(false);
-                        }
-                    }
-                }
-                Err(e) => {
+                        });
+
+                    set_is_creating.set(false);
+                })
+                .unwrap_or_else(|e| {
                     web_sys::console::error_1(
                         &format!("Failed to invoke create_task command: {:?}", e).into()
                     );
                     set_is_creating.set(false);
-                }
-            }
+                });
         });
     }
 
@@ -232,125 +229,6 @@ impl TaskFormViewModel {
                     web_sys::console::error_1(
                         &format!("Failed to invoke update_task command: {:?}", e).into()
                     );
-                }
-            }
-        });
-    }
-
-    pub fn cycle_to_next_incomplete_task(&self) {
-        let set_current_task = self.set_current_task;
-        let set_cycle_position = self.set_cycle_position;
-        let current_task = self.current_task;
-
-        spawn_local(async move {
-            #[derive(serde::Serialize)]
-            struct CycleArgs {
-                current_task_id: Option<String>,
-                direction: String,
-            }
-
-            let current_id = current_task.get_untracked().map(|t| t.id.to_string());
-
-            let args = CycleArgs {
-                current_task_id: current_id,
-                direction: "next".to_string(),
-            };
-
-            if let Ok(result) = invoke(
-                commands::task::CYCLE_INCOMPLETE_TASK,
-                args,
-            )
-            .await
-            {
-                    #[derive(serde::Deserialize)]
-                    struct CycleResult {
-                        task: Option<Task>,
-                        position: usize,
-                        total_incomplete: usize,
-                    }
-
-                    if let Ok(cycle_result) = from_value::<CycleResult>(result) {
-                        set_current_task.set(cycle_result.task);
-                        set_cycle_position.set((
-                            cycle_result.position,
-                            cycle_result.total_incomplete,
-                        ));
-                    }
-            }
-        });
-    }
-
-    pub fn cycle_to_previous_incomplete_task(&self) {
-        let set_current_task = self.set_current_task;
-        let set_cycle_position = self.set_cycle_position;
-        let current_task = self.current_task;
-
-        spawn_local(async move {
-            #[derive(serde::Serialize)]
-            struct CycleArgs {
-                current_task_id: Option<String>,
-                direction: String,
-            }
-
-            let current_id = current_task.get_untracked().map(|t| t.id.to_string());
-
-            let args = CycleArgs {
-                current_task_id: current_id,
-                direction: "previous".to_string(),
-            };
-
-            if let Ok(result) = invoke(
-                commands::task::CYCLE_INCOMPLETE_TASK,
-                args,
-            )
-            .await
-            {
-                    #[derive(serde::Deserialize)]
-                    struct CycleResult {
-                        task: Option<Task>,
-                        position: usize,
-                        total_incomplete: usize,
-                    }
-
-                    if let Ok(cycle_result) = from_value::<CycleResult>(result) {
-                        set_current_task.set(cycle_result.task);
-                        set_cycle_position.set((
-                            cycle_result.position,
-                            cycle_result.total_incomplete,
-                        ));
-                    }
-            }
-        });
-    }
-
-    pub fn get_cycle_position(&self) -> (usize, usize) {
-        self.cycle_position.get()
-    }
-
-    pub fn update_cycle_position(&self) {
-        let set_cycle_position = self.set_cycle_position;
-        let current_task = self.current_task;
-
-        spawn_local(async move {
-            if let Some(task) = current_task.get_untracked() {
-                #[derive(serde::Serialize)]
-                struct GetPositionArgs {
-                    task_id: String,
-                }
-
-                let args = GetPositionArgs {
-                    task_id: task.id.to_string(),
-                };
-
-                if let Ok(result) = invoke(
-                    commands::task::GET_TASK_CYCLE_POSITION,
-                    args,
-                )
-                .await
-                {
-                        if let Ok((position, total)) = from_value::<(usize, usize)>(result) {
-                            set_cycle_position.set((position, total));
-                        }
                 }
             }
         });
