@@ -1,5 +1,6 @@
 use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
+use crate::components::error_toast::{ErrorInfo, handle_command_error};
 use domain::{Task, TaskId, TimerConfiguration, event_names::commands};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -21,6 +22,8 @@ pub struct TaskFormViewModel {
     set_is_creating: WriteSignal<bool>,
     current_task: ReadSignal<Option<Task>>,
     set_current_task: WriteSignal<Option<Task>>,
+    error_state: ReadSignal<Option<ErrorInfo>>,
+    set_error_state: WriteSignal<Option<ErrorInfo>>,
 }
 
 impl ViewModel for TaskFormViewModel {
@@ -29,12 +32,15 @@ impl ViewModel for TaskFormViewModel {
     fn new() -> Self {
         let (is_creating, set_is_creating) = signal(false);
         let (current_task, set_current_task) = signal(None::<Task>);
+        let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
         let vm = Self {
             is_creating,
             set_is_creating,
             current_task,
             set_current_task,
+            error_state,
+            set_error_state,
         };
 
         vm.setup_event_listeners();
@@ -105,6 +111,14 @@ impl TaskFormViewModel {
         self.set_current_task.set(task);
     }
 
+    pub fn get_error_state(&self) -> Option<ErrorInfo> {
+        self.error_state.get()
+    }
+
+    pub fn clear_error(&self) {
+        self.set_error_state.set(None);
+    }
+
     pub fn create_task_full(
         &self,
         name: String,
@@ -114,6 +128,7 @@ impl TaskFormViewModel {
         custom_config: Option<TimerConfiguration>,
     ) {
         let set_is_creating = self.set_is_creating;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
@@ -140,45 +155,35 @@ impl TaskFormViewModel {
 
             let args = CreateTaskArgs { request };
 
-            invoke(commands::task::CREATE, args).await
-                .map(|result| {
-                    web_sys::console::log_1(
-                        &format!("Create task result: {:?}", result).into(),
-                    );
-
-                    from_value::<TaskDto>(result.clone())
-                        .ok()
-                        .and_then(|task_dto| {
-                            web_sys::console::log_1(
-                                &format!("Successfully deserialized TaskDto: {}", task_dto.name).into()
-                            );
-
-                            task_dto.to_task()
-                                .map(|new_task| {
-                                    web_sys::console::log_1(
-                                        &format!("Successfully created task: {}", new_task.name).into()
-                                    );
-                                })
-                                .map_err(|e| {
-                                    web_sys::console::error_1(
-                                        &format!("Failed to convert TaskDto to Task: {}", e).into()
-                                    );
-                                })
-                                .ok()
-                        })
-                        .unwrap_or_else(|| {
-                            web_sys::console::error_1(
-                                &format!("Failed to deserialize TaskDto").into()
-                            );
-                        });
-
+            invoke::<TaskDto, _>(commands::task::CREATE, Some(args)).await
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to create task: {}", e), set_error_state);
                     set_is_creating.set(false);
                 })
-                .unwrap_or_else(|e| {
-                    web_sys::console::error_1(
-                        &format!("Failed to invoke create_task command: {:?}", e).into()
+                .ok()
+                .and_then(|task_dto| {
+                    web_sys::console::log_1(
+                        &format!("Create task result: {:?}", task_dto).into(),
                     );
-                    set_is_creating.set(false);
+
+                    web_sys::console::log_1(
+                        &format!("Successfully deserialized TaskDto: {}", task_dto.name).into()
+                    );
+
+                    task_dto.to_task()
+                        .map_err(|e| {
+                            handle_command_error(format!("Failed to convert TaskDto to Task: {}", e), set_error_state);
+                            set_is_creating.set(false);
+                        })
+                        .ok()
+                        .map(|new_task| {
+                            web_sys::console::log_1(
+                                &format!("Successfully created task: {}", new_task.name).into()
+                            );
+                            set_is_creating.set(false);
+                            // Clear any existing errors on success
+                            set_error_state.set(None);
+                        })
                 });
         });
     }
@@ -192,6 +197,8 @@ impl TaskFormViewModel {
         tags: Option<Vec<String>>,
         timer_config: Option<TimerConfiguration>,
     ) {
+        let set_error_state = self.set_error_state;
+
         spawn_local(async move {
             #[derive(serde::Serialize)]
             struct UpdateTaskRequest {
@@ -219,18 +226,18 @@ impl TaskFormViewModel {
 
             let args = UpdateTaskArgs { request };
 
-            match invoke(commands::task::UPDATE, args).await {
-                Ok(result) => {
+            invoke::<TaskDto, _>(commands::task::UPDATE, Some(args)).await
+                .map(|task_dto| {
                     web_sys::console::log_1(
-                        &format!("Update task result: {:?}", result).into(),
+                        &format!("Update task result: {:?}", task_dto).into(),
                     );
-                }
-                Err(e) => {
-                    web_sys::console::error_1(
-                        &format!("Failed to invoke update_task command: {:?}", e).into()
-                    );
-                }
-            }
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
+                })
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to update task: {}", e), set_error_state);
+                })
+                .ok();
         });
     }
 }

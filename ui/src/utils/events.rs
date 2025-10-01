@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 #[wasm_bindgen]
 extern "C" {
@@ -7,75 +7,59 @@ extern "C" {
     async fn tauri_invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-pub async fn invoke_command(
-    command: &str,
-    args: JsValue,
-) -> Result<JsValue, JsValue> {
-    web_sys::console::log_1(&format!("INVOKE: Calling command '{}' with args: {:?}", command, args).into());
-    
-    let result = tauri_invoke(command, args).await;
-    
-    web_sys::console::log_1(&format!("INVOKE: Command '{}' returned: {:?}", command, result).into());
+/// Unified invoke function that handles serialization, deserialization, and logging
+///
+/// # Arguments
+/// * `cmd` - The Tauri command to invoke
+/// * `args` - Optional arguments to pass to the command
+///
+/// # Returns
+/// * `Result<T, String>` - The deserialized result or an error message
+///
+/// # Example
+/// ```
+/// // Without arguments:
+/// let state: TimerState = invoke(commands::timer::GET_STATE, None::<()>).await?;
+///
+/// // With arguments:
+/// let task: Task = invoke(commands::task::GET_BY_ID, Some(&task_id)).await?;
+/// ```
+pub async fn invoke<T, A>(cmd: &str, args: Option<A>) -> Result<T, String>
+where
+    T: for<'de> Deserialize<'de>,
+    A: Serialize,
+{
+    // Log the invocation
+    web_sys::console::log_1(&format!("Invoking command: {}", cmd).into());
 
-    // Check if the result is a string (which could be an error message)
+    // Prepare arguments
+    let js_args = match args {
+        Some(a) => {
+            serde_wasm_bindgen::to_value(&a)
+                .map_err(|e| format!("Failed to serialize args for '{}': {:?}", cmd, e))?
+        }
+        None => js_sys::Object::new().into(),
+    };
+
+    // Call the Tauri command
+    let result = tauri_invoke(cmd, js_args).await;
+
+    // Check for string errors (Tauri v2 error format)
     if result.is_string() {
         let result_str = result.as_string().unwrap_or_default();
-        // Check if it looks like an error message (common patterns)
         if result_str.contains("Error") ||
            result_str.contains("failed") ||
            result_str.contains("not allowed") {
-            web_sys::console::error_1(&format!(
-                "Command '{}' failed: {}",
-                command, result_str
-            ).into());
-            return Err(JsValue::from_str(&result_str));
+            web_sys::console::error_1(&format!("Command '{}' failed: {}", cmd, result_str).into());
+            return Err(result_str);
         }
     }
 
-    Ok(result)
-}
-
-pub async fn invoke_command_no_args(command: &str) -> Result<JsValue, JsValue> {
-    // Create an empty object instead of NULL for Tauri v2
-    let args = js_sys::Object::new();
-    invoke_command(command, args.into()).await
-}
-
-/// Helper function to invoke a command with a single named parameter
-/// This ensures the argument is properly wrapped in an object with the correct field name
-pub async fn invoke_with_param(
-    command: &str,
-    param_name: &str,
-    value: JsValue,
-) -> Result<JsValue, JsValue> {
-    let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &JsValue::from_str(param_name), &value)
-        .map_err(|_| JsValue::from_str("Failed to set parameter"))?;
-
-    web_sys::console::log_1(&format!(
-        "INVOKE_WITH_PARAM: Calling '{}' with param '{}': {:?}",
-        command, param_name, value
-    ).into());
-
-    invoke_command(command, args.into()).await
-}
-
-/// Generic invoke function that automatically handles serialization
-/// Use this instead of manually calling serde_wasm_bindgen::to_value
-pub async fn invoke<T>(command: &str, args: T) -> Result<JsValue, JsValue>
-where
-    T: Serialize,
-{
-    web_sys::console::log_1(&format!("INVOKE: Preparing to call command '{}'", command).into());
-
-    match serde_wasm_bindgen::to_value(&args) {
-        Ok(args_value) => {
-            invoke_command(command, args_value).await
-        }
-        Err(err) => {
-            let error_msg = format!("Failed to serialize arguments for command '{}': {:?}", command, err);
-            web_sys::console::error_1(&JsValue::from_str(&error_msg));
-            Err(JsValue::from_str(&error_msg))
-        }
-    }
+    // Deserialize the result
+    serde_wasm_bindgen::from_value(result)
+        .map_err(|e| {
+            let error_msg = format!("Failed to parse result from '{}': {:?}", cmd, e);
+            web_sys::console::error_1(&error_msg.clone().into());
+            error_msg
+        })
 }

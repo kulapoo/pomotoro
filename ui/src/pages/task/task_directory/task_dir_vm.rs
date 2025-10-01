@@ -1,5 +1,6 @@
 use crate::pages::task::types::TaskDto;
-use crate::utils::{ViewModel, invoke_command_no_args, invoke};
+use crate::utils::{ViewModel, invoke};
+use crate::components::error_toast::{ErrorInfo, handle_command_error};
 use domain::event_names::{ui_listeners::task as task_event_names, commands};
 use domain::{Task, TaskId};
 use js_sys;
@@ -21,9 +22,8 @@ extern "C" {
 
 // Helper function to refetch all tasks
 async fn refetch_all_tasks(set_tasks: WriteSignal<Vec<Task>>, command: &str) {
-    let tasks = invoke_command_no_args(command).await
+    let tasks = invoke::<Vec<TaskDto>, ()>(command, None).await
         .ok()
-        .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
         .map(|task_dto_list| {
             task_dto_list.into_iter()
                 .filter_map(|dto| dto.to_task().ok())
@@ -49,6 +49,8 @@ pub struct TaskDirectoryViewModel {
     set_sort_by: WriteSignal<String>,
     status_filter: ReadSignal<String>,
     set_status_filter: WriteSignal<String>,
+    error_state: ReadSignal<Option<ErrorInfo>>,
+    set_error_state: WriteSignal<Option<ErrorInfo>>,
 }
 
 impl ViewModel for TaskDirectoryViewModel {
@@ -62,6 +64,7 @@ impl ViewModel for TaskDirectoryViewModel {
         let (search_query, set_search_query) = signal(String::new());
         let (sort_by, set_sort_by) = signal("created_at".to_string());
         let (status_filter, set_status_filter) = signal("all".to_string());
+        let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
         let vm = Self {
             tasks,
@@ -78,6 +81,8 @@ impl ViewModel for TaskDirectoryViewModel {
             set_sort_by,
             status_filter,
             set_status_filter,
+            error_state,
+            set_error_state,
         };
 
         vm.load_initial_data();
@@ -238,9 +243,8 @@ impl TaskDirectoryViewModel {
         let tasks = self.tasks;
 
         spawn_local(async move {
-            let task_list = invoke_command_no_args(commands::task::GET_ALL).await
+            let task_list = invoke::<Vec<TaskDto>, ()>(commands::task::GET_ALL, None).await
                 .ok()
-                .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
                 .map(|task_dto_list| {
                     task_dto_list.into_iter()
                         .filter_map(|dto| dto.to_task().ok())
@@ -251,12 +255,8 @@ impl TaskDirectoryViewModel {
             set_tasks.set(task_list);
 
             // Get timer state and extract active task
-            invoke_command_no_args(commands::timer::GET_STATE).await
+            invoke::<serde_json::Value, ()>(commands::timer::GET_STATE, None).await
                 .ok()
-                .and_then(|result| {
-                    web_sys::console::log_1(&format!("Timer state result: {:?}", result).into());
-                    from_value::<serde_json::Value>(result).ok()
-                })
                 .and_then(|timer| {
                     web_sys::console::log_1(&format!("Timer parsed: {:?}", timer).into());
 
@@ -349,6 +349,7 @@ impl TaskDirectoryViewModel {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
         let set_selected_task = self.set_selected_task;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(Serialize)]
@@ -364,7 +365,7 @@ impl TaskDirectoryViewModel {
                 &format!("Invoking delete_task for task_id: {:?}", task_id).into(),
             );
 
-            invoke(commands::task::DELETE, args).await
+            invoke::<(), _>(commands::task::DELETE, Some(args)).await
                 .map(|_result| {
                     web_sys::console::log_1(
                         &format!("Successfully deleted task: {:?}", task_id).into(),
@@ -373,10 +374,13 @@ impl TaskDirectoryViewModel {
                     current_tasks.retain(|t| t.id != task_id);
                     set_tasks.set(current_tasks);
                     set_selected_task.set(None);
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 })
-                .unwrap_or_else(|e| {
-                    web_sys::console::error_1(&format!("Failed to delete task: {:?}", e).into());
-                });
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to delete task: {}", e), set_error_state);
+                })
+                .ok();
         });
 
         true
@@ -385,6 +389,7 @@ impl TaskDirectoryViewModel {
     pub fn switch_active_task(&self, task_id: TaskId) {
         let set_active_task = self.set_active_task;
         let tasks = self.tasks;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             web_sys::console::log_1(&format!("Switching to task: {:?}", task_id).into());
@@ -402,40 +407,29 @@ impl TaskDirectoryViewModel {
                 &format!("Invoking switch_active_task for task_id: {:?}", task_id).into(),
             );
 
-            invoke(commands::timer::SWITCH_ACTIVE_TASK, args).await
-                .map(|result| {
+            invoke::<serde_json::Value, _>(commands::timer::SWITCH_ACTIVE_TASK, Some(args)).await
+                .map(|timer_info| {
                     web_sys::console::log_1(
-                        &format!("Switch task result: {:?}", result).into(),
+                        &format!("Timer info received: {:?}", timer_info).into(),
                     );
-                    // The result now contains TimerInfo with both state and active_task_id
-                    from_value::<serde_json::Value>(result)
-                        .map(|timer_info| {
-                            web_sys::console::log_1(
-                                &format!("Timer info received: {:?}", timer_info).into(),
-                            );
-                            let active_id = task_id;
-                            let task_list = tasks.get_untracked();
-                            let active_task = task_list
-                                .iter()
-                                .find(|t| t.id == active_id)
-                                .cloned();
-                            let task_name = active_task.as_ref().map(|t| t.name.clone());
-                            set_active_task.set(active_task);
-                            web_sys::console::log_1(
-                                &format!("Active task set to: {:?}", task_name).into(),
-                            );
-                        })
-                        .unwrap_or_else(|e| {
-                            web_sys::console::error_1(
-                                &format!("Failed to parse timer info: {:?}", e).into(),
-                            );
-                        });
+                    let active_id = task_id;
+                    let task_list = tasks.get_untracked();
+                    let active_task = task_list
+                        .iter()
+                        .find(|t| t.id == active_id)
+                        .cloned();
+                    let task_name = active_task.as_ref().map(|t| t.name.clone());
+                    set_active_task.set(active_task);
+                    web_sys::console::log_1(
+                        &format!("Active task set to: {:?}", task_name).into(),
+                    );
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 })
-                .unwrap_or_else(|e| {
-                    web_sys::console::error_1(
-                        &format!("Failed to switch task: {:?}", e).into(),
-                    );
-                });
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to switch active task: {}", e), set_error_state);
+                })
+                .ok();
         });
     }
 
@@ -450,6 +444,7 @@ impl TaskDirectoryViewModel {
         let set_filtered = self.set_filtered_tasks;
         let sort_by = self.sort_by.get();
         let status_filter = self.status_filter.get();
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
@@ -471,13 +466,16 @@ impl TaskDirectoryViewModel {
                 sort_order: Some("asc".to_string()),
             };
 
-            invoke(commands::task::SEARCH, args).await
-                .ok()
-                .and_then(|result| from_value::<Vec<Task>>(result).ok())
-                .map(|task_list| set_filtered.set(task_list))
-                .unwrap_or_else(|| {
-                    web_sys::console::error_1(&"Failed to search tasks".into());
-                });
+            invoke::<Vec<Task>, _>(commands::task::SEARCH, Some(args)).await
+                .map(|task_list| {
+                    set_filtered.set(task_list);
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
+                })
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to search tasks: {}", e), set_error_state);
+                })
+                .ok();
         });
     }
 
@@ -503,9 +501,18 @@ impl TaskDirectoryViewModel {
         self.status_filter.get()
     }
 
+    pub fn get_error_state(&self) -> Option<ErrorInfo> {
+        self.error_state.get()
+    }
+
+    pub fn clear_error(&self) {
+        self.set_error_state.set(None);
+    }
+
     pub fn cycle_to_next_incomplete_task(&self) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
@@ -528,23 +535,25 @@ impl TaskDirectoryViewModel {
                 total_incomplete: usize,
             }
 
-            invoke(commands::task::CYCLE_INCOMPLETE_TASK, args).await
-                .ok()
-                .and_then(|result| from_value::<CycleResult>(result).ok())
+            invoke::<CycleResult, _>(commands::task::CYCLE_INCOMPLETE_TASK, Some(args)).await
                 .map(|_cycle_result| {
                     spawn_local(async move {
                         refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
                     });
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 })
-                .unwrap_or_else(|| {
-                    web_sys::console::error_1(&"Failed to cycle to next incomplete task".into());
-                });
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to cycle to next incomplete task: {}", e), set_error_state);
+                })
+                .ok();
         });
     }
 
     pub fn cycle_to_previous_incomplete_task(&self) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
@@ -567,23 +576,25 @@ impl TaskDirectoryViewModel {
                 total_incomplete: usize,
             }
 
-            invoke(commands::task::CYCLE_INCOMPLETE_TASK, args).await
-                .ok()
-                .and_then(|result| from_value::<CycleResult>(result).ok())
+            invoke::<CycleResult, _>(commands::task::CYCLE_INCOMPLETE_TASK, Some(args)).await
                 .map(|_cycle_result| {
                     spawn_local(async move {
                         refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
                     });
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 })
-                .unwrap_or_else(|| {
-                    web_sys::console::error_1(&"Failed to cycle to previous incomplete task".into());
-                });
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to cycle to previous incomplete task: {}", e), set_error_state);
+                })
+                .ok();
         });
     }
 
     pub fn reset_task_to_queued(&self, task_id: TaskId, reset_sessions: bool) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
+        let set_error_state = self.set_error_state;
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
@@ -597,52 +608,42 @@ impl TaskDirectoryViewModel {
                 reset_sessions,
             };
 
-            invoke(commands::task::RESET_STATUS, args).await
-                .map(|result| {
+            invoke::<TaskDto, _>(commands::task::RESET_STATUS, Some(args)).await
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to reset task status: {}", e), set_error_state);
+                })
+                .ok()
+                .and_then(|task_dto| {
                     web_sys::console::log_1(
-                        &format!("Reset task status result: {:?}", result).into(),
+                        &format!("Reset task status result: {:?}", task_dto).into(),
                     );
 
-                    from_value::<TaskDto>(result.clone())
-                        .ok()
-                        .and_then(|task_dto| {
-                            task_dto.to_task()
-                                .map(|updated_task| {
-                                    web_sys::console::log_1(
-                                        &format!(
-                                            "Successfully reset task: id={}, status={:?}",
-                                            updated_task.id, updated_task.status
-                                        )
-                                        .into(),
-                                    );
-                                    let mut current_tasks = tasks.get_untracked();
-                                    if let Some(index) =
-                                        current_tasks.iter().position(|t| t.id == task_id)
-                                    {
-                                        current_tasks[index] = updated_task;
-                                        set_tasks.set(current_tasks);
-                                    }
-                                })
-                                .map_err(|e| {
-                                    web_sys::console::error_1(
-                                        &format!("Failed to convert TaskDto to Task: {}", e).into(),
-                                    );
-                                })
-                                .ok()
-                        })
-                        .unwrap_or_else(|| {
-                            web_sys::console::error_1(
-                                &format!("Failed to deserialize TaskDto").into(),
-                            );
+                    task_dto.to_task()
+                        .map_err(|e| {
+                            handle_command_error(format!("Failed to convert TaskDto to Task: {}", e), set_error_state);
                             spawn_local(async move {
                                 refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
                             });
-                        });
-                })
-                .unwrap_or_else(|e| {
-                    web_sys::console::error_1(
-                        &format!("Failed to invoke reset_task_status command: {:?}", e).into(),
-                    );
+                        })
+                        .ok()
+                        .map(|updated_task| {
+                            web_sys::console::log_1(
+                                &format!(
+                                    "Successfully reset task: id={}, status={:?}",
+                                    updated_task.id, updated_task.status
+                                )
+                                .into(),
+                            );
+                            let mut current_tasks = tasks.get_untracked();
+                            if let Some(index) =
+                                current_tasks.iter().position(|t| t.id == task_id)
+                            {
+                                current_tasks[index] = updated_task;
+                                set_tasks.set(current_tasks);
+                            }
+                            // Clear any existing errors on success
+                            set_error_state.set(None);
+                        })
                 });
         });
     }

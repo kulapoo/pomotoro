@@ -2,69 +2,45 @@ use domain::event_names::commands;
 use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use crate::utils::{invoke, invoke_command_no_args};
+use crate::utils::invoke;
 
 pub async fn get_global_config() -> std::result::Result<Config, String> {
-    let result = invoke_command_no_args(commands::config::GET_GLOBAL).await
-        .map_err(|e| format!("Failed to get config: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to deserialize Config: {e}"))
+    invoke::<Config, ()>(commands::config::GET_GLOBAL, None).await
 }
 
 #[allow(dead_code)]
 pub async fn save_global_config(
     config: Config,
 ) -> std::result::Result<(), String> {
-    let result = invoke(commands::config::SAVE_GLOBAL, config).await
-        .map_err(|e| format!("Failed to save config: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to save Config: {e}"))
+    invoke::<(), _>(commands::config::SAVE_GLOBAL, Some(config)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_general(
     general: GeneralConfig,
 ) -> std::result::Result<Config, String> {
-    let result = invoke(commands::config::UPDATE_GENERAL, general).await
-        .map_err(|e| format!("Failed to update general config: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update general Config: {e}"))
+    invoke::<Config, _>(commands::config::UPDATE_GENERAL, Some(general)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_notification_preferences(
     preferences: NotificationConfig,
 ) -> std::result::Result<Config, String> {
-    let result = invoke(commands::config::UPDATE_NOTIFICATIONS, preferences).await
-        .map_err(|e| format!("Failed to update notification preferences: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update notification preferences: {e}"))
+    invoke::<Config, _>(commands::config::UPDATE_NOTIFICATIONS, Some(preferences)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_appearance(
     appearance: AppearanceConfig,
 ) -> std::result::Result<Config, String> {
-    let result = invoke(commands::config::UPDATE_APPEARANCE, appearance).await
-        .map_err(|e| format!("Failed to update appearance: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update appearance: {e}"))
+    invoke::<Config, _>(commands::config::UPDATE_APPEARANCE, Some(appearance)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_audio_config(
     audio_config: AudioConfig,
 ) -> std::result::Result<Config, String> {
-    let result = invoke(commands::config::UPDATE_AUDIO, audio_config).await
-        .map_err(|e| format!("Failed to update audio config: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update audio config: {e}"))
+    invoke::<Config, _>(commands::config::UPDATE_AUDIO, Some(audio_config)).await
 }
 
 #[allow(dead_code)]
@@ -91,22 +67,13 @@ pub async fn update_default_timings(
         long_break_minutes,
     };
 
-    let result = invoke(commands::config::UPDATE_TIMINGS, args).await
-        .map_err(|e| format!("Failed to update timings: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to update default timings: {e}"))
+    invoke::<Config, _>(commands::config::UPDATE_TIMINGS, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn reset_global_config_to_defaults()
 -> std::result::Result<Config, String> {
-    let result =
-        invoke_command_no_args(commands::config::RESET_TO_DEFAULTS).await
-        .map_err(|e| format!("Failed to reset config: {:?}", e))?;
-
-    serde_wasm_bindgen::from_value(result)
-        .map_err(|e| format!("Failed to reset config: {e}"))
+    invoke::<Config, ()>(commands::config::RESET_TO_DEFAULTS, None).await
 }
 
 #[derive(Clone)]

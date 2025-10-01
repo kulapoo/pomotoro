@@ -1,12 +1,11 @@
 use super::TaskFormViewModel;
-use crate::utils::{ViewModel, invoke_command_no_args};
+use crate::utils::{ViewModel, invoke};
 use domain::{Task, TimerConfiguration, TaskId};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use std::time::Duration;
 use uuid::Uuid;
-use serde_wasm_bindgen::from_value;
 use crate::pages::task::types::TaskDto;
 
 #[component]
@@ -33,9 +32,8 @@ pub fn TaskFormPage() -> impl IntoView {
     if let Some(id) = task_id() {
         spawn_local(async move {
             // Fetch all tasks and find the one we need
-            invoke_command_no_args(domain::event_names::task::GET_ALL).await
+            invoke::<Vec<TaskDto>, ()>(domain::event_names::commands::task::GET_ALL, None).await
                 .ok()
-                .and_then(|result| from_value::<Vec<TaskDto>>(result).ok())
                 .and_then(|task_dto_list| {
                     task_dto_list.into_iter()
                         .filter_map(|dto| dto.to_task().ok())
