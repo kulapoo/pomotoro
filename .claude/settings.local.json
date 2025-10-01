@@ -48,7 +48,8 @@
       "Bash(timeout 5 cargo run --bin infra)",
       "Bash(cargo fix:*)",
       "Bash(rustc:*)",
-      "Bash(./test_timer_ser)"
+      "Bash(./test_timer_ser)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": [],

@@ -7,6 +7,7 @@ pub mod timer {
     pub const STATE_UPDATED: &str = "timer:state_updated";
     pub const RESET: &str = "timer:timer_reset";
     pub const PAUSE: &str = "timer:timer_paused";
+    pub const RESUME: &str = "timer:timer_resumed";
 }
 
 pub mod task {

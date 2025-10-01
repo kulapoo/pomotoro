@@ -14,6 +14,7 @@ use commands::{
     /*get_task_effective_settings,*/ get_tasks_by_tags, get_timer_state,
     import_settings, open_data_directory, pause_audio, pause_timer, play_audio,
     play_background_audio, play_notification_sound, remove_audio_asset,
+    resume_timer,
     request_notification_permission, reset_config_to_defaults,
     reset_task_sessions, reset_task_settings_to_defaults, reset_task_status, reset_timer,
     resume_audio, save_global_config, search_tasks, search_tasks_fuzzy,
@@ -52,11 +53,10 @@ pub fn run() {
                 ])
                 .level(log::LevelFilter::Info)
                 .filter(|metadata| {
-                    // Filter out noisy logs from dependencies
-                    !metadata.target().starts_with("tauri::manager")
-                        && !metadata.target().starts_with("tracing::span")
-                        && !metadata.target().starts_with("wry::webkitgtk")
-                        && !metadata.target().starts_with("r2d2")
+                    // Only include logs from our crates
+                    metadata.target().starts_with("infra::")
+                        || metadata.target().starts_with("tae:")
+                        || metadata.target().starts_with("usecases::")
                 })
                 .build(),
         )
@@ -131,6 +131,7 @@ pub fn run() {
             get_timer_state,
             start_timer,
             pause_timer,
+            resume_timer,
             reset_timer,
             skip_phase,
             switch_active_task,

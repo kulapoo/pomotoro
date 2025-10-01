@@ -343,6 +343,275 @@ pub async fn protected_action() -> Result<String, AppError> {
 
 ## Async & Resources
 
+### Understanding Async in Leptos
+
+Leptos provides several ways to handle asynchronous operations, bridging the gap between Rust's async ecosystem and the reactive system:
+
+#### spawn_local
+`spawn_local` is the fundamental async primitive that spawns a `Future` on the current thread (browser's event loop or server's runtime):
+
+```rust
+use leptos::*;
+
+#[component]
+fn AsyncButton() -> impl IntoView {
+    let on_click = move |_| {
+        spawn_local(async move {
+            let result = fetch_data().await;
+            process_result(result);
+        });
+    };
+
+    view! {
+        <button on:click=on_click>"Fetch Data"</button>
+    }
+}
+```
+
+**Key characteristics of spawn_local:**
+- Runs futures that are `!Send` (safe for browser APIs)
+- Fire-and-forget execution
+- No built-in way to track completion or errors
+- Ideal for side effects that don't need UI updates
+
+#### Resources: Reactive Async Data
+Resources wrap async operations in the reactive system, providing automatic re-execution and state tracking:
+
+```rust
+#[component]
+fn DataLoader() -> impl IntoView {
+    let (query, set_query) = signal("".to_string());
+
+    let search_results = Resource::new(
+        move || query.get(),
+        |q| async move {
+            search_api(&q).await
+        }
+    );
+
+    view! {
+        <input
+            on:input=move |ev| set_query.set(event_target_value(&ev))
+        />
+        <Suspense fallback=|| view! { <p>"Searching..."</p> }>
+            {move || search_results.get().map(|results| match results {
+                Ok(data) => view! { <ResultsList data /> },
+                Err(e) => view! { <ErrorMessage error=e /> }
+            })}
+        </Suspense>
+    }
+}
+```
+
+**Types of Resources:**
+- `Resource`: Serializable, works with SSR
+- `LocalResource`: Non-serializable, browser-only
+- `OnceResource`: Loads once, never re-fetches
+
+#### Actions: Imperative Async Operations
+Actions handle user-triggered async operations with built-in state management:
+
+```rust
+#[component]
+fn TodoForm() -> impl IntoView {
+    let add_todo = Action::new(|input: &String| {
+        let input = input.to_owned();
+        async move {
+            api_client::create_todo(&input).await
+        }
+    });
+
+    let input_ref = NodeRef::<Input>::new();
+
+    view! {
+        <form on:submit=move |ev| {
+            ev.prevent_default();
+            if let Some(input) = input_ref.get() {
+                add_todo.dispatch(input.value());
+                input.set_value("");
+            }
+        }>
+            <input node_ref=input_ref type="text" />
+            <button
+                type="submit"
+                disabled=move || add_todo.pending().get()
+            >
+                {move || if add_todo.pending().get() {
+                    "Adding..."
+                } else {
+                    "Add Todo"
+                }}
+            </button>
+        </form>
+
+        <Show when=move || {
+            add_todo.value().get()
+                .and_then(|r| r.err())
+                .is_some()
+        }>
+            <p class="error">"Failed to add todo"</p>
+        </Show>
+    }
+}
+```
+
+#### Server Functions with Async
+Server functions inherently return futures and integrate seamlessly:
+
+```rust
+#[server(LoadUserData)]
+pub async fn load_user_data(id: i32) -> Result<User, ServerFnError> {
+    let pool = use_context::<SqlitePool>()?;
+
+    sqlx::query_as!(User,
+        "SELECT * FROM users WHERE id = ?",
+        id
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| ServerFnError::ServerError(e.to_string()))
+}
+
+#[component]
+fn UserProfile(id: i32) -> impl IntoView {
+    let user_resource = Resource::once(|| async move {
+        load_user_data(id).await
+    });
+
+    let refresh_action = Action::new(|_: &()| async move {
+        load_user_data(id).await
+    });
+
+    Effect::new(move |_| {
+        if let Some(Ok(user)) = refresh_action.value().get() {
+            user_resource.set(Ok(user));
+        }
+    });
+
+    view! {
+        <button on:click=move |_| refresh_action.dispatch(())>
+            "Refresh"
+        </button>
+        <Suspense>
+            {move || user_resource.get().map(|result| match result {
+                Ok(user) => view! { <UserCard user /> },
+                Err(e) => view! { <ErrorDisplay error=e /> }
+            })}
+        </Suspense>
+    }
+}
+```
+
+### Async Patterns Comparison
+
+| Pattern | Use Case | State Tracking | Re-execution | SSR Support |
+|---------|----------|----------------|--------------|-------------|
+| `spawn_local` | Fire-and-forget tasks | No | Manual | Yes |
+| `Resource` | Loading data | Yes | Reactive | Yes |
+| `LocalResource` | Browser-only data | Yes | Reactive | No |
+| `Action` | User mutations | Yes | Manual | Yes |
+| `ServerAction` | Form submissions | Yes | Manual | Yes |
+
+### Advanced Async Patterns
+
+#### Combining Multiple Async Operations
+```rust
+#[component]
+fn Dashboard() -> impl IntoView {
+    let user = Resource::once(|| get_current_user());
+    let stats = Resource::new(
+        move || user.get().and_then(|u| u.ok().map(|u| u.id)),
+        |id| async move {
+            match id {
+                Some(id) => load_user_stats(id).await,
+                None => Ok(Stats::default())
+            }
+        }
+    );
+
+    view! {
+        <Suspense>
+            {move || match (user.get(), stats.get()) {
+                (Some(Ok(user)), Some(Ok(stats))) => {
+                    view! { <DashboardContent user stats /> }
+                },
+                _ => view! { <LoadingSpinner /> }
+            }}
+        </Suspense>
+    }
+}
+```
+
+#### Async State Management
+```rust
+#[derive(Clone)]
+struct AsyncState {
+    loading: RwSignal<bool>,
+    error: RwSignal<Option<String>>,
+    data: RwSignal<Option<Data>>,
+}
+
+impl AsyncState {
+    fn new() -> Self {
+        Self {
+            loading: RwSignal::new(false),
+            error: RwSignal::new(None),
+            data: RwSignal::new(None),
+        }
+    }
+
+    fn fetch(&self) {
+        let state = self.clone();
+        spawn_local(async move {
+            state.loading.set(true);
+            state.error.set(None);
+
+            match fetch_data().await {
+                Ok(data) => {
+                    state.data.set(Some(data));
+                    state.error.set(None);
+                }
+                Err(e) => {
+                    state.error.set(Some(e.to_string()));
+                }
+            }
+
+            state.loading.set(false);
+        });
+    }
+}
+```
+
+#### Stream Processing
+```rust
+#[component]
+fn LiveFeed() -> impl IntoView {
+    let (messages, set_messages) = signal(Vec::new());
+
+    on_mount(move || {
+        spawn_local(async move {
+            let mut stream = connect_websocket().await;
+
+            while let Some(msg) = stream.next().await {
+                set_messages.update(|msgs| msgs.push(msg));
+            }
+        });
+    });
+
+    view! {
+        <ul>
+            <For
+                each=move || messages.get()
+                key=|msg| msg.id
+                let:msg
+            >
+                <li>{msg.content}</li>
+            </For>
+        </ul>
+    }
+}
+```
+
 ### Resources for Data Loading
 ```rust
 #[component]

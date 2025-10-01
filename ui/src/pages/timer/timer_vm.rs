@@ -1,8 +1,7 @@
 use crate::components::{ErrorInfo, handle_command_error};
 use domain::event_names::{ui_listeners::timer as timer_event_names, commands};
 use domain::{
-    Phase, Task, TaskId, TimerConfiguration, TimerState, TimerStatus,
-    TimerTick,
+    Phase, Task, TaskId, Timer, TimerConfiguration, TimerState, TimerStatus, TimerTick
 };
 use js_sys;
 use leptos::prelude::*;
@@ -264,7 +263,7 @@ impl TimerViewModel {
 
                 // Log status change for debugging
                 web_sys::console::log_1(
-                    &format!("Timer status changed: {:?}", payload).into(),
+                    &format!("Timer tae tae status changed: {:?}", payload).into(),
                 );
 
                 // Update timer state if provided in the event
@@ -313,10 +312,14 @@ impl TimerViewModel {
         let active_task = self.active_task.get_untracked();
 
         spawn_local(async move {
+
             // Determine the correct command based on current state
             let command = if current_state.is_running() {
                 // Timer is running, pause it
                 commands::timer::PAUSE
+            }
+            else if current_state.is_paused() {
+                commands::timer::RESUME
             } else {
                 // Timer is idle or paused, start/resume it
                 // The backend start_timer handles resume automatically when paused
@@ -340,10 +343,10 @@ impl TimerViewModel {
                     task_id: active_task.map(|t| t.id.to_string()),
                 };
 
-                invoke::<TimerState, _>(command, Some(args)).await
-                    .map(|state| {
-                        let status = state.status();
-                        set_timer_state.set(state);
+                invoke::<Timer, _>(command, Some(args)).await
+                    .map(|timer| {
+                        let status = timer.state().status();
+                        set_timer_state.set(timer.state().clone());
                         web_sys::console::log_1(
                             &format!("Timer state updated after {}: {:?}", command, status).into()
                         );
@@ -351,10 +354,10 @@ impl TimerViewModel {
                     .map_err(|e| handle_command_error(e, set_error_state))
                     .ok();
             } else {
-                invoke::<TimerState, ()>(command, None).await
-                    .map(|state| {
-                        let status = state.status();
-                        set_timer_state.set(state);
+                invoke::<Timer, ()>(command, None).await
+                    .map(|timer| {
+                        let status = timer.state().status();
+                        set_timer_state.set(timer.state().clone());
                         web_sys::console::log_1(
                             &format!("Timer state updated after {}: {:?}", command, status).into()
                         );
@@ -370,8 +373,8 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            invoke::<TimerState, ()>(commands::timer::RESET, None).await
-                .map(|state| set_timer_state.set(state))
+            invoke::<Timer, ()>(commands::timer::RESET, None).await
+                .map(|timer| set_timer_state.set(timer.state().clone()))
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok();
         });

@@ -2,6 +2,7 @@ pub mod timer {
     // User Commands
     pub const START: &str = "start_timer";
     pub const PAUSE: &str = "pause_timer";
+    pub const RESUME: &str = "resume_timer";
     pub const RESET: &str = "reset_timer";
     pub const SKIP_PHASE: &str = "skip_phase";
     pub const GET_STATE: &str = "get_timer_state";

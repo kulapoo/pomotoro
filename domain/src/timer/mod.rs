@@ -63,4 +63,5 @@ pub use events::{
     ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted, Paused,
     PhaseCompleted, PhaseSkipped, Reset, SessionFlowReset,
     Started, StatusChanged, Tick, WorkSessionCompleted, WorkSessionStarted,
+    Resumed,
 };

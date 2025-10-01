@@ -54,7 +54,6 @@ where
             return Err(result_str);
         }
     }
-
     // Deserialize the result
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| {
