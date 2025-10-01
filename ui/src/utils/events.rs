@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use serde::Serialize;
 
 #[wasm_bindgen]
 extern "C" {
@@ -57,4 +58,24 @@ pub async fn invoke_with_param(
     ).into());
 
     invoke_command(command, args.into()).await
+}
+
+/// Generic invoke function that automatically handles serialization
+/// Use this instead of manually calling serde_wasm_bindgen::to_value
+pub async fn invoke<T>(command: &str, args: T) -> Result<JsValue, JsValue>
+where
+    T: Serialize,
+{
+    web_sys::console::log_1(&format!("INVOKE: Preparing to call command '{}'", command).into());
+
+    match serde_wasm_bindgen::to_value(&args) {
+        Ok(args_value) => {
+            invoke_command(command, args_value).await
+        }
+        Err(err) => {
+            let error_msg = format!("Failed to serialize arguments for command '{}': {:?}", command, err);
+            web_sys::console::error_1(&JsValue::from_str(&error_msg));
+            Err(JsValue::from_str(&error_msg))
+        }
+    }
 }

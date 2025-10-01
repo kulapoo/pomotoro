@@ -1,7 +1,7 @@
 use crate::pages::task::types::TaskDto;
-use crate::utils::{ViewModel, invoke_command, invoke_command_no_args};
-use domain::event_names::ui_listeners::task as task_event_names;
-use domain::{Task, TaskId, event_names};
+use crate::utils::{ViewModel, invoke_command, invoke_command_no_args, invoke};
+use domain::event_names::{ui_listeners::task as task_event_names, commands};
+use domain::{Task, TaskId};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -111,11 +111,11 @@ impl TaskDirectoryViewModel {
 
                 let set_tasks_clone = set_tasks;
                 spawn_local(async move {
-                    refetch_all_tasks(set_tasks_clone, event_names::task::GET_ALL).await;
+                    refetch_all_tasks(set_tasks_clone, commands::task::GET_ALL).await;
                 });
             });
 
-            listen(event_names::task::TASK_CREATED, &callback).await;
+            listen(commands::task::TASK_CREATED, &callback).await;
             callback.forget();
         });
 
@@ -132,11 +132,11 @@ impl TaskDirectoryViewModel {
 
                 let set_tasks_clone = set_tasks_for_update;
                 spawn_local(async move {
-                    refetch_all_tasks(set_tasks_clone, event_names::task::GET_ALL).await;
+                    refetch_all_tasks(set_tasks_clone, commands::task::GET_ALL).await;
                 });
             });
 
-            listen(event_names::task::TASK_UPDATED, &callback).await;
+            listen(commands::task::TASK_UPDATED, &callback).await;
             callback.forget();
         });
 
@@ -153,11 +153,11 @@ impl TaskDirectoryViewModel {
 
                 let set_tasks_clone = set_tasks_for_delete;
                 spawn_local(async move {
-                    refetch_all_tasks(set_tasks_clone, event_names::task::GET_ALL).await;
+                    refetch_all_tasks(set_tasks_clone, commands::task::GET_ALL).await;
                 });
             });
 
-            listen(event_names::task::TASK_DELETED, &callback).await;
+            listen(commands::task::TASK_DELETED, &callback).await;
             callback.forget();
         });
 
@@ -174,11 +174,11 @@ impl TaskDirectoryViewModel {
 
                 let set_tasks_clone = set_tasks_for_complete;
                 spawn_local(async move {
-                    refetch_all_tasks(set_tasks_clone, event_names::task::GET_ALL).await;
+                    refetch_all_tasks(set_tasks_clone, commands::task::GET_ALL).await;
                 });
             });
 
-            listen(event_names::task::TASK_COMPLETED, &callback).await;
+            listen(commands::task::TASK_COMPLETED, &callback).await;
             callback.forget();
         });
 
@@ -238,7 +238,7 @@ impl TaskDirectoryViewModel {
         let tasks = self.tasks;
 
         spawn_local(async move {
-            if let Ok(result) = invoke_command_no_args(event_names::task::GET_ALL).await {
+            if let Ok(result) = invoke_command_no_args(commands::task::GET_ALL).await {
                 if let Ok(task_dto_list) = from_value::<Vec<TaskDto>>(result) {
                     let mut task_list = Vec::new();
                     for dto in task_dto_list {
@@ -250,7 +250,7 @@ impl TaskDirectoryViewModel {
                 }
             }
 
-            if let Ok(result) = invoke_command_no_args(event_names::timer::GET_STATE).await {
+            if let Ok(result) = invoke_command_no_args(commands::timer::GET_STATE).await {
                 web_sys::console::log_1(&format!("Timer state result: {:?}", result).into());
 
                 // Try to extract TimerInfo which includes both state and active_task_id
@@ -365,7 +365,7 @@ impl TaskDirectoryViewModel {
                     &format!("Invoking delete_task with args: {:?}", args_value).into(),
                 );
 
-                match invoke_command(event_names::task::DELETE, args_value).await {
+                match invoke_command(commands::task::DELETE, args_value).await {
                     Ok(_result) => {
                         web_sys::console::log_1(
                             &format!("Successfully deleted task: {:?}", task_id).into(),
@@ -407,7 +407,7 @@ impl TaskDirectoryViewModel {
                 );
 
                 match invoke_command(
-                    event_names::timer::SWITCH_ACTIVE_TASK,
+                    commands::timer::SWITCH_ACTIVE_TASK,
                     args_value,
                 )
                 .await
@@ -479,7 +479,7 @@ impl TaskDirectoryViewModel {
             };
 
             if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) = invoke_command(event_names::task::SEARCH, args_value).await {
+                if let Ok(result) = invoke_command(commands::task::SEARCH, args_value).await {
                     if let Ok(task_list) = from_value::<Vec<Task>>(result) {
                         set_filtered.set(task_list);
                     }
@@ -526,16 +526,11 @@ impl TaskDirectoryViewModel {
                 reset_sessions,
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                web_sys::console::log_1(
-                    &format!("Invoking reset_task_status with args: {:?}", args_value).into(),
-                );
-
-                match invoke_command("reset_task_status", args_value).await {
-                    Ok(result) => {
-                        web_sys::console::log_1(
-                            &format!("Reset task status result: {:?}", result).into(),
-                        );
+            match invoke(commands::task::RESET_STATUS, args).await {
+                Ok(result) => {
+                    web_sys::console::log_1(
+                        &format!("Reset task status result: {:?}", result).into(),
+                    );
 
                         match from_value::<TaskDto>(result.clone()) {
                             Ok(task_dto) => {
@@ -560,7 +555,7 @@ impl TaskDirectoryViewModel {
                                         web_sys::console::error_1(
                                             &format!("Failed to convert TaskDto to Task: {}", e).into(),
                                         );
-                                        refetch_all_tasks(set_tasks, event_names::task::GET_ALL).await;
+                                        refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
                                     }
                                 }
                             }
@@ -568,7 +563,7 @@ impl TaskDirectoryViewModel {
                                 web_sys::console::error_1(
                                     &format!("Failed to deserialize TaskDto: {:?}", e).into(),
                                 );
-                                refetch_all_tasks(set_tasks, event_names::task::GET_ALL).await;
+                                refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
                             }
                         }
                     }
@@ -578,9 +573,6 @@ impl TaskDirectoryViewModel {
                         );
                     }
                 }
-            } else {
-                web_sys::console::error_1(&"Failed to serialize args".into());
-            }
         });
     }
 }

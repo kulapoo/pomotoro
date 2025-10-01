@@ -1,18 +1,12 @@
-use domain::event_names;
+use domain::event_names::commands;
 use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen::to_value;
-use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
-}
+use crate::utils::{invoke, invoke_command_no_args};
 
 pub async fn get_global_config() -> std::result::Result<Config, String> {
-    let result = invoke(event_names::config::GET_GLOBAL, JsValue::NULL).await;
+    let result = invoke_command_no_args(commands::config::GET_GLOBAL).await
+        .map_err(|e| format!("Failed to get config: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to deserialize Config: {e}"))
@@ -22,10 +16,8 @@ pub async fn get_global_config() -> std::result::Result<Config, String> {
 pub async fn save_global_config(
     config: Config,
 ) -> std::result::Result<(), String> {
-    let args = to_value(&config)
-        .map_err(|e| format!("Failed to serialize config: {e}"))?;
-
-    let result = invoke(event_names::config::SAVE_GLOBAL, args).await;
+    let result = invoke(commands::config::SAVE_GLOBAL, config).await
+        .map_err(|e| format!("Failed to save config: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to save Config: {e}"))
@@ -35,10 +27,8 @@ pub async fn save_global_config(
 pub async fn update_general(
     general: GeneralConfig,
 ) -> std::result::Result<Config, String> {
-    let args = to_value(&general)
-        .map_err(|e| format!("Failed to serialize general Config: {e}"))?;
-
-    let result = invoke(event_names::config::UPDATE_GENERAL, args).await;
+    let result = invoke(commands::config::UPDATE_GENERAL, general).await
+        .map_err(|e| format!("Failed to update general config: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to update general Config: {e}"))
@@ -48,11 +38,8 @@ pub async fn update_general(
 pub async fn update_notification_preferences(
     preferences: NotificationConfig,
 ) -> std::result::Result<Config, String> {
-    let args = to_value(&preferences).map_err(|e| {
-        format!("Failed to serialize notification preferences: {e}")
-    })?;
-
-    let result = invoke(event_names::config::UPDATE_NOTIFICATIONS, args).await;
+    let result = invoke(commands::config::UPDATE_NOTIFICATIONS, preferences).await
+        .map_err(|e| format!("Failed to update notification preferences: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to update notification preferences: {e}"))
@@ -62,10 +49,8 @@ pub async fn update_notification_preferences(
 pub async fn update_appearance(
     appearance: AppearanceConfig,
 ) -> std::result::Result<Config, String> {
-    let args = to_value(&appearance)
-        .map_err(|e| format!("Failed to serialize appearance: {e}"))?;
-
-    let result = invoke(event_names::config::UPDATE_APPEARANCE, args).await;
+    let result = invoke(commands::config::UPDATE_APPEARANCE, appearance).await
+        .map_err(|e| format!("Failed to update appearance: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to update appearance: {e}"))
@@ -75,10 +60,8 @@ pub async fn update_appearance(
 pub async fn update_audio_config(
     audio_config: AudioConfig,
 ) -> std::result::Result<Config, String> {
-    let args = to_value(&audio_config)
-        .map_err(|e| format!("Failed to serialize audio config: {e}"))?;
-
-    let result = invoke(event_names::config::UPDATE_AUDIO, args).await;
+    let result = invoke(commands::config::UPDATE_AUDIO, audio_config).await
+        .map_err(|e| format!("Failed to update audio config: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to update audio config: {e}"))
@@ -90,14 +73,26 @@ pub async fn update_default_timings(
     short_break_minutes: u32,
     long_break_minutes: u32,
 ) -> std::result::Result<Config, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({
-        "workMinutes": work_minutes,
-        "shortBreakMinutes": short_break_minutes,
-        "longBreakMinutes": long_break_minutes,
-    }))
-    .map_err(|e| format!("Failed to serialize timing args: {e}"))?;
+    use serde::Serialize;
 
-    let result = invoke(event_names::config::UPDATE_TIMINGS, args).await;
+    #[derive(Serialize)]
+    struct UpdateTimingsArgs {
+        #[serde(rename = "workMinutes")]
+        work_minutes: u32,
+        #[serde(rename = "shortBreakMinutes")]
+        short_break_minutes: u32,
+        #[serde(rename = "longBreakMinutes")]
+        long_break_minutes: u32,
+    }
+
+    let args = UpdateTimingsArgs {
+        work_minutes,
+        short_break_minutes,
+        long_break_minutes,
+    };
+
+    let result = invoke(commands::config::UPDATE_TIMINGS, args).await
+        .map_err(|e| format!("Failed to update timings: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to update default timings: {e}"))
@@ -107,7 +102,8 @@ pub async fn update_default_timings(
 pub async fn reset_global_config_to_defaults()
 -> std::result::Result<Config, String> {
     let result =
-        invoke(event_names::config::RESET_TO_DEFAULTS, JsValue::NULL).await;
+        invoke_command_no_args(commands::config::RESET_TO_DEFAULTS).await
+        .map_err(|e| format!("Failed to reset config: {:?}", e))?;
 
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| format!("Failed to reset config: {e}"))

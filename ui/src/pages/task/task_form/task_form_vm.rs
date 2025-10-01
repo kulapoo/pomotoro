@@ -1,9 +1,9 @@
 use crate::pages::task::types::TaskDto;
-use crate::utils::{ViewModel, invoke_command};
-use domain::{Task, TaskId, TimerConfiguration, event_names};
+use crate::utils::{ViewModel, invoke};
+use domain::{Task, TaskId, TimerConfiguration, event_names::commands};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen::{from_value, to_value};
+use serde_wasm_bindgen::from_value;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -69,7 +69,7 @@ impl TaskFormViewModel {
                 set_is_creating.set(false);
             });
 
-            listen(event_names::task::TASK_CREATED, &callback).await;
+            listen(commands::task::TASK_CREATED, &callback).await;
             callback.forget();
         });
 
@@ -87,7 +87,7 @@ impl TaskFormViewModel {
                 }
             });
 
-            listen(event_names::task::TASK_UPDATED, &callback).await;
+            listen(commands::task::TASK_UPDATED, &callback).await;
             callback.forget();
         });
     }
@@ -143,39 +143,26 @@ impl TaskFormViewModel {
 
             let args = CreateTaskArgs { request };
 
-            match to_value(&args) {
-                Ok(args_value) => {
+            match invoke(commands::task::CREATE, args).await {
+                Ok(result) => {
                     web_sys::console::log_1(
-                        &format!("Invoking create_task with args: {:?}", args_value).into(),
+                        &format!("Create task result: {:?}", result).into(),
                     );
-                    match invoke_command(event_names::task::CREATE, args_value).await {
-                        Ok(result) => {
+                    match from_value::<TaskDto>(result.clone()) {
+                        Ok(task_dto) => {
                             web_sys::console::log_1(
-                                &format!("Create task result: {:?}", result).into(),
+                                &format!("Successfully deserialized TaskDto: {}", task_dto.name).into()
                             );
-                            match from_value::<TaskDto>(result.clone()) {
-                                Ok(task_dto) => {
+                            match task_dto.to_task() {
+                                Ok(new_task) => {
                                     web_sys::console::log_1(
-                                        &format!("Successfully deserialized TaskDto: {}", task_dto.name).into()
+                                        &format!("Successfully created task: {}", new_task.name).into()
                                     );
-                                    match task_dto.to_task() {
-                                        Ok(new_task) => {
-                                            web_sys::console::log_1(
-                                                &format!("Successfully created task: {}", new_task.name).into()
-                                            );
-                                            set_is_creating.set(false);
-                                        }
-                                        Err(e) => {
-                                            web_sys::console::error_1(
-                                                &format!("Failed to convert TaskDto to Task: {}", e).into()
-                                            );
-                                            set_is_creating.set(false);
-                                        }
-                                    }
+                                    set_is_creating.set(false);
                                 }
                                 Err(e) => {
                                     web_sys::console::error_1(
-                                        &format!("Failed to deserialize TaskDto: {:?}", e).into()
+                                        &format!("Failed to convert TaskDto to Task: {}", e).into()
                                     );
                                     set_is_creating.set(false);
                                 }
@@ -183,7 +170,7 @@ impl TaskFormViewModel {
                         }
                         Err(e) => {
                             web_sys::console::error_1(
-                                &format!("Failed to invoke create_task command: {:?}", e).into()
+                                &format!("Failed to deserialize TaskDto: {:?}", e).into()
                             );
                             set_is_creating.set(false);
                         }
@@ -191,7 +178,7 @@ impl TaskFormViewModel {
                 }
                 Err(e) => {
                     web_sys::console::error_1(
-                        &format!("Failed to serialize args: {:?}", e).into()
+                        &format!("Failed to invoke create_task command: {:?}", e).into()
                     );
                     set_is_creating.set(false);
                 }
@@ -235,22 +222,16 @@ impl TaskFormViewModel {
 
             let args = UpdateTaskArgs { request };
 
-            if let Ok(args_value) = to_value(&args) {
-                web_sys::console::log_1(
-                    &format!("Invoking update_task with args: {:?}", args_value).into(),
-                );
-
-                match invoke_command(event_names::task::UPDATE, args_value).await {
-                    Ok(result) => {
-                        web_sys::console::log_1(
-                            &format!("Update task result: {:?}", result).into(),
-                        );
-                    }
-                    Err(e) => {
-                        web_sys::console::error_1(
-                            &format!("Failed to invoke update_task command: {:?}", e).into()
-                        );
-                    }
+            match invoke(commands::task::UPDATE, args).await {
+                Ok(result) => {
+                    web_sys::console::log_1(
+                        &format!("Update task result: {:?}", result).into(),
+                    );
+                }
+                Err(e) => {
+                    web_sys::console::error_1(
+                        &format!("Failed to invoke update_task command: {:?}", e).into()
+                    );
                 }
             }
         });
@@ -275,13 +256,12 @@ impl TaskFormViewModel {
                 direction: "next".to_string(),
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) = invoke_command(
-                    event_names::task::CYCLE_INCOMPLETE_TASK,
-                    args_value,
-                )
-                .await
-                {
+            if let Ok(result) = invoke(
+                commands::task::CYCLE_INCOMPLETE_TASK,
+                args,
+            )
+            .await
+            {
                     #[derive(serde::Deserialize)]
                     struct CycleResult {
                         task: Option<Task>,
@@ -296,7 +276,6 @@ impl TaskFormViewModel {
                             cycle_result.total_incomplete,
                         ));
                     }
-                }
             }
         });
     }
@@ -320,13 +299,12 @@ impl TaskFormViewModel {
                 direction: "previous".to_string(),
             };
 
-            if let Ok(args_value) = to_value(&args) {
-                if let Ok(result) = invoke_command(
-                    event_names::task::CYCLE_INCOMPLETE_TASK,
-                    args_value,
-                )
-                .await
-                {
+            if let Ok(result) = invoke(
+                commands::task::CYCLE_INCOMPLETE_TASK,
+                args,
+            )
+            .await
+            {
                     #[derive(serde::Deserialize)]
                     struct CycleResult {
                         task: Option<Task>,
@@ -341,7 +319,6 @@ impl TaskFormViewModel {
                             cycle_result.total_incomplete,
                         ));
                     }
-                }
             }
         });
     }
@@ -365,17 +342,15 @@ impl TaskFormViewModel {
                     task_id: task.id.to_string(),
                 };
 
-                if let Ok(args_value) = to_value(&args) {
-                    if let Ok(result) = invoke_command(
-                        event_names::task::GET_TASK_CYCLE_POSITION,
-                        args_value,
-                    )
-                    .await
-                    {
+                if let Ok(result) = invoke(
+                    commands::task::GET_TASK_CYCLE_POSITION,
+                    args,
+                )
+                .await
+                {
                         if let Ok((position, total)) = from_value::<(usize, usize)>(result) {
                             set_cycle_position.set((position, total));
                         }
-                    }
                 }
             }
         });

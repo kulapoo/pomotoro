@@ -45,11 +45,12 @@
       "Bash(RUST_BACKTRACE=full cargo run --bin infra)",
       "Bash(env RUST_BACKTRACE=full cargo run --bin infra)",
       "Bash(timeout 2 cargo run --bin infra)",
-      "Bash(timeout 5 cargo run --bin infra)"
+      "Bash(timeout 5 cargo run --bin infra)",
+      "Bash(cargo fix:*)"
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "default"
   },
   "hooks": {
     "PostToolUse": [
