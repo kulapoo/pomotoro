@@ -27,7 +27,7 @@ impl EventHandler for TimerResumedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let _timer_resumed = event
+        let timer_resumed = event
             .as_any()
             .downcast_ref::<domain::TimerResumed>()
             .ok_or(domain::Error::EventHandlingError {
@@ -45,7 +45,7 @@ impl EventHandler for TimerResumedHandler {
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::RESUME,
-                json!(timer.state()),
+                json!(timer),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer resumed event: {e}"),

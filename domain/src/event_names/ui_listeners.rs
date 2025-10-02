@@ -4,7 +4,6 @@ pub mod timer {
     pub const PHASE_EVENT: &str = "timer:phase_event";
     pub const PHASE_COMPLETED: &str = "timer:phase_completed";
     pub const PHASE_SKIPPED: &str = "timer:phase_skipped";
-    pub const STATE_UPDATED: &str = "timer:state_updated";
     pub const RESET: &str = "timer:timer_reset";
     pub const PAUSE: &str = "timer:timer_paused";
     pub const RESUME: &str = "timer:timer_resumed";

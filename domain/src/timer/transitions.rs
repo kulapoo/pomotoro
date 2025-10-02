@@ -81,13 +81,15 @@ impl StateTransitions {
             } => {
                 let phase = Self::get_phase_from_state(&state);
 
-                let events: Vec<Box<dyn Event>> = vec![Box::new(Paused::new(
-                    timer_id,
-                    phase,
-                    remaining_seconds,
-                    1,
-                    configuration.clone(),
-                ))];
+                let events: Vec<Box<dyn Event>> = vec![
+                    Box::new(Paused::new(
+                        timer_id,
+                        phase,
+                        remaining_seconds,
+                        1,
+                        configuration.clone(),
+                    )),
+                ];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Paused {
@@ -116,17 +118,32 @@ impl StateTransitions {
         state: TimerState,
         timer_id: TimerId,
         _configuration: &TimerConfiguration,
+        active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
-            TimerState::Paused { paused_from, .. } => {
+            TimerState::Paused { paused_from, remaining_seconds } => {
                 let phase = Self::get_phase_from_state(&paused_from);
-                let remaining = paused_from.remaining_seconds();
 
+                // Use the remaining_seconds from the Paused state, not from paused_from
                 let events: Vec<Box<dyn Event>> =
-                    vec![Box::new(Started::new(timer_id, phase, remaining, 1))];
+                    vec![Box::new(
+                        Started::new(timer_id, phase, remaining_seconds, 1)
+                            .with_active_entity(active_task_id)
+                    )];
+
+                // Create the resumed state with the correct remaining seconds
+                let resumed_state = match *paused_from {
+                    TimerState::Working { .. } => TimerState::Working { remaining_seconds },
+                    TimerState::ShortBreak { .. } => TimerState::ShortBreak { remaining_seconds },
+                    TimerState::LongBreak { .. } => TimerState::LongBreak { remaining_seconds },
+                    _ => return Err(Error::InvalidStateTransition {
+                        from: "Paused".to_string(),
+                        to: "Resume".to_string(),
+                    }),
+                };
 
                 Ok(TransitionResult {
-                    new_state: *paused_from,
+                    new_state: resumed_state,
                     events,
                 })
             }
@@ -428,7 +445,7 @@ mod tests {
         let config = crate::TimerConfiguration::default();
 
         let result =
-            StateTransitions::resume(paused, crate::TimerId::new(), &config)
+            StateTransitions::resume(paused, crate::TimerId::new(), &config, None)
                 .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
     }

@@ -9,12 +9,12 @@ pub mod timer {
     pub const SWITCH_ACTIVE_TASK: &str = "switch_active_task";
 
     // Business Events
-    pub const UPDATE_STATE: &str = "timer_state_updated";
     pub const PHASE_COMPLETE: &str = "phase_completed";
     pub const SESSION_COMPLETED: &str = "session_completed";
     pub const TIMER_STARTED: &str = "timer_started";
     pub const TIMER_PAUSED: &str = "timer_paused";
     pub const TIMER_RESET: &str = "timer_reset";
+    pub const UPDATE_TIMER_SECS: &str = "update_timer_secs";
 }
 
 pub mod task {

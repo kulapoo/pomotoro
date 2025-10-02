@@ -97,7 +97,7 @@ impl TimerViewModel {
                 set_error_state,
             );
             Self::setup_timer_tick_listener(set_timer_state);
-            Self::setup_timer_state_updated_listener(
+            Self::setup_timer_status_changed_listener(
                 set_timer_state,
                 set_active_task,
             );
@@ -175,7 +175,7 @@ impl TimerViewModel {
         });
     }
 
-    fn setup_timer_state_updated_listener(
+    fn setup_timer_status_changed_listener(
         set_timer_state: WriteSignal<TimerState>,
         set_active_task: WriteSignal<Option<Task>>,
     ) {
@@ -197,7 +197,7 @@ impl TimerViewModel {
                 }
             });
 
-            listen(timer_event_names::STATE_UPDATED, &callback).await;
+            listen(timer_event_names::STATUS_CHANGED, &callback).await;
 
             callback.forget();
         });
@@ -313,58 +313,61 @@ impl TimerViewModel {
 
         spawn_local(async move {
 
-            // Determine the correct command based on current state
             let command = if current_state.is_running() {
-                // Timer is running, pause it
                 commands::timer::PAUSE
             }
             else if current_state.is_paused() {
                 commands::timer::RESUME
             } else {
-                // Timer is idle or paused, start/resume it
-                // The backend start_timer handles resume automatically when paused
                 commands::timer::START
             };
 
-            // Log the action for debugging
             web_sys::console::log_1(
                 &format!("Executing timer command: {} (current state: {:?})",
                         command, current_state.status()).into()
             );
 
-            // For start_timer, we need to pass task_id if available
-            if command == commands::timer::START && active_task.is_some() {
-                #[derive(serde::Serialize)]
-                struct StartTimerArgs {
-                    task_id: Option<String>,
+            #[derive(serde::Serialize)]
+            struct TimerStateArgs {
+                remaining_seconds: u32,
+            }
+
+            let timer_state_args = TimerStateArgs {
+                remaining_seconds: current_state.remaining_seconds(),
+            };
+
+            invoke::<(), TimerStateArgs>(commands::timer::UPDATE_TIMER_SECS, Some(timer_state_args)).await
+            .map_err(|e| handle_command_error(e, set_error_state))
+            .ok();
+
+            #[derive(serde::Serialize)]
+            struct TimerArgs {
+                task_id: Option<String>,
+            }
+
+            let args = TimerArgs {
+                task_id: active_task.map(|t| t.id.to_string()),
+            };
+
+            invoke::<Timer, TimerArgs>(command, Some(args)).await
+            .map(|mut timer| {
+                let status = timer.state().status();
+                let remaining_seconds = timer.state().remaining_seconds();
+
+                if command == commands::timer::RESUME {
+                    timer.set_remaining_seconds(remaining_seconds - 1);
                 }
 
-                let args = StartTimerArgs {
-                    task_id: active_task.map(|t| t.id.to_string()),
-                };
-
-                invoke::<Timer, _>(command, Some(args)).await
-                    .map(|timer| {
-                        let status = timer.state().status();
-                        set_timer_state.set(timer.state().clone());
-                        web_sys::console::log_1(
-                            &format!("Timer state updated after {}: {:?}", command, status).into()
-                        );
-                    })
-                    .map_err(|e| handle_command_error(e, set_error_state))
-                    .ok();
-            } else {
-                invoke::<Timer, ()>(command, None).await
-                    .map(|timer| {
-                        let status = timer.state().status();
-                        set_timer_state.set(timer.state().clone());
-                        web_sys::console::log_1(
-                            &format!("Timer state updated after {}: {:?}", command, status).into()
-                        );
-                    })
-                    .map_err(|e| handle_command_error(e, set_error_state))
-                    .ok();
-            }
+                web_sys::console::log_1(
+                    &format!("Timer updated after {}: {:?}", command, timer).into()
+                );
+                set_timer_state.set(timer.state().clone());
+                web_sys::console::log_1(
+                    &format!("Timer state updated after {}: {:?}", command, status).into()
+                );
+            })
+            .map_err(|e| handle_command_error(e, set_error_state))
+            .ok();
         });
     }
 
@@ -381,9 +384,6 @@ impl TimerViewModel {
     }
 
     pub fn complete_phase(&self) {
-        // Phase completion happens automatically through the timer tick mechanism
-        // This method is kept for compatibility but doesn't need to do anything
-        // as the backend timer service handles phase transitions automatically
         web_sys::console::log_1(&"Phase completion is handled automatically by the backend".into());
     }
 
@@ -397,12 +397,9 @@ impl TimerViewModel {
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
                 .and_then(|timer| {
-                    // Extract timer state
                     timer.get("state")
                         .and_then(|state_val| serde_json::from_value::<TimerState>(state_val.clone()).ok())
                         .map(|state| set_timer_state.set(state));
-
-                    // Extract active task ID and fetch the task
                     timer.get("active_task_id")
                         .and_then(|active_task_id| {
                             (!active_task_id.is_null()).then(|| active_task_id.as_str())

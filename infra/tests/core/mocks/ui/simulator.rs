@@ -22,7 +22,6 @@ fn register_events(
         timer_events::PHASE_EVENT,
         timer_events::PHASE_COMPLETED,
         timer_events::PHASE_SKIPPED,
-        timer_events::STATE_UPDATED,
         task_events::LIST_UPDATED,
         task_events::ACTIVE_CHANGED,
         task_events::PROGRESS_UPDATED,
