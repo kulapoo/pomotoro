@@ -111,43 +111,20 @@ impl TimerViewModel {
         set_error_state: WriteSignal<Option<ErrorInfo>>,
     ) {
         spawn_local(async move {
-            invoke::<serde_json::Value, ()>(commands::timer::GET_STATE, None).await
+            invoke::<Timer, ()>(commands::timer::GET_STATE, None).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
                 .and_then(|timer| {
                     // Try extracting from timer object first
-                    if let Some(state_val) = timer.get("state") {
-                        if let Ok(state) = serde_json::from_value::<TimerState>(state_val.clone()) {
-                            set_timer_state.set(state);
-                        }
 
-                        // Extract active task ID and fetch the task
-                        timer.get("active_task_id")
-                            .and_then(|active_task_id| {
-                                (!active_task_id.is_null()).then(|| active_task_id.as_str())
-                                    .flatten()
-                                    .map(|s| s.to_string())
-                            })
-                            .map(|task_id_str| {
-                                spawn_local(async move {
-                                    Self::fetch_task_by_id(&task_id_str, set_active_task).await;
-                                });
-                            })
-                            .or_else(|| {
-                                set_active_task.set(None);
-                                Some(())
-                            })
-                    } else {
-                        // Fallback: try parsing as just TimerState for backwards compatibility
-                        serde_json::from_value::<TimerState>(timer)
-                            .ok()
-                            .map(|state| {
-                                set_timer_state.set(state);
-                                spawn_local(async move {
-                                    Self::fetch_active_task(set_active_task).await;
-                                });
-                            })
-                    }
+                    set_timer_state.set(timer.state().clone());
+                    let active_task_id = timer.active_task_id().map(|id| id.to_string()).unwrap_or_default();
+
+                    spawn_local(async move {
+                        Self::fetch_task_by_id(&active_task_id, set_active_task).await;
+                    });
+
+                    Some(())
                 });
         });
     }
@@ -393,84 +370,20 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            invoke::<serde_json::Value, ()>(commands::timer::SKIP_PHASE, None).await
+            invoke::<Timer, ()>(commands::timer::SKIP_PHASE, None).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
-                .and_then(|timer| {
-                    timer.get("state")
-                        .and_then(|state_val| serde_json::from_value::<TimerState>(state_val.clone()).ok())
-                        .map(|state| set_timer_state.set(state));
-                    timer.get("active_task_id")
-                        .and_then(|active_task_id| {
-                            (!active_task_id.is_null()).then(|| active_task_id.as_str())
-                                .flatten()
-                                .map(|s| s.to_string())
-                        })
-                        .map(|task_id_str| {
-                            spawn_local(async move {
-                                Self::fetch_task_by_id(&task_id_str, set_active_task).await;
-                            });
-                        })
-                        .or_else(|| {
-                            set_active_task.set(None);
-                            Some(())
-                        })
-                });
-        });
-    }
+                .map(|timer| {
+                    set_timer_state.set(timer.state().clone());
 
-    pub fn switch_task(&self, task_id: TaskId) {
-        let set_timer_state = self.set_timer_state;
-        let set_active_task = self.set_active_task;
-        let set_error_state = self.set_error_state;
-
-        spawn_local(async move {
-            #[derive(serde::Serialize)]
-            struct SwitchTaskArgs {
-                task_id: String,
-            }
-
-            let args = SwitchTaskArgs {
-                task_id: task_id.to_string(),
-            };
-
-            invoke::<serde_json::Value, _>(commands::timer::SWITCH_ACTIVE_TASK, Some(args)).await
-                .map_err(|e| handle_command_error(e, set_error_state))
-                .ok()
-                .and_then(|timer| {
-                    // Extract timer state
-                    timer.get("state")
-                        .and_then(|state_val| serde_json::from_value::<TimerState>(state_val.clone()).ok())
-                        .map(|state| set_timer_state.set(state));
-
-                    // Extract active task ID and fetch the task
-                    timer.get("active_task_id")
-                        .and_then(|active_task_id| {
-                            (!active_task_id.is_null()).then(|| active_task_id.as_str())
-                                .flatten()
-                                .map(|s| s.to_string())
-                        })
-                        .map(|task_id_str| {
-                            spawn_local(async move {
-                                Self::fetch_task_by_id(&task_id_str, set_active_task).await;
-                            });
-                        })
-                        .or_else(|| {
-                            // Fallback: try parsing as just TimerState for backwards compatibility
-                            serde_json::from_value::<TimerState>(timer.clone())
-                                .ok()
-                                .map(|state| {
-                                    set_timer_state.set(state);
-                                    spawn_local(async move {
-                                        Self::fetch_active_task(set_active_task).await;
-                                    });
-                                })
+                    if let Some(task_id) = timer.active_task_id() {
+                        let task_id_str = task_id.to_string();
+                        spawn_local(async move {
+                            Self::fetch_task_by_id(&task_id_str, set_active_task).await;
                         });
-
-                    Some(())
-                })
-                .unwrap_or_else(|| {
-                    web_sys::console::error_1(&"Failed to parse switch task result".into());
+                    } else {
+                        set_active_task.set(None);
+                    }
                 });
         });
     }
