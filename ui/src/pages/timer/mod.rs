@@ -1,3 +1,4 @@
+mod task_ops;
 mod timer_controls;
 mod timer_display;
 mod timer_page;

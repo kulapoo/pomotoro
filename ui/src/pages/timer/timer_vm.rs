@@ -1,7 +1,7 @@
 use crate::components::{ErrorInfo, handle_command_error};
 use domain::event_names::{ui_listeners::timer as timer_event_names, commands};
 use domain::{
-    Phase, Task, TaskId, Timer, TimerConfiguration, TimerState, TimerStatus, TimerTick
+    Phase, Task, Timer, TimerConfiguration, TimerState, TimerStatus, TimerTick
 };
 use js_sys;
 use leptos::prelude::*;
@@ -10,6 +10,8 @@ use serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
 use crate::utils::{ViewModel, invoke};
+
+use super::task_ops;
 
 #[wasm_bindgen]
 extern "C" {
@@ -65,6 +67,7 @@ impl ViewModel for TimerViewModel {
     }
 }
 
+// Accessors
 impl TimerViewModel {
     pub fn error_state(&self) -> ReadSignal<Option<ErrorInfo>> {
         self.error_state
@@ -85,6 +88,13 @@ impl TimerViewModel {
             .unwrap_or_else(|| "No Task Selected".to_string())
     }
 
+    pub fn get_active_entity_id(&self) -> Option<String> {
+        self.active_task.get().map(|task| task.id.to_string())
+    }
+}
+
+// Initialization & Event Listeners
+impl TimerViewModel {
     fn initialize(&self) {
         let set_timer_state = self.set_timer_state;
         let set_active_task = self.set_active_task;
@@ -121,7 +131,7 @@ impl TimerViewModel {
                     let active_task_id = timer.active_task_id().map(|id| id.to_string()).unwrap_or_default();
 
                     spawn_local(async move {
-                        Self::fetch_task_by_id(&active_task_id, set_active_task).await;
+                        task_ops::fetch_task_by_id(&active_task_id, set_active_task).await;
                     });
 
                     Some(())
@@ -169,7 +179,7 @@ impl TimerViewModel {
                     // Fetch updated active task info
                     let set_active_task_clone = set_active_task;
                     spawn_local(async move {
-                        Self::fetch_active_task(set_active_task_clone).await;
+                        task_ops::fetch_active_task(set_active_task_clone).await;
                     });
                 }
             });
@@ -255,33 +265,10 @@ impl TimerViewModel {
             callback.forget();
         });
     }
+}
 
-    async fn fetch_task_details(
-        entity_id: String,
-        set_active_task: WriteSignal<Option<Task>>,
-    ) {
-        if let Ok(task_id) = TaskId::from_string(&entity_id) {
-            #[derive(serde::Serialize, Clone)]
-            struct GetTaskArgs {
-                id: String,
-            }
-
-            let args = GetTaskArgs {
-                id: task_id.to_string(),
-            };
-
-            // Use the actual Tauri command name - try TaskDto first
-            if let Ok(task_dto) = invoke::<crate::pages::task::TaskDto, _>(commands::task::GET, Some(args.clone())).await {
-                if let Ok(task) = task_dto.to_task() {
-                    set_active_task.set(Some(task));
-                }
-            } else if let Ok(task) = invoke::<Task, _>(commands::task::GET, Some(args)).await {
-                // Fallback to direct Task for backwards compatibility
-                set_active_task.set(Some(task));
-            }
-        }
-    }
-
+// Timer Commands
+impl TimerViewModel {
     pub fn start_pause_timer(&self) {
         let current_state = self.timer_state.get_untracked();
         let set_timer_state = self.set_timer_state;
@@ -379,7 +366,7 @@ impl TimerViewModel {
                     if let Some(task_id) = timer.active_task_id() {
                         let task_id_str = task_id.to_string();
                         spawn_local(async move {
-                            Self::fetch_task_by_id(&task_id_str, set_active_task).await;
+                            task_ops::fetch_task_by_id(&task_id_str, set_active_task).await;
                         });
                     } else {
                         set_active_task.set(None);
@@ -387,92 +374,10 @@ impl TimerViewModel {
                 });
         });
     }
+}
 
-    async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
-        use crate::pages::task::types::TaskDto;
-
-        // Check if current task has reached max sessions and needs to cycle
-        invoke::<Vec<TaskDto>, ()>(commands::task::GET_ACTIVE, None).await
-            .ok()
-            .and_then(|task_dtos| task_dtos.first().cloned())
-            .and_then(|task_dto| task_dto.to_task().ok())
-            .map(|task| {
-                // Check if task completed its max sessions
-                if task.current_sessions >= task.max_sessions {
-                    // Cycle to next incomplete task
-                    spawn_local(async move {
-                        Self::cycle_to_next_task(set_active_task).await;
-                    });
-                } else {
-                    set_active_task.set(Some(task));
-                }
-            })
-            .unwrap_or_else(|| {
-                web_sys::console::error_1(&"Failed to check task cycle".into());
-            });
-    }
-
-    async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
-        use crate::pages::task::types::TaskDto;
-
-        // Try to get TaskDto and convert to Task
-        let task = invoke::<TaskDto, ()>(commands::task::CYCLE_INCOMPLETE_TASK, None).await
-            .ok()
-            .and_then(|task_dto| task_dto.to_task().ok());
-
-        task.as_ref()
-            .map(|t| web_sys::console::log_1(&format!("Cycled to next task: {}", t.name).into()))
-            .unwrap_or_else(|| web_sys::console::error_1(&"Failed to cycle task".into()));
-
-        set_active_task.set(task);
-    }
-
-    async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
-        use crate::pages::task::types::TaskDto;
-
-        let active_task = invoke::<Vec<TaskDto>, ()>(commands::task::GET_ACTIVE, None).await
-            .ok()
-            .and_then(|task_dtos| task_dtos.first().cloned())
-            .and_then(|task_dto| task_dto.to_task().ok());
-
-        set_active_task.set(active_task);
-    }
-
-    async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option<Task>>) {
-        use serde::Serialize;
-        use crate::pages::task::types::TaskDto;
-
-        #[derive(Serialize)]
-        struct GetTaskArgs {
-            id: String,
-        }
-
-        let args = GetTaskArgs {
-            id: task_id.to_string(),
-        };
-
-        let task = invoke::<Option<TaskDto>, _>(commands::task::GET, Some(args)).await
-            .ok()
-            .flatten()
-            .and_then(|task_dto| {
-                task_dto.to_task()
-                    .map(|task| {
-                        web_sys::console::log_1(&format!("Timer page: Loaded active task: {}", task.name).into());
-                        task
-                    })
-                    .map_err(|e| {
-                        web_sys::console::error_1(&format!("Timer page: Failed to convert TaskDto to Task: {}", e).into());
-                    })
-                    .ok()
-            });
-
-        if task.is_none() {
-            web_sys::console::log_1(&"Timer page: Task not found or failed to parse".into());
-        }
-
-        set_active_task.set(task);
-    }
-
+// Display & Formatting
+impl TimerViewModel {
     pub fn get_phase_name(&self) -> String {
         let state = self.timer_state.get();
         match &state {
@@ -499,9 +404,17 @@ impl TimerViewModel {
 
     pub fn format_time(&self) -> String {
         let state = self.timer_state.get();
-        let seconds = state.remaining_seconds();
-        let minutes = seconds / 60;
-        let secs = seconds % 60;
+        let active_task = self.active_task.get();
+        let mut seconds = state.remaining_seconds();
+        let mut minutes = seconds / 60;
+        let mut secs = seconds % 60;
+
+        if state == TimerState::Idle {
+            seconds = active_task.map(|t| t.config.timer.work_duration.as_secs() as u32).unwrap_or_default();
+            minutes = seconds / 60;
+            secs = seconds % 60;
+        }
+
         format!("{minutes:02}:{secs:02}")
     }
 
@@ -555,18 +468,6 @@ impl TimerViewModel {
         }
     }
 
-    fn get_current_phase_static(state: &TimerState) -> Phase {
-        match state {
-            TimerState::Working { .. } => Phase::Work,
-            TimerState::ShortBreak { .. } => Phase::ShortBreak,
-            TimerState::LongBreak { .. } => Phase::LongBreak,
-            TimerState::Idle { .. } => Phase::Work,
-            TimerState::Paused { paused_from, .. } => {
-                Self::get_current_phase_static(paused_from)
-            }
-        }
-    }
-
     pub fn get_sessions_completed(&self) -> usize {
         if let Some(task) = self.active_task.get() {
             let config = self.timer_config.get();
@@ -592,8 +493,19 @@ impl TimerViewModel {
             0
         }
     }
+}
 
-    pub fn get_active_entity_id(&self) -> Option<String> {
-        self.active_task.get().map(|task| task.id.to_string())
+// Internal Utilities
+impl TimerViewModel {
+    fn get_current_phase_static(state: &TimerState) -> Phase {
+        match state {
+            TimerState::Working { .. } => Phase::Work,
+            TimerState::ShortBreak { .. } => Phase::ShortBreak,
+            TimerState::LongBreak { .. } => Phase::LongBreak,
+            TimerState::Idle { .. } => Phase::Work,
+            TimerState::Paused { paused_from, .. } => {
+                Self::get_current_phase_static(paused_from)
+            }
+        }
     }
 }
