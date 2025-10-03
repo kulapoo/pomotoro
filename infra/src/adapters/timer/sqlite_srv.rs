@@ -134,6 +134,8 @@ impl TimerTickService {
         let config_clone = config.clone();
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
+            // Skip the first tick which completes immediately
+            interval.tick().await;
             loop {
                 interval.tick().await;
                 let should_continue = {

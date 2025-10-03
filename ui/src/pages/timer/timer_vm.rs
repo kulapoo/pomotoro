@@ -291,18 +291,21 @@ impl TimerViewModel {
                         command, current_state.status()).into()
             );
 
-            #[derive(serde::Serialize)]
-            struct TimerStateArgs {
-                remaining_seconds: u32,
+            // Only sync state for PAUSE to capture the current UI time
+            if command == commands::timer::PAUSE {
+                #[derive(serde::Serialize)]
+                struct TimerStateArgs {
+                    remaining_seconds: u32,
+                }
+
+                let timer_state_args = TimerStateArgs {
+                    remaining_seconds: current_state.remaining_seconds(),
+                };
+
+                invoke::<(), TimerStateArgs>(commands::timer::UPDATE_TIMER_SECS, Some(timer_state_args)).await
+                    .map_err(|e| handle_command_error(e, set_error_state))
+                    .ok();
             }
-
-            let timer_state_args = TimerStateArgs {
-                remaining_seconds: current_state.remaining_seconds(),
-            };
-
-            invoke::<(), TimerStateArgs>(commands::timer::UPDATE_TIMER_SECS, Some(timer_state_args)).await
-            .map_err(|e| handle_command_error(e, set_error_state))
-            .ok();
 
             #[derive(serde::Serialize)]
             struct TimerArgs {
@@ -314,13 +317,8 @@ impl TimerViewModel {
             };
 
             invoke::<Timer, TimerArgs>(command, Some(args)).await
-            .map(|mut timer| {
+            .map(|timer| {
                 let status = timer.state().status();
-                let remaining_seconds = timer.state().remaining_seconds();
-
-                if command == commands::timer::RESUME {
-                    timer.set_remaining_seconds(remaining_seconds - 1);
-                }
 
                 web_sys::console::log_1(
                     &format!("Timer updated after {}: {:?}", command, timer).into()
