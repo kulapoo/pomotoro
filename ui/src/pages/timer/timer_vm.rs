@@ -335,11 +335,15 @@ impl TimerViewModel {
 
     pub fn reset_timer(&self) {
         let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            invoke::<Timer, ()>(commands::timer::RESET, None).await
-                .map(|timer| set_timer_state.set(timer.state().clone()))
+            invoke::<(Timer, Task), ()>(commands::timer::RESET, None).await
+                .map(|(timer, task)| {
+                    set_timer_state.set(timer.state().clone());
+                    set_active_task.set(Some(task));
+                })
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok();
         });

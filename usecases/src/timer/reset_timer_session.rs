@@ -22,7 +22,7 @@ pub async fn reset_timer_session(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Get the task for its configuration
-    let task = task_repo
+    let mut task = task_repo
         .get_by_id(task_id)
         .await?
         .ok_or(domain::Error::TaskNotFound {
@@ -32,9 +32,13 @@ pub async fn reset_timer_session(
     // Get the single timer instance
     let mut timer = timer_repo.get().await?;
 
+    task.reset_sessions();
+
     // Reset the timer with task's configuration
     let events = timer.reset(&task.config.timer)?;
     timer_repo.save(&timer).await?;
+
+    task_repo.update(task.clone()).await?;
 
     // Publish events
     for event in events {
