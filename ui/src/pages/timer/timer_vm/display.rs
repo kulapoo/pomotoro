@@ -3,7 +3,6 @@ use leptos::prelude::*;
 
 use super::TimerViewModel;
 
-// Display & Formatting
 impl TimerViewModel {
     pub fn get_phase_name(&self) -> String {
         let state = self.timer_state.get();
@@ -47,7 +46,11 @@ impl TimerViewModel {
 
     pub fn get_progress_percentage(&self) -> f64 {
         let state = self.timer_state.get();
-        let config = self.timer_config.get();
+        let active_task = self.active_task.get();
+        let Some(task) = active_task else {
+            return 0.0;
+        };
+        let config = &task.config.timer;
         let remaining = state.remaining_seconds();
         let total = match &state {
             TimerState::Working { .. } => {
@@ -75,9 +78,8 @@ impl TimerViewModel {
 
     pub fn get_session_display(&self) -> String {
         if let Some(task) = self.active_task.get() {
-            let config = self.timer_config.get();
             let sessions_until_long_break =
-                config.sessions_until_long_break as u32;
+                task.config.timer.sessions_until_long_break as u32;
             format!(
                 "Session {}/{}",
                 (task.current_sessions % sessions_until_long_break as u8) + 1,
@@ -97,17 +99,7 @@ impl TimerViewModel {
 
     pub fn get_sessions_completed(&self) -> usize {
         if let Some(task) = self.active_task.get() {
-            let config = self.timer_config.get();
-            (task.current_sessions % config.sessions_until_long_break) as usize
-        } else {
-            0
-        }
-    }
-
-    pub fn get_today_pomodoros(&self) -> u32 {
-        // This would typically come from a stats service, for now return task sessions
-        if let Some(task) = self.active_task.get() {
-            task.current_sessions as u32
+            (task.current_sessions % task.config.timer.sessions_until_long_break) as usize
         } else {
             0
         }

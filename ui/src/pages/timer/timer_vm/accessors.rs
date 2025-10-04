@@ -30,7 +30,11 @@ impl TimerViewModel {
         self.active_task.get().map(|task| task.id.to_string())
     }
 
-    pub fn get_is_idle(&self) -> bool {
-        self.timer_state.get().is_idle()
+    // pub fn get_can_skip(&self) -> bool {
+    //     self.timer_state.get().can_skip()
+    // }
+
+    pub fn get_is_completed(&self) -> bool {
+        self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
     }
 }

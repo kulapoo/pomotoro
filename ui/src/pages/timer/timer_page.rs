@@ -39,10 +39,6 @@ pub fn TimerPage() -> impl IntoView {
 
             <div class="pomodoro-stats">
                 <div class="stat-item">
-                    <div class="stat-value" id="todayPomodoros">{move || vm.with_value(|v| v.get_today_pomodoros())}</div>
-                    <div class="stat-label">"Today's Pomodoros"</div>
-                </div>
-                <div class="stat-item">
                     <div class="stat-value" id="taskPomodoros">{move || vm.with_value(|v| v.get_task_pomodoros())}</div>
                     <div class="stat-label">"Task Pomodoros"</div>
                 </div>
