@@ -91,6 +91,10 @@ impl TimerViewModel {
     pub fn get_active_entity_id(&self) -> Option<String> {
         self.active_task.get().map(|task| task.id.to_string())
     }
+
+    pub fn get_is_idle(&self) -> bool {
+        self.timer_state.get().is_idle()
+    }
 }
 
 // Initialization & Event Listeners

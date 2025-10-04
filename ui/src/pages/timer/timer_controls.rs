@@ -15,6 +15,9 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
         vm.with_value(|v| v.skip_phase());
     };
 
+    let is_idle = move || vm.with_value(|v| v.get_is_idle());
+
+
     view! {
         <>
             <button
@@ -32,6 +35,7 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             </button>
 
             <button
+                disabled=is_idle
                 class="btn btn-secondary"
                 on:click=skip_action
             >
