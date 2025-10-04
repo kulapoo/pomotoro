@@ -158,7 +158,7 @@ pub async fn delete_task(
     id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<bool, String> {
+) -> Result<(), String> {
     info!("Deleting task: id={}", id);
 
     let task_id = TaskId::from_string(&id)
@@ -172,7 +172,9 @@ pub async fn delete_task(
     )
     .await
     .with_context(|| format!("Failed to delete task with id: {}", id))
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -99,6 +99,10 @@ impl ViewModel for TaskDirectoryViewModel {
     }
 }
 
+// ============================================================================
+// Initialization
+// ============================================================================
+
 impl TaskDirectoryViewModel {
     fn setup_event_listeners(&self) {
         let set_tasks = self.set_tasks;
@@ -307,7 +311,13 @@ impl TaskDirectoryViewModel {
                 });
         });
     }
+}
 
+// ============================================================================
+// State Access (Getters)
+// ============================================================================
+
+impl TaskDirectoryViewModel {
     pub fn get_tasks(&self) -> Vec<Task> {
         if self.search_query.get().is_empty() && self.status_filter.get() == "all" {
             self.tasks.get()
@@ -324,10 +334,28 @@ impl TaskDirectoryViewModel {
         self.selected_task.get()
     }
 
-    pub fn select_task(&self, task_id: Option<TaskId>) {
-        self.set_selected_task.set(task_id);
+    pub fn get_search_query(&self) -> String {
+        self.search_query.get()
     }
 
+    pub fn get_sort_by(&self) -> String {
+        self.sort_by.get()
+    }
+
+    pub fn get_status_filter(&self) -> String {
+        self.status_filter.get()
+    }
+
+    pub fn get_error_state(&self) -> Option<ErrorInfo> {
+        self.error_state.get()
+    }
+}
+
+// ============================================================================
+// Task Operations
+// ============================================================================
+
+impl TaskDirectoryViewModel {
     pub fn delete_task(&self, task_id: TaskId) -> bool {
         let task_name = self.tasks
             .get()
@@ -431,82 +459,6 @@ impl TaskDirectoryViewModel {
                 })
                 .ok();
         });
-    }
-
-    pub fn search_tasks(&self, query: String) {
-        self.set_search_query.set(query.clone());
-
-        if query.is_empty() && self.status_filter.get() == "all" {
-            self.set_filtered_tasks.set(self.tasks.get());
-            return;
-        }
-
-        let set_filtered = self.set_filtered_tasks;
-        let sort_by = self.sort_by.get();
-        let status_filter = self.status_filter.get();
-        let set_error_state = self.set_error_state;
-
-        spawn_local(async move {
-            #[derive(serde::Serialize)]
-            struct SearchArgs {
-                query: Option<String>,
-                status: Option<String>,
-                sort_by: Option<String>,
-                sort_order: Option<String>,
-            }
-
-            let args = SearchArgs {
-                query: if query.is_empty() { None } else { Some(query) },
-                status: if status_filter == "all" {
-                    None
-                } else {
-                    Some(status_filter)
-                },
-                sort_by: Some(sort_by),
-                sort_order: Some("asc".to_string()),
-            };
-
-            invoke::<Vec<Task>, _>(commands::task::SEARCH, Some(args)).await
-                .map(|task_list| {
-                    set_filtered.set(task_list);
-                    // Clear any existing errors on success
-                    set_error_state.set(None);
-                })
-                .map_err(|e| {
-                    handle_command_error(format!("Failed to search tasks: {}", e), set_error_state);
-                })
-                .ok();
-        });
-    }
-
-    pub fn set_sort(&self, sort_by: String) {
-        self.set_sort_by.set(sort_by);
-        self.search_tasks(self.search_query.get());
-    }
-
-    pub fn set_status_filter(&self, status: String) {
-        self.set_status_filter.set(status);
-        self.search_tasks(self.search_query.get());
-    }
-
-    pub fn get_search_query(&self) -> String {
-        self.search_query.get()
-    }
-
-    pub fn get_sort_by(&self) -> String {
-        self.sort_by.get()
-    }
-
-    pub fn get_status_filter(&self) -> String {
-        self.status_filter.get()
-    }
-
-    pub fn get_error_state(&self) -> Option<ErrorInfo> {
-        self.error_state.get()
-    }
-
-    pub fn clear_error(&self) {
-        self.set_error_state.set(None);
     }
 
     pub fn cycle_to_next_incomplete_task(&self) {
@@ -646,5 +598,87 @@ impl TaskDirectoryViewModel {
                         })
                 });
         });
+    }
+}
+
+// ============================================================================
+// Search & Filter Operations
+// ============================================================================
+
+impl TaskDirectoryViewModel {
+    pub fn search_tasks(&self, query: String) {
+        self.set_search_query.set(query.clone());
+
+        if query.is_empty() && self.status_filter.get() == "all" {
+            self.set_filtered_tasks.set(self.tasks.get());
+            return;
+        }
+
+        let set_filtered = self.set_filtered_tasks;
+        let sort_by = self.sort_by.get();
+        let status_filter = self.status_filter.get();
+        let set_error_state = self.set_error_state;
+
+        spawn_local(async move {
+            #[derive(serde::Serialize)]
+            struct SearchArgs {
+                query: Option<String>,
+                tags: Option<Vec<String>>,
+                status: Option<String>,
+                sort_by: Option<String>,
+                sort_order: Option<String>,
+                limit: Option<usize>,
+                offset: Option<usize>,
+            }
+
+            let args = SearchArgs {
+                query: if query.is_empty() { None } else { Some(query) },
+                tags: None,
+                status: if status_filter == "all" {
+                    None
+                } else {
+                    Some(status_filter)
+                },
+                sort_by: Some(sort_by),
+                sort_order: Some("asc".to_string()),
+                limit: None,
+                offset: None,
+            };
+
+            invoke::<Vec<Task>, _>(commands::task::SEARCH, Some(args)).await
+                .map(|task_list| {
+                    set_filtered.set(task_list);
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
+                })
+                .map_err(|e| {
+                    handle_command_error(format!("Failed to search tasks: {}", e), set_error_state);
+                })
+                .ok();
+        });
+    }
+
+    pub fn set_sort(&self, sort_by: String) {
+        self.set_sort_by.set(sort_by);
+        self.search_tasks(self.search_query.get());
+    }
+
+    pub fn set_status_filter(&self, status: String) {
+        self.set_status_filter.set(status);
+        self.search_tasks(self.search_query.get());
+    }
+}
+
+// ============================================================================
+// Selection & Error Management
+// ============================================================================
+
+impl TaskDirectoryViewModel {
+    pub fn select_task(&self, task_id: Option<TaskId>) {
+        self.set_selected_task.set(task_id);
+    }
+
+    pub fn clear_error(&self) {
+        self.set_error_state.set(None);
     }
 }

@@ -6,4 +6,3 @@ pub mod types;
 // Public exports
 pub use task_directory::TaskDirectoryPage;
 pub use task_form::TaskFormPage;
-pub use types::TaskDto;

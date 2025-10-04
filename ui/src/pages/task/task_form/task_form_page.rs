@@ -16,7 +16,7 @@ pub fn TaskFormPage() -> impl IntoView {
 
     // Extract task ID from route params if in edit mode
     let task_id = move || {
-        params.with(|p| {
+        params.with_untracked(|p| {
             p.get("id").and_then(|id| Uuid::parse_str(&id).ok().map(|uuid| TaskId::from_uuid(uuid)))
         })
     };
@@ -26,7 +26,7 @@ pub fn TaskFormPage() -> impl IntoView {
     let (is_loading, set_is_loading) = signal(true);
 
     // Fetch task if in edit mode
-    let is_update = task_id().is_some();
+    let is_update = move || task_id().is_some();
 
     // Load task data when in edit mode
     if let Some(id) = task_id() {
@@ -199,7 +199,7 @@ pub fn TaskFormPage() -> impl IntoView {
         >
             <div class="task-creation-form">
                 <h4 class="form-title">
-                    {if is_update { "Update Task" } else { "Create New Task" }}
+                    {move || if is_update() { "Update Task" } else { "Create New Task" }}
                 </h4>
 
             <Show when=move || validation_error.get().is_some()>
@@ -363,9 +363,9 @@ pub fn TaskFormPage() -> impl IntoView {
                 >
                     {move || {
                         if is_submitting.get() {
-                            if is_update { "Updating..." } else { "Creating..." }
+                            if is_update() { "Updating..." } else { "Creating..." }
                         } else {
-                            if is_update { "Update Task" } else { "Create Task" }
+                            if is_update() { "Update Task" } else { "Create Task" }
                         }
                     }}
                 </button>
