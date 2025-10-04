@@ -56,7 +56,7 @@ pub fn run() {
                 .filter(|metadata| {
                     // Only include logs from our crates
                     metadata.target().starts_with("infra::")
-                        || metadata.target().starts_with("tae:")
+                        || metadata.target().starts_with("domain::")
                         || metadata.target().starts_with("usecases::")
                 })
                 .build(),
@@ -113,14 +113,10 @@ pub fn run() {
                 let app_handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     // Wait a bit for the window to be ready
-                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
                     if let Some(window) = app_handle.get_webview_window("main") {
                         window.open_devtools();
-
-                        // Auto-close after 10 seconds if desired
-                        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                        window.close_devtools();
                     }
                 });
             }

@@ -159,7 +159,7 @@ pub async fn delete_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
 ) -> Result<bool, String> {
-    info!("Deleting tae tae task: id={}", id);
+    info!("Deleting task: id={}", id);
 
     let task_id = TaskId::from_string(&id)
         .map_err(|_| format!("Invalid task ID: {}", id))?;
