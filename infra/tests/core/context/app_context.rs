@@ -81,6 +81,9 @@ impl AppContext {
             task_repo.clone(),
             timer_tick_service.clone(),
             config_repo.clone(),
+            task_cycling_service.clone(),
+            timer_repo.clone(),
+            event_bus.clone(),
         )
         .unwrap();
 
