@@ -48,6 +48,10 @@ pub async fn skip_timer_phase(
         task.increment_session()?;
     }
 
+    if task.is_completed() {
+        timer.reset(&task.config.timer)?;
+    }
+
     task_repo.update(task).await?;
 
     timer_repo.save(&timer).await?;

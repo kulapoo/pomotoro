@@ -1,5 +1,5 @@
 use crate::adapters::events::app_emitter::Emitter;
-use crate::adapters::EventHandler;
+use crate::adapters::{EventHandler, TimerTickService};
 use async_trait::async_trait;
 use domain::{Event, Result};
 use serde_json::json;
@@ -8,11 +8,12 @@ use std::sync::Arc;
 
 pub struct TimerResetHandler {
     emitter: Arc<dyn Emitter>,
+    timer_srv: Arc<TimerTickService>,
 }
 
 impl TimerResetHandler {
-    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
-        TimerResetHandler { emitter }
+    pub fn new(emitter: Arc<dyn Emitter>, timer_srv: Arc<TimerTickService>) -> Self {
+        TimerResetHandler { emitter, timer_srv }
     }
 }
 
@@ -29,6 +30,17 @@ impl EventHandler for TimerResetHandler {
             .ok_or(domain::Error::EventHandlingError {
             message: format!("Failed to reset timer"),
         })?;
+
+
+        self.timer_srv.load_state().await?;
+
+        self.timer_srv
+            .stop_timer_tick_loop()
+            .await
+            .map_err(|e| domain::Error::EventHandlingError {
+                message: format!("Failed to stop timer tick loop: {e}"),
+            })?;
+
 
         self.emitter
             .emit(

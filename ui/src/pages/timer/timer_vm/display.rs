@@ -63,7 +63,7 @@ impl TimerViewModel {
                 config.get_phase_duration_seconds(Phase::LongBreak)
             }
             TimerState::Paused { paused_from, .. } => {
-                let phase = Self::get_current_phase_static(paused_from);
+                let phase = paused_from.phase();
                 config.get_phase_duration_seconds(phase)
             }
             TimerState::Idle => return 0.0,

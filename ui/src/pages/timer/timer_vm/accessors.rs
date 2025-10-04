@@ -1,4 +1,4 @@
-use domain::Task;
+use domain::{StateTransitions, Task, TransitionType};
 use leptos::prelude::*;
 
 use crate::components::ErrorInfo;
@@ -30,11 +30,26 @@ impl TimerViewModel {
         self.active_task.get().map(|task| task.id.to_string())
     }
 
-    // pub fn get_can_skip(&self) -> bool {
-    //     self.timer_state.get().can_skip()
-    // }
-
     pub fn get_is_completed(&self) -> bool {
         self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
     }
+
+    pub fn can_skip(&self) -> bool {
+        StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Skip)
+    }
+
+    pub fn can_reset(&self) -> bool {
+        StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Reset)
+    }
+
+    pub fn can_toggle_start_pause(&self) -> bool {
+        StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Start)
+            || StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Pause)
+            || StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Resume)
+    }
+
+    pub fn is_task_completed(&self) -> bool {
+        self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
+    }
+
 }
