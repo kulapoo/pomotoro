@@ -12,61 +12,91 @@ pub async fn get_global_config() -> std::result::Result<Config, String> {
 pub async fn save_global_config(
     config: Config,
 ) -> std::result::Result<(), String> {
-    invoke::<(), _>(commands::config::SAVE_GLOBAL, Some(config)).await
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct SaveGlobalConfigArgs {
+        config: Config,
+    }
+
+    let args = SaveGlobalConfigArgs { config };
+    invoke::<(), _>(commands::config::SAVE_GLOBAL, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_general(
     general: GeneralConfig,
 ) -> std::result::Result<Config, String> {
-    invoke::<Config, _>(commands::config::UPDATE_GENERAL, Some(general)).await
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct UpdateGeneralArgs {
+        preferences: GeneralConfig,
+    }
+
+    let args = UpdateGeneralArgs { preferences: general };
+    invoke::<Config, _>(commands::config::UPDATE_GENERAL, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_notification_preferences(
     preferences: NotificationConfig,
 ) -> std::result::Result<Config, String> {
-    invoke::<Config, _>(commands::config::UPDATE_NOTIFICATIONS, Some(preferences)).await
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct UpdateNotificationArgs {
+        preferences: NotificationConfig,
+    }
+
+    let args = UpdateNotificationArgs { preferences };
+    invoke::<Config, _>(commands::config::UPDATE_NOTIFICATIONS, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_appearance(
     appearance: AppearanceConfig,
 ) -> std::result::Result<Config, String> {
-    invoke::<Config, _>(commands::config::UPDATE_APPEARANCE, Some(appearance)).await
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct UpdateAppearanceArgs {
+        preferences: AppearanceConfig,
+    }
+
+    let args = UpdateAppearanceArgs { preferences: appearance };
+    invoke::<Config, _>(commands::config::UPDATE_APPEARANCE, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_audio_config(
+    task_id: TaskId,
     audio_config: AudioConfig,
 ) -> std::result::Result<Config, String> {
-    invoke::<Config, _>(commands::config::UPDATE_AUDIO, Some(audio_config)).await
+    use serde::Serialize;
+
+    #[derive(Serialize)]
+    struct UpdateAudioArgs {
+        task_id: TaskId,
+        audio_config: AudioConfig,
+    }
+
+    let args = UpdateAudioArgs { task_id, audio_config };
+    invoke::<Config, _>(commands::config::UPDATE_AUDIO, Some(args)).await
 }
 
 #[allow(dead_code)]
 pub async fn update_default_timings(
-    work_minutes: u32,
-    short_break_minutes: u32,
-    long_break_minutes: u32,
+    timer: TimerConfiguration,
 ) -> std::result::Result<Config, String> {
     use serde::Serialize;
 
     #[derive(Serialize)]
     struct UpdateTimingsArgs {
-        #[serde(rename = "workMinutes")]
-        work_minutes: u32,
-        #[serde(rename = "shortBreakMinutes")]
-        short_break_minutes: u32,
-        #[serde(rename = "longBreakMinutes")]
-        long_break_minutes: u32,
+        timer: TimerConfiguration,
     }
 
-    let args = UpdateTimingsArgs {
-        work_minutes,
-        short_break_minutes,
-        long_break_minutes,
-    };
-
+    let args = UpdateTimingsArgs { timer };
     invoke::<Config, _>(commands::config::UPDATE_TIMINGS, Some(args)).await
 }
 

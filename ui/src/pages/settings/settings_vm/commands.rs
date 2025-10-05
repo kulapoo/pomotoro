@@ -1,5 +1,6 @@
 use domain::event_names;
 use domain::*;
+use leptos::prelude::{Get, Set};
 use leptos::task::spawn_local;
 
 use crate::components::error_toast::handle_command_error;
@@ -17,7 +18,19 @@ impl SettingsViewModel {
         let config_clone = config.clone();
 
         spawn_local(async move {
-            invoke::<(), _>(event_names::config::SAVE_GLOBAL, Some(config)).await
+            #[derive(serde::Serialize)]
+            struct Args {
+                config: Config,
+            }
+
+            let args = Args { config };
+
+            // Debug: Log the serialized args
+            if let Ok(js_val) = serde_wasm_bindgen::to_value(&args) {
+                web_sys::console::log_2(&"Serialized args for SAVE_GLOBAL:".into(), &js_val);
+            }
+
+            invoke::<(), _>(event_names::config::SAVE_GLOBAL, Some(args)).await
                 .map(|_| {
                     set_config.set(Some(config_clone));
                     // Clear any existing errors on success

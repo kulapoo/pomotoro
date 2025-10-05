@@ -60,7 +60,12 @@ impl SettingsViewModel {
                                         // Save to backend
                                         set_is_saving.set(true);
                                         spawn_local(async move {
-                                            invoke::<(), _>(event_names::config::SAVE_GLOBAL, Some(config)).await
+                                            #[derive(serde::Serialize)]
+                                            struct Args {
+                                                config: Config,
+                                            }
+
+                                            invoke::<(), _>(event_names::config::SAVE_GLOBAL, Some(Args { config })).await
                                                 .ok();
                                             set_is_saving.set(false);
                                         });
