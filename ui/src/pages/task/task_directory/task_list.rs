@@ -16,7 +16,7 @@ pub fn TaskList(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
                         move |_| navigate("/tasks/new", Default::default())
                     }
                 >
-                    <span class="btn-icon">"+ "</span>
+                    <span class="btn-icon">"➕"</span>
                     "Add New Task"
                 </button>
             </div>
