@@ -36,19 +36,19 @@ pub fn Sidebar() -> impl IntoView {
             </div>
             <ul class="nav-menu">
                 <li class={move || format!("nav-item {}", if is_active("/timer") { "active" } else { "" })}>
-                    <A href="/timer">
+                    <A href="/timer" class="nav-link">
                         <span class="nav-icon">"⏱️"</span>
                         <span class="nav-text">"Timer"</span>
                     </A>
                 </li>
                 <li class={move || format!("nav-item {}", if is_active("/tasks") { "active" } else { "" })}>
-                    <A href="/tasks">
+                    <A href="/tasks" class="nav-link">
                         <span class="nav-icon">"📝"</span>
                         <span class="nav-text">"Tasks"</span>
                     </A>
                 </li>
                 <li class={move || format!("nav-item {}", if is_active("/settings") { "active" } else { "" })}>
-                    <A href="/settings">
+                    <A href="/settings" class="nav-link">
                         <span class="nav-icon">"⚙️"</span>
                         <span class="nav-text">"Settings"</span>
                     </A>

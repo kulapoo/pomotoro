@@ -131,18 +131,24 @@ h4 { font-size: 1.125rem; }
 }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-md) var(--spacing-lg);
   margin: 0 var(--spacing-sm);
   border-radius: var(--radius-md);
-  cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: var(--dark);
   position: relative;
 }
 
-.sidebar.collapsed .nav-item {
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  color: var(--dark);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  width: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav-link {
   padding: var(--spacing-md);
   justify-content: center;
 }
@@ -154,6 +160,9 @@ h4 { font-size: 1.125rem; }
 
 .nav-item.active {
   background: rgba(94, 114, 228, 0.1);
+}
+
+.nav-item.active .nav-link {
   color: var(--primary);
   font-weight: 600;
 }
@@ -1450,9 +1459,12 @@ h4 { font-size: 1.125rem; }
     display: none;
   }
 
-  .nav-item {
+  .nav-link {
     justify-content: center;
     padding: var(--spacing-md);
+  }
+
+  .nav-item {
     margin: 0;
     border-radius: 0;
   }
@@ -1609,7 +1621,7 @@ h4 { font-size: 1.125rem; }
 /* Touch-friendly enhancements for mobile */
 @media (hover: none) and (pointer: coarse) {
   .btn,
-  .nav-item,
+  .nav-link,
   .task-item,
   .cycle-button {
     min-height: 44px;
