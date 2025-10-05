@@ -47,16 +47,7 @@ impl TimerViewModel {
                     .ok();
             }
 
-            #[derive(serde::Serialize)]
-            struct TimerArgs {
-                task_id: Option<String>,
-            }
-
-            let args = TimerArgs {
-                task_id: active_task.map(|t| t.id.to_string()),
-            };
-
-            invoke::<Timer, TimerArgs>(command, Some(args)).await
+            invoke::<Timer, ()>(command, None).await
             .map(|timer| {
                 let status = timer.state().status();
 

@@ -621,7 +621,7 @@ impl TaskDirectoryViewModel {
 
         spawn_local(async move {
             #[derive(serde::Serialize)]
-            struct SearchArgs {
+            struct SearchRequest {
                 query: Option<String>,
                 tags: Option<Vec<String>>,
                 status: Option<String>,
@@ -631,21 +631,28 @@ impl TaskDirectoryViewModel {
                 offset: Option<usize>,
             }
 
+            #[derive(serde::Serialize)]
+            struct SearchArgs {
+                request: SearchRequest,
+            }
+
             let args = SearchArgs {
-                query: if query.is_empty() { None } else { Some(query) },
-                tags: None,
-                status: if status_filter == "all" {
-                    None
-                } else {
-                    Some(status_filter)
+                request: SearchRequest {
+                    query: if query.is_empty() { None } else { Some(query) },
+                    tags: None,
+                    status: if status_filter == "all" {
+                        None
+                    } else {
+                        Some(status_filter)
+                    },
+                    sort_by: Some(sort_by),
+                    sort_order: Some("asc".to_string()),
+                    limit: None,
+                    offset: None,
                 },
-                sort_by: Some(sort_by),
-                sort_order: Some("asc".to_string()),
-                limit: None,
-                offset: None,
             };
 
-            invoke::<Vec<Task>, _>(commands::task::SEARCH, Some(args)).await
+            invoke::<Vec<Task>, SearchArgs>(commands::task::SEARCH, Some(args)).await
                 .map(|task_list| {
                     set_filtered.set(task_list);
                     // Clear any existing errors on success
