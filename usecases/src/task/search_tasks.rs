@@ -32,12 +32,21 @@ pub async fn search_tasks(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     query: SearchTasksQuery,
 ) -> Result<Vec<Task>> {
-    let criteria = SearchCriteria::new()
-        .with_query(query.query.unwrap_or_default())
-        .with_tags(query.tags.unwrap_or_default())
-        .with_status(query.status.unwrap_or_default())
+    let mut criteria = SearchCriteria::new()
         .with_limit(query.limit.unwrap_or(100))
         .with_offset(query.offset.unwrap_or(0));
+
+    if let Some(q) = query.query.filter(|s| !s.is_empty()) {
+        criteria = criteria.with_query(q);
+    }
+
+    if let Some(tags) = query.tags.filter(|t| !t.is_empty()) {
+        criteria = criteria.with_tags(tags);
+    }
+
+    if let Some(status) = query.status.filter(|s| !s.is_empty()) {
+        criteria = criteria.with_status(status);
+    }
 
     let sort_by = query.sort_by.as_ref().and_then(|s| match s.as_str() {
         "name" => Some(SortBy::Name),
