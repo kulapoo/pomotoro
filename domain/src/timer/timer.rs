@@ -183,6 +183,7 @@ impl Timer {
             self.state.clone(),
             self.id,
             configuration,
+            self.active_task_id,
         )?;
         self.state = result.new_state;
         Ok(result.events)

@@ -299,7 +299,7 @@ pub async fn skip_phase(
         .active_task_id()
         .ok_or("No active task in timer")?;
 
-    let (_old_phase, new_phase) = skip_timer_phase(
+    let (_old_phase, _new_phase) = skip_timer_phase(
         task_repo.inner().clone(),
         timer_repo.inner().clone(),
         event_publisher.inner().clone(),
@@ -311,18 +311,21 @@ pub async fn skip_phase(
     )
     .map_err(|e| e.to_string())?;
 
-    // Send tauri event with new phase information
-    app_handle
-        .emit(ui_listeners::timer::PHASE_SKIPPED, new_phase)
-        .map_err(|e| e.to_string())?;
-
-    timer_repo_arc
+    // Get the updated timer state with correct remaining seconds
+    let updated_timer = timer_repo_arc
         .get()
         .await
         .context(
-            "infra::commands::timer_cmd - Failed to get updated timer state",
+            "infra::commands::timer_cmd::skip_phase - Failed to get updated timer state",
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // Send tauri event with full timer state (not just phase)
+    app_handle
+        .emit(ui_listeners::timer::PHASE_SKIPPED, updated_timer.state())
+        .map_err(|e| e.to_string())?;
+
+    Ok(updated_timer)
 }
 
 #[tauri::command(rename_all = "snake_case")]

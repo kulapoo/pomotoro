@@ -49,7 +49,8 @@
       "Bash(cargo fix:*)",
       "Bash(rustc:*)",
       "Bash(./test_timer_ser)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(/tmp/test_skip_events:*)"
     ],
     "deny": [],
     "ask": [],

@@ -236,6 +236,7 @@ impl StateTransitions {
         state: TimerState,
         timer_id: TimerId,
         configuration: &TimerConfiguration,
+        active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Working { .. }
@@ -261,17 +262,28 @@ impl StateTransitions {
                         && event_type != "WorkSessionCompleted"
                 });
 
+                // Get the duration for the new phase
+                let duration = configuration.get_phase_duration_seconds(next_phase);
+
+                // Insert PhaseSkipped and Started events at the beginning
                 result.events.insert(
                     0,
                     Box::new(PhaseSkipped::new(
                         timer_id, from_phase, next_phase, 1,
                     )),
                 );
+                result.events.insert(
+                    1,
+                    Box::new(
+                        Started::new(timer_id, next_phase, duration, 1)
+                            .with_active_entity(active_task_id)
+                    ),
+                );
 
                 Ok(result)
             }
             TimerState::Paused { paused_from, .. } => {
-                Self::skip_phase(*paused_from, timer_id, configuration)
+                Self::skip_phase(*paused_from, timer_id, configuration, active_task_id)
             }
             TimerState::Idle => Err(Error::InvalidStateTransition {
                 from: "Stopped".to_string(),
