@@ -50,7 +50,8 @@
       "Bash(rustc:*)",
       "Bash(./test_timer_ser)",
       "Bash(mkdir:*)",
-      "Bash(/tmp/test_skip_events:*)"
+      "Bash(/tmp/test_skip_events:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": [],

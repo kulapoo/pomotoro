@@ -3,7 +3,6 @@ mod phase_skipped;
 mod registry;
 mod timer_paused;
 mod timer_reset;
-mod timer_resumed;
 mod timer_started;
 mod timer_status_changed;
 mod timer_tick;
@@ -15,7 +14,6 @@ pub(super) use timer_reset::TimerResetHandler;
 pub(super) use timer_started::TimerStartedHandler;
 pub(super) use timer_status_changed::TimerStatusChangedHandler;
 pub(super) use timer_tick::TimerTickHandler;
-pub(super) use timer_resumed::TimerResumedHandler;
 
 pub use registry::register_timer_handlers;
 pub use registry::unregister_timer_handlers;

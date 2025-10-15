@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Represents all possible states of a Pomodoro timer.
-/// 
+///
 /// Each state variant contains the data relevant to that state.
 /// The state machine ensures type-safe transitions and makes invalid states unrepresentable.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -212,11 +212,11 @@ mod tests {
         };
 
         let updated = state.with_remaining_seconds(50);
-        
+
         match updated {
-            TimerState::Working { 
+            TimerState::Working {
                 remaining_seconds,
-                .. 
+                ..
             } => {
                 assert_eq!(remaining_seconds, 50);
             }
@@ -231,11 +231,11 @@ mod tests {
         };
 
         let updated = short_break.with_remaining_seconds(150);
-        
+
         match updated {
-            TimerState::ShortBreak { 
+            TimerState::ShortBreak {
                 remaining_seconds,
-                .. 
+                ..
             } => {
                 assert_eq!(remaining_seconds, 150);
             }
@@ -255,11 +255,11 @@ mod tests {
         };
 
         let updated = paused.with_remaining_seconds(75);
-        
+
         match updated {
-            TimerState::Paused { 
+            TimerState::Paused {
                 remaining_seconds,
-                .. 
+                ..
             } => {
                 assert_eq!(remaining_seconds, 75);
             }
@@ -272,7 +272,7 @@ mod tests {
         let idle = TimerState::Idle;
 
         let updated = idle.with_remaining_seconds(999);
-        
+
         match updated {
             TimerState::Idle => {
                 assert_eq!(idle, updated);

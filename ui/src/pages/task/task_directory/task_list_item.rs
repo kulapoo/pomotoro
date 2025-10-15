@@ -32,6 +32,8 @@ where
         _ => "task-item"
     };
 
+    web_sys::console::log_1(&format!("Task {:?}", task.status).into());
+
     view! {
         <div class=task_classes>
             <div class="task-content" on:click=move |_| {
