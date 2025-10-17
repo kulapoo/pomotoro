@@ -61,6 +61,7 @@ pub async fn register_handlers(
     register_task_handlers(
         event_bus.clone(),
         emitter.clone(),
+        task_repository.clone(),
         task_cycling_service,
         timer_repository,
         event_publisher,

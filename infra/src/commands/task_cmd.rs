@@ -3,7 +3,7 @@ use crate::adapters::{
 };
 use anyhow::{Context, anyhow};
 use domain::{
-    AudioConfig, Config, ConfigRepository, EventPublisher, Task, TaskId, TaskRepository,
+    AudioConfig, ConfigRepository, EventPublisher, Task, TaskId, TaskRepository,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -18,10 +18,15 @@ pub struct CreateTaskRequest {
     pub description: Option<String>,
     pub max_sessions: u8,
     pub tags: Vec<String>,
-    pub config: Option<Config>,
+    pub work_duration: Option<Duration>,
+    pub short_break_duration: Option<Duration>,
+    pub long_break_duration: Option<Duration>,
+    pub sessions_until_long_break: Option<u8>,
+    pub enable_screen_blocking: Option<bool>,
+    pub audio_config: Option<AudioConfig>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct UpdateTaskRequest {
     pub id: String,
     pub name: Option<String>,
@@ -46,12 +51,54 @@ pub async fn create_task(
     debug!("Creating task: name='{}', sessions={}, tags={:?}",
            request.name, request.max_sessions, request.tags);
 
+    // Build the full Config if any timer configuration fields are provided
+    let config = if request.work_duration.is_some()
+        || request.short_break_duration.is_some()
+        || request.long_break_duration.is_some()
+        || request.sessions_until_long_break.is_some()
+        || request.enable_screen_blocking.is_some()
+        || request.audio_config.is_some()
+    {
+        // Get the default config from the repository
+        let mut default_config = config_repo.get_config()
+            .await
+            .map_err(|e| format!("Failed to get default config: {}", e))?;
+
+        // Override individual timer fields if provided
+        if let Some(work_duration) = request.work_duration {
+            default_config.timer = default_config.timer.with_work_duration(work_duration)
+                .map_err(|e| format!("Invalid work duration: {}", e))?;
+        }
+        if let Some(short_break_duration) = request.short_break_duration {
+            default_config.timer = default_config.timer.with_short_break_duration(short_break_duration)
+                .map_err(|e| format!("Invalid short break duration: {}", e))?;
+        }
+        if let Some(long_break_duration) = request.long_break_duration {
+            default_config.timer = default_config.timer.with_long_break_duration(long_break_duration)
+                .map_err(|e| format!("Invalid long break duration: {}", e))?;
+        }
+        if let Some(sessions_until_long_break) = request.sessions_until_long_break {
+            default_config.timer = default_config.timer.with_sessions_until_long_break(sessions_until_long_break)
+                .map_err(|e| format!("Invalid sessions until long break: {}", e))?;
+        }
+        if let Some(enable_screen_blocking) = request.enable_screen_blocking {
+            default_config.general.enable_screen_blocking = enable_screen_blocking;
+        }
+        if let Some(audio_config) = request.audio_config {
+            default_config.audio = audio_config;
+        }
+
+        Some(default_config)
+    } else {
+        None
+    };
+
     let cmd = CreateTaskCmd {
         name: request.name.clone(),
         description: request.description,
         max_sessions: request.max_sessions,
         tags: request.tags,
-        config: request.config,
+        config,
     };
 
     match usecases::task::create_task(
@@ -453,7 +500,12 @@ pub async fn debug_create_test_task(
         description: Some("A test task for debugging".to_string()),
         max_sessions: 3,
         tags: vec!["debug".to_string(), "test".to_string()],
-        config: None,
+        work_duration: None,
+        short_break_duration: None,
+        long_break_duration: None,
+        sessions_until_long_break: None,
+        enable_screen_blocking: None,
+        audio_config: None,
     };
 
     create_task(request, task_repo, config_repo, event_publisher).await

@@ -150,6 +150,7 @@ impl Timer {
             configuration,
             self.active_task_id,
         )?;
+
         self.state = result.new_state;
         Ok(result.events)
     }
@@ -170,6 +171,7 @@ impl Timer {
     pub fn skip_phase(
         &mut self,
         configuration: &TimerConfiguration,
+        next_phase: Phase,
     ) -> Result<Vec<Box<dyn Event>>> {
         if !StateTransitions::can_transition(&self.state, TransitionType::Skip)
         {
@@ -183,6 +185,7 @@ impl Timer {
             self.state.clone(),
             self.id,
             configuration,
+            next_phase,
             self.active_task_id,
         )?;
         self.state = result.new_state;
@@ -210,29 +213,11 @@ impl Timer {
 
         events.push(Box::new(tick_event));
 
-        if phase_complete {
-            let next_phase = self.determine_next_phase();
-            let result = StateTransitions::complete_phase(
-                self.state.clone(),
-                self.id,
-                configuration,
-                next_phase,
-            )?;
-            self.state = result.new_state;
-            events.extend(result.events);
-        }
+        // NOTE: We do NOT auto-transition here. The use case layer (complete_timer_phase)
+        // must handle phase transitions to properly respect session counting for LongBreak.
+        // The tick() method only signals that a phase is complete via the return value.
 
         Ok((phase_complete, events))
-    }
-
-    fn determine_next_phase(&self) -> Phase {
-        match self.state {
-            TimerState::Working { .. } => Phase::ShortBreak,
-            TimerState::ShortBreak { .. } | TimerState::LongBreak { .. } => {
-                Phase::Work
-            }
-            _ => Phase::Work,
-        }
     }
 
     pub fn can_start(&self) -> bool {
@@ -443,7 +428,7 @@ mod tests {
         timer.start(&config).unwrap();
         assert!(timer.can_skip());
 
-        let skip_result = timer.skip_phase(&config);
+        let skip_result = timer.skip_phase(&config, Phase::ShortBreak);
         assert!(skip_result.is_ok());
     }
 

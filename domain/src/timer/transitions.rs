@@ -232,10 +232,12 @@ impl StateTransitions {
     /// Skips current phase and starts next phase.
     ///
     /// Similar to complete_phase but generates PhaseSkipped event.
+    /// The caller must determine the next_phase based on session counting logic.
     pub fn skip_phase(
         state: TimerState,
         timer_id: TimerId,
         configuration: &TimerConfiguration,
+        next_phase: Phase,
         active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
@@ -243,11 +245,6 @@ impl StateTransitions {
             | TimerState::ShortBreak { .. }
             | TimerState::LongBreak { .. } => {
                 let from_phase = Self::get_phase_from_state(&state);
-
-                let next_phase = match from_phase {
-                    Phase::Work => Phase::ShortBreak,
-                    Phase::ShortBreak | Phase::LongBreak => Phase::Work,
-                };
 
                 let mut result = Self::complete_phase(
                     state.clone(),
@@ -272,6 +269,7 @@ impl StateTransitions {
                         timer_id, from_phase, next_phase, 1,
                     )),
                 );
+
                 result.events.insert(
                     1,
                     Box::new(
@@ -283,7 +281,7 @@ impl StateTransitions {
                 Ok(result)
             }
             TimerState::Paused { paused_from, .. } => {
-                Self::skip_phase(*paused_from, timer_id, configuration, active_task_id)
+                Self::skip_phase(*paused_from, timer_id, configuration, next_phase, active_task_id)
             }
             TimerState::Idle => Err(Error::InvalidStateTransition {
                 from: "Stopped".to_string(),
@@ -410,6 +408,80 @@ pub enum TransitionType {
     Skip,
     /// Decrement timer.
     Tick,
+}
+
+impl StateTransitions {
+    /// Creates a timer state for a given phase with the specified remaining seconds.
+    ///
+    /// This is a utility method for creating the appropriate `TimerState` variant
+    /// based on a `Phase` value. It's used when we need to construct a state
+    /// directly from a phase without going through the full transition logic.
+    ///
+    /// # Arguments
+    ///
+    /// * `phase` - The phase to convert into a timer state
+    /// * `remaining_seconds` - The duration in seconds for this state
+    ///
+    /// # Returns
+    ///
+    /// The corresponding `TimerState` variant with the specified remaining seconds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use domain::timer::{Phase, TimerState, transitions::StateTransitions};
+    /// let state = StateTransitions::create_state_for_phase(Phase::Work, 1500);
+    /// assert!(matches!(state, TimerState::Working { remaining_seconds: 1500 }));
+    /// ```
+    pub fn create_state_for_phase(phase: Phase, remaining_seconds: u32) -> TimerState {
+        match phase {
+            Phase::Work => TimerState::Working {
+                remaining_seconds,
+            },
+            Phase::ShortBreak => TimerState::ShortBreak {
+                remaining_seconds,
+            },
+            Phase::LongBreak => TimerState::LongBreak {
+                remaining_seconds,
+            },
+        }
+    }
+}
+
+/// Converts a `Phase` into a `TimerState` with zero remaining seconds.
+///
+/// This is useful when you need a default state for a phase, typically
+/// used in testing or when initializing states without specific durations.
+///
+/// # Examples
+///
+/// ```
+/// # use domain::timer::{Phase, TimerState};
+/// let state: TimerState = Phase::Work.into();
+/// assert!(matches!(state, TimerState::Working { remaining_seconds: 0 }));
+/// ```
+impl From<Phase> for TimerState {
+    fn from(phase: Phase) -> Self {
+        StateTransitions::create_state_for_phase(phase, 0)
+    }
+}
+
+/// Converts a tuple of `(Phase, u32)` into a `TimerState`.
+///
+/// This provides a convenient way to create a timer state with both
+/// a phase and duration in a single conversion.
+///
+/// # Examples
+///
+/// ```
+/// # use domain::timer::{Phase, TimerState};
+/// let state: TimerState = (Phase::ShortBreak, 300).into();
+/// assert!(matches!(state, TimerState::ShortBreak { remaining_seconds: 300 }));
+/// ```
+impl From<(Phase, u32)> for TimerState {
+    fn from((phase, remaining_seconds): (Phase, u32)) -> Self {
+        StateTransitions::create_state_for_phase(phase, remaining_seconds)
+    }
 }
 
 #[cfg(test)]
@@ -541,5 +613,29 @@ mod tests {
             &working,
             TransitionType::Start
         ));
+    }
+
+    #[test]
+    fn should_convert_phase_to_state_with_zero_seconds() {
+        let work_state: TimerState = Phase::Work.into();
+        assert!(matches!(work_state, TimerState::Working { remaining_seconds: 0 }));
+
+        let short_break_state: TimerState = Phase::ShortBreak.into();
+        assert!(matches!(short_break_state, TimerState::ShortBreak { remaining_seconds: 0 }));
+
+        let long_break_state: TimerState = Phase::LongBreak.into();
+        assert!(matches!(long_break_state, TimerState::LongBreak { remaining_seconds: 0 }));
+    }
+
+    #[test]
+    fn should_convert_phase_and_duration_tuple_to_state() {
+        let work_state: TimerState = (Phase::Work, 1500).into();
+        assert!(matches!(work_state, TimerState::Working { remaining_seconds: 1500 }));
+
+        let short_break_state: TimerState = (Phase::ShortBreak, 300).into();
+        assert!(matches!(short_break_state, TimerState::ShortBreak { remaining_seconds: 300 }));
+
+        let long_break_state: TimerState = (Phase::LongBreak, 900).into();
+        assert!(matches!(long_break_state, TimerState::LongBreak { remaining_seconds: 900 }));
     }
 }

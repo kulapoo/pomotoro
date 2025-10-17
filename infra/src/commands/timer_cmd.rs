@@ -299,7 +299,7 @@ pub async fn skip_phase(
         .active_task_id()
         .ok_or("No active task in timer")?;
 
-    let (_old_phase, _new_phase) = skip_timer_phase(
+    skip_timer_phase(
         task_repo.inner().clone(),
         timer_repo.inner().clone(),
         event_publisher.inner().clone(),

@@ -68,18 +68,18 @@ pub async fn update_task(
         task.tags = tags;
     }
 
-    // Update timer settings if any provided
+    // Update timer settings if any provided (using builder methods for validation)
     if let Some(work_duration) = cmd.work_duration {
-        task.config.timer.work_duration = work_duration;
+        task.config.timer = task.config.timer.with_work_duration(work_duration)?;
     }
     if let Some(short_break_duration) = cmd.short_break_duration {
-        task.config.timer.short_break_duration = short_break_duration;
+        task.config.timer = task.config.timer.with_short_break_duration(short_break_duration)?;
     }
     if let Some(long_break_duration) = cmd.long_break_duration {
-        task.config.timer.long_break_duration = long_break_duration;
+        task.config.timer = task.config.timer.with_long_break_duration(long_break_duration)?;
     }
     if let Some(sessions_until_long_break) = cmd.sessions_until_long_break {
-        task.config.timer.sessions_until_long_break = sessions_until_long_break;
+        task.config.timer = task.config.timer.with_sessions_until_long_break(sessions_until_long_break)?;
     }
     if let Some(enable_screen_blocking) = cmd.enable_screen_blocking {
         task.config.general.enable_screen_blocking = enable_screen_blocking;

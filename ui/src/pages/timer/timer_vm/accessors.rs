@@ -38,10 +38,6 @@ impl TimerViewModel {
         StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Skip)
     }
 
-    pub fn can_reset(&self) -> bool {
-        StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Reset)
-    }
-
     pub fn can_toggle_start_pause(&self) -> bool {
         StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Start)
             || StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Pause)

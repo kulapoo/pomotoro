@@ -77,9 +77,7 @@ impl TimerViewModel {
                     serde_wasm_bindgen::from_value::<TimerTick>(payload)
                 {
                     set_timer_state.update(|state| {
-                        *state = state.with_remaining_seconds(
-                            timer_tick.remaining_seconds,
-                        );
+                        *state = (timer_tick.phase, timer_tick.remaining_seconds).into();
                     });
                 }
             });

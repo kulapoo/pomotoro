@@ -14,6 +14,7 @@ use std::sync::Arc;
 /// - Transitions immediately to next phase regardless of remaining time
 /// - May trigger work session completion events if skipping work phase
 /// - Follows standard pomodoro cycle progression
+/// - Respects session counting for determining ShortBreak vs LongBreak
 ///
 /// ## Dependencies
 ///
@@ -41,12 +42,21 @@ pub async fn skip_timer_phase(
 
     let old_phase = timer.get_current_phase();
 
-    let events = timer.skip_phase(&task.config.timer)?;
+    // Determine next phase based on session count (same logic as complete_timer_phase)
+    let next_phase = match old_phase {
+        Phase::Work => {
+            // About to skip work, so increment session first
+            task.increment_session()?;
+            // Determine if it's time for long break
+            determine_next_break_type(&task)
+        }
+        Phase::ShortBreak | Phase::LongBreak => Phase::Work,
+    };
 
-    // Only increment session when skipping a Work phase
-    if old_phase == Phase::Work {
-        task.increment_session()?;
-    }
+    log::info!("Skipping to phase: {}-{}-{}-{}", next_phase.name(), task.current_sessions, task.config.timer.sessions_until_long_break, task.is_completed());
+
+    // Skip to the determined phase
+    let events = timer.skip_phase(&task.config.timer, next_phase)?;
 
     if task.is_completed() {
         timer.reset(&task.config.timer)?;
@@ -63,4 +73,16 @@ pub async fn skip_timer_phase(
     }
 
     Ok((old_phase, new_phase))
+}
+
+/// Determine whether the next break should be short or long
+/// based on the current session count and configuration.
+fn determine_next_break_type(task: &domain::Task) -> Phase {
+    let sessions_until_long = task.config.timer.sessions_until_long_break;
+
+    if task.current_sessions % sessions_until_long == 0 {
+        Phase::LongBreak
+    } else {
+        Phase::ShortBreak
+    }
 }
