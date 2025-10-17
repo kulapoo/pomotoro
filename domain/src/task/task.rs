@@ -59,7 +59,7 @@ impl Task {
 
     pub fn is_completed(&self) -> bool {
         self.current_sessions >= self.max_sessions
-            || self.status == Status::Completed
+            && self.status == Status::Completed
     }
 
     pub fn increment_session(&mut self) -> Result<()> {

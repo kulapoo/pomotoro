@@ -1366,4 +1366,198 @@ async fn complete_productivity_workflow_integration() {
     assert!(!has_task3_in_queue, "Completed task 3 should not be in incomplete queue");
 }
 
+// Test 31: Skip through multiple work sessions and verify long break pattern
+#[tokio::test]
+async fn should_give_long_break_after_skipping_4_work_sessions() {
+    let ctx = setup_ctx("should_give_long_break_after_skipping_4_work_sessions").await;
+
+    // AAA
+
+    // Arrange
+    // Create a task for testing skip-to-long-break
+    let config = Config {
+        timer: TimerConfiguration::new(
+            Duration::from_secs(25 * 60),  // 25 minutes work
+            Duration::from_secs(5 * 60),   // 5 minutes short break
+            Duration::from_secs(15 * 60),  // 15 minutes long break
+            4,  // Long break after 4 sessions
+        )
+        .expect("Failed to create timer configuration"),
+        ..Default::default()
+    };
+
+    let task = TaskBuilder::new()
+        .name("Skip to long break test")
+        .description("Task for testing consecutive skips to long break")
+        .max_sessions(12)  // Enough for multiple cycles
+        .status(TaskStatus::Active)
+        .config(config)
+        .build();
+
+    ctx.task_repo
+        .create(task.clone())
+        .await
+        .expect("Failed to create task");
+
+    // Start the first session
+    start_timer_session(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerSessionCmd {
+            task_id: Some(task.id),
+        },
+    )
+    .await
+    .expect("Failed to start first session");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Act & Assert
+    // Skip through 4 work sessions and verify the break pattern
+
+    // Session 1: Work -> ShortBreak
+    let skip1_result = usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let state1 = get_timer(&ctx).await.state().clone();
+    let is_short_break1 = matches!(state1, TimerState::ShortBreak { .. });
+    let task1 = get_active_task(&ctx).await;
+
+    assert!(skip1_result.is_ok(), "Failed to skip session 1");
+    assert!(is_short_break1, "Session 1: Should be in SHORT break");
+    assert_eq!(task1.current_sessions, 1, "Session 1: Task should have 1 completed session");
+
+    // Skip break -> Work
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await
+    .expect("Failed to skip break 1");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Session 2: Work -> ShortBreak
+    let skip2_result = usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let state2 = get_timer(&ctx).await.state().clone();
+    let is_short_break2 = matches!(state2, TimerState::ShortBreak { .. });
+    let task2 = get_active_task(&ctx).await;
+
+    assert!(skip2_result.is_ok(), "Failed to skip session 2");
+    assert!(is_short_break2, "Session 2: Should be in SHORT break");
+    assert_eq!(task2.current_sessions, 2, "Session 2: Task should have 2 completed sessions");
+
+    // Skip break -> Work
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await
+    .expect("Failed to skip break 2");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Session 3: Work -> ShortBreak
+    let skip3_result = usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let state3 = get_timer(&ctx).await.state().clone();
+    let is_short_break3 = matches!(state3, TimerState::ShortBreak { .. });
+    let task3 = get_active_task(&ctx).await;
+
+    assert!(skip3_result.is_ok(), "Failed to skip session 3");
+    assert!(is_short_break3, "Session 3: Should be in SHORT break");
+    assert_eq!(task3.current_sessions, 3, "Session 3: Task should have 3 completed sessions");
+
+    // Skip break -> Work
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await
+    .expect("Failed to skip break 3");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Session 4: Work -> LONG BREAK (THIS IS THE KEY TEST)
+    let skip4_result = usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let state4 = get_timer(&ctx).await.state().clone();
+    let is_long_break = matches!(state4, TimerState::LongBreak { .. });
+    let task4 = get_active_task(&ctx).await;
+
+    assert!(skip4_result.is_ok(), "Failed to skip session 4");
+    assert!(is_long_break, "Session 4: Should be in LONG break after 4 work sessions");
+    assert_eq!(task4.current_sessions, 4, "Session 4: Task should have 4 completed sessions");
+
+    // Skip long break -> Work
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await
+    .expect("Failed to skip long break");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Session 5: Work -> ShortBreak (verify cycle continues correctly)
+    let skip5_result = usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id,
+    )
+    .await;
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let state5 = get_timer(&ctx).await.state().clone();
+    let is_short_break5 = matches!(state5, TimerState::ShortBreak { .. });
+    let task5 = get_active_task(&ctx).await;
+
+    assert!(skip5_result.is_ok(), "Failed to skip session 5");
+    assert!(is_short_break5, "Session 5: Should be in SHORT break (new cycle)");
+    assert_eq!(task5.current_sessions, 5, "Session 5: Task should have 5 completed sessions");
+}
+
 

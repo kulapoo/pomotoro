@@ -12,7 +12,7 @@ pub use std::time::Duration;
 pub use tauri::State;
 
 // Declare submodules
-mod complete_task_session;
+mod complete_task;
 mod create_task;
 mod cycle_incomplete_task;
 mod debug_create_test_task;
@@ -31,7 +31,7 @@ mod search_tasks_fuzzy;
 mod update_task;
 
 // Re-export all command functions and their types
-pub use complete_task_session::complete_task_session;
+pub use complete_task::complete_task;
 pub use create_task::{create_task, CreateTaskRequest};
 pub use cycle_incomplete_task::{
     cycle_incomplete_task, CycleIncompleteTaskRequest, CycleIncompleteTaskResponse,

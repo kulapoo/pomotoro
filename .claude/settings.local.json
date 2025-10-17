@@ -53,7 +53,8 @@
       "Bash(/tmp/test_skip_events:*)",
       "Bash(rm:*)",
       "Bash(tree:*)",
-      "Bash(for dir in /home/jpt/src/oss/pomotoro/infra/src/commands/*/)"
+      "Bash(for dir in /home/jpt/src/oss/pomotoro/infra/src/commands/*/)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": [],

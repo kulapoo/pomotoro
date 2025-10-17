@@ -35,7 +35,11 @@ impl TimerViewModel {
     }
 
     pub fn can_skip(&self) -> bool {
-        StateTransitions::can_transition(&self.timer_state.get(), TransitionType::Skip)
+        let state = self.timer_state.get();
+        web_sys::console::log_1(&state.is_running().to_string().into());
+        web_sys::console::log_1(&state.remaining_seconds().to_string().into());
+
+        state.is_running() && state.remaining_seconds() > 0
     }
 
     pub fn can_toggle_start_pause(&self) -> bool {

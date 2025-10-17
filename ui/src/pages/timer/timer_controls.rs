@@ -11,13 +11,14 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
         vm.with_value(|v| v.reset_timer());
     };
 
+    let can_toggle_start_pause = move || vm.with_value(|v| v.can_toggle_start_pause());
+
+    let can_skip = move || vm.with_value(|v| v.can_skip());
+
     let skip_action = move |_| {
         vm.with_value(|v| v.skip_phase());
     };
 
-    let can_toggle_start_pause = move || vm.with_value(|v| v.can_toggle_start_pause());
-
-    let can_skip = move || vm.with_value(|v| v.can_skip());
 
     let is_task_completed = move || vm.with_value(|v| v.is_task_completed());
 
@@ -34,7 +35,6 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             <button
                 class="btn btn-secondary"
                 on:click=reset_action
-                disabled=move || is_task_completed()
             >
                 "Reset"
             </button>
@@ -42,7 +42,7 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             <button
                 class="btn btn-secondary"
                 on:click=skip_action
-                disabled=move || !can_skip() || is_task_completed()
+                disabled=move || !can_skip()
             >
                 "Skip"
             </button>
