@@ -174,16 +174,24 @@ pub fn TaskFormPage() -> impl IntoView {
                     .collect()
             };
 
-            let custom_config = if use_custom_config.get() {
-                Some(
-                    TimerConfiguration::new(
-                        Duration::from_secs(work_duration.get() * 60),
-                        Duration::from_secs(short_break.get() * 60),
-                        Duration::from_secs(long_break.get() * 60),
-                        sessions_until_long_break.get() as u8,
-                    )
-                    .expect("Invalid timer configuration"),
-                )
+            // Prepare individual timer config fields
+            let timer_work_duration = if use_custom_config.get() {
+                Some(Duration::from_secs(work_duration.get() * 60))
+            } else {
+                None
+            };
+            let timer_short_break = if use_custom_config.get() {
+                Some(Duration::from_secs(short_break.get() * 60))
+            } else {
+                None
+            };
+            let timer_long_break = if use_custom_config.get() {
+                Some(Duration::from_secs(long_break.get() * 60))
+            } else {
+                None
+            };
+            let timer_sessions_until_long_break = if use_custom_config.get() {
+                Some(sessions_until_long_break.get() as u8)
             } else {
                 None
             };
@@ -199,7 +207,12 @@ pub fn TaskFormPage() -> impl IntoView {
                         description.clone(),
                         Some(max_sessions.get() as usize),
                         Some(tags.clone()),
-                        custom_config.clone(),
+                        timer_work_duration,
+                        timer_short_break,
+                        timer_long_break,
+                        timer_sessions_until_long_break,
+                        None, // enable_screen_blocking
+                        None, // audio_config
                     );
 
                     // Navigate back to tasks after update
@@ -219,7 +232,12 @@ pub fn TaskFormPage() -> impl IntoView {
                         description.clone(),
                         max_sessions.get() as usize,
                         tags.clone(),
-                        custom_config.clone(),
+                        timer_work_duration,
+                        timer_short_break,
+                        timer_long_break,
+                        timer_sessions_until_long_break,
+                        None, // enable_screen_blocking
+                        None, // audio_config
                     );
 
                     let navigate = navigate.clone();

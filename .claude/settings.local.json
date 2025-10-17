@@ -51,7 +51,9 @@
       "Bash(./test_timer_ser)",
       "Bash(mkdir:*)",
       "Bash(/tmp/test_skip_events:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(tree:*)",
+      "Bash(for dir in /home/jpt/src/oss/pomotoro/infra/src/commands/*/)"
     ],
     "deny": [],
     "ask": [],

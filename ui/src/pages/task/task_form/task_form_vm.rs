@@ -1,10 +1,11 @@
 use crate::components::error_toast::{ErrorInfo, handle_command_error};
 use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
-use domain::{Task, TaskId, TimerConfiguration, event_names::commands};
+use domain::{Task, TaskId, event_names::commands, AudioConfig};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use serde_wasm_bindgen::from_value;
+use std::time::Duration;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
 
@@ -129,7 +130,12 @@ impl TaskFormViewModel {
         description: Option<String>,
         max_sessions: usize,
         tags: Vec<String>,
-        custom_config: Option<TimerConfiguration>,
+        work_duration: Option<Duration>,
+        short_break_duration: Option<Duration>,
+        long_break_duration: Option<Duration>,
+        sessions_until_long_break: Option<u8>,
+        enable_screen_blocking: Option<bool>,
+        audio_config: Option<AudioConfig>,
     ) {
         let set_is_creating = self.set_is_creating;
         let set_error_state = self.set_error_state;
@@ -141,7 +147,12 @@ impl TaskFormViewModel {
                 description: Option<String>,
                 max_sessions: u8,
                 tags: Vec<String>,
-                timer_config: Option<TimerConfiguration>,
+                work_duration: Option<Duration>,
+                short_break_duration: Option<Duration>,
+                long_break_duration: Option<Duration>,
+                sessions_until_long_break: Option<u8>,
+                enable_screen_blocking: Option<bool>,
+                audio_config: Option<AudioConfig>,
             }
 
             #[derive(serde::Serialize)]
@@ -154,7 +165,12 @@ impl TaskFormViewModel {
                 description,
                 max_sessions: max_sessions as u8,
                 tags,
-                timer_config: custom_config,
+                work_duration,
+                short_break_duration,
+                long_break_duration,
+                sessions_until_long_break,
+                enable_screen_blocking,
+                audio_config,
             };
 
             let args = CreateTaskArgs { request };
@@ -218,7 +234,12 @@ impl TaskFormViewModel {
         description: Option<String>,
         max_sessions: Option<usize>,
         tags: Option<Vec<String>>,
-        timer_config: Option<TimerConfiguration>,
+        work_duration: Option<Duration>,
+        short_break_duration: Option<Duration>,
+        long_break_duration: Option<Duration>,
+        sessions_until_long_break: Option<u8>,
+        enable_screen_blocking: Option<bool>,
+        audio_config: Option<AudioConfig>,
     ) {
         let set_error_state = self.set_error_state;
 
@@ -230,7 +251,12 @@ impl TaskFormViewModel {
                 description: Option<String>,
                 max_sessions: Option<u8>,
                 tags: Option<Vec<String>>,
-                timer_config: Option<TimerConfiguration>,
+                work_duration: Option<Duration>,
+                short_break_duration: Option<Duration>,
+                long_break_duration: Option<Duration>,
+                sessions_until_long_break: Option<u8>,
+                enable_screen_blocking: Option<bool>,
+                audio_config: Option<AudioConfig>,
             }
 
             #[derive(serde::Serialize)]
@@ -244,7 +270,12 @@ impl TaskFormViewModel {
                 description,
                 max_sessions: max_sessions.map(|s| s as u8),
                 tags,
-                timer_config,
+                work_duration,
+                short_break_duration,
+                long_break_duration,
+                sessions_until_long_break,
+                enable_screen_blocking,
+                audio_config,
             };
 
             let args = UpdateTaskArgs { request };
