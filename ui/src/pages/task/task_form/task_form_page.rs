@@ -1,12 +1,12 @@
 use super::TaskFormViewModel;
+use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
-use domain::{Task, TimerConfiguration, TaskId};
+use domain::{Task, TaskId, TimerConfiguration};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use std::time::Duration;
 use uuid::Uuid;
-use crate::pages::task::types::TaskDto;
 
 #[component]
 pub fn TaskFormPage() -> impl IntoView {
@@ -17,7 +17,11 @@ pub fn TaskFormPage() -> impl IntoView {
     // Extract task ID from route params if in edit mode
     let task_id = move || {
         params.with_untracked(|p| {
-            p.get("id").and_then(|id| Uuid::parse_str(&id).ok().map(|uuid| TaskId::from_uuid(uuid)))
+            p.get("id").and_then(|id| {
+                Uuid::parse_str(&id)
+                    .ok()
+                    .map(|uuid| TaskId::from_uuid(uuid))
+            })
         })
     };
 
@@ -32,17 +36,24 @@ pub fn TaskFormPage() -> impl IntoView {
     if let Some(id) = task_id() {
         spawn_local(async move {
             // Fetch all tasks and find the one we need
-            invoke::<Vec<TaskDto>, ()>(domain::event_names::commands::task::GET_ALL, None).await
-                .ok()
-                .and_then(|task_dto_list| {
-                    task_dto_list.into_iter()
-                        .filter_map(|dto| dto.to_task().ok())
-                        .find(|fetched_task| fetched_task.id == id)
-                })
-                .map(|fetched_task| set_task.set(Some(fetched_task)))
-                .unwrap_or_else(|| {
-                    web_sys::console::error_1(&format!("Failed to fetch task with id: {}", id).into());
-                });
+            invoke::<Vec<TaskDto>, ()>(
+                domain::event_names::commands::task::GET_ALL,
+                None,
+            )
+            .await
+            .ok()
+            .and_then(|task_dto_list| {
+                task_dto_list
+                    .into_iter()
+                    .filter_map(|dto| dto.to_task().ok())
+                    .find(|fetched_task| fetched_task.id == id)
+            })
+            .map(|fetched_task| set_task.set(Some(fetched_task)))
+            .unwrap_or_else(|| {
+                web_sys::console::error_1(
+                    &format!("Failed to fetch task with id: {}", id).into(),
+                );
+            });
             set_is_loading.set(false);
         });
     } else {
@@ -57,24 +68,29 @@ pub fn TaskFormPage() -> impl IntoView {
     let (work_duration, set_work_duration) = signal(25u64);
     let (short_break, set_short_break) = signal(5u64);
     let (long_break, set_long_break) = signal(15u64);
-    let (sessions_until_long_break, set_sessions_until_long_break) = signal(4usize);
+    let (sessions_until_long_break, set_sessions_until_long_break) =
+        signal(4usize);
 
     // Update form fields when task is loaded
     Effect::new(move || {
         if let Some(loaded_task) = task.get() {
             set_task_name.set(loaded_task.name.clone());
-            set_task_description.set(loaded_task.description.clone().unwrap_or_default());
+            set_task_description
+                .set(loaded_task.description.clone().unwrap_or_default());
             set_max_sessions.set(loaded_task.max_sessions as u32);
             set_tags_input.set(loaded_task.tags.join(", "));
 
-            let has_custom_config = loaded_task.config.timer != TimerConfiguration::default();
+            let has_custom_config =
+                loaded_task.config.timer != TimerConfiguration::default();
             set_use_custom_config.set(has_custom_config);
 
             let timer_config = &loaded_task.config.timer;
             set_work_duration.set(timer_config.work_duration.as_secs() / 60);
-            set_short_break.set(timer_config.short_break_duration.as_secs() / 60);
+            set_short_break
+                .set(timer_config.short_break_duration.as_secs() / 60);
             set_long_break.set(timer_config.long_break_duration.as_secs() / 60);
-            set_sessions_until_long_break.set(timer_config.sessions_until_long_break as usize);
+            set_sessions_until_long_break
+                .set(timer_config.sessions_until_long_break as usize);
         }
     });
 
@@ -87,23 +103,35 @@ pub fn TaskFormPage() -> impl IntoView {
             return Err("Task name is required".to_string());
         }
         if name.len() > 100 {
-            return Err("Task name must be less than 100 characters".to_string());
+            return Err(
+                "Task name must be less than 100 characters".to_string()
+            );
         }
         if max_sessions.get() < 1 || max_sessions.get() > 100 {
             return Err("Max sessions must be between 1 and 100".to_string());
         }
         if use_custom_config.get() {
             if work_duration.get() < 1 || work_duration.get() > 90 {
-                return Err("Work duration must be between 1 and 90 minutes".to_string());
+                return Err("Work duration must be between 1 and 90 minutes"
+                    .to_string());
             }
             if short_break.get() < 1 || short_break.get() > 30 {
-                return Err("Short break must be between 1 and 30 minutes".to_string());
+                return Err(
+                    "Short break must be between 1 and 30 minutes".to_string()
+                );
             }
             if long_break.get() < 5 || long_break.get() > 60 {
-                return Err("Long break must be between 5 and 60 minutes".to_string());
+                return Err(
+                    "Long break must be between 5 and 60 minutes".to_string()
+                );
             }
-            if sessions_until_long_break.get() < 2 || sessions_until_long_break.get() > 10 {
-                return Err("Sessions until long break must be between 2 and 10".to_string());
+            if sessions_until_long_break.get() < 2
+                || sessions_until_long_break.get() > 10
+            {
+                return Err(
+                    "Sessions until long break must be between 2 and 10"
+                        .to_string(),
+                );
             }
         }
         Ok(())
@@ -112,79 +140,98 @@ pub fn TaskFormPage() -> impl IntoView {
     let submit_task = {
         let navigate = navigate.clone();
         move |_| {
-        set_validation_error.set(None);
+            set_validation_error.set(None);
 
-        match validate_form() {
-            Err(error) => {
-                set_validation_error.set(Some(error));
+            match validate_form() {
+                Err(error) => {
+                    set_validation_error.set(Some(error));
+                    return;
+                }
+                Ok(_) => {}
+            }
+
+            if is_submitting.get() {
                 return;
             }
-            Ok(_) => {}
-        }
 
-        if is_submitting.get() {
-            return;
-        }
+            set_is_submitting.set(true);
 
-        set_is_submitting.set(true);
-
-        let name = task_name.get().trim().to_string();
-        let description = if task_description.get().trim().is_empty() {
-            None
-        } else {
-            Some(task_description.get().trim().to_string())
-        };
-
-        let tags: Vec<String> = if tags_input.get().trim().is_empty() {
-            Vec::new()
-        } else {
-            tags_input.get()
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect()
-        };
-
-        let custom_config = if use_custom_config.get() {
-            Some(TimerConfiguration::new(
-                Duration::from_secs(work_duration.get() * 60),
-                Duration::from_secs(short_break.get() * 60),
-                Duration::from_secs(long_break.get() * 60),
-                sessions_until_long_break.get() as u8,
-            ).expect("Invalid timer configuration"))
-        } else {
-            None
-        };
-
-        vm.with_value(|v| {
-            if let Some(id) = task_id() {
-                web_sys::console::log_1(&format!("Updating task: {:?}", id).into());
-                v.update_task(
-                    id,
-                    Some(name.clone()),
-                    description.clone(),
-                    Some(max_sessions.get() as usize),
-                    Some(tags.clone()),
-                    custom_config.clone(),
-                );
-
-                // Navigate back to tasks after update
-                let navigate = navigate.clone();
-                navigate("/tasks", Default::default());
+            let name = task_name.get().trim().to_string();
+            let description = if task_description.get().trim().is_empty() {
+                None
             } else {
-                web_sys::console::log_1(&format!("Creating task: {} with {} sessions", name, max_sessions.get()).into());
-                v.create_task_full(name.clone(), description.clone(), max_sessions.get() as usize, tags.clone(), custom_config.clone());
+                Some(task_description.get().trim().to_string())
+            };
 
-                let navigate = navigate.clone();
-                set_timeout(
-                    move || {
-                        set_is_submitting.set(false);
-                        navigate("/tasks", Default::default());
-                    },
-                    std::time::Duration::from_millis(500),
-                );
-            }
-        });
+            let tags: Vec<String> = if tags_input.get().trim().is_empty() {
+                Vec::new()
+            } else {
+                tags_input
+                    .get()
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            };
+
+            let custom_config = if use_custom_config.get() {
+                Some(
+                    TimerConfiguration::new(
+                        Duration::from_secs(work_duration.get() * 60),
+                        Duration::from_secs(short_break.get() * 60),
+                        Duration::from_secs(long_break.get() * 60),
+                        sessions_until_long_break.get() as u8,
+                    )
+                    .expect("Invalid timer configuration"),
+                )
+            } else {
+                None
+            };
+
+            vm.with_value(|v| {
+                if let Some(id) = task_id() {
+                    web_sys::console::log_1(
+                        &format!("Updating task: {:?}", id).into(),
+                    );
+                    v.update_task(
+                        id,
+                        Some(name.clone()),
+                        description.clone(),
+                        Some(max_sessions.get() as usize),
+                        Some(tags.clone()),
+                        custom_config.clone(),
+                    );
+
+                    // Navigate back to tasks after update
+                    let navigate = navigate.clone();
+                    navigate("/tasks", Default::default());
+                } else {
+                    web_sys::console::log_1(
+                        &format!(
+                            "Creating task: {} with {} sessions",
+                            name,
+                            max_sessions.get()
+                        )
+                        .into(),
+                    );
+                    v.create_task_full(
+                        name.clone(),
+                        description.clone(),
+                        max_sessions.get() as usize,
+                        tags.clone(),
+                        custom_config.clone(),
+                    );
+
+                    let navigate = navigate.clone();
+                    set_timeout(
+                        move || {
+                            set_is_submitting.set(false);
+                            navigate("/tasks", Default::default());
+                        },
+                        std::time::Duration::from_millis(500),
+                    );
+                }
+            });
         }
     };
 
