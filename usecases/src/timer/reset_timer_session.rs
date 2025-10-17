@@ -1,18 +1,21 @@
 use domain::{EventPublisher, Result, TaskId, TaskRepository, TimerRepository};
 use std::sync::Arc;
 
-/// Reset a timer session for a specific task
+/// Reset the timer countdown to its initial state
 ///
-/// This use case resets the timer for a specific task back to its initial state.
+/// This use case resets only the timer countdown back to its initial idle state,
+/// without affecting task sessions. For resetting task sessions, use the
+/// `reset_task` use case instead.
 ///
 /// ## Business Rules
 ///
-/// - Task must exist
+/// - Task must exist to provide timer configuration
 /// - Resets the timer to idle state
+/// - Does not modify task sessions or task state
 ///
 /// ## Dependencies
 ///
-/// - TaskRepository: For task validation and retrieval
+/// - TaskRepository: For retrieving task's timer configuration
 /// - TimerRepository: For timer operations
 /// - EventPublisher: For domain event publishing
 pub async fn reset_timer_session(
@@ -21,8 +24,8 @@ pub async fn reset_timer_session(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    // Get the task for its configuration
-    let mut task = task_repo
+    // Get the task only for its timer configuration
+    let task = task_repo
         .get_by_id(task_id)
         .await?
         .ok_or(domain::Error::TaskNotFound {
@@ -32,13 +35,9 @@ pub async fn reset_timer_session(
     // Get the single timer instance
     let mut timer = timer_repo.get().await?;
 
-    task.reset_sessions();
-
     // Reset the timer with task's configuration
     let events = timer.reset(&task.config.timer)?;
     timer_repo.save(&timer).await?;
-
-    task_repo.update(task.clone()).await?;
 
     // Publish events
     for event in events {

@@ -560,7 +560,7 @@ impl TaskDirectoryViewModel {
                 reset_sessions,
             };
 
-            invoke::<TaskDto, _>(commands::task::RESET_STATUS, Some(args)).await
+            invoke::<TaskDto, _>(commands::task::RESET_TASK, Some(args)).await
                 .map_err(|e| {
                     handle_command_error(format!("Failed to reset task status: {}", e), set_error_state);
                 })

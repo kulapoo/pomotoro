@@ -5,9 +5,8 @@ pub mod cycle_task;
 pub mod delete_task;
 pub mod get_task;
 pub mod get_task_queue;
-pub mod reset_sessions;
 pub mod reset_task_settings;
-pub mod reset_task_status;
+pub mod reset_task;
 pub mod search_tasks;
 pub mod set_default_task;
 pub mod switch_task;
@@ -33,9 +32,8 @@ pub use get_task_queue::{
     TaskQueueInfo, TaskQueueQuery, TaskQueueSummary, get_active_task_queue,
     get_task_queue, get_task_queue_summary, get_task_queue_with_priorities,
 };
-pub use reset_sessions::reset_sessions;
 pub use reset_task_settings::reset_task_settings_to_defaults;
-pub use reset_task_status::reset_task_status;
+pub use reset_task::reset_task;
 pub use search_tasks::{
     FilterTasksByStatusQuery, SearchTasksQuery, filter_tasks_by_status,
     search_tasks, search_tasks_fuzzy,

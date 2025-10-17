@@ -27,8 +27,7 @@ pub mod task {
     pub const GET_ACTIVE: &str = "get_active_tasks";
     pub const GET_BY_TAGS: &str = "get_tasks_by_tags";
     pub const COMPLETE_TASK: &str = "complete_task";
-    pub const RESET_SESSIONS: &str = "reset_task_sessions";
-    pub const RESET_STATUS: &str = "reset_task_status";
+    pub const RESET_TASK: &str = "reset_task";
     pub const SEARCH: &str = "search_tasks";
     pub const SEARCH_FUZZY: &str = "search_tasks_fuzzy";
     pub const FILTER_BY_STATUS: &str = "filter_tasks_by_status";

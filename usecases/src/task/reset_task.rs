@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 
 /// Resets a completed task back to Queued status with optional session reset
-pub async fn reset_task_status(
+pub async fn reset_task(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
     task_id: TaskId,
     reset_sessions: bool,

@@ -1,7 +1,7 @@
-# Task Reset Status Feature
+# Task Reset Feature
 
 ## Overview
-Added functionality to reset completed tasks back to `Queued` status, with optional session reset.
+Functionality to reset tasks back to `Queued` status, with optional session count reset.
 
 ## Implementation
 
@@ -9,12 +9,12 @@ Added functionality to reset completed tasks back to `Queued` status, with optio
 - **Location**: `/home/jpt/src/oss/pomotoro/domain/src/task/task.rs`
 - **Exported**: `TaskPatch` struct now publicly available via `domain::TaskPatch`
 - **Existing methods**:
-  - `reset_sessions()` - resets to `Active` status (line 78-82)
+  - `reset_sessions()` - resets session count to 0 and status to `Active`
   - `queue()`, `activate()`, `pause()` - prevented from working on `Completed` tasks
 
 ### Use Case Layer
-- **File**: `/home/jpt/src/oss/pomotoro/usecases/src/task/reset_task_status.rs`
-- **Function**: `reset_task_status(task_repo, task_id, reset_sessions) -> Result<()>`
+- **File**: `/home/jpt/src/oss/pomotoro/usecases/src/task/reset_task.rs`
+- **Function**: `reset_task(task_repo, task_id, reset_sessions) -> Result<()>`
 - **Parameters**:
   - `task_id: TaskId` - The task to reset
   - `reset_sessions: bool` - Whether to reset session count to 0
@@ -26,8 +26,8 @@ Added functionality to reset completed tasks back to `Queued` status, with optio
 
 ### Command Layer
 - **File**: `/home/jpt/src/oss/pomotoro/infra/src/commands/task_cmd.rs`
-- **Command**: `reset_task_status`
-- **Tauri Endpoint**: `reset_task_status`
+- **Command**: `reset_task`
+- **Tauri Endpoint**: `reset_task`
 - **Request**:
   ```rust
   {
@@ -37,15 +37,15 @@ Added functionality to reset completed tasks back to `Queued` status, with optio
   ```
 - **Response**: `TaskDto`
 - **Logging**:
-  - `info!` on start: "Resetting task status: id={}, reset_sessions={}"
+  - `info!` on start: "Resetting task: id={}, reset_sessions={}"
   - `error!` on failures with context
-  - `info!` on success: "Successfully reset task status: id={}, new_status={:?}"
+  - `info!` on success: "Successfully reset task: id={}, new_status={:?}"
 
 ### UI Layer
 - **File**: `/home/jpt/src/oss/pomotoro/ui/src/pages/task/task_vm.rs`
 - **Method**: `reset_task_to_queued(task_id: TaskId, reset_sessions: bool)`
 - **Behavior**:
-  - Invokes `reset_task_status` command
+  - Invokes `reset_task` command
   - Updates task list on success
   - Handles errors with console logging
   - Refetches all tasks on error to ensure consistency
@@ -64,17 +64,8 @@ vm.reset_task_to_queued(task_id, true);
 
 ### Backend direct call
 ```rust
-usecases::task::reset_task_status(&task_repo, task_id, true).await?;
+usecases::task::reset_task(&task_repo, task_id, true).await?;
 ```
-
-## Differences from `reset_sessions`
-
-| Feature | `reset_sessions()` | `reset_task_status()` |
-|---------|-------------------|---------------------|
-| Target status | `Active` | `Queued` |
-| Works on completed? | Yes | Yes |
-| Resets session count | Always | Optional |
-| Clears completed_at | Yes | Yes |
 
 ## Testing Recommendations
 
@@ -89,9 +80,9 @@ usecases::task::reset_task_status(&task_repo, task_id, true).await?;
 ## Related Files
 
 - Domain: `/home/jpt/src/oss/pomotoro/domain/src/task/task.rs`
-- Use Case: `/home/jpt/src/oss/pomotoro/usecases/src/task/reset_task_status.rs`
-- Command: `/home/jpt/src/oss/pomotoro/infra/src/commands/task_cmd.rs:223-262`
-- UI: `/home/jpt/src/oss/pomotoro/ui/src/pages/task/task_vm.rs:1125-1212`
+- Use Case: `/home/jpt/src/oss/pomotoro/usecases/src/task/reset_task.rs`
+- Command: `/home/jpt/src/oss/pomotoro/infra/src/commands/task_cmd/reset_task.rs`
+- UI: `/home/jpt/src/oss/pomotoro/ui/src/pages/task/task_directory/task_dir_vm.rs:546-601`
 - Registration: `/home/jpt/src/oss/pomotoro/infra/src/lib.rs:146`
 
 ## Status
