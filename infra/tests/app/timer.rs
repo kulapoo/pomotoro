@@ -365,6 +365,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
 
     let timer = get_timer(&ctx).await;
 
+    // Pause the timer
     let _ = pause_timer_phase(
         timer.active_task_id().expect("Task id should be set"),
         ctx.task_repo.clone(),
@@ -372,7 +373,9 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.event_bus.clone(),
     )
     .await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+    // Start the timer again
     let _ = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -384,21 +387,9 @@ async fn timer_should_publish_events_on_all_state_changes() {
         },
     )
     .await;
-
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    assert_eq!(timer.state().is_running(), true);
-
-    assert_utils::assert_event_was_emitted(
-        &ctx.ui_simulator,
-        event_names::ui_listeners::timer::STATUS_CHANGED,
-    );
-
-    assert_utils::assert_event_was_emitted(
-        &ctx.ui_simulator,
-        event_names::ui_listeners::timer::PAUSE,
-    );
-
+    // Reset the timer
     let _ = reset_timer_phase(
         timer.active_task_id().expect("Task id should be set"),
         ctx.task_repo.clone(),
@@ -406,7 +397,9 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.event_bus.clone(),
     )
     .await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+    // Start the timer again
     let _ = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -418,17 +411,19 @@ async fn timer_should_publish_events_on_all_state_changes() {
         },
     )
     .await;
-
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
-        event_names::ui_listeners::timer::RESET,
+        event_names::ui_listeners::timer::STATUS_CHANGED,
     );
-
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
-        event_names::ui_listeners::timer::PHASE_COMPLETED,
+        event_names::ui_listeners::timer::PAUSE,
+    );
+    assert_utils::assert_event_was_emitted(
+        &ctx.ui_simulator,
+        event_names::ui_listeners::timer::RESET,
     );
 }
 

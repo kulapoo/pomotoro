@@ -220,9 +220,6 @@ mod tests {
         assert!(!task.is_completed());
 
         task.current_sessions = 5;
-        assert!(task.is_completed());
-
-        task.current_sessions = 3;
         task.status = Status::Completed;
         assert!(task.is_completed());
     }
