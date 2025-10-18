@@ -1,17 +1,21 @@
 use super::*;
 use anyhow::{anyhow, Context};
 use log::info;
-use usecases::task::reset_task as reset_task_usecase;
+use usecases::task::reset_task as reset_task_uc;
+use domain::TimerRepository;
+use domain::EventPublisher;
+use domain::TaskRepository;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn reset_task(
     task_id: String,
-    reset_sessions: bool,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
+    timer_repo: State<'_, Arc<dyn TimerRepository + Send + Sync>>,
+    event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
 ) -> Result<TaskDto, String> {
     info!(
-        "Resetting task: id={}, reset_sessions={}",
-        task_id, reset_sessions
+        "Resetting task: id={}",
+        task_id
     );
 
     let task_id_parsed = TaskId::from_string(&task_id).map_err(|e| {
@@ -19,7 +23,7 @@ pub async fn reset_task(
         format!("Invalid task ID: {}", task_id)
     })?;
 
-    reset_task_usecase(&task_repo, task_id_parsed, reset_sessions)
+    reset_task_uc(task_repo.inner().clone(), timer_repo.inner().clone(), event_publisher.inner().clone(), task_id_parsed)
         .await
         .with_context(|| format!("Failed to reset task: {}", task_id))
         .map_err(|e| {

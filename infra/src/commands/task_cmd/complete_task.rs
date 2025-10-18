@@ -1,14 +1,11 @@
 use super::*;
 use anyhow::{Context, anyhow};
-use domain::TimerRepository;
 use log::info;
 use usecases::task::complete_task as complete_task_uc;
-use usecases::timer::complete_timer_phase;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn complete_task(
     task_id: String,
-    timer_repo: State<'_, Arc<dyn TimerRepository + Send + Sync>>,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
 ) -> Result<TaskDto, String> {
@@ -26,24 +23,6 @@ pub async fn complete_task(
             log::error!("Failed to complete task {}: {}", task_id, e);
             e.to_string()
         })?;
-
-    complete_timer_phase(
-        task_repo.inner().clone(),
-        timer_repo.inner().clone(),
-        event_publisher.inner().clone(),
-    )
-    .await
-    .with_context(|| {
-        format!("Failed to complete timer phase for task: {}", task_id)
-    })
-    .map_err(|e| {
-        log::error!(
-            "Failed to complete timer phase for task {}: {}",
-            task_id,
-            e
-        );
-        e.to_string()
-    })?;
 
     let task = task_repo
         .get_by_id(task_id_parsed)

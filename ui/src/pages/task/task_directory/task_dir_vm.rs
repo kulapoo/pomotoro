@@ -543,7 +543,7 @@ impl TaskDirectoryViewModel {
         });
     }
 
-    pub fn reset_task_to_queued(&self, task_id: TaskId, reset_sessions: bool) {
+    pub fn reset_task_to_queued(&self, task_id: TaskId) {
         let set_tasks = self.set_tasks;
         let tasks = self.tasks;
         let set_error_state = self.set_error_state;
@@ -552,12 +552,10 @@ impl TaskDirectoryViewModel {
             #[derive(serde::Serialize)]
             struct ResetTaskStatusArgs {
                 task_id: String,
-                reset_sessions: bool,
             }
 
             let args = ResetTaskStatusArgs {
                 task_id: task_id.to_string(),
-                reset_sessions,
             };
 
             invoke::<TaskDto, _>(commands::task::RESET_TASK, Some(args)).await

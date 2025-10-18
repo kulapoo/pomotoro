@@ -125,9 +125,12 @@ where
                                 ev.stop_propagation();
                                 let reset_sessions = web_sys::window()
                                     .unwrap()
-                                    .confirm_with_message("Reset session count to 0?")
+                                    .confirm_with_message("Reset session?")
                                     .unwrap_or(false);
-                                vm.with_value(|v| v.reset_task_to_queued(task_id, reset_sessions));
+
+                                if reset_sessions {
+                                    vm.with_value(|v| v.reset_task_to_queued(task_id));
+                                }
                             }
                         >
                             "🔄"
