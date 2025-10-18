@@ -7,7 +7,7 @@ pub mod timer {
     pub use super::commands::timer::{
         START, SKIP_PHASE, GET_STATE, SWITCH_ACTIVE_TASK,
         TIMER_STARTED, TIMER_PAUSED, TIMER_RESET,
-        PHASE_COMPLETE, SESSION_COMPLETED
+        SESSION_COMPLETED
     };
     // From ui_listeners - use different names for conflicting items
     pub use super::ui_listeners::timer::{

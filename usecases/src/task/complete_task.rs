@@ -1,5 +1,5 @@
 use domain::{
-    Error, EventPublisher, Result, TaskCompleted, TaskId, TaskRepository,
+    EventPublisher, Result, TaskCompleted, TaskId, TaskRepository,
     TaskSessionCompleted,
 };
 use std::sync::Arc;
@@ -16,10 +16,6 @@ pub async fn complete_task(
         task_id,
     )
     .await?;
-
-    if task.is_completed() {
-        return Err(Error::TaskAlreadyCompleted);
-    }
 
     // Mark all sessions as complete
     task.current_sessions = task.max_sessions;

@@ -1,5 +1,5 @@
 use super::*;
-use usecases::timer::{start_timer_session, StartTimerSessionCmd};
+use usecases::timer::{start_timer_phase, StartTimerPhaseCmd};
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn start_timer(
@@ -27,7 +27,7 @@ pub async fn start_timer(
         debug!("Resuming paused timer for task {}", task_id);
 
         // Resume the paused timer
-        usecases::timer::resume_timer_session(
+        usecases::timer::resume_timer_phase(
             task_id,
             task_repo.inner().clone(),
             timer_repo.inner().clone(),
@@ -64,18 +64,18 @@ pub async fn start_timer(
         let task_id = task.id;
         info!("Starting timer for task {}", task_id);
 
-        let cmd = StartTimerSessionCmd {
+        let cmd = StartTimerPhaseCmd {
             task_id: Some(task_id),
         };
 
-        start_timer_session(
+        start_timer_phase(
             task_repo.inner().clone(),
             timer_repo.inner().clone(),
             event_publisher.inner().clone(),
             cmd,
         )
         .await
-        .context("infra::commands::timer_cmd::start_timer - Failed to execute start timer session")
+        .context("infra::commands::timer_cmd::start_timer - Failed to execute start timer phase")
         .map_err(|e| e.to_string())?;
     }
 

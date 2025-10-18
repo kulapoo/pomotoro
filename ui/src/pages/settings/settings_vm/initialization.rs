@@ -8,7 +8,7 @@ use leptos::task::spawn_local;
 use serde_wasm_bindgen::from_value;
 use wasm_bindgen::prelude::*;
 
-use crate::components::error_toast::{ErrorInfo, handle_command_error};
+use crate::components::error_toast::handle_command_error;
 use crate::utils::invoke;
 
 use super::SettingsViewModel;

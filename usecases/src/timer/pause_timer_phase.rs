@@ -4,7 +4,7 @@ use domain::{
 };
 use std::sync::Arc;
 
-/// Pause a timer session
+/// Pause a timer phase
 ///
 /// Pauses the currently running timer and gets configuration from
 /// the active task.
@@ -20,7 +20,7 @@ use std::sync::Arc;
 /// - TaskRepository: For retrieving task configuration
 /// - TimerRepository: For timer persistence
 /// - EventPublisher: For domain event publishing
-pub async fn pause_timer_session(
+pub async fn pause_timer_phase(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
@@ -57,10 +57,10 @@ pub async fn pause_timer_session(
     Ok(timer.status())
 }
 
-/// Resume a paused timer session
+/// Resume a paused timer phase
 ///
 /// Resumes a paused timer using the active task's configuration.
-pub async fn resume_timer_session(
+pub async fn resume_timer_phase(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,

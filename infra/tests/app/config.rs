@@ -581,12 +581,12 @@ async fn should_not_allow_config_update_during_active_timer() {
         .expect("Default task should exist");
 
     // Create a timer session
-    use usecases::timer::{start_timer_session, StartTimerSessionCmd};
-    let _ = start_timer_session(
+    use usecases::timer::{start_timer_phase, StartTimerPhaseCmd};
+    let _ = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )

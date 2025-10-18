@@ -1,5 +1,5 @@
 use super::*;
-use usecases::timer::pause_timer_session;
+use usecases::timer::pause_timer_phase;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pause_timer(
@@ -40,7 +40,7 @@ pub async fn pause_timer(
 
     info!("Pausing timer for task {}", task_id);
 
-    pause_timer_session(
+    pause_timer_phase(
         task_id,
         task_repo.inner().clone(),
         timer_repo.inner().clone(),

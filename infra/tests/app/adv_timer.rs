@@ -3,7 +3,7 @@ use std::time::Duration;
 use domain::{Config, Phase, TaskCyclerService, TaskRepository, TaskStatus, TimerConfiguration, TimerRepository, TimerState, TimerStatus};
 use usecases::{
     CreateTaskCmd, create_task,
-    timer::{StartTimerSessionCmd, complete_timer_phase, pause_timer_session, resume_timer_session, start_timer_session},
+    timer::{StartTimerPhaseCmd, complete_timer_phase, pause_timer_phase, resume_timer_phase, start_timer_phase},
 };
 
 use crate::{TaskBuilder, utils::{setup::setup_ctx, task::get_active_task, timer::get_timer}};
@@ -49,11 +49,11 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Start the timer for session 1
 
-    let timer_session1_result = start_timer_session(
+    let timer_session1_result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task1_id),
         },
     )
@@ -416,11 +416,11 @@ async fn should_skip_from_work_to_break_phase() {
         .expect("Failed to create task");
 
     // Start timer with this task
-    let start_result = start_timer_session(
+    let start_result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )
@@ -496,11 +496,11 @@ async fn pause_and_resume_should_maintain_timer_state() {
         .expect("Failed to create task");
 
     // Start timer with this task
-    let start_result = start_timer_session(
+    let start_result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )
@@ -526,7 +526,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
     let remaining_before_pause = state_before_pause.remaining_seconds();
 
     // Pause the timer
-    let pause_result = usecases::timer::pause_timer_session(
+    let pause_result = usecases::timer::pause_timer_phase(
         task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -557,7 +557,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
     }
 
     // Resume the timer
-    let resume_result = usecases::timer::resume_timer_session(
+    let resume_result = usecases::timer::resume_timer_phase(
         task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -623,11 +623,11 @@ async fn task_with_custom_settings_overrides_defaults() {
 
     // Act
     // Start timer with custom settings task
-    let start_result = start_timer_session(
+    let start_result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )
@@ -797,11 +797,11 @@ async fn should_trigger_long_break_after_4_work_sessions() {
 
     // Act
     // Start the first session
-    start_timer_session(
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )
@@ -897,11 +897,11 @@ async fn should_switch_active_task_during_timer_session() {
         .expect("Failed to create task 2");
 
     // Start timer with task1
-    start_timer_session(
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task1.id),
         },
     )
@@ -1024,11 +1024,11 @@ async fn should_emit_tick_events_every_second() {
         .expect("No default task found");
 
     // Start timer with default task
-    start_timer_session(
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(default_task.id),
         },
     )
@@ -1145,11 +1145,11 @@ async fn complete_productivity_workflow_integration() {
 
     // Act
     // Work on first task
-    start_timer_session(
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task1.id),
         },
     )
@@ -1243,7 +1243,7 @@ async fn complete_productivity_workflow_integration() {
     }
 
     // Pause timer
-    pause_timer_session(
+    pause_timer_phase(
         task2.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -1267,7 +1267,7 @@ async fn complete_productivity_workflow_integration() {
     .expect("Failed to switch to task 3");
 
     // Resume timer with task3
-    resume_timer_session(
+    resume_timer_phase(
         task3.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -1400,11 +1400,11 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         .expect("Failed to create task");
 
     // Start the first session
-    start_timer_session(
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task.id),
         },
     )

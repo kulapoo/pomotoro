@@ -9,7 +9,7 @@ pub mod timer {
     pub const SWITCH_ACTIVE_TASK: &str = "switch_active_task";
 
     // Business Events
-    pub const PHASE_COMPLETE: &str = "phase_completed";
+    pub const PHASE_COMPLETED: &str = "phase_completed";
     pub const SESSION_COMPLETED: &str = "session_completed";
     pub const TIMER_STARTED: &str = "timer_started";
     pub const TIMER_PAUSED: &str = "timer_paused";

@@ -3,7 +3,6 @@ use domain::*;
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::utils::invoke;

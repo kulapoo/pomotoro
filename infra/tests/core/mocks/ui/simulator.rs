@@ -45,7 +45,6 @@ fn register_events(
         task_commands::GET_ACTIVE,
         task_commands::GET_BY_TAGS,
         task_commands::COMPLETE_TASK,
-        task_commands::RESET_SESSIONS,
         task_commands::SEARCH,
         task_commands::SEARCH_FUZZY,
         task_commands::FILTER_BY_STATUS,

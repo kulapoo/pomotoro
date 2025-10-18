@@ -5,10 +5,10 @@ use domain::{
 use std::sync::Arc;
 
 
-/// Resume a paused timer session
+/// Resume a paused timer phase
 ///
 /// Resumes a paused timer using the active task's configuration.
-pub async fn resume_timer_session(
+pub async fn resume_timer_phase(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,

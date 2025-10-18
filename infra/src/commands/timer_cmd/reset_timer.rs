@@ -1,5 +1,5 @@
 use super::*;
-use usecases::timer::reset_timer_session;
+use usecases::timer::reset_timer_phase;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn reset_timer(
@@ -21,7 +21,7 @@ pub async fn reset_timer(
         .active_task_id()
         .ok_or("No active task in timer")?;
 
-    reset_timer_session(
+    reset_timer_phase(
         task_id,
         task_repo.inner().clone(),
         timer_repo.inner().clone(),

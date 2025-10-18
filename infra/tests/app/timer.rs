@@ -12,13 +12,14 @@ use domain::{
 };
 use usecases::{
     SwitchTaskCmd,
-    timer::{complete_timer_phase, skip_timer_phase},
+    timer::skip_timer_phase,
+    timer::complete_timer_phase,
 };
 use usecases::{
     switch_task,
     timer::{
-        StartTimerSessionCmd, pause_timer_session, reset_timer_session,
-        start_timer_session,
+        StartTimerPhaseCmd, pause_timer_phase, reset_timer_phase,
+        start_timer_phase,
     },
 };
 
@@ -59,11 +60,11 @@ async fn timer_should_start_from_idle_state() {
         .await
         .expect("Failed to update timer");
 
-    let result = start_timer_session(
+    let result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task_id),
         },
     )
@@ -98,11 +99,11 @@ async fn timer_should_not_start_when_already_running() {
     let timer = get_timer(&ctx).await;
     let task_id = timer.active_task_id().expect("Task id should be set");
 
-    let result = start_timer_session(
+    let result = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(task_id),
         },
     )
@@ -147,7 +148,7 @@ async fn timer_should_pause_when_running() {
     let task_id = timer.active_task_id().expect("Task id should be set");
 
     // Act
-    let result = pause_timer_session(
+    let result = pause_timer_phase(
         task_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -182,7 +183,7 @@ async fn timer_should_reset_to_initial_state() {
     let timer = get_timer(&ctx).await;
     let task_id = timer.active_task_id().expect("Task id should be set");
 
-    let result = reset_timer_session(
+    let result = reset_timer_phase(
         task_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -303,7 +304,7 @@ async fn timer_should_decrement_timer_counter() {
     tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     let old_task = utils::task::get_active_task(&ctx).await;
 
-    let pause_timer_result = pause_timer_session(
+    let pause_timer_result = pause_timer_phase(
         old_task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -364,7 +365,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
 
     let timer = get_timer(&ctx).await;
 
-    let _ = pause_timer_session(
+    let _ = pause_timer_phase(
         timer.active_task_id().expect("Task id should be set"),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -372,11 +373,11 @@ async fn timer_should_publish_events_on_all_state_changes() {
     )
     .await;
 
-    let _ = start_timer_session(
+    let _ = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(
                 timer.active_task_id().expect("Task id should be set"),
             ),
@@ -398,7 +399,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         event_names::ui_listeners::timer::PAUSE,
     );
 
-    let _ = reset_timer_session(
+    let _ = reset_timer_phase(
         timer.active_task_id().expect("Task id should be set"),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -406,22 +407,15 @@ async fn timer_should_publish_events_on_all_state_changes() {
     )
     .await;
 
-    let _ = start_timer_session(
+    let _ = start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerSessionCmd {
+        StartTimerPhaseCmd {
             task_id: Some(
                 timer.active_task_id().expect("Task id should be set"),
             ),
         },
-    )
-    .await;
-
-    let _ = complete_timer_phase(
-        ctx.task_repo.clone(),
-        ctx.timer_repo.clone(),
-        ctx.event_bus.clone(),
     )
     .await;
 

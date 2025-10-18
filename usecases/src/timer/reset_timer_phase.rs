@@ -4,21 +4,21 @@ use std::sync::Arc;
 /// Reset the timer countdown to its initial state
 ///
 /// This use case resets only the timer countdown back to its initial idle state,
-/// without affecting task sessions. For resetting task sessions, use the
+/// without affecting task phases. For resetting task phases, use the
 /// `reset_task` use case instead.
 ///
 /// ## Business Rules
 ///
 /// - Task must exist to provide timer configuration
 /// - Resets the timer to idle state
-/// - Does not modify task sessions or task state
+/// - Does not modify task phases or task state
 ///
 /// ## Dependencies
 ///
 /// - TaskRepository: For retrieving task's timer configuration
 /// - TimerRepository: For timer operations
 /// - EventPublisher: For domain event publishing
-pub async fn reset_timer_session(
+pub async fn reset_timer_phase(
     task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,

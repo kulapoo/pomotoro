@@ -4,11 +4,11 @@ use domain::{
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct StartTimerSessionCmd {
+pub struct StartTimerPhaseCmd {
     pub task_id: Option<TaskId>,
 }
 
-/// Start a timer session for a specific task
+/// Start a timer phase for a specific task
 ///
 /// Sets the active task on the timer and starts it using
 /// the task's configuration.
@@ -23,11 +23,11 @@ pub struct StartTimerSessionCmd {
 /// - TaskRepository: For task validation and retrieval
 /// - TimerRepository: For timer persistence
 /// - EventPublisher: For domain event publishing
-pub async fn start_timer_session(
+pub async fn start_timer_phase(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
-    cmd: StartTimerSessionCmd,
+    cmd: StartTimerPhaseCmd,
 ) -> Result<()> {
     let to_invalid_task_data =
         |msg: String| domain::Error::InvalidTaskParams { message: msg };

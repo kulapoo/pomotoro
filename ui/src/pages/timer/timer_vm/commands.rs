@@ -1,6 +1,7 @@
 use domain::{Task, Timer, event_names::commands};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use serde::Serialize;
 
 use crate::components::handle_command_error;
 use crate::utils::invoke;
@@ -13,7 +14,6 @@ impl TimerViewModel {
         let current_state = self.timer_state.get_untracked();
         let set_timer_state = self.set_timer_state;
         let set_error_state = self.set_error_state;
-        let active_task = self.active_task.get_untracked();
 
         spawn_local(async move {
 
@@ -81,13 +81,49 @@ impl TimerViewModel {
     }
 
     pub fn complete_phase(&self) {
-        web_sys::console::log_1(&"Phase completion is handled automatically by the backend".into());
+        let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
+        let set_error_state = self.set_error_state;
+        let task_id = self.active_task.get().unwrap().id;
+
+        spawn_local(async move {
+            #[derive(Serialize)]
+            struct CompleteTaskArgs {
+                task_id: String,
+            }
+
+            let args = CompleteTaskArgs {
+                task_id: task_id.to_string(),
+            };
+
+            invoke::<Timer, CompleteTaskArgs>(commands::task::COMPLETE_TASK, Some(args)).await
+                .map_err(|e| handle_command_error(e, set_error_state))
+                .ok()
+                .map(|timer| {
+                    set_timer_state.set(timer.state().clone());
+
+                    if let Some(task_id) = timer.active_task_id() {
+                        let task_id_str = task_id.to_string();
+                        spawn_local(async move {
+                            task_ops::fetch_task_by_id(&task_id_str, set_active_task).await;
+                        });
+                    } else {
+                        set_active_task.set(None);
+                    }
+                });
+        });
     }
 
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;
         let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
+
+
+        if self.is_task_completed() && self.timer_state.get().is_running() {
+            self.complete_phase();
+            return;
+        }
 
         spawn_local(async move {
             invoke::<Timer, ()>(commands::timer::SKIP_PHASE, None).await
