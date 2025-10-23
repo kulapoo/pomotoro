@@ -13,7 +13,7 @@ pub use builder::Builder;
 pub use cycling_srv::CyclerService;
 pub use events::{
     Completed, Created, SessionCompleted, StatusChanged,
-    SwitchWorkflowCompleted, TaskDeleted, Updated,
+    SwitchWorkflowCompleted, TaskDeleted, Updated, Reset,
 };
 pub use id::{Id, Marker};
 pub use repository::Repository;

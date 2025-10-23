@@ -1,7 +1,6 @@
 use domain::{Task, Timer, event_names::commands};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde::Serialize;
 
 use crate::components::handle_command_error;
 use crate::utils::invoke;
@@ -79,6 +78,34 @@ impl TimerViewModel {
                 .ok();
         });
     }
+
+    pub fn reset_task(&self) {
+        let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
+        let set_error_state = self.set_error_state;
+        let active_task_id = self.get_active_entity_id().expect("No active task");
+
+        #[derive(serde::Serialize)]
+        struct ResetTaskArgs {
+            task_id: String,
+        }
+
+        let reset_task_args = ResetTaskArgs {
+            task_id: active_task_id,
+        };
+
+        spawn_local(async move {
+            invoke::<(Timer, Task), ResetTaskArgs>(commands::task::RESET_TASK, Some(reset_task_args)).await
+                .map(|(timer, task)| {
+                    set_timer_state.set(timer.state().clone());
+                    set_active_task.set(Some(task));
+                })
+                .map_err(|e| handle_command_error(e, set_error_state))
+                .ok();
+        });
+    }
+
+
 
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;

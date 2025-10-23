@@ -1,6 +1,5 @@
-use domain::{Error, Result, TaskId, TaskPatch, TaskRepository, TaskStatus, TimerRepository, EventPublisher};
+use domain::{Error, EventPublisher, Result, Task, TaskId, TaskRepository, Timer, TimerRepository};
 use std::sync::Arc;
-use chrono::Utc;
 
 use crate::timer::reset_timer_phase;
 
@@ -11,7 +10,7 @@ pub async fn reset_task(
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     task_id: TaskId,
-) -> Result<()> {
+) -> Result<(Task, Timer)> {
     let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
         Error::TaskNotFound {
             id: task_id.to_string(),
@@ -20,15 +19,14 @@ pub async fn reset_task(
 
     reset_timer_phase(task_id, task_repo.clone(), timer_repo.clone(), event_publisher.clone()).await?;
 
-    // Allow resetting from any status, including Completed
-    let patch = TaskPatch {
-        status: Some(TaskStatus::Queued),
-        current_sessions: Some(0),
-        completed_at: None,
-        updated_at: Some(Utc::now()),
-        ..Default::default()
-    };
+    task.reset();
 
-    task.patch(patch);
-    task_repo.update(task).await
+    let task_event = task.clone();
+
+    event_publisher.publish(Box::new(domain::TaskReset::new(task_id, Some(task_event.name), task_event.description, Some(task_event.max_sessions), Some(task_event.tags), 1)));
+
+    task_repo.update(task.clone()).await?;
+
+    let timer = timer_repo.get().await?;
+    Ok((task, timer))
 }

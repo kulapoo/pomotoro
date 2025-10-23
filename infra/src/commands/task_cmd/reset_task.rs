@@ -1,5 +1,6 @@
 use super::*;
 use anyhow::{anyhow, Context};
+use domain::Timer;
 use log::info;
 use usecases::task::reset_task as reset_task_uc;
 use domain::TimerRepository;
@@ -12,7 +13,7 @@ pub async fn reset_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, Arc<dyn TimerRepository + Send + Sync>>,
     event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
-) -> Result<TaskDto, String> {
+) -> Result<(Timer, Task), String> {
     info!(
         "Resetting task: id={}",
         task_id
@@ -49,5 +50,8 @@ pub async fn reset_task(
         "Successfully reset task: id={}, new_status={:?}",
         task_id, task.status
     );
-    Ok(TaskDto::from(task))
+
+    let timer = timer_repo.get().await.map_err(|e| e.to_string())?;
+
+    Ok((timer, task))
 }

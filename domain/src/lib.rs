@@ -16,7 +16,7 @@ pub use task::{
     Repository as TaskRepository, SessionCompleted as TaskSessionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
     SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskDeleted,
-    TaskPatch, Updated as TaskUpdated,
+    TaskPatch, Updated as TaskUpdated, Reset as TaskReset,
 };
 
 pub use timer::{

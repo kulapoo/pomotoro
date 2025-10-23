@@ -168,6 +168,19 @@ impl Timer {
         Ok(result.events)
     }
 
+    pub fn reset_phase(
+        &mut self,
+        configuration: &TimerConfiguration,
+    ) -> Result<Vec<Box<dyn Event>>> {
+        let result = StateTransitions::reset_phase(
+            self.state.clone(),
+            self.id,
+            configuration,
+        )?;
+        self.state = result.new_state;
+        Ok(result.events)
+    }
+
     pub fn skip_phase(
         &mut self,
         configuration: &TimerConfiguration,

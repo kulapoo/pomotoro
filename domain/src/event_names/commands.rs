@@ -22,6 +22,7 @@ pub mod task {
     pub const CREATE: &str = "create_task";
     pub const UPDATE: &str = "update_task";
     pub const DELETE: &str = "delete_task";
+    pub const RESET: &str = "reset_task";
     pub const GET: &str = "get_task";
     pub const GET_ALL: &str = "get_all_tasks";
     pub const GET_ACTIVE: &str = "get_active_tasks";

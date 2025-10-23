@@ -169,6 +169,30 @@ impl StateTransitions {
         })
     }
 
+    pub fn reset_phase(
+        state: TimerState,
+        timer_id: TimerId,
+        configuration: &TimerConfiguration,
+    ) -> Result<TransitionResult> {
+        let phase = Self::get_phase_from_state(&state);
+        let remaining_seconds = configuration.get_phase_duration_seconds(phase);
+
+        let new_state = match state {
+            TimerState::Working { .. } => TimerState::Working { remaining_seconds },
+            TimerState::ShortBreak { .. } => TimerState::ShortBreak { remaining_seconds },
+            TimerState::LongBreak { .. } => TimerState::LongBreak { remaining_seconds },
+            TimerState::Paused { paused_from, .. } => TimerState::Paused { remaining_seconds, paused_from },
+            TimerState::Idle => TimerState::Idle,
+        };
+
+        let events: Vec<Box<dyn Event>> = vec![Box::new(Reset::new(timer_id, phase, 1))];
+
+        Ok(TransitionResult {
+            new_state,
+            events,
+        })
+    }
+
     /// Completes current phase and transitions to next.
     ///
     /// Generates appropriate session completion and start events.

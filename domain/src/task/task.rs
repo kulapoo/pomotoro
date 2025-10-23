@@ -81,6 +81,11 @@ impl Task {
         self.completed_at = None;
     }
 
+    pub fn reset(&mut self) {
+        self.reset_sessions();
+        self.status = Status::Queued;
+    }
+
     pub fn get_progress_ratio(&self) -> f64 {
         if self.max_sessions == 0 {
             return 1.0;
