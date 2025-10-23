@@ -194,7 +194,7 @@ async fn timer_should_reset_to_initial_state() {
     let timer_after_reset = get_timer(&ctx).await;
 
     assert_eq!(result.is_ok(), true);
-    assert_eq!(timer_after_reset.is_idle(), true);
+    assert_eq!(timer_after_reset.remaining_seconds(None), 1500);
     assert_eq!(timer_after_reset.active_task_id(), Some(task_id));
 
     assert_utils::assert_event_was_emitted(
