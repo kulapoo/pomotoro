@@ -23,10 +23,17 @@ pub async fn reset_task(
 
     let task_event = task.clone();
 
-    event_publisher.publish(Box::new(domain::TaskReset::new(task_id, Some(task_event.name), task_event.description, Some(task_event.max_sessions), Some(task_event.tags), 1)));
+
+    let mut timer = timer_repo.get().await?;
+
+    let timer_config = &task.get_config().timer;
+    timer.reset(timer_config)?;
 
     task_repo.update(task.clone()).await?;
+    timer_repo.save(&timer).await?;
 
-    let timer = timer_repo.get().await?;
+    event_publisher.publish(Box::new(domain::TaskReset::new(task_id, Some(task_event.name), task_event.description, Some(task_event.max_sessions), Some(task_event.tags), 1)));
+
+
     Ok((task, timer))
 }

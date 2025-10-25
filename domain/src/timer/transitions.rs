@@ -158,10 +158,10 @@ impl StateTransitions {
     pub fn reset(
         _state: TimerState,
         timer_id: TimerId,
-        _configuration: &TimerConfiguration,
+        configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
         let events: Vec<Box<dyn Event>> =
-            vec![Box::new(Reset::new(timer_id, Phase::Work, 1))];
+            vec![Box::new(Reset::new(timer_id, Phase::Work, 1, configuration.clone()))];
 
         Ok(TransitionResult {
             new_state: TimerState::Idle,
@@ -185,7 +185,7 @@ impl StateTransitions {
             TimerState::Idle => TimerState::Idle,
         };
 
-        let events: Vec<Box<dyn Event>> = vec![Box::new(Reset::new(timer_id, phase, 1))];
+        let events: Vec<Box<dyn Event>> = vec![Box::new(Reset::new(timer_id, phase, 1, configuration.clone()))];
 
         Ok(TransitionResult {
             new_state,

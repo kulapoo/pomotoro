@@ -54,7 +54,8 @@
       "Bash(rm:*)",
       "Bash(tree:*)",
       "Bash(for dir in /home/jpt/src/oss/pomotoro/infra/src/commands/*/)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": [],

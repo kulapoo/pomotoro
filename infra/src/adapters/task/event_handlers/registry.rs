@@ -2,7 +2,7 @@ use std::{any::TypeId, sync::Arc};
 
 use domain::{EventPublisher, Result, TaskCyclerService, TaskRepository, TimerRepository};
 
-use crate::adapters::events::EventSubscriber;
+use crate::adapters::{events::EventSubscriber, task::event_handlers::TaskResetHandler, TimerTickService};
 use crate::adapters::events::app_emitter::Emitter;
 
 use super::{
@@ -18,6 +18,7 @@ pub fn register_task_handlers(
     cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    timer_srv: Arc<TimerTickService>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TaskCompletedHandler::new(
@@ -36,6 +37,7 @@ pub fn register_task_handlers(
     event_bus.subscribe(Box::new(TaskSwitchWorkflowCompletedHandler::new(
         emitter.clone(),
     )))?;
+    event_bus.subscribe(Box::new(TaskResetHandler::new(emitter.clone(), timer_srv.clone())))?;
 
     Ok(())
 }
@@ -53,6 +55,6 @@ pub fn unregister_task_handlers(
     event_bus.clear_handlers_for_type(TypeId::of::<
         TaskSwitchWorkflowCompletedHandler,
     >())?;
-
+    event_bus.clear_handlers_for_type(TypeId::of::<TaskResetHandler>())?;
     Ok(())
 }
