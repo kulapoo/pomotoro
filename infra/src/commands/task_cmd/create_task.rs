@@ -22,7 +22,7 @@ pub async fn create_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     config_repo: State<'_, Arc<dyn ConfigRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TaskDto, String> {
+) -> Result<Task, String> {
     debug!(
         "Creating task: name='{}', sessions={}, tags={:?}",
         request.name, request.max_sessions, request.tags
@@ -97,7 +97,7 @@ pub async fn create_task(
     {
         Ok(task) => {
             info!("Created task: id={}, name='{}'", task.id, task.name);
-            Ok(TaskDto::from(task))
+            Ok(task)
         }
         Err(e) => {
             log::error!("Failed to create task '{}': {}", request.name, e);

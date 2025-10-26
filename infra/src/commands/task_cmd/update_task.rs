@@ -21,7 +21,7 @@ pub async fn update_task(
     request: UpdateTaskRequest,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<TaskDto, String> {
+) -> Result<Task, String> {
     let task_id = TaskId::from_string(&request.id)
         .map_err(|_| format!("Invalid task ID: {}", request.id))?;
 
@@ -50,5 +50,5 @@ pub async fn update_task(
         log::error!("{}", error_msg);
         error_msg
     })?;
-    Ok(TaskDto::from(task))
+    Ok(task)
 }

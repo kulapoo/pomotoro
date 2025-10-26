@@ -6,12 +6,12 @@ use usecases::task::get_task_by_id;
 pub async fn get_task(
     id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
-) -> Result<Option<TaskDto>, String> {
+) -> Result<Option<Task>, String> {
     let task_id = TaskId::from_string(&id).map_err(|_| format!("Invalid task ID: {}", id))?;
 
     let result = get_task_by_id(&task_repo, task_id)
         .await
         .with_context(|| format!("Failed to get task with id: {}", id))
         .map_err(|e| e.to_string())?;
-    Ok(Some(TaskDto::from(result)))
+    Ok(Some(result))
 }

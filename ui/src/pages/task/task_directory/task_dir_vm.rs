@@ -1,4 +1,3 @@
-use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
 use crate::components::error_toast::{ErrorInfo, handle_command_error};
 use domain::event_names::{ui_listeners::task as task_event_names, commands};
@@ -22,13 +21,8 @@ extern "C" {
 
 // Helper function to refetch all tasks
 async fn refetch_all_tasks(set_tasks: WriteSignal<Vec<Task>>, command: &str) {
-    let tasks = invoke::<Vec<TaskDto>, ()>(command, None).await
+    let tasks = invoke::<Vec<Task>, ()>(command, None).await
         .ok()
-        .map(|task_dto_list| {
-            task_dto_list.into_iter()
-                .filter_map(|dto| dto.to_task().ok())
-                .collect()
-        })
         .unwrap_or_default();
 
     set_tasks.set(tasks);
@@ -201,11 +195,7 @@ impl TaskDirectoryViewModel {
                     &format!("Active task changed event received: {:?}", payload).into(),
                 );
 
-                if let Ok(task_dto) = from_value::<TaskDto>(payload.clone()) {
-                    if let Ok(task) = task_dto.to_task() {
-                        set_active_task.set(Some(task));
-                    }
-                } else if let Ok(task) = from_value::<Task>(payload) {
+                if let Ok(task) = from_value::<Task>(payload) {
                     set_active_task.set(Some(task));
                 }
             });
@@ -225,14 +215,12 @@ impl TaskDirectoryViewModel {
                     &format!("Task progress updated event received: {:?}", payload).into(),
                 );
 
-                if let Ok(task_dto) = from_value::<TaskDto>(payload.clone()) {
-                    if let Ok(updated_task) = task_dto.to_task() {
-                        set_tasks_for_progress.update(|tasks| {
-                            if let Some(index) = tasks.iter().position(|t| t.id == updated_task.id) {
-                                tasks[index] = updated_task;
-                            }
-                        });
-                    }
+                if let Ok(updated_task) = from_value::<Task>(payload) {
+                    set_tasks_for_progress.update(|tasks| {
+                        if let Some(index) = tasks.iter().position(|t| t.id == updated_task.id) {
+                            tasks[index] = updated_task;
+                        }
+                    });
                 }
             });
 
@@ -247,13 +235,8 @@ impl TaskDirectoryViewModel {
         let tasks = self.tasks;
 
         spawn_local(async move {
-            let task_list = invoke::<Vec<TaskDto>, ()>(commands::task::GET_ALL, None).await
+            let task_list = invoke::<Vec<Task>, ()>(commands::task::GET_ALL, None).await
                 .ok()
-                .map(|task_dto_list| {
-                    task_dto_list.into_iter()
-                        .filter_map(|dto| dto.to_task().ok())
-                        .collect()
-                })
                 .unwrap_or_default();
 
             set_tasks.set(task_list);
@@ -558,42 +541,31 @@ impl TaskDirectoryViewModel {
                 task_id: task_id.to_string(),
             };
 
-            invoke::<TaskDto, _>(commands::task::RESET_TASK, Some(args)).await
+            invoke::<(domain::Timer, Task), _>(commands::task::RESET_TASK, Some(args)).await
                 .map_err(|e| {
                     handle_command_error(format!("Failed to reset task status: {}", e), set_error_state);
                 })
                 .ok()
-                .and_then(|task_dto| {
+                .map(|(_timer, updated_task)| {
                     web_sys::console::log_1(
-                        &format!("Reset task status result: {:?}", task_dto).into(),
+                        &format!("Reset task status result: {:?}", updated_task).into(),
                     );
-
-                    task_dto.to_task()
-                        .map_err(|e| {
-                            handle_command_error(format!("Failed to convert TaskDto to Task: {}", e), set_error_state);
-                            spawn_local(async move {
-                                refetch_all_tasks(set_tasks, commands::task::GET_ALL).await;
-                            });
-                        })
-                        .ok()
-                        .map(|updated_task| {
-                            web_sys::console::log_1(
-                                &format!(
-                                    "Successfully reset task: id={}, status={:?}",
-                                    updated_task.id, updated_task.status
-                                )
-                                .into(),
-                            );
-                            let mut current_tasks = tasks.get_untracked();
-                            if let Some(index) =
-                                current_tasks.iter().position(|t| t.id == task_id)
-                            {
-                                current_tasks[index] = updated_task;
-                                set_tasks.set(current_tasks);
-                            }
-                            // Clear any existing errors on success
-                            set_error_state.set(None);
-                        })
+                    web_sys::console::log_1(
+                        &format!(
+                            "Successfully reset task: id={}, status={:?}",
+                            updated_task.id, updated_task.status
+                        )
+                        .into(),
+                    );
+                    let mut current_tasks = tasks.get_untracked();
+                    if let Some(index) =
+                        current_tasks.iter().position(|t| t.id == task_id)
+                    {
+                        current_tasks[index] = updated_task;
+                        set_tasks.set(current_tasks);
+                    }
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 });
         });
     }

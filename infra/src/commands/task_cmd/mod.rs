@@ -4,7 +4,7 @@
 //! for external task management requests.
 
 // Common imports and types used across multiple task commands
-pub use crate::adapters::{events::mem_event_bus::EventPublisherArc, task::task_dto::TaskDto};
+pub use crate::adapters::events::mem_event_bus::EventPublisherArc;
 pub use domain::{AudioConfig, ConfigRepository, EventPublisher, Task, TaskId, TaskRepository};
 pub use serde::{Deserialize, Serialize};
 pub use std::sync::Arc;

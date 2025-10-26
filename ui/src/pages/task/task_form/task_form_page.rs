@@ -1,5 +1,4 @@
 use super::TaskFormViewModel;
-use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
 use domain::{Task, TaskId, TimerConfiguration};
 use leptos::prelude::*;
@@ -36,16 +35,15 @@ pub fn TaskFormPage() -> impl IntoView {
     if let Some(id) = task_id() {
         spawn_local(async move {
             // Fetch all tasks and find the one we need
-            invoke::<Vec<TaskDto>, ()>(
+            invoke::<Vec<Task>, ()>(
                 domain::event_names::commands::task::GET_ALL,
                 None,
             )
             .await
             .ok()
-            .and_then(|task_dto_list| {
-                task_dto_list
+            .and_then(|tasks| {
+                tasks
                     .into_iter()
-                    .filter_map(|dto| dto.to_task().ok())
                     .find(|fetched_task| fetched_task.id == id)
             })
             .map(|fetched_task| set_task.set(Some(fetched_task)))

@@ -1,5 +1,4 @@
 use crate::components::error_toast::{ErrorInfo, handle_command_error};
-use crate::pages::task::types::TaskDto;
 use crate::utils::{ViewModel, invoke};
 use domain::{Task, TaskId, event_names::commands, AudioConfig};
 use leptos::prelude::*;
@@ -84,9 +83,8 @@ impl TaskFormViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
-                from_value::<TaskDto>(payload)
+                from_value::<Task>(payload)
                     .ok()
-                    .and_then(|task_dto| task_dto.to_task().ok())
                     .map(|task| set_current_task.set(Some(task)))
                     .unwrap_or_else(|| {
                         web_sys::console::error_1(
@@ -175,7 +173,7 @@ impl TaskFormViewModel {
 
             let args = CreateTaskArgs { request };
 
-            invoke::<TaskDto, _>(commands::task::CREATE, Some(args))
+            invoke::<Task, _>(commands::task::CREATE, Some(args))
                 .await
                 .map_err(|e| {
                     handle_command_error(
@@ -185,44 +183,21 @@ impl TaskFormViewModel {
                     set_is_creating.set(false);
                 })
                 .ok()
-                .and_then(|task_dto| {
+                .map(|new_task| {
                     web_sys::console::log_1(
-                        &format!("Create task result: {:?}", task_dto).into(),
+                        &format!("Create task result: {:?}", new_task).into(),
                     );
 
                     web_sys::console::log_1(
                         &format!(
-                            "Successfully deserialized TaskDto: {}",
-                            task_dto.name
+                            "Successfully created task: {}",
+                            new_task.name
                         )
                         .into(),
                     );
-
-                    task_dto
-                        .to_task()
-                        .map_err(|e| {
-                            handle_command_error(
-                                format!(
-                                    "Failed to convert TaskDto to Task: {}",
-                                    e
-                                ),
-                                set_error_state,
-                            );
-                            set_is_creating.set(false);
-                        })
-                        .ok()
-                        .map(|new_task| {
-                            web_sys::console::log_1(
-                                &format!(
-                                    "Successfully created task: {}",
-                                    new_task.name
-                                )
-                                .into(),
-                            );
-                            set_is_creating.set(false);
-                            // Clear any existing errors on success
-                            set_error_state.set(None);
-                        })
+                    set_is_creating.set(false);
+                    // Clear any existing errors on success
+                    set_error_state.set(None);
                 });
         });
     }
@@ -280,7 +255,7 @@ impl TaskFormViewModel {
 
             let args = UpdateTaskArgs { request };
 
-            invoke::<TaskDto, _>(commands::task::UPDATE, Some(args)).await
+            invoke::<Task, _>(commands::task::UPDATE, Some(args)).await
                 .map(|task_dto| {
                     web_sys::console::log_1(
                         &format!("Update task result: {:?}", task_dto).into(),

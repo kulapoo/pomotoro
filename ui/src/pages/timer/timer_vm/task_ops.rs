@@ -2,17 +2,15 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use domain::{Task, event_names::commands};
-use crate::pages::task::types::TaskDto;
 use crate::utils::invoke;
 
 /// Checks if the current active task has reached its maximum sessions
 /// and cycles to the next task if needed
 pub async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
     // Check if current task has reached max sessions and needs to cycle
-    invoke::<Vec<TaskDto>, ()>(commands::task::GET_ACTIVE, None).await
+    invoke::<Vec<Task>, ()>(commands::task::GET_ACTIVE, None).await
         .ok()
-        .and_then(|task_dtos| task_dtos.first().cloned())
-        .and_then(|task_dto| task_dto.to_task().ok())
+        .and_then(|tasks| tasks.first().cloned())
         .map(|task| {
             // Check if task completed its max sessions
             if task.current_sessions >= task.max_sessions {
@@ -31,10 +29,9 @@ pub async fn check_task_cycle(set_active_task: WriteSignal<Option<Task>>) {
 
 /// Cycles to the next incomplete task in the queue
 pub async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
-    // Try to get TaskDto and convert to Task
-    let task = invoke::<TaskDto, ()>(commands::task::CYCLE_INCOMPLETE_TASK, None).await
-        .ok()
-        .and_then(|task_dto| task_dto.to_task().ok());
+    // Try to get Task
+    let task = invoke::<Task, ()>(commands::task::CYCLE_INCOMPLETE_TASK, None).await
+        .ok();
 
     task.as_ref()
         .map(|t| web_sys::console::log_1(&format!("Cycled to next task: {}", t.name).into()))
@@ -45,10 +42,9 @@ pub async fn cycle_to_next_task(set_active_task: WriteSignal<Option<Task>>) {
 
 /// Fetches the currently active task from the backend
 pub async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
-    let active_task = invoke::<Vec<TaskDto>, ()>(commands::task::GET_ACTIVE, None).await
+    let active_task = invoke::<Vec<Task>, ()>(commands::task::GET_ACTIVE, None).await
         .ok()
-        .and_then(|task_dtos| task_dtos.first().cloned())
-        .and_then(|task_dto| task_dto.to_task().ok());
+        .and_then(|tasks| tasks.first().cloned());
 
     set_active_task.set(active_task);
 }
@@ -66,19 +62,12 @@ pub async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option
         id: task_id.to_string(),
     };
 
-    let task = invoke::<Option<TaskDto>, _>(commands::task::GET, Some(args)).await
+    let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
         .ok()
         .flatten()
-        .and_then(|task_dto| {
-            task_dto.to_task()
-                .map(|task| {
-                    web_sys::console::log_1(&format!("Timer page: Loaded active task: {}", task.name).into());
-                    task
-                })
-                .map_err(|e| {
-                    web_sys::console::error_1(&format!("Timer page: Failed to convert TaskDto to Task: {}", e).into());
-                })
-                .ok()
+        .map(|task| {
+            web_sys::console::log_1(&format!("Timer page: Loaded active task: {}", task.name).into());
+            task
         });
 
     if task.is_none() {

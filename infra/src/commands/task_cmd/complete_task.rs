@@ -8,7 +8,7 @@ pub async fn complete_task(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
-) -> Result<TaskDto, String> {
+) -> Result<Task, String> {
     info!("Completing task: id={}", task_id);
 
     let task_id_parsed = TaskId::from_string(&task_id)
@@ -33,5 +33,5 @@ pub async fn complete_task(
         .map_err(|e| e.to_string())?;
 
     info!("Successfully completed task: id={}", task_id);
-    Ok(task.into())
+    Ok(task)
 }

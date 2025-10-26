@@ -1,6 +1,5 @@
 use crate::adapters::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
-use crate::adapters::task::task_dto::TaskDto;
 use async_trait::async_trait;
 use domain::{Event, Result, TaskRepository};
 use serde_json::json;
@@ -32,15 +31,13 @@ impl EventHandler for TaskUpdatedHandler {
             let task = self.task_repo.get_by_id(updated_event.task_id).await?;
 
             if let Some(task) = task {
-                let task_dto = TaskDto::from(task);
-
                 self.emitter
-                    .emit(domain::event_names::task::TASK_UPDATED, json!(task_dto))
+                    .emit(domain::event_names::task::TASK_UPDATED, json!(task))
                     .map_err(|e| domain::Error::EventPublishingError {
                         message: format!("Failed to emit task updated event: {e}"),
                     })?;
                 self.emitter
-                    .emit(domain::event_names::task::LIST_UPDATED, json!(task_dto))
+                    .emit(domain::event_names::task::LIST_UPDATED, json!(task))
                     .map_err(|e| domain::Error::EventPublishingError {
                         message: format!("Failed to emit task updated event: {e}"),
                     })?;
