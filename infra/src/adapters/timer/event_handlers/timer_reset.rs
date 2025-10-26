@@ -41,6 +41,13 @@ impl EventHandler for TimerResetHandler {
                 message: format!("Failed to stop timer tick loop: {e}"),
             })?;
 
+        self.timer_srv
+            .start_timer_tick_loop(Some(timer_reset.timer_configuration.clone()), None)
+            .await
+            .map_err(|e| domain::Error::EventHandlingError {
+                message: format!("Failed to start timer tick loop: {e}"),
+            })?;
+
 
         self.emitter
             .emit(

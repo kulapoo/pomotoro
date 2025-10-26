@@ -9,7 +9,7 @@ use chrono::Utc;
 use domain::TimerRepository;
 use domain::{
     ConfigRepository, Error, Phase, Result as DomainResult, Task,
-    TaskRepository, Timer,
+    TaskId, TaskRepository, Timer, TimerConfiguration,
 };
 
 /// Infrastructure service for managing timer tick loops and technical concerns
@@ -104,7 +104,8 @@ impl TimerTickService {
     /// This manages the technical aspects of timer ticking
     pub async fn start_timer_tick_loop(
         &self,
-        task: Option<&Task>,
+        timer_config: Option<TimerConfiguration>,
+        _task_id: Option<TaskId>,
     ) -> Result<(), String> {
         // Reload timer from repository to ensure we have the latest state
         // This is crucial because the use case just saved the timer
@@ -112,9 +113,9 @@ impl TimerTickService {
             format!("Failed to reload timer state: {}", e)
         })?;
 
-        // Get configuration from task or default from config repository
-        let config = if let Some(task) = task {
-            task.config.timer.clone()
+        // Get configuration from parameter or default from config repository
+        let config = if let Some(config) = timer_config {
+            config
         } else {
             self.config_repository
                 .get_config()

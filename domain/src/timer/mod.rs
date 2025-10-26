@@ -39,6 +39,15 @@ impl Phase {
             Phase::LongBreak => "Long Break",
         }
     }
+
+    pub fn determine_next_break_type(current_sessions: u8, sessions_until_long_break: u8) -> Phase {
+        if current_sessions % sessions_until_long_break == 0 {
+            Phase::LongBreak
+        } else {
+            Phase::ShortBreak
+        }
+    }
+
 }
 
 #[derive(

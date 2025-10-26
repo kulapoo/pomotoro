@@ -31,6 +31,7 @@ pub fn register_test_handlers(
         task_cycling_service,
         timer_repository,
         event_publisher,
+        timer_tick_service.clone(),
     )?;
     register_timer_handlers(
         event_bus.clone(),

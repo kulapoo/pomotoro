@@ -28,7 +28,10 @@ pub async fn complete_timer_phase(
     // Only increment session when completing a Work phase
     let next_phase = if current_phase == Phase::Work {
         task.increment_session()?;
-        determine_next_break_type(&task)
+        Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        )
     } else {
         // After a break, always go back to Work
         Phase::Work
@@ -45,16 +48,6 @@ pub async fn complete_timer_phase(
     }
 
     Ok(())
-}
-
-fn determine_next_break_type(task: &domain::Task) -> Phase {
-    let sessions_until_long = task.config.timer.sessions_until_long_break;
-
-    if task.current_sessions % sessions_until_long == 0 {
-        Phase::LongBreak
-    } else {
-        Phase::ShortBreak
-    }
 }
 
 #[cfg(test)]
@@ -75,7 +68,10 @@ mod tests {
 
         // Timer configuration is now managed through task.config.timer
 
-        let next_phase = determine_next_break_type(&task);
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
         assert_eq!(next_phase, Phase::ShortBreak);
     }
 
@@ -92,7 +88,10 @@ mod tests {
 
         // Timer configuration is now managed through task.config.timer
 
-        let next_phase = determine_next_break_type(&task);
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
         assert_eq!(next_phase, Phase::LongBreak);
     }
 
@@ -109,7 +108,10 @@ mod tests {
 
         // Timer configuration is now managed through task.config.timer
 
-        let next_phase = determine_next_break_type(&task);
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
         assert_eq!(next_phase, Phase::ShortBreak);
     }
 }

@@ -65,6 +65,7 @@ pub async fn register_handlers(
         task_cycling_service,
         timer_repository,
         event_publisher,
+        timer_tick_service.clone(),
     )
     .context("Failed to register task event handlers")?;
     register_config_handlers(event_bus.clone(), emitter.clone())

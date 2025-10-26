@@ -50,8 +50,10 @@ impl EventHandler for TimerStartedHandler {
 
         let task = self.task_repository.get_by_id(task_id).await?;
 
+        let timer_config = task.as_ref().map(|t| t.config.timer.clone());
+
         self.timer_srv
-            .start_timer_tick_loop(task.as_ref())
+            .start_timer_tick_loop(timer_config, Some(task_id))
             .await
             .map_err(|e| domain::Error::EventHandlingError {
                 message: format!("Failed to start timer tick loop: {e}"),
