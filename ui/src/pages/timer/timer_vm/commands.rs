@@ -128,4 +128,28 @@ impl TimerViewModel {
                 });
         });
     }
+
+    pub fn complete_task(&self) {
+        let set_timer_state = self.set_timer_state;
+        let set_active_task = self.set_active_task;
+        let set_error_state = self.set_error_state;
+
+        spawn_local(async move {
+            invoke::<Timer, ()>(commands::task::COMPLETE_TASK, None).await
+                .map_err(|e| handle_command_error(e, set_error_state))
+                .ok()
+                .map(|timer| {
+                    set_timer_state.set(timer.state().clone());
+
+                    if let Some(task_id) = timer.active_task_id() {
+                        let task_id_str = task_id.to_string();
+                        spawn_local(async move {
+                            task_ops::fetch_task_by_id(&task_id_str, set_active_task).await;
+                        });
+                    } else {
+                        set_active_task.set(None);
+                    }
+                });
+        });
+    }
 }

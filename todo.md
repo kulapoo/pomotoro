@@ -1,4 +1,4 @@
 # todo
 
-- [ ] skip should be able to skip to next task if no incomplete tasks
+- [ ] skip should be able to skip to next task
 - [ ] hide delete for default task
