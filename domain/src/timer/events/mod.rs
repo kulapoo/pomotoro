@@ -1,6 +1,6 @@
 pub mod active_task_switched;
-pub mod break_session_completed;
-pub mod break_session_started;
+pub mod break_phase_completed;
+pub mod break_phase_started;
 pub mod phase_completed;
 pub mod phase_skipped;
 pub mod session_flow_reset;
@@ -9,12 +9,12 @@ pub mod timer_reset;
 pub mod timer_started;
 pub mod timer_status_changed;
 pub mod timer_tick;
-pub mod work_session_completed;
-pub mod work_session_started;
+pub mod work_phase_completed;
+pub mod work_phase_started;
 
 pub use active_task_switched::ActiveTaskSwitched;
-pub use break_session_completed::BreakSessionCompleted;
-pub use break_session_started::BreakSessionStarted;
+pub use break_phase_completed::BreakPhaseCompleted;
+pub use break_phase_started::BreakPhaseStarted;
 pub use phase_completed::PhaseCompleted;
 pub use phase_skipped::PhaseSkipped;
 pub use session_flow_reset::SessionFlowReset;
@@ -23,8 +23,8 @@ pub use timer_reset::Reset;
 pub use timer_started::Started;
 pub use timer_status_changed::StatusChanged;
 pub use timer_tick::Tick;
-pub use work_session_completed::WorkSessionCompleted;
-pub use work_session_started::WorkSessionStarted;
+pub use work_phase_completed::WorkPhaseCompleted;
+pub use work_phase_started::WorkPhaseStarted;
 #[cfg(test)]
 mod tests {
     use super::*;

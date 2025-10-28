@@ -193,10 +193,10 @@ classDiagram
         +TimerTick
         +PhaseCompleted
         +PhaseSkipped
-        +WorkSessionStarted
-        +WorkSessionCompleted
-        +BreakSessionStarted
-        +BreakSessionCompleted
+        +WorkPhaseStarted
+        +WorkPhaseCompleted
+        +BreakPhaseStarted
+        +BreakPhaseCompleted
     }
     
     Timer --> TimerState
@@ -217,7 +217,7 @@ sequenceDiagram
     
     U->>T: Start Timer
     T->>E: Publish(TimerStarted)
-    T->>E: Publish(WorkSessionStarted)
+    T->>E: Publish(WorkPhaseStarted)
     
     loop Every Second
         T->>T: Tick
@@ -229,7 +229,7 @@ sequenceDiagram
     T->>E: Publish(TaskSessionCompleted)
     
     alt Sessions < 4
-        T->>E: Publish(BreakSessionStarted)
+        T->>E: Publish(BreakPhaseStarted)
     else Sessions = 4
         T->>E: Publish(LongBreakStarted)
     end

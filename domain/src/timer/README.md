@@ -125,10 +125,10 @@ Domain events emitted during timer operations:
 ```mermaid
 graph LR
     subgraph "Session Events"
-        WSS[WorkSessionStarted]
-        WSC[WorkSessionCompleted]
-        BSS[BreakSessionStarted]
-        BSC[BreakSessionCompleted]
+        WSS[WorkPhaseStarted]
+        WSC[WorkPhaseCompleted]
+        BSS[BreakPhaseStarted]
+        BSC[BreakPhaseCompleted]
     end
     
     subgraph "Control Events"
@@ -170,12 +170,12 @@ let events = timer.set_active_entity(Some("task-123".to_string()))?;
 
 // 3. Start the timer
 let events = timer.start()?;
-// → Returns: Started, WorkSessionStarted
+// → Returns: Started, WorkPhaseStarted
 
 // 4. Tick every second
 let (phase_complete, events) = timer.tick()?;
 // → Returns: Tick (each second)
-// → When complete: PhaseCompleted, WorkSessionCompleted/BreakSessionStarted
+// → When complete: PhaseCompleted, WorkPhaseCompleted/BreakPhaseStarted
 ```
 
 ### State Transitions

@@ -34,7 +34,7 @@ pub enum NotificationEvent {
         phase: Phase,
         remaining_seconds: u32,
     },
-    WorkSessionCompleted {
+    WorkPhaseCompleted {
         task_name: Option<String>,
     },
     BreakStarted {
@@ -127,7 +127,7 @@ impl NotificationEvent {
                 ),
                 icon: None,
             },
-            NotificationEvent::WorkSessionCompleted {
+            NotificationEvent::WorkPhaseCompleted {
                 task_name,
             } => {
                 let body = if let Some(name) = task_name {
@@ -235,7 +235,7 @@ impl NotificationService {
 
         match event {
             NotificationEvent::PhaseCompleted { .. }
-            | NotificationEvent::WorkSessionCompleted { .. }
+            | NotificationEvent::WorkPhaseCompleted { .. }
             | NotificationEvent::BreakStarted { .. }
             | NotificationEvent::BreakCompleted { .. } => {
                 config.show_phase_transition_notifications

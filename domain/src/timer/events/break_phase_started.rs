@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct BreakSessionCompleted {
+pub struct BreakPhaseStarted {
     pub timer_id: TimerId,
     pub phase: Phase,
     pub duration_seconds: u32,
@@ -12,7 +12,7 @@ pub struct BreakSessionCompleted {
     pub occurred_at: DateTime<Utc>,
 }
 
-impl BreakSessionCompleted {
+impl BreakPhaseStarted {
     pub fn new(
         timer_id: TimerId,
         phase: Phase,
@@ -29,9 +29,9 @@ impl BreakSessionCompleted {
     }
 }
 
-impl crate::Event for BreakSessionCompleted {
+impl crate::Event for BreakPhaseStarted {
     fn event_type(&self) -> &'static str {
-        "BreakSessionCompleted"
+        "BreakPhaseStarted"
     }
 
     fn aggregate_id(&self) -> String {

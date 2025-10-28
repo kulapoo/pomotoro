@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use domain::timer::events::{
-    BreakSessionCompleted, BreakSessionStarted, Paused as TimerPaused,
-    Started as TimerStarted, Tick as TimerTick, WorkSessionCompleted,
-    WorkSessionStarted,
+    BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
+    Started as TimerStarted, Tick as TimerTick, WorkPhaseCompleted,
+    WorkPhaseStarted,
 };
 use domain::{ConfigRepository, Event, Phase, PlaybackRequest, Result};
 use std::any::TypeId;
@@ -11,12 +11,12 @@ use std::sync::Arc;
 use super::AudioServiceWrapper;
 use crate::adapters::events::{EventHandler, EventSubscriber};
 
-pub struct WorkSessionStartedAudioHandler {
+pub struct WorkPhaseStartedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
-impl WorkSessionStartedAudioHandler {
+impl WorkPhaseStartedAudioHandler {
     pub fn new(
         audio_service: Arc<AudioServiceWrapper>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -29,14 +29,14 @@ impl WorkSessionStartedAudioHandler {
 }
 
 #[async_trait]
-impl EventHandler for WorkSessionStartedAudioHandler {
+impl EventHandler for WorkPhaseStartedAudioHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<WorkSessionStarted>()
+        TypeId::of::<WorkPhaseStarted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(_work_started) =
-            event.as_any().downcast_ref::<WorkSessionStarted>()
+            event.as_any().downcast_ref::<WorkPhaseStarted>()
         {
             let config = self.config_repository.get_config().await?;
 
@@ -70,16 +70,16 @@ impl EventHandler for WorkSessionStartedAudioHandler {
     }
 
     fn name(&self) -> &'static str {
-        "WorkSessionStartedAudioHandler"
+        "WorkPhaseStartedAudioHandler"
     }
 }
 
-pub struct WorkSessionCompletedAudioHandler {
+pub struct WorkPhaseCompletedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
-impl WorkSessionCompletedAudioHandler {
+impl WorkPhaseCompletedAudioHandler {
     pub fn new(
         audio_service: Arc<AudioServiceWrapper>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -92,14 +92,14 @@ impl WorkSessionCompletedAudioHandler {
 }
 
 #[async_trait]
-impl EventHandler for WorkSessionCompletedAudioHandler {
+impl EventHandler for WorkPhaseCompletedAudioHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<WorkSessionCompleted>()
+        TypeId::of::<WorkPhaseCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(_work_completed) =
-            event.as_any().downcast_ref::<WorkSessionCompleted>()
+            event.as_any().downcast_ref::<WorkPhaseCompleted>()
         {
             let config = self.config_repository.get_config().await?;
 
@@ -124,16 +124,16 @@ impl EventHandler for WorkSessionCompletedAudioHandler {
     }
 
     fn name(&self) -> &'static str {
-        "WorkSessionCompletedAudioHandler"
+        "WorkPhaseCompletedAudioHandler"
     }
 }
 
-pub struct BreakSessionStartedAudioHandler {
+pub struct BreakPhaseStartedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
-impl BreakSessionStartedAudioHandler {
+impl BreakPhaseStartedAudioHandler {
     pub fn new(
         audio_service: Arc<AudioServiceWrapper>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -146,14 +146,14 @@ impl BreakSessionStartedAudioHandler {
 }
 
 #[async_trait]
-impl EventHandler for BreakSessionStartedAudioHandler {
+impl EventHandler for BreakPhaseStartedAudioHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<BreakSessionStarted>()
+        TypeId::of::<BreakPhaseStarted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(_break_started) =
-            event.as_any().downcast_ref::<BreakSessionStarted>()
+            event.as_any().downcast_ref::<BreakPhaseStarted>()
         {
             let config = self.config_repository.get_config().await?;
 
@@ -187,16 +187,16 @@ impl EventHandler for BreakSessionStartedAudioHandler {
     }
 
     fn name(&self) -> &'static str {
-        "BreakSessionStartedAudioHandler"
+        "BreakPhaseStartedAudioHandler"
     }
 }
 
-pub struct BreakSessionCompletedAudioHandler {
+pub struct BreakPhaseCompletedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
-impl BreakSessionCompletedAudioHandler {
+impl BreakPhaseCompletedAudioHandler {
     pub fn new(
         audio_service: Arc<AudioServiceWrapper>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -209,14 +209,14 @@ impl BreakSessionCompletedAudioHandler {
 }
 
 #[async_trait]
-impl EventHandler for BreakSessionCompletedAudioHandler {
+impl EventHandler for BreakPhaseCompletedAudioHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<BreakSessionCompleted>()
+        TypeId::of::<BreakPhaseCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(_break_completed) =
-            event.as_any().downcast_ref::<BreakSessionCompleted>()
+            event.as_any().downcast_ref::<BreakPhaseCompleted>()
         {
             let config = self.config_repository.get_config().await?;
 
@@ -241,7 +241,7 @@ impl EventHandler for BreakSessionCompletedAudioHandler {
     }
 
     fn name(&self) -> &'static str {
-        "BreakSessionCompletedAudioHandler"
+        "BreakPhaseCompletedAudioHandler"
     }
 }
 
@@ -393,25 +393,25 @@ pub fn register_audio_event_handlers(
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 ) -> Result<()> {
-    let _ = event_bus.subscribe(Box::new(WorkSessionStartedAudioHandler::new(
+    let _ = event_bus.subscribe(Box::new(WorkPhaseStartedAudioHandler::new(
         audio_service.clone(),
         config_repository.clone(),
     )));
 
     let _ =
-        event_bus.subscribe(Box::new(WorkSessionCompletedAudioHandler::new(
+        event_bus.subscribe(Box::new(WorkPhaseCompletedAudioHandler::new(
             audio_service.clone(),
             config_repository.clone(),
         )));
 
     let _ =
-        event_bus.subscribe(Box::new(BreakSessionStartedAudioHandler::new(
+        event_bus.subscribe(Box::new(BreakPhaseStartedAudioHandler::new(
             audio_service.clone(),
             config_repository.clone(),
         )));
 
     let _ =
-        event_bus.subscribe(Box::new(BreakSessionCompletedAudioHandler::new(
+        event_bus.subscribe(Box::new(BreakPhaseCompletedAudioHandler::new(
             audio_service.clone(),
             config_repository.clone(),
         )));

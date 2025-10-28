@@ -164,8 +164,8 @@ Phase 4: Simplify Events
 
 Files: domain/src/timer/events/.rs\*
 
-- WorkSessionCompleted: Remove session_count, task_session_count
-- WorkSessionStarted: Remove session fields
+- WorkPhaseCompleted: Remove session_count, task_session_count
+- WorkPhaseStarted: Remove session fields
 - PhaseCompleted: Simplify to just phase transition info
 
 Phase 5: Database Updates
@@ -264,8 +264,8 @@ Domain Layer (8 files)
 - timer/state_machine.rs
 - timer/timer.rs
 - timer/transitions.rs
-- timer/events/work_session_completed.rs
-- timer/events/work_session_started.rs
+- timer/events/work_phase_completed.rs
+- timer/events/work_phase_started.rs
 - timer/events/phase_completed.rs
 - timer/mod.rs
 - timer/configuration.rs (if separate)

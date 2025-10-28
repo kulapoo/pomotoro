@@ -238,7 +238,7 @@ async fn timer_should_complete_phase() {
 
     let old_task = utils::task::get_active_task(&ctx).await;
 
-    let complete_work_session_result = complete_timer_phase(
+    let complete_work_phase_result = complete_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -250,7 +250,7 @@ async fn timer_should_complete_phase() {
     let task = utils::task::get_active_task(&ctx).await;
     let new_timer = get_timer(&ctx).await;
 
-    assert!(complete_work_session_result.is_ok());
+    assert!(complete_work_phase_result.is_ok());
 
     assert_eq!(old_timer.state().is_work_phase(), true);
     assert_eq!(new_timer.state().is_break_phase(), true);

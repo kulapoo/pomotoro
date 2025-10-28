@@ -3,14 +3,14 @@ use serde::{Deserialize, Serialize};
 use crate::TimerId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct WorkSessionStarted {
+pub struct WorkPhaseStarted {
     pub timer_id: TimerId,
     pub duration_seconds: u32,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl WorkSessionStarted {
+impl WorkPhaseStarted {
     pub fn new(
         timer_id: TimerId,
         duration_seconds: u32,
@@ -25,9 +25,9 @@ impl WorkSessionStarted {
     }
 }
 
-impl crate::Event for WorkSessionStarted {
+impl crate::Event for WorkPhaseStarted {
     fn event_type(&self) -> &'static str {
-        "WorkSessionStarted"
+        "WorkPhaseStarted"
     }
 
     fn aggregate_id(&self) -> String {

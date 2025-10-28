@@ -25,8 +25,8 @@
 - `TimerReset`
 - `PhaseCompleted`
 - `PhaseSkipped`
-- `WorkSessionStarted/Completed`
-- `BreakSessionStarted/Completed`
+- `WorkPhaseStarted/Completed`
+- `BreakPhaseStarted/Completed`
 
 ### Task
 **Location**: `domain/src/task/`

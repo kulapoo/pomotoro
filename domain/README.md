@@ -268,10 +268,10 @@ cat src/timer/events/timer_started.rs
 cat src/timer/events/timer_paused.rs
 cat src/timer/events/phase_completed.rs
 
-# Session events  
-cat src/timer/events/work_session_started.rs
-cat src/timer/events/work_session_completed.rs
-cat src/timer/events/break_session_completed.rs
+# Session events
+cat src/timer/events/work_phase_started.rs
+cat src/timer/events/work_phase_completed.rs
+cat src/timer/events/break_phase_completed.rs
 ```
 
 **Practice Exercise:**
@@ -381,7 +381,7 @@ cat src/events.rs
 
 1. **Timer → Task Integration:**
    ```
-   WorkSessionCompleted → TaskSessionCompleted → TaskStatusChanged
+   WorkPhaseCompleted → TaskSessionCompleted → TaskStatusChanged
    ```
 
 2. **Task → Timer Integration:**

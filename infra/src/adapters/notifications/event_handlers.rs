@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use domain::timer::events::{
-    BreakSessionCompleted, BreakSessionStarted, Paused as TimerPaused,
-    Started as TimerStarted, WorkSessionCompleted,
+    BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
+    Started as TimerStarted, WorkPhaseCompleted,
 };
 use domain::{ConfigRepository, Event, PhaseCompleted, Result, TaskCompleted};
 use std::any::TypeId;
@@ -193,12 +193,12 @@ impl EventHandler for TaskCompletedNotificationHandler {
     }
 }
 
-pub struct WorkSessionCompletedNotificationHandler {
+pub struct WorkPhaseCompletedNotificationHandler {
     notification_service: Arc<dyn NotificationServiceTrait>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
 }
 
-impl WorkSessionCompletedNotificationHandler {
+impl WorkPhaseCompletedNotificationHandler {
     pub fn new(
         notification_service: Arc<dyn NotificationServiceTrait>,
         task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
@@ -211,14 +211,14 @@ impl WorkSessionCompletedNotificationHandler {
 }
 
 #[async_trait]
-impl EventHandler for WorkSessionCompletedNotificationHandler {
+impl EventHandler for WorkPhaseCompletedNotificationHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<WorkSessionCompleted>()
+        TypeId::of::<WorkPhaseCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(work_completed) =
-            event.as_any().downcast_ref::<WorkSessionCompleted>()
+            event.as_any().downcast_ref::<WorkPhaseCompleted>()
         {
             let task_name =
                 if let Some(entity_id) = &work_completed.active_entity_id {
@@ -237,7 +237,7 @@ impl EventHandler for WorkSessionCompletedNotificationHandler {
                     None
                 };
 
-            let notification_event = NotificationEvent::WorkSessionCompleted {
+            let notification_event = NotificationEvent::WorkPhaseCompleted {
                 task_name,
             };
             self.notification_service
@@ -248,7 +248,7 @@ impl EventHandler for WorkSessionCompletedNotificationHandler {
     }
 
     fn name(&self) -> &'static str {
-        "WorkSessionCompletedNotificationHandler"
+        "WorkPhaseCompletedNotificationHandler"
     }
 }
 
@@ -269,12 +269,12 @@ impl BreakStartedNotificationHandler {
 #[async_trait]
 impl EventHandler for BreakStartedNotificationHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<BreakSessionStarted>()
+        TypeId::of::<BreakPhaseStarted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(break_started) =
-            event.as_any().downcast_ref::<BreakSessionStarted>()
+            event.as_any().downcast_ref::<BreakPhaseStarted>()
         {
             let notification_event = NotificationEvent::BreakStarted {
                 break_type: break_started.phase.clone(),
@@ -309,12 +309,12 @@ impl BreakCompletedNotificationHandler {
 #[async_trait]
 impl EventHandler for BreakCompletedNotificationHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<BreakSessionCompleted>()
+        TypeId::of::<BreakPhaseCompleted>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         if let Some(break_completed) =
-            event.as_any().downcast_ref::<BreakSessionCompleted>()
+            event.as_any().downcast_ref::<BreakPhaseCompleted>()
         {
             let notification_event = NotificationEvent::BreakCompleted {
                 break_type: break_completed.phase.clone(),
@@ -367,7 +367,7 @@ pub async fn register_notification_handlers(
     ));
 
     let _ = event_bus.subscribe(Box::new(
-        WorkSessionCompletedNotificationHandler::new(
+        WorkPhaseCompletedNotificationHandler::new(
             notification_service.clone(),
             task_repository.clone(),
         ),

@@ -314,7 +314,7 @@ pub struct PomodoroSaga {
 }
 
 impl PomodoroSaga {
-    pub async fn handle_work_completed(&self, event: WorkSessionCompleted) -> Result<()> {
+    pub async fn handle_work_completed(&self, event: WorkPhaseCompleted) -> Result<()> {
         // Step 1: Update task
         self.task_service
             .increment_session(event.task_id.clone())
@@ -345,7 +345,7 @@ sequenceDiagram
     participant NotificationHandler
     participant StatsHandler
     
-    Timer->>EventBus: Publish(WorkSessionCompleted)
+    Timer->>EventBus: Publish(WorkPhaseCompleted)
     EventBus->>TaskHandler: Handle(event)
     TaskHandler->>TaskHandler: Update task sessions
     EventBus->>NotificationHandler: Handle(event)

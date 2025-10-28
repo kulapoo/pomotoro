@@ -309,10 +309,10 @@ TimerReset { timestamp: Timestamp }
 TimerTick { remaining: Duration, phase: Phase }
 PhaseCompleted { phase: Phase, timestamp: Timestamp }
 PhaseSkipped { from: Phase, to: Phase, timestamp: Timestamp }
-WorkSessionStarted { task_id: Option<TaskId>, timestamp: Timestamp }
-WorkSessionCompleted { task_id: Option<TaskId>, timestamp: Timestamp }
-BreakSessionStarted { duration: Duration, timestamp: Timestamp }
-BreakSessionCompleted { timestamp: Timestamp }
+WorkPhaseStarted { task_id: Option<TaskId>, timestamp: Timestamp }
+WorkPhaseCompleted { task_id: Option<TaskId>, timestamp: Timestamp }
+BreakPhaseStarted { duration: Duration, timestamp: Timestamp }
+BreakPhaseCompleted { timestamp: Timestamp }
 ```
 
 ### Task Events

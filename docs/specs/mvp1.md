@@ -342,12 +342,12 @@ THEN:
     state = get_timer_state(context)
     assert state.status == TimerStatus::Running
     assert state.active_task_id == Some(task.id)
-    assert_event_published(context, "WorkSessionStarted")
+    assert_event_published(context, "WorkPhaseStarted")
 ```
 
-### Test 12: Complete work session increments task counter
+### Test 12: Complete work phase increments task counter
 ```pseudo
-TEST: "completing_work_session_should_increment_task_counter"
+TEST: "completing_work_phase_should_increment_task_counter"
 GIVEN: 
     context = setup_test_context()
     task = context.usecases.create_task.execute(
@@ -360,7 +360,7 @@ WHEN:
 THEN:  
     updated_task = context.usecases.get_task.execute(task.id).value
     assert updated_task.current_sessions == 1  // Field is 'current_sessions'
-    assert_event_published(context, "WorkSessionCompleted")
+    assert_event_published(context, "WorkPhaseCompleted")
     assert_event_published(context, "TaskSessionCompleted")
     
     // Timer should transition to break
@@ -553,8 +553,8 @@ THEN:
     assert task.sessions_completed == 2
     
     events = context.event_bus.get_published_events()
-    assert events.count("WorkSessionCompleted") == 2
-    assert events.count("BreakSessionCompleted") == 1
+    assert events.count("WorkPhaseCompleted") == 2
+    assert events.count("BreakPhaseCompleted") == 1
 ```
 
 ### Test 22: Task cycling with multiple tasks
@@ -817,8 +817,8 @@ THEN:
     
     // Verify events
     events = context.event_bus.get_published_events()
-    assert events.contains("WorkSessionCompleted")
-    assert events.contains("BreakSessionCompleted")
+    assert events.contains("WorkPhaseCompleted")
+    assert events.contains("BreakPhaseCompleted")
     assert events.contains("TaskStatusChanged")
     assert events.contains("TimerPaused")
     
@@ -895,7 +895,7 @@ Each test should:
   - Phase enum: Work | ShortBreak | LongBreak
   - Timer service: start(), pause(), resume(), reset(), skip_phase(), tick()
   - Progress tracking: remaining_seconds(), progress_percentage()
-  - Domain events: Started, Paused, Tick, PhaseCompleted, WorkSessionCompleted
+  - Domain events: Started, Paused, Tick, PhaseCompleted, WorkPhaseCompleted
 
 - **Config Module** (`config/`):
   - TimerConfiguration: work_duration (25min), short_break (5min), long_break (15min), sessions_until_long_break (4)
@@ -965,7 +965,7 @@ Each test should:
 ### Domain Events System
 - All events implement `Event` trait with versioning and timestamps
 - Task events: Created, Completed, StatusChanged, Updated, SessionCompleted
-- Timer events: Started, Paused, Tick, PhaseCompleted, PhaseSkipped, WorkSessionCompleted
+- Timer events: Started, Paused, Tick, PhaseCompleted, PhaseSkipped, WorkPhaseCompleted
 - Event-driven architecture with `EventPublisher` trait
 
 ## Key Implementation vs Specification Differences

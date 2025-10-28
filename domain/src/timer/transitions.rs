@@ -4,8 +4,8 @@
 //! ensuring valid state changes and generating appropriate domain events.
 
 use super::events::{
-    BreakSessionCompleted, BreakSessionStarted, Paused, PhaseCompleted,
-    PhaseSkipped, Reset, Started, WorkSessionCompleted, WorkSessionStarted,
+    BreakPhaseCompleted, BreakPhaseStarted, Paused, PhaseCompleted,
+    PhaseSkipped, Reset, Started, WorkPhaseCompleted, WorkPhaseStarted,
 };
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result, TimerId};
@@ -43,7 +43,7 @@ impl StateTransitions {
                         Started::new(timer_id, Phase::Work, duration, 1)
                             .with_active_entity(active_task_id),
                     ),
-                    Box::new(WorkSessionStarted::new(
+                    Box::new(WorkPhaseStarted::new(
                         timer_id, duration, 1,
                     )),
                 ];
@@ -223,24 +223,24 @@ impl StateTransitions {
 
         match from_phase {
             Phase::Work => {
-                events.push(Box::new(WorkSessionCompleted::new(
+                events.push(Box::new(WorkPhaseCompleted::new(
                     timer_id,
                     configuration.get_phase_duration_seconds(Phase::Work),
                     1,
                 )));
-                events.push(Box::new(BreakSessionStarted::new(
+                events.push(Box::new(BreakPhaseStarted::new(
                     timer_id, next_phase, duration, 1,
                 )));
             }
             Phase::ShortBreak | Phase::LongBreak => {
-                events.push(Box::new(BreakSessionCompleted::new(
+                events.push(Box::new(BreakPhaseCompleted::new(
                     timer_id,
                     from_phase,
                     configuration.get_phase_duration_seconds(from_phase),
                     1,
                 )));
                 if next_phase == Phase::Work {
-                    events.push(Box::new(WorkSessionStarted::new(
+                    events.push(Box::new(WorkPhaseStarted::new(
                         timer_id, duration, 1,
                     )));
                 }
@@ -280,7 +280,7 @@ impl StateTransitions {
                 result.events.retain(|event| {
                     let event_type = event.event_type();
                     event_type != "PhaseCompleted"
-                        && event_type != "WorkSessionCompleted"
+                        && event_type != "WorkPhaseCompleted"
                 });
 
                 // Get the duration for the new phase

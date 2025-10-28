@@ -20,13 +20,13 @@ pub use task::{
 };
 
 pub use timer::{
-    ActiveTaskSwitched, BreakSessionCompleted, BreakSessionStarted,
+    ActiveTaskSwitched, BreakPhaseCompleted, BreakPhaseStarted,
     DEFAULT_TIMER_ID, Error as TimerError, Paused as TimerPaused, Phase,
     PhaseCompleted, PhaseSkipped, Reset as TimerReset, Result as TimerResult,
     SessionFlowReset, Started as TimerStarted, StateTransitions,
     Status as TimerStatus, StatusChanged as TimerStatusChanged,
     Tick as TimerTick, Timer, TimerId, TimerRepository, TimerState,
-    TransitionResult, TransitionType, WorkSessionCompleted, WorkSessionStarted,
+    TransitionResult, TransitionType, WorkPhaseCompleted, WorkPhaseStarted,
 };
 
 pub use config::{
