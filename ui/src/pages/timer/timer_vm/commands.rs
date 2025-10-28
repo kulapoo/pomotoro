@@ -105,8 +105,6 @@ impl TimerViewModel {
         });
     }
 
-
-
     pub fn skip_phase(&self) {
         let set_timer_state = self.set_timer_state;
         let set_active_task = self.set_active_task;

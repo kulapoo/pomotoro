@@ -36,7 +36,7 @@ impl TimerViewModel {
 
     pub fn can_skip(&self) -> bool {
         let state = self.timer_state.get();
-        state.is_running() && state.remaining_seconds() > 0 && !self.get_is_completed()
+        state.is_running() && state.remaining_seconds() > 0
     }
 
     pub fn can_toggle_start_pause(&self) -> bool {

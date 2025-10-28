@@ -79,7 +79,7 @@ impl StateTransitions {
             | TimerState::LongBreak {
                 remaining_seconds, ..
             } => {
-                let phase = Self::get_phase_from_state(&state);
+                let phase = state.phase();
 
                 let events: Vec<Box<dyn Event>> = vec![
                     Box::new(Paused::new(
@@ -122,7 +122,7 @@ impl StateTransitions {
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Paused { paused_from, remaining_seconds } => {
-                let phase = Self::get_phase_from_state(&paused_from);
+                let phase = paused_from.phase();
 
                 // Use the remaining_seconds from the Paused state, not from paused_from
                 let events: Vec<Box<dyn Event>> =
@@ -174,7 +174,7 @@ impl StateTransitions {
         timer_id: TimerId,
         configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
-        let phase = Self::get_phase_from_state(&state);
+        let phase = state.phase();
         let remaining_seconds = configuration.get_phase_duration_seconds(phase);
 
         let new_state = match state {
@@ -202,7 +202,7 @@ impl StateTransitions {
         configuration: &TimerConfiguration,
         next_phase: Phase,
     ) -> Result<TransitionResult> {
-        let from_phase = Self::get_phase_from_state(&state);
+        let from_phase = state.phase();
 
         let duration = configuration.get_phase_duration_seconds(next_phase);
         let next_state = match next_phase {
@@ -268,7 +268,7 @@ impl StateTransitions {
             TimerState::Working { .. }
             | TimerState::ShortBreak { .. }
             | TimerState::LongBreak { .. } => {
-                let from_phase = Self::get_phase_from_state(&state);
+                let from_phase = state.phase();
 
                 let mut result = Self::complete_phase(
                     state.clone(),
@@ -343,19 +343,6 @@ impl StateTransitions {
         };
 
         Ok((state, phase_complete))
-    }
-
-    /// Extracts the phase from any timer state.
-    fn get_phase_from_state(state: &TimerState) -> Phase {
-        match state {
-            TimerState::Idle => Phase::Work,
-            TimerState::Working { .. } => Phase::Work,
-            TimerState::ShortBreak { .. } => Phase::ShortBreak,
-            TimerState::LongBreak { .. } => Phase::LongBreak,
-            TimerState::Paused { paused_from, .. } => {
-                Self::get_phase_from_state(paused_from)
-            }
-        }
     }
 
     /// Validates if a transition is allowed from current state.

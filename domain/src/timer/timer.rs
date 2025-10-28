@@ -226,10 +226,6 @@ impl Timer {
 
         events.push(Box::new(tick_event));
 
-        // NOTE: We do NOT auto-transition here. The use case layer (complete_timer_phase)
-        // must handle phase transitions to properly respect session counting for LongBreak.
-        // The tick() method only signals that a phase is complete via the return value.
-
         Ok((phase_complete, events))
     }
 
