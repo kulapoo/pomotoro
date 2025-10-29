@@ -54,6 +54,19 @@ where
             return Err(result_str);
         }
     }
+
+    // Handle unit "()" return type - check if result is null or empty string
+    if result.is_null() || result.is_undefined() ||
+       (result.is_string() && result.as_string().unwrap_or_default().is_empty()) {
+        // Try to deserialize from null - this works for unit type ()
+        return serde_wasm_bindgen::from_value(JsValue::NULL)
+            .map_err(|e| {
+                let error_msg = format!("Failed to parse empty result from '{}': {:?}", cmd, e);
+                web_sys::console::error_1(&error_msg.clone().into());
+                error_msg
+            });
+    }
+
     // Deserialize the result
     serde_wasm_bindgen::from_value(result)
         .map_err(|e| {

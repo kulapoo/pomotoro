@@ -134,7 +134,6 @@ impl TimerViewModel {
         let set_error_state = self.set_error_state;
 
         let active_task_id = self.get_active_entity_id().expect("Complete Task: No active task");
-        let task_id_clone = active_task_id.clone();
 
         #[derive(serde::Serialize)]
         struct CompleteTaskArgs {
@@ -146,13 +145,11 @@ impl TimerViewModel {
         };
 
         spawn_local(async move {
-            invoke::<Timer, CompleteTaskArgs>(commands::task::COMPLETE_TASK, Some(complete_args)).await
+            invoke::<Task, CompleteTaskArgs>(commands::task::COMPLETE_TASK, Some(complete_args)).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
-                .map(|_| {
-                    spawn_local(async move {
-                        task_ops::fetch_task_by_id(&task_id_clone, set_active_task).await;
-                    });
+                .map(|task| {
+                    set_active_task.set(Some(task));
                 });
         });
     }

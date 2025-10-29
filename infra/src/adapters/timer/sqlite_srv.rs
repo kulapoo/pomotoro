@@ -218,4 +218,18 @@ impl TimerTickService {
     pub async fn get_session_history(&self) -> Vec<SessionHistoryDto> {
         self.session_history.lock().await.clone()
     }
+
+    /// Reset the timer to initial state
+    pub async fn reset_timer(&self, timer_config: TimerConfiguration) -> DomainResult<()> {
+        // Reset the timer using the domain method (but we won't publish the events)
+        {
+            let mut timer = self.timer.lock().await;
+            // Call reset on the timer - this returns events but we ignore them
+            // since the requirement is no event publishing
+            let _ = timer.reset(&timer_config)?;
+        }
+
+        // Save the reset state to the repository
+        self.save_state().await
+    }
 }

@@ -24,8 +24,10 @@ pub fn register_task_handlers(
     event_bus.subscribe(Box::new(TaskCompletedHandler::new(
         emitter.clone(),
         cycling_service,
+        task_repository.clone(),
         timer_repository,
         event_publisher,
+        timer_srv.clone(),
     )))?;
     event_bus.subscribe(Box::new(TaskUpdatedHandler::new(emitter.clone(), task_repository)))?;
     event_bus.subscribe(Box::new(TaskDeletedHandler::new(emitter.clone())))?;

@@ -9,4 +9,4 @@ ignore = ["infra"]
 
 [serve]
 port = 1420
-open = true
+open = false
