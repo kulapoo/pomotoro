@@ -30,10 +30,6 @@ impl TimerViewModel {
         self.active_task.get().map(|task| task.id.to_string())
     }
 
-    pub fn get_is_completed(&self) -> bool {
-        self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
-    }
-
     pub fn can_skip(&self) -> bool {
         let state = self.timer_state.get();
         state.is_running() && state.remaining_seconds() > 0
@@ -48,5 +44,6 @@ impl TimerViewModel {
     pub fn is_task_completed(&self) -> bool {
         self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
     }
+
 
 }
