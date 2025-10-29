@@ -10,7 +10,7 @@ pub fn TimerDisplay(vm: StoredValue<TimerViewModel>) -> impl IntoView {
 
     view! {
         <div class="mb-8">
-            <h2 class="timer-label">
+            <h2 class="text-2xl font-semibold text-slate-800 text-center">
                 {move || vm.with_value(|v| v.get_phase_name())}
             </h2>
         </div>
@@ -22,7 +22,7 @@ pub fn TimerDisplay(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             />
             <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div class="text-center">
-                    <div class="timer-display">
+                    <div class="text-6xl font-bold text-indigo-600">
                         {move || vm.with_value(|v| v.format_time())}
                     </div>
                 </div>

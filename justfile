@@ -18,11 +18,11 @@ build:
 
 # Build frontend only
 build-frontend:
-    cd infra && trunk build --config Trunk.toml
+    trunk build
 
 # Run frontend dev server only
 serve:
-    cd infra && trunk serve --config Trunk.toml
+    trunk serve
 
 # Clean build artifacts
 clean:

@@ -1,0 +1,12 @@
+[build]
+target = "ui/index.html"
+
+[tools]
+tailwindcss = "4.1.13"
+
+[watch]
+ignore = ["infra"]
+
+[serve]
+port = 1420
+open = true

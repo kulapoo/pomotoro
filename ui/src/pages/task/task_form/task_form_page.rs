@@ -255,27 +255,30 @@ pub fn TaskFormPage() -> impl IntoView {
         <Show
             when=move || !is_loading.get()
             fallback=|| view! {
-                <div class="task-creation-form">
-                    <p>"Loading task..."</p>
+                <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
+                    <p class="text-center text-slate-600">"Loading task..."</p>
                 </div>
             }
         >
-            <div class="task-creation-form">
-                <h4 class="form-title">
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
+                <h4 class="text-2xl font-bold text-slate-800 mb-6">
                     {move || if is_update() { "Update Task" } else { "Create New Task" }}
                 </h4>
 
             <Show when=move || validation_error.get().is_some()>
-                <div class="validation-error">
+                <div class="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-md mb-6">
                     {move || validation_error.get().unwrap_or_default()}
                 </div>
             </Show>
 
-            <div class="form-group">
-                <label class="form-label">"Task Name"<span class="required">"*"</span></label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                    "Task Name"
+                    <span class="text-red-500 ml-1">"*"</span>
+                </label>
                 <input
                     type="text"
-                    class="form-input"
+                    class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                     placeholder="Enter task name..."
                     prop:value=move || task_name.get()
                     on:input=move |ev| {
@@ -285,10 +288,10 @@ pub fn TaskFormPage() -> impl IntoView {
                 />
             </div>
 
-            <div class="form-group">
-                <label class="form-label">"Description"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Description"</label>
                 <textarea
-                    class="form-textarea"
+                    class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                     placeholder="Enter task description..."
                     prop:value=move || task_description.get()
                     on:input=move |ev| {
@@ -299,11 +302,11 @@ pub fn TaskFormPage() -> impl IntoView {
                 ></textarea>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">"Max Sessions"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Max Sessions"</label>
                 <input
                     type="number"
-                    class="form-input"
+                    class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                     min="1"
                     max="100"
                     prop:value=move || max_sessions.get()
@@ -313,14 +316,14 @@ pub fn TaskFormPage() -> impl IntoView {
                     }
                     prop:disabled=move || is_submitting.get()
                 />
-                <span class="form-help">"Number of pomodoro sessions for this task"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Number of pomodoro sessions for this task"</span>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">"Tags"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Tags"</label>
                 <input
                     type="text"
-                    class="form-input"
+                    class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                     placeholder="Enter tags separated by commas..."
                     prop:value=move || tags_input.get()
                     on:input=move |ev| {
@@ -328,32 +331,33 @@ pub fn TaskFormPage() -> impl IntoView {
                     }
                     prop:disabled=move || is_submitting.get()
                 />
-                <span class="form-help">"e.g., work, personal, urgent"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"e.g., work, personal, urgent"</span>
             </div>
 
-            <div class="form-group">
-                <label class="form-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
+                        class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-2 focus:ring-indigo-600 disabled:cursor-not-allowed"
                         prop:checked=move || use_custom_config.get()
                         on:change=move |ev| {
                             set_use_custom_config.set(event_target_checked(&ev));
                         }
                         prop:disabled=move || is_submitting.get()
                     />
-                    <span>"Use custom timer settings for this task"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Use custom timer settings for this task"</span>
                 </label>
             </div>
 
             <Show when=move || use_custom_config.get()>
-                <div class="custom-timer-settings">
-                    <h5 class="settings-subtitle">"Custom Timer Settings"</h5>
+                <div class="bg-slate-200 rounded-lg p-6 mb-6">
+                    <h5 class="text-lg font-semibold text-slate-800 mb-4">"Custom Timer Settings"</h5>
 
-                    <div class="form-group">
-                        <label class="form-label">"Work Duration (minutes)"</label>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">"Work Duration (minutes)"</label>
                         <input
                             type="number"
-                            class="form-input"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                             min="1"
                             max="90"
                             prop:value=move || work_duration.get()
@@ -365,11 +369,11 @@ pub fn TaskFormPage() -> impl IntoView {
                         />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">"Short Break (minutes)"</label>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">"Short Break (minutes)"</label>
                         <input
                             type="number"
-                            class="form-input"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                             min="1"
                             max="30"
                             prop:value=move || short_break.get()
@@ -381,11 +385,11 @@ pub fn TaskFormPage() -> impl IntoView {
                         />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">"Long Break (minutes)"</label>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">"Long Break (minutes)"</label>
                         <input
                             type="number"
-                            class="form-input"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                             min="5"
                             max="60"
                             prop:value=move || long_break.get()
@@ -397,11 +401,11 @@ pub fn TaskFormPage() -> impl IntoView {
                         />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">"Sessions Until Long Break"</label>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">"Sessions Until Long Break"</label>
                         <input
                             type="number"
-                            class="form-input"
+                            class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                             min="2"
                             max="10"
                             prop:value=move || sessions_until_long_break.get()
@@ -415,9 +419,9 @@ pub fn TaskFormPage() -> impl IntoView {
                 </div>
             </Show>
 
-            <div class="form-actions">
+            <div class="flex gap-4">
                 <button
-                    class="btn btn-primary"
+                    class="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-indigo-600"
                     prop:disabled=move || task_name.get().trim().is_empty() || is_submitting.get()
                     on:click={
                         let submit_task = submit_task.clone();
@@ -434,7 +438,7 @@ pub fn TaskFormPage() -> impl IntoView {
                 </button>
 
                 <button
-                    class="btn btn-secondary"
+                    class="flex-1 px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-slate-600"
                     on:click={
                         let navigate = navigate.clone();
                         move |_| navigate("/tasks", Default::default())

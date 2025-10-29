@@ -79,70 +79,90 @@ pub fn SettingsPage() -> impl IntoView {
     };
 
     view! {
-        <div class="settings-page-wrapper">
-        <div class="settings-container">
-            <div class="settings-header">
-                <h2 class="settings-title">"Global Settings"</h2>
-                <div class="settings-actions">
-                    <button class="btn btn-secondary" on:click=handle_export>"Export"</button>
-                    <button class="btn btn-secondary" on:click=handle_import>"Import"</button>
-                    <button class="btn btn-secondary" on:click=handle_reset>"Reset to Defaults"</button>
+        <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-md">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-6 border-b border-slate-200 gap-4">
+                <h2 class="text-3xl font-bold text-slate-800">"Global Settings"</h2>
+                <div class="flex flex-wrap gap-3">
+                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_export>"Export"</button>
+                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_import>"Import"</button>
+                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_reset>"Reset to Defaults"</button>
                 </div>
             </div>
 
             <Show when=move || !validation_errors.get().is_empty()>
-                <div class="settings-errors">
+                <div class="mx-6 mt-6">
                     <For
                         each=move || validation_errors.get()
                         key=|error| error.clone()
                         children=move |error| view! {
-                            <div class="error-message">{error}</div>
+                            <div class="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-md mb-2">{error}</div>
                         }
                     />
                 </div>
             </Show>
 
             <Show when=move || success_message.get().is_some()>
-                <div class="success-message">
+                <div class="mx-6 mt-6 bg-emerald-500/10 border border-emerald-500 text-emerald-500 px-4 py-3 rounded-md">
                     {move || success_message.get().unwrap_or_default()}
                 </div>
             </Show>
 
-            <div class="settings-tabs">
+            <div class="flex border-b border-slate-200 px-6 mt-6 overflow-x-auto">
                 <button
-                    class=move || if active_tab.get() == "timer" { "tab-button active" } else { "tab-button" }
+                    class=move || if active_tab.get() == "timer" {
+                        "px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap"
+                    } else {
+                        "px-6 py-3 font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-all whitespace-nowrap"
+                    }
                     on:click=move |_| set_active_tab.set("timer")
                 >
                     "Timer"
                 </button>
                 <button
-                    class=move || if active_tab.get() == "notifications" { "tab-button active" } else { "tab-button" }
+                    class=move || if active_tab.get() == "notifications" {
+                        "px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap"
+                    } else {
+                        "px-6 py-3 font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-all whitespace-nowrap"
+                    }
                     on:click=move |_| set_active_tab.set("notifications")
                 >
                     "Notifications"
                 </button>
                 <button
-                    class=move || if active_tab.get() == "audio" { "tab-button active" } else { "tab-button" }
+                    class=move || if active_tab.get() == "audio" {
+                        "px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap"
+                    } else {
+                        "px-6 py-3 font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-all whitespace-nowrap"
+                    }
                     on:click=move |_| set_active_tab.set("audio")
                 >
                     "Audio"
                 </button>
                 // Appearance tab disabled - using light theme only
                 <button
-                    class=move || if active_tab.get() == "general" { "tab-button active" } else { "tab-button" }
+                    class=move || if active_tab.get() == "general" {
+                        "px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap"
+                    } else {
+                        "px-6 py-3 font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-all whitespace-nowrap"
+                    }
                     on:click=move |_| set_active_tab.set("general")
                 >
                     "General"
                 </button>
                 <button
-                    class=move || if active_tab.get() == "storage" { "tab-button active" } else { "tab-button" }
+                    class=move || if active_tab.get() == "storage" {
+                        "px-6 py-3 font-medium border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap"
+                    } else {
+                        "px-6 py-3 font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition-all whitespace-nowrap"
+                    }
                     on:click=move |_| set_active_tab.set("storage")
                 >
                     "Storage"
                 </button>
             </div>
 
-            <div class="settings-content">
+            <div class="p-6">
                 {move || {
                     let config_opt = vm_stored.with_value(|v| v.config.get());
                     match config_opt {
@@ -159,19 +179,19 @@ pub fn SettingsPage() -> impl IntoView {
                         },
                         None => {
                             view! {
-                                <div class="settings-loading">"Loading settings..."</div>
+                                <div class="text-center py-12 text-slate-600">"Loading settings..."</div>
                             }.into_any()
                         }
                     }
                 }}
             </div>
 
-            <div class="settings-footer">
-                <button class="btn btn-cancel" on:click=move |_| {
+            <div class="flex gap-4 p-6 border-t border-slate-200">
+                <button class="flex-1 px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-md shadow-sm hover:bg-slate-300 hover:shadow-md transition-all duration-200" on:click=move |_| {
                     vm_stored.with_value(|v| v.refetch_config());
                     set_success_message.set(Some("Changes discarded".to_string()));
                 }>"Cancel"</button>
-                <button class="btn btn-primary" on:click=handle_save>"Save All Settings"</button>
+                <button class="flex-1 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-200" on:click=handle_save>"Save All Settings"</button>
             </div>
         </div>
         </div>
@@ -198,14 +218,14 @@ fn TimerSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Timer Settings"</h3>
+        <div>
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"Timer Settings"</h3>
 
-            <div class="setting-group">
-                <label class="setting-label">"Work Duration (minutes)"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Work Duration (minutes)"</label>
                 <input
                     type="number"
-                    class="setting-input"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     value=work_duration
                     min="1"
                     max="90"
@@ -219,14 +239,14 @@ fn TimerSettings(
                         });
                     }
                 />
-                <span class="setting-help">"Duration of work sessions (1-90 minutes)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Duration of work sessions (1-90 minutes)"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Short Break Duration (minutes)"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Short Break Duration (minutes)"</label>
                 <input
                     type="number"
-                    class="setting-input"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     value=short_break_duration
                     min="1"
                     max="30"
@@ -240,14 +260,14 @@ fn TimerSettings(
                         });
                     }
                 />
-                <span class="setting-help">"Duration of short breaks (1-30 minutes)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Duration of short breaks (1-30 minutes)"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Long Break Duration (minutes)"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Long Break Duration (minutes)"</label>
                 <input
                     type="number"
-                    class="setting-input"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     value=long_break_duration
                     min="5"
                     max="60"
@@ -261,14 +281,14 @@ fn TimerSettings(
                         });
                     }
                 />
-                <span class="setting-help">"Duration of long breaks (5-60 minutes)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Duration of long breaks (5-60 minutes)"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Sessions Until Long Break"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Sessions Until Long Break"</label>
                 <input
                     type="number"
-                    class="setting-input"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     value=sessions_until_long_break
                     min="2"
                     max="10"
@@ -282,7 +302,7 @@ fn TimerSettings(
                         });
                     }
                 />
-                <span class="setting-help">"Number of work sessions before a long break (2-10)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Number of work sessions before a long break (2-10)"</span>
             </div>
         </div>
     }
@@ -325,13 +345,14 @@ fn NotificationSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Notification Settings"</h3>
-            
-            <div class="setting-group">
-                <label class="setting-checkbox">
+        <div>
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"Notification Settings"</h3>
+
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
+                        class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-2 focus:ring-indigo-600"
                         checked=enable_desktop
                         on:change=move |ev| {
                             let checked = event_target_checked(&ev);
@@ -343,13 +364,13 @@ fn NotificationSettings(
                             });
                         }
                     />
-                    <span>"Enable Desktop Notifications"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Enable Desktop Notifications"</span>
                 </label>
-                <span class="setting-help">"Show system notifications for timer events"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Show system notifications for timer events"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=enable_sound
@@ -363,13 +384,13 @@ fn NotificationSettings(
                             });
                         }
                     />
-                    <span>"Enable Sound Notifications"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Enable Sound Notifications"</span>
                 </label>
-                <span class="setting-help">"Play sounds for timer events"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Play sounds for timer events"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=show_phase_transitions
@@ -383,13 +404,13 @@ fn NotificationSettings(
                             });
                         }
                     />
-                    <span>"Show Phase Transition Notifications"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Show Phase Transition Notifications"</span>
                 </label>
-                <span class="setting-help">"Notify when switching between work and break phases"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Notify when switching between work and break phases"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=show_task_completions
@@ -403,16 +424,16 @@ fn NotificationSettings(
                             });
                         }
                     />
-                    <span>"Show Task Completion Notifications"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Show Task Completion Notifications"</span>
                 </label>
-                <span class="setting-help">"Notify when tasks are completed"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Notify when tasks are completed"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Auto-Dismiss Delay (seconds)"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Auto-Dismiss Delay (seconds)"</label>
                 <input
                     type="number"
-                    class="setting-input"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     value=auto_dismiss_delay
                     min="1"
                     max="300"
@@ -426,13 +447,13 @@ fn NotificationSettings(
                         });
                     }
                 />
-                <span class="setting-help">"Time before notifications automatically close"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Time before notifications automatically close"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Notification Position"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Notification Position"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let position = match value.as_str() {
@@ -457,7 +478,7 @@ fn NotificationSettings(
                     <option value="BottomLeft" selected=is_position_bottom_left>"Bottom Left"</option>
                     <option value="Center" selected=is_position_center>"Center"</option>
                 </select>
-                <span class="setting-help">"Where notifications appear on screen"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Where notifications appear on screen"</span>
             </div>
         </div>
     }
@@ -489,11 +510,11 @@ fn AudioSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Audio Settings"</h3>
+        <div class="">
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"Audio Settings"</h3>
             
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=audio_enabled
@@ -507,17 +528,17 @@ fn AudioSettings(
                             });
                         }
                     />
-                    <span>"Enable Audio"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Enable Audio"</span>
                 </label>
-                <span class="setting-help">"Master audio toggle"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Master audio toggle"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Volume"</label>
-                <div class="volume-control">
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Volume"</label>
+                <div class="flex items-center gap-4">
                     <input
                         type="range"
-                        class="setting-slider"
+                        class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                         value=volume
                         min="0"
                         max="100"
@@ -531,13 +552,13 @@ fn AudioSettings(
                             });
                         }
                     />
-                    <span class="volume-value">{volume}"%"</span>
+                    <span class="text-sm font-medium text-slate-700 min-w-[3rem] text-right">{volume}"%"</span>
                 </div>
-                <span class="setting-help">"Master volume for all sounds"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Master volume for all sounds"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=enable_background
@@ -551,15 +572,15 @@ fn AudioSettings(
                             });
                         }
                     />
-                    <span>"Enable Background Audio"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Enable Background Audio"</span>
                 </label>
-                <span class="setting-help">"Play ambient sounds during work sessions"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Play ambient sounds during work sessions"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Work Notification Sound"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Work Notification Sound"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let sound = if value.is_empty() { None } else { Some(value) };
@@ -576,16 +597,16 @@ fn AudioSettings(
                     <option value="chime.wav">"Chime"</option>
                     <option value="gong.wav">"Gong"</option>
                 </select>
-                <button class="btn btn-small" on:click=move |_| {
+                <button class="ml-2 px-3 py-1 bg-slate-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-slate-700 transition-all duration-200" on:click=move |_| {
                     vm.with_value(|v| v.test_audio_preview("work"));
                 }>"Test"</button>
-                <span class="setting-help">"Sound played when work session ends"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Sound played when work session ends"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Break Notification Sound"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Break Notification Sound"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let sound = if value.is_empty() { None } else { Some(value) };
@@ -602,16 +623,16 @@ fn AudioSettings(
                     <option value="chime.wav">"Chime"</option>
                     <option value="gong.wav">"Gong"</option>
                 </select>
-                <button class="btn btn-small" on:click=move |_| {
+                <button class="ml-2 px-3 py-1 bg-slate-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-slate-700 transition-all duration-200" on:click=move |_| {
                     vm.with_value(|v| v.test_audio_preview("break"));
                 }>"Test"</button>
-                <span class="setting-help">"Sound played when break session ends"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Sound played when break session ends"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">"Background Sound"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Background Sound"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let sound = if value.is_empty() { None } else { Some(value) };
@@ -629,10 +650,10 @@ fn AudioSettings(
                     <option value="ocean.wav">"Ocean"</option>
                     <option value="whitenoise.wav">"White Noise"</option>
                 </select>
-                <button class="btn btn-small" on:click=move |_| {
+                <button class="ml-2 px-3 py-1 bg-slate-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-slate-700 transition-all duration-200" on:click=move |_| {
                     vm.with_value(|v| v.test_audio_preview("background"));
                 }>"Test"</button>
-                <span class="setting-help">"Ambient sound during work sessions"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Ambient sound during work sessions"</span>
             </div>
         </div>
     }
@@ -669,13 +690,13 @@ fn AppearanceSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Appearance Settings"</h3>
+        <div class="">
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"Appearance Settings"</h3>
             
-            <div class="setting-group">
-                <label class="setting-label">"Theme"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Theme"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let theme = match value.as_str() {
@@ -695,11 +716,11 @@ fn AppearanceSettings(
                     <option value="Light" selected=is_theme_light>"Light"</option>
                     <option value="Dark" selected=is_theme_dark>"Dark"</option>
                 </select>
-                <span class="setting-help">"Application color scheme"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Application color scheme"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=show_seconds
@@ -713,13 +734,13 @@ fn AppearanceSettings(
                             });
                         }
                     />
-                    <span>"Show Seconds in Timer"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Show Seconds in Timer"</span>
                 </label>
-                <span class="setting-help">"Display seconds in the timer countdown"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Display seconds in the timer countdown"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=always_on_top
@@ -733,13 +754,13 @@ fn AppearanceSettings(
                             });
                         }
                     />
-                    <span>"Always On Top"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Always On Top"</span>
                 </label>
-                <span class="setting-help">"Keep window above other applications"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Keep window above other applications"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=compact_mode
@@ -753,13 +774,13 @@ fn AppearanceSettings(
                             });
                         }
                     />
-                    <span>"Compact Mode"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Compact Mode"</span>
                 </label>
-                <span class="setting-help">"Use minimal interface layout"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Use minimal interface layout"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=show_sidebar
@@ -773,13 +794,13 @@ fn AppearanceSettings(
                             });
                         }
                     />
-                    <span>"Show Task List Sidebar"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Show Task List Sidebar"</span>
                 </label>
-                <span class="setting-help">"Display task list in sidebar"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Display task list in sidebar"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=animate_progress
@@ -793,9 +814,9 @@ fn AppearanceSettings(
                             });
                         }
                     />
-                    <span>"Animate Progress"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Animate Progress"</span>
                 </label>
-                <span class="setting-help">"Show smooth animations for progress indicators"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Show smooth animations for progress indicators"</span>
             </div>
         </div>
     }
@@ -829,13 +850,13 @@ fn GeneralSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"General Settings"</h3>
+        <div class="">
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"General Settings"</h3>
             
-            <div class="setting-group">
-                <label class="setting-label">"Task Cycling Behavior"</label>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Task Cycling Behavior"</label>
                 <select
-                    class="setting-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
                     on:change=move |ev| {
                         let value = event_target_value(&ev);
                         let behavior = match value.as_str() {
@@ -855,11 +876,11 @@ fn GeneralSettings(
                     <option value="AutoAdvance" selected=is_cycling_auto_advance>"Auto Advance"</option>
                     <option value="RoundRobin" selected=is_cycling_round_robin>"Round Robin"</option>
                 </select>
-                <span class="setting-help">"How tasks cycle after completion"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"How tasks cycle after completion"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=auto_start_breaks
@@ -873,13 +894,13 @@ fn GeneralSettings(
                             });
                         }
                     />
-                    <span>"Auto-Start Breaks"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Auto-Start Breaks"</span>
                 </label>
-                <span class="setting-help">"Automatically start break sessions after work"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Automatically start break sessions after work"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=auto_start_work
@@ -893,13 +914,13 @@ fn GeneralSettings(
                             });
                         }
                     />
-                    <span>"Auto-Start Work After Break"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Auto-Start Work After Break"</span>
                 </label>
-                <span class="setting-help">"Automatically start work sessions after break"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Automatically start work sessions after break"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=minimize_to_tray
@@ -913,13 +934,13 @@ fn GeneralSettings(
                             });
                         }
                     />
-                    <span>"Minimize to System Tray"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Minimize to System Tray"</span>
                 </label>
-                <span class="setting-help">"Hide to system tray when minimized"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Hide to system tray when minimized"</span>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-checkbox">
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
                     <input
                         type="checkbox"
                         checked=start_minimized
@@ -933,9 +954,9 @@ fn GeneralSettings(
                             });
                         }
                     />
-                    <span>"Start Minimized"</span>
+                    <span class="ml-2 text-sm text-slate-700">"Start Minimized"</span>
                 </label>
-                <span class="setting-help">"Launch application minimized"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Launch application minimized"</span>
             </div>
         </div>
     }
@@ -956,15 +977,15 @@ fn StorageSettings(
     });
 
     view! {
-        <div class="settings-section">
-            <h3 class="section-title">"Storage Settings"</h3>
+        <div class="">
+            <h3 class="text-xl font-semibold text-slate-800 mb-6">"Storage Settings"</h3>
             
-            <div class="setting-group">
-                <label class="setting-label">"Data Directory"</label>
-                <div class="path-input-group">
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">"Data Directory"</label>
+                <div class="flex gap-2">
                     <input
                         type="text"
-                        class="setting-input path-input"
+                        class="flex-1 px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                         value=move || storage_path.get()
                         on:input=move |ev| {
                             let value = event_target_value(&ev);
@@ -972,7 +993,7 @@ fn StorageSettings(
                             set_validation_error.set(None);
                         }
                     />
-                    <button class="btn btn-secondary" on:click=move |_| {
+                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=move |_| {
                         vm.with_value(|v| {
                             if let Some(path) = v.browse_for_directory() {
                                 set_storage_path.set(path);
@@ -981,16 +1002,16 @@ fn StorageSettings(
                         });
                     }>"Browse"</button>
                 </div>
-                <span class="setting-help">"Location where all application data is stored"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Location where all application data is stored"</span>
                 <Show when=move || validation_error.get().is_some()>
-                    <div class="validation-error">
+                    <div class="mt-2 text-sm text-red-500 bg-red-500/10 border border-red-500 rounded px-3 py-2">
                         {move || validation_error.get().unwrap_or_default()}
                     </div>
                 </Show>
             </div>
 
-            <div class="setting-group">
-                <button class="btn btn-secondary" on:click=move |_| {
+            <div class="mb-6">
+                <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=move |_| {
                     let path = storage_path.get();
                     vm.with_value(|v| {
                         match v.validate_storage_path(&path) {
@@ -1004,23 +1025,23 @@ fn StorageSettings(
                         }
                     });
                 }>"Apply Storage Path"</button>
-                <span class="setting-help">"Change storage location (requires restart)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Change storage location (requires restart)"</span>
             </div>
 
-            <div class="setting-group">
-                <button class="btn btn-secondary" on:click=move |_| {
+            <div class="mb-6">
+                <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=move |_| {
                     vm.with_value(|v| v.open_data_directory());
                 }>"Open Data Directory"</button>
-                <span class="setting-help">"Browse current data directory in file manager"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Browse current data directory in file manager"</span>
             </div>
 
-            <div class="setting-group">
-                <button class="btn btn-warning" on:click=move |_| {
+            <div class="mb-6">
+                <button class="px-4 py-2 bg-amber-500 text-white font-medium rounded-md shadow-sm hover:bg-amber-500/90 hover:shadow-md transition-all duration-200" on:click=move |_| {
                     if leptos::prelude::window().confirm_with_message("This will delete all application data. Are you sure?").unwrap_or(false) {
                         vm.with_value(|v| v.clear_all_data());
                     }
                 }>"Clear All Data"</button>
-                <span class="setting-help">"Delete all tasks, settings, and history"</span>
+                <span class="text-xs text-slate-600 mt-1 block">"Delete all tasks, settings, and history"</span>
             </div>
         </div>
     }

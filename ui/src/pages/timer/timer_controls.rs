@@ -31,40 +31,40 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
     let is_task_completed = move || vm.with_value(|v| v.is_task_completed());
 
     view! {
-        <div class="timer-controls">
+        <>
             <button
-                class="btn btn-primary"
+                class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-indigo-600"
                 on:click=start_pause_action
                 disabled= move || !can_toggle_start_pause() || is_task_completed()
             >
                 {move || vm.with_value(|v| v.get_start_pause_button_text())}
             </button>
             <button
-                class="btn btn-secondary"
+                class="px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200"
                 on:click=reset_action
             >
                 "Reset Timer"
             </button>
             <button
-                class="btn btn-secondary"
+                class="px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200"
                 on:click=reset_task_action
             >
                 "Reset Task"
             </button>
             <button
-                class="btn btn-secondary"
+                class="px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-slate-600"
                 on:click=skip_action
                 disabled=move || !can_skip()
             >
                 "Skip"
             </button>
             <button
-                class="btn btn-secondary"
+                class="px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-slate-600"
                 on:click=complete_task_action
                 disabled=move || !can_skip()
             >
                 "Complete Task"
             </button>
-        </div>
+        </>
     }
 }

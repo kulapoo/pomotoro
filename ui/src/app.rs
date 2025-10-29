@@ -20,7 +20,7 @@ fn AppLayout() -> impl IntoView {
         <>
             <Sidebar />
 
-            <main class="main-content" id="mainContent">
+            <main class="ml-[250px] p-8 min-h-screen bg-slate-50 transition-all duration-200" id="mainContent">
                 <Routes fallback=|| view! { <NotFound /> }>
                     // Root redirects to timer
                     <Route path=path!("/") view=|| view! { <TimerPage /> } />
@@ -42,9 +42,9 @@ fn AppLayout() -> impl IntoView {
 #[component]
 fn NotFound() -> impl IntoView {
     view! {
-        <div class="not-found">
-            <h1>"404"</h1>
-            <p>"Page not found"</p>
+        <div class="flex flex-col items-center justify-center min-h-[50vh] text-center">
+            <h1 class="text-6xl font-bold text-slate-800 mb-4">"404"</h1>
+            <p class="text-xl text-slate-600">"Page not found"</p>
         </div>
     }
 }

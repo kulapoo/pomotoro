@@ -10,9 +10,9 @@ pub fn CircularProgress(
 
     view! {
         <div class="relative">
-            <svg class="progress-ring" width="200" height="200">
+            <svg class="transform -rotate-90 transition-transform duration-200" width="200" height="200">
                 <circle
-                    class="stroke-gray-200 dark:stroke-gray-600"
+                    class="stroke-gray-200"
                     stroke-width="8"
                     fill="transparent"
                     r="90"
@@ -20,7 +20,7 @@ pub fn CircularProgress(
                     cy="100"
                 />
                 <circle
-                    class="progress-ring-circle"
+                    class="transition-all duration-200 ease-linear"
                     stroke={move || match phase.get() {
                         Phase::Work => "#ef4444",
                         Phase::ShortBreak => "#22c55e",
@@ -36,6 +36,7 @@ pub fn CircularProgress(
                         let offset = stroke_dasharray * (1.0 - progress.get() / 100.0);
                         format!("{offset}")
                     }}
+                    stroke-linecap="round"
                 />
             </svg>
         </div>

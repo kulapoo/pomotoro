@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.jpt.pomotoro",
   "build": {
-    "beforeDevCommand": "cd infra && trunk serve --config Trunk.toml",
+    "beforeDevCommand": "trunk serve",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "cd infra && trunk build --config Trunk.toml",
+    "beforeBuildCommand": "trunk build",
     "frontendDist": "../dist"
   },
   "app": {

@@ -15,7 +15,12 @@ where
     let task_id = task.id;
     let task_for_edit = task.clone();
     let task_status_for_button = task.status.clone();
-    let task_status_for_disabled = task.status.clone();
+    let task_status_for_disabled1 = task.status.clone();
+    let task_status_for_disabled2 = task.status.clone();
+    let task_status_for_disabled3 = task.status.clone();
+    let task_status_for_disabled4 = task.status.clone();
+    let task_status_for_disabled5 = task.status.clone();
+    let task_status_for_disabled6 = task.status.clone();
     let task_status_for_onclick = task.status.clone();
 
     let progress_percentage = if task.max_sessions > 0 {
@@ -25,28 +30,28 @@ where
     };
 
     let task_classes = match (&task.status, is_active) {
-        (_, true) => "task-item active-task",
-        (TaskStatus::Completed, _) => "task-item completed-task",
-        (TaskStatus::Paused, _) => "task-item paused-task",
-        (TaskStatus::Queued, _) => "task-item queued-task",
-        _ => "task-item"
+        (_, true) => "bg-indigo-600/5 border-l-4 border-indigo-600 shadow-md",
+        (TaskStatus::Completed, _) => "bg-slate-50 opacity-75",
+        (TaskStatus::Paused, _) => "bg-amber-500/5 border-l-4 border-amber-500",
+        (TaskStatus::Queued, _) => "bg-white",
+        _ => "bg-white"
     };
 
     web_sys::console::log_1(&format!("Task {:?}", task.status).into());
 
     view! {
-        <div class=task_classes>
-            <div class="task-content" on:click=move |_| {
+        <div class={format!("rounded-lg shadow-sm border border-slate-200 transition-all duration-200 hover:shadow-md {}", task_classes)}>
+            <div class="p-4 cursor-pointer" on:click=move |_| {
                 vm.with_value(|v| v.switch_active_task(task_id));
             }>
-                <div class="task-header">
-                    <h3>{task.name.clone()}</h3>
-                    <span class={format!("task-status status-{}",
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-slate-800">{task.name.clone()}</h3>
+                    <span class={format!("px-3 py-1 text-xs font-medium rounded-full {}",
                         match &task.status {
-                            TaskStatus::Active => "active",
-                            TaskStatus::Completed => "completed",
-                            TaskStatus::Paused => "paused",
-                            TaskStatus::Queued => "queued",
+                            TaskStatus::Active => "bg-indigo-600 text-white",
+                            TaskStatus::Completed => "bg-emerald-500 text-white",
+                            TaskStatus::Paused => "bg-amber-500 text-white",
+                            TaskStatus::Queued => "bg-slate-600 text-white",
                         }
                     )}>
                         {match &task.status {
@@ -61,7 +66,7 @@ where
                 {task.description.clone().map(|desc| {
                     if !desc.is_empty() {
                         view! {
-                            <p class="task-description">{desc}</p>
+                            <p class="text-slate-600 text-sm mb-3">{desc}</p>
                         }.into_any()
                     } else {
                         ().into_any()
@@ -70,10 +75,10 @@ where
 
                 {if !task.tags.is_empty() {
                     view! {
-                        <div class="task-tags">
+                        <div class="flex flex-wrap gap-2 mb-3">
                             {task.tags.iter().map(|tag| {
                                 view! {
-                                    <span class="task-tag">{tag.clone()}</span>
+                                    <span class="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded-md">{tag.clone()}</span>
                                 }
                             }).collect_view()}
                         </div>
@@ -82,21 +87,26 @@ where
                     ().into_any()
                 }}
 
-                <div class="task-meta">
-                    <div class="pomodoro-progress">
-                        <span class="progress-text">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        <span class="text-sm text-slate-600 mb-2 block">
                             {format!("{} of {} pomodoros completed", task.current_sessions, task.max_sessions)}
                         </span>
-                        <div class="progress-bar">
+                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                             <div
-                                class="progress-fill"
+                                class="h-full bg-indigo-600 rounded-full transition-all duration-300"
                                 style=format!("width: {}%", progress_percentage)
                             ></div>
                         </div>
                     </div>
                     <button
-                        class="btn-select"
-                        disabled=move || is_active || task_status_for_disabled == TaskStatus::Completed
+                        class="px-4 py-2 font-medium rounded-md transition-all duration-200 disabled:cursor-not-allowed"
+                        class=("bg-indigo-600", move || !is_active && task_status_for_disabled1 != TaskStatus::Completed)
+                        class=("text-white", move || !is_active && task_status_for_disabled2 != TaskStatus::Completed)
+                        class=("hover:bg-indigo-700", move || !is_active && task_status_for_disabled3 != TaskStatus::Completed)
+                        class=("bg-slate-300", move || is_active || task_status_for_disabled4 == TaskStatus::Completed)
+                        class=("text-slate-600", move || is_active || task_status_for_disabled5 == TaskStatus::Completed)
+                        disabled=move || is_active || task_status_for_disabled6 == TaskStatus::Completed
                         on:click=move |ev| {
                             ev.stop_propagation();
                             if !is_active && task_status_for_onclick != TaskStatus::Completed {
@@ -115,11 +125,11 @@ where
                 </div>
             </div>
 
-            <div class="task-actions">
+            <div class="flex gap-2 px-4 pb-4 border-t border-slate-200 pt-3">
                 {if task.status == TaskStatus::Completed {
                     view! {
                         <button
-                            class="btn-icon btn-reset"
+                            class="p-2 text-2xl hover:bg-slate-100 rounded-md transition-all duration-200"
                             title="Reset to Queued"
                             on:click=move |ev| {
                                 ev.stop_propagation();
@@ -140,7 +150,7 @@ where
                     ().into_any()
                 }}
                 <button
-                    class="btn-icon btn-edit"
+                    class="p-2 text-2xl hover:bg-slate-100 rounded-md transition-all duration-200"
                     title="Edit Task"
                     on:click={
                         let on_edit = on_edit.clone();
@@ -153,7 +163,7 @@ where
                     "✏️"
                 </button>
                 <button
-                    class="btn-icon btn-delete"
+                    class="p-2 text-2xl hover:bg-slate-100 rounded-md transition-all duration-200"
                     title="Delete Task"
                     on:click=move |ev| {
                         ev.stop_propagation();

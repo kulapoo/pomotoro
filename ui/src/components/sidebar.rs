@@ -29,28 +29,79 @@ pub fn Sidebar() -> impl IntoView {
     };
 
     view! {
-        <nav class={move || format!("sidebar {}", if collapsed.get() { "collapsed" } else { "" })} id="sidebar">
-            <div class="sidebar-header">
-                <span class="sidebar-title">"Pomotoro"</span>
-                <button class="toggle-btn" on:click=toggle_sidebar>"☰"</button>
+        <nav
+            class={move || format!(
+                "fixed left-0 top-0 h-screen bg-white/95 backdrop-blur-[10px] border-r border-slate-200 shadow-md transition-all duration-200 ease-in-out z-50 {}",
+                if collapsed.get() { "w-[60px]" } else { "w-[250px]" }
+            )}
+            id="sidebar"
+        >
+            <div class="flex items-center justify-between p-md border-b border-slate-200 h-16">
+                <span class={move || format!(
+                    "text-xl font-bold text-indigo-600 transition-opacity duration-200 {}",
+                    if collapsed.get() { "opacity-0 w-0" } else { "opacity-100" }
+                )}>"Pomotoro"</span>
+                <button
+                    class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-all duration-200"
+                    on:click=toggle_sidebar
+                >"☰"</button>
             </div>
-            <ul class="nav-menu">
-                <li class={move || format!("nav-item {}", if is_active("/timer") { "active" } else { "" })}>
-                    <A href="/timer" attr:class="nav-link">
-                        <span class="nav-icon">"⏱️"</span>
-                        <span class="nav-text">"Timer"</span>
+            <ul class="flex flex-col py-md">
+                <li class={move || format!(
+                    "mb-xs {}",
+                    if is_active("/timer") { "" } else { "" }
+                )}>
+                    <A href="/timer" attr:class={move || format!(
+                        "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
+                        if is_active("/timer") {
+                            "bg-indigo-600/10 text-indigo-600 border-l-4 border-indigo-600"
+                        } else {
+                            "text-slate-700 hover:bg-slate-100 hover:text-indigo-600"
+                        }
+                    )}>
+                        <span class="text-2xl w-8 flex-shrink-0">"⏱️"</span>
+                        <span class={move || format!(
+                            "ml-3 font-medium transition-opacity duration-200 whitespace-nowrap {}",
+                            if collapsed.get() { "opacity-0 w-0 overflow-hidden" } else { "opacity-100" }
+                        )}>"Timer"</span>
                     </A>
                 </li>
-                <li class={move || format!("nav-item {}", if is_active("/tasks") { "active" } else { "" })}>
-                    <A href="/tasks" attr:class="nav-link">
-                        <span class="nav-icon">"📝"</span>
-                        <span class="nav-text">"Tasks"</span>
+                <li class={move || format!(
+                    "mb-xs {}",
+                    if is_active("/tasks") { "" } else { "" }
+                )}>
+                    <A href="/tasks" attr:class={move || format!(
+                        "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
+                        if is_active("/tasks") {
+                            "bg-indigo-600/10 text-indigo-600 border-l-4 border-indigo-600"
+                        } else {
+                            "text-slate-700 hover:bg-slate-100 hover:text-indigo-600"
+                        }
+                    )}>
+                        <span class="text-2xl w-8 flex-shrink-0">"📝"</span>
+                        <span class={move || format!(
+                            "ml-3 font-medium transition-opacity duration-200 whitespace-nowrap {}",
+                            if collapsed.get() { "opacity-0 w-0 overflow-hidden" } else { "opacity-100" }
+                        )}>"Tasks"</span>
                     </A>
                 </li>
-                <li class={move || format!("nav-item {}", if is_active("/settings") { "active" } else { "" })}>
-                    <A href="/settings" attr:class="nav-link">
-                        <span class="nav-icon">"⚙️"</span>
-                        <span class="nav-text">"Settings"</span>
+                <li class={move || format!(
+                    "mb-xs {}",
+                    if is_active("/settings") { "" } else { "" }
+                )}>
+                    <A href="/settings" attr:class={move || format!(
+                        "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
+                        if is_active("/settings") {
+                            "bg-indigo-600/10 text-indigo-600 border-l-4 border-indigo-600"
+                        } else {
+                            "text-slate-700 hover:bg-slate-100 hover:text-indigo-600"
+                        }
+                    )}>
+                        <span class="text-2xl w-8 flex-shrink-0">"⚙️"</span>
+                        <span class={move || format!(
+                            "ml-3 font-medium transition-opacity duration-200 whitespace-nowrap {}",
+                            if collapsed.get() { "opacity-0 w-0 overflow-hidden" } else { "opacity-100" }
+                        )}>"Settings"</span>
                     </A>
                 </li>
             </ul>

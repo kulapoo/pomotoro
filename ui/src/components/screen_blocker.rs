@@ -10,14 +10,14 @@ pub fn ScreenBlocker(
     view! {
         <Show when=move || is_blocking.get()>
             <div class="fixed top-0 left-0 w-screen h-screen bg-black/95 z-[9999] flex items-center justify-center backdrop-blur-[10px]">
-                <div class="text-center text-gray-50 max-w-2xl p-10 md:p-10 p-5">
+                <div class="text-center text-slate-50 max-w-2xl p-10 md:p-10 p-5">
                     <div class="text-5xl md:text-5xl text-3xl font-bold mb-6 gradient-text">
                         {move || blocking_message.get()}
                     </div>
 
                     <div class="mb-8">
-                        <p class="text-xl md:text-xl text-lg mb-4 text-gray-300">"You're in a focused work session. Stay concentrated!"</p>
-                        <p class="text-base md:text-base text-sm text-gray-400 italic">"Press ESC or click below if you need to temporarily disable blocking."</p>
+                        <p class="text-xl md:text-xl text-lg mb-4 text-slate-300">"You're in a focused work session. Stay concentrated!"</p>
+                        <p class="text-base md:text-base text-sm text-slate-400 italic">"Press ESC or click below if you need to temporarily disable blocking."</p>
                     </div>
 
                     <button

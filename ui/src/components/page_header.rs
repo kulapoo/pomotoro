@@ -8,10 +8,10 @@ pub fn PageHeader(
 ) -> impl IntoView {
     view! {
         <header class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">{title}</h1>
+            <h1 class="text-2xl font-bold text-slate-800">{title}</h1>
             <Show when=move || on_settings_click.is_some()>
                 <button
-                    class="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                    class="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                     on:click=move |_| {
                         if let Some(callback) = on_settings_click {
                             callback.run(());

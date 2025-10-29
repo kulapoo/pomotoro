@@ -38,31 +38,33 @@ pub fn ErrorToast(
                 .get()
                 .map(|error| {
                     view! {
-                        <div class="error-toast" role="alert">
-                            <div class="error-toast-content">
-                                <div class="error-toast-header">
-                                    <span class="error-toast-icon">{"⚠️"}</span>
-                                    <h3 class="error-toast-title">"Error"</h3>
+                        <div class="fixed top-4 right-4 z-50 max-w-md animate-in slide-in-from-right" role="alert">
+                            <div class="bg-white rounded-lg shadow-xl border-l-4 border-red-500 p-4">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-2xl">{"⚠️"}</span>
+                                        <h3 class="text-lg font-semibold text-slate-800">"Error"</h3>
+                                    </div>
                                     <button
-                                        class="error-toast-close"
+                                        class="text-slate-400 hover:text-slate-600 transition-colors p-1"
                                         on:click=move |_| set_error.set(None)
                                         aria-label="Close error notification"
                                     >
-                                        "✕"
+                                        <span class="text-xl">"✕"</span>
                                     </button>
                                 </div>
 
-                                <div class="error-toast-body">
-                                    <p class="error-toast-message">{error.message.clone()}</p>
+                                <div>
+                                    <p class="text-slate-700 mb-3">{error.message.clone()}</p>
 
                                     {error
                                         .context
                                         .as_ref()
                                         .map(|ctx| {
                                             view! {
-                                                <details class="error-toast-details">
-                                                    <summary>"Technical Details"</summary>
-                                                    <p class="error-toast-context">{ctx.clone()}</p>
+                                                <details class="mb-3">
+                                                    <summary class="cursor-pointer text-sm text-slate-600 hover:text-slate-800 font-medium">"Technical Details"</summary>
+                                                    <p class="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded">{ctx.clone()}</p>
                                                 </details>
                                             }
                                         })}
@@ -72,9 +74,9 @@ pub fn ErrorToast(
                                         .as_ref()
                                         .map(|rec| {
                                             view! {
-                                                <div class="error-toast-recovery">
-                                                    <strong>"Suggestion: "</strong>
-                                                    <span>{rec.clone()}</span>
+                                                <div class="bg-indigo-600/5 border border-indigo-600/20 rounded p-3 text-sm">
+                                                    <strong class="text-indigo-600">"Suggestion: "</strong>
+                                                    <span class="text-slate-700">{rec.clone()}</span>
                                                 </div>
                                             }
                                         })}

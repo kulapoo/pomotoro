@@ -58,7 +58,9 @@
       "Bash(git checkout:*)",
       "Bash(curl:*)",
       "Bash(cat:*)",
-      "Bash(npx tailwindcss:*)"
+      "Bash(npx tailwindcss:*)",
+      "Bash(npm install)",
+      "Read(///**)"
     ],
     "deny": [],
     "ask": [],
