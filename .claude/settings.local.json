@@ -60,7 +60,8 @@
       "Bash(cat:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(npm install)",
-      "Read(///**)"
+      "Read(///**)",
+      "Bash(cargo clippy:*)"
     ],
     "deny": [],
     "ask": [],

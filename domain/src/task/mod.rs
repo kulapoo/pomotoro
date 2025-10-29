@@ -3,6 +3,7 @@ pub mod cycling_srv;
 pub mod events;
 pub mod id;
 pub mod repository;
+pub mod services;
 pub mod status;
 mod task;
 #[cfg(test)]

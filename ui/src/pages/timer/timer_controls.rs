@@ -24,7 +24,13 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
     let can_skip = move || vm.with_value(|v| v.can_skip());
 
     let skip_action = move |_| {
-        vm.with_value(|v| v.skip_phase());
+        vm.with_value(|v| {
+            if v.can_skip_with_completed() {
+                v.complete_task();
+                return;
+            }
+            v.skip_phase();
+        });
     };
 
 
@@ -61,7 +67,7 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             <button
                 class="px-6 py-3 bg-slate-600 text-white font-semibold rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm disabled:hover:bg-slate-600"
                 on:click=complete_task_action
-                disabled=move || !is_task_completed()
+                disabled=move || is_task_completed()
             >
                 "Complete Task"
             </button>

@@ -1,6 +1,6 @@
 use std::{any::TypeId, sync::Arc};
 
-use domain::{Result, TaskRepository};
+use domain::{ConfigRepository, Result, TaskCyclerService, TaskRepository};
 
 use crate::adapters::{events::EventSubscriber, task::event_handlers::TaskResetHandler, TimerTickService};
 use crate::adapters::events::app_emitter::Emitter;
@@ -16,12 +16,16 @@ pub fn register_task_handlers(
     emitter: Arc<dyn Emitter>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
     timer_srv: Arc<TimerTickService>,
+    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+    cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TaskCompletedHandler::new(
         emitter.clone(),
         task_repository.clone(),
         timer_srv.clone(),
+        config_repository,
+        cycling_service,
     )))?;
     event_bus.subscribe(Box::new(TaskUpdatedHandler::new(emitter.clone(), task_repository)))?;
     event_bus.subscribe(Box::new(TaskDeletedHandler::new(emitter.clone())))?;

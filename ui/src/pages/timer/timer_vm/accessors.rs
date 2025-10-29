@@ -45,5 +45,9 @@ impl TimerViewModel {
         self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
     }
 
+    pub fn can_skip_with_completed(&self) -> bool {
+        self.can_skip() && self.is_task_completed()
+    }
+
 
 }

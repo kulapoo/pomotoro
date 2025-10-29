@@ -38,6 +38,7 @@ pub async fn register_handlers(
     app_handle: AppHandle,
     config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
+    task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
     timer_tick_service: Arc<TimerTickService>,
     audio_service: Arc<AudioServiceWrapper>,
 ) -> Result<()> {
@@ -60,6 +61,8 @@ pub async fn register_handlers(
         emitter.clone(),
         task_repository.clone(),
         timer_tick_service.clone(),
+        config_repository.clone(),
+        task_cycling_service,
     )
     .context("Failed to register task event handlers")?;
     register_config_handlers(event_bus.clone(), emitter.clone())
@@ -137,6 +140,7 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         app_handle.clone(),
         config_repository.clone(),
         task_repository.clone(),
+        task_cycling_service.clone(),
         timer_tick_service.clone(),
         audio_service.clone(),
     )

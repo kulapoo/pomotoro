@@ -4,6 +4,18 @@ use async_trait::async_trait;
 
 /// Domain contract for task cycling operations
 /// Concrete implementations belong in infrastructure layer
+///
+/// ARCHITECTURE VIOLATION: This trait contains async methods which violate
+/// domain purity. Domain layer should not have I/O operations.
+///
+/// TODO: Migration Plan (v2):
+/// 1. Remove async/await from all methods
+/// 2. Reduce to 3 essential methods: get_next_task, has_tasks, filter_active_tasks
+/// 3. Move I/O operations to infrastructure layer only
+/// 4. Use AutoCycleService for pure domain logic instead
+///
+/// For now, AutoCycleService provides the pure domain logic while this
+/// trait remains for backward compatibility.
 #[async_trait]
 pub trait CyclerService: Send + Sync {
     async fn get_next_task(
