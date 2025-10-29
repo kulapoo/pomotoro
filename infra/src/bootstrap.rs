@@ -40,9 +40,6 @@ pub async fn register_handlers(
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     timer_tick_service: Arc<TimerTickService>,
     audio_service: Arc<AudioServiceWrapper>,
-    task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
-    timer_repository: Arc<dyn TimerRepository + Send + Sync>,
-    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     // Create the emitter that will be shared by all event handlers
     let emitter: Arc<dyn Emitter> =
@@ -62,9 +59,6 @@ pub async fn register_handlers(
         event_bus.clone(),
         emitter.clone(),
         task_repository.clone(),
-        task_cycling_service,
-        timer_repository,
-        event_publisher,
         timer_tick_service.clone(),
     )
     .context("Failed to register task event handlers")?;
@@ -145,9 +139,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         task_repository.clone(),
         timer_tick_service.clone(),
         audio_service.clone(),
-        task_cycling_service.clone(),
-        timer_repository.clone(),
-        event_publisher.clone(),
     )
     .await?;
 

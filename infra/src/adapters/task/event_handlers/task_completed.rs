@@ -2,35 +2,26 @@ use crate::adapters::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::TimerTickService;
 use async_trait::async_trait;
-use domain::{Event, EventPublisher, Result, TaskCyclerService, TaskRepository, TimerRepository};
+use domain::{Event, Result, TaskRepository};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
 pub struct TaskCompletedHandler {
     emitter: Arc<dyn Emitter>,
-    cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
-    timer_repository: Arc<dyn TimerRepository + Send + Sync>,
-    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     timer_srv: Arc<TimerTickService>,
 }
 
 impl TaskCompletedHandler {
     pub fn new(
         emitter: Arc<dyn Emitter>,
-        cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
         task_repository: Arc<dyn TaskRepository + Send + Sync>,
-        timer_repository: Arc<dyn TimerRepository + Send + Sync>,
-        event_publisher: Arc<dyn EventPublisher + Send + Sync>,
         timer_srv: Arc<TimerTickService>,
     ) -> Self {
         TaskCompletedHandler {
             emitter,
-            cycling_service,
             task_repository,
-            timer_repository,
-            event_publisher,
             timer_srv,
         }
     }
