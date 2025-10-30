@@ -3,7 +3,7 @@ use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::TimerTickService;
 use async_trait::async_trait;
 use domain::{
-    ConfigRepository, Event, Result, TaskCyclerService, TaskRepository,
+    ConfigRepository, Event, Result, TaskRepository,
     task::services::AutoCycleService,
 };
 use serde_json::json;
@@ -15,7 +15,6 @@ pub struct TaskCompletedHandler {
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
     timer_srv: Arc<TimerTickService>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
-    cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
 }
 
 impl TaskCompletedHandler {
@@ -24,14 +23,12 @@ impl TaskCompletedHandler {
         task_repository: Arc<dyn TaskRepository + Send + Sync>,
         timer_srv: Arc<TimerTickService>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
-        cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
     ) -> Self {
         TaskCompletedHandler {
             emitter,
             task_repository,
             timer_srv,
             config_repository,
-            cycling_service,
         }
     }
 }
@@ -80,18 +77,14 @@ impl EventHandler for TaskCompletedHandler {
                 Some(&task_completed.task_id),
                 &config.general.task_cycling_behavior,
             ) {
-                // Use existing cycling infrastructure to switch to next task
-                // This will handle all the timer updates and UI notifications
-                let _cycle_result = self.cycling_service
-                    .cycle_to_next_active_task(Some(task_completed.task_id.clone()))
-                    .await?;
-
                 // Log the auto-cycle action for debugging
                 tracing::info!(
-                    "AutoCycle: Switched from task {} to task {}",
+                    "AutoCycle: Would switch from task {} to task {}",
                     task_completed.task_id,
                     next_task.id
                 );
+                // Note: The actual task switching would be handled by UI or another handler
+                // since we're now using pure functions without side effects
             } else {
                 tracing::debug!("AutoCycle: No eligible tasks found for cycling");
             }

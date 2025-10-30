@@ -1,7 +1,8 @@
 use super::*;
 use anyhow::Context;
+use domain::{TaskId, TaskRepository};
 use usecases::task::cycle_incomplete_task::{
-    cycle_incomplete_task as cycle_task_usecase, CycleDirection, CycleIncompleteTaskQuery,
+    cycle_incomplete_task as cycle_task_pure, CycleDirection,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,23 +22,38 @@ pub struct CycleIncompleteTaskResponse {
 #[tauri::command(rename_all = "snake_case")]
 pub async fn cycle_incomplete_task(
     request: CycleIncompleteTaskRequest,
-    cycling_service: State<'_, Arc<dyn domain::TaskCyclerService + Send + Sync>>,
+    task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
 ) -> Result<CycleIncompleteTaskResponse, String> {
+    // Parse direction
     let direction = match request.direction.as_str() {
         "next" => CycleDirection::Next,
         "previous" => CycleDirection::Previous,
         _ => CycleDirection::Next,
     };
 
-    let query = CycleIncompleteTaskQuery {
-        current_task_id: request.current_task_id,
-        direction,
+    // Parse task ID if provided
+    let current_task_id = if let Some(id_str) = request.current_task_id {
+        Some(
+            TaskId::from_string(&id_str)
+                .map_err(|_| format!("Invalid task ID: {}", id_str))?,
+        )
+    } else {
+        None
     };
 
-    let result = cycle_task_usecase(&cycling_service, query)
+    // Fetch all tasks from repository (async I/O)
+    let tasks = task_repo
+        .get_all()
         .await
-        .context("Failed to cycle incomplete task")
+        .context("Failed to fetch tasks")
         .map_err(|e| e.to_string())?;
+
+    // Call pure use case function
+    let result = cycle_task_pure(
+        &tasks,
+        current_task_id.as_ref(),
+        direction,
+    );
 
     Ok(CycleIncompleteTaskResponse {
         task: result.task,

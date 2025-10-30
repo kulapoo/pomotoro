@@ -1,20 +1,19 @@
 use domain::{
-    Error, EventPublisher, Result, TaskCyclerService, TaskId, TaskRepository,
-    TaskSwitchWorkflowCompleted, TimerRepository,
+    Error, EventPublisher, Result, TaskId, TaskRepository, TaskSwitchWorkflowCompleted, TimerRepository
 };
 use std::sync::Arc;
+use super::validate_task_switch;
 
 #[derive(Debug, Clone)]
 pub struct SwitchTaskCmd {
     pub task_id: TaskId,
 }
 
-/// Switch to a different task
-/// Updates the timer's active_task_id to switch which task is active.
+/// Switch to a different task (requires async for state management)
+/// This function coordinates the task switching workflow
 pub async fn switch_task(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
-    cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     cmd: SwitchTaskCmd,
 ) -> Result<()> {
@@ -25,27 +24,18 @@ pub async fn switch_task(
         }
     })?;
 
-    if task.is_completed() {
-        return Err(Error::TaskAlreadyCompleted);
-    }
-
     // Get the single timer instance
     let mut timer = timer_repo.get().await?;
 
-    if timer.is_running() {
-        return Err(Error::InvalidStateTransition {
-            from: "Running".to_string(),
-            to: "TaskSwitch".to_string(),
-        });
-    }
-
-    cycling_service.validate_task_switch(cmd.task_id).await?;
+    // Use pure validation
+    validate_task_switch(&task, &timer)?;
 
     // Update the timer's active task
     let previous_task_id = timer.active_task_id();
     timer.set_active_task(cmd.task_id);
     timer_repo.save(&timer).await?;
 
+    // Publish event
     let switch_event = TaskSwitchWorkflowCompleted::new(
         previous_task_id,
         cmd.task_id,
@@ -55,30 +45,4 @@ pub async fn switch_task(
     event_publisher.publish(Box::new(switch_event));
 
     Ok(())
-}
-
-pub async fn switch_to_next_task(
-    current_task_id: Option<TaskId>,
-    _task_repo: Arc<dyn TaskRepository + Send + Sync>,
-    cycling_service: Arc<dyn TaskCyclerService + Send + Sync>,
-    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
-) -> Result<Option<String>> {
-    // Check if the timer is running
-    let timer = timer_repo.get().await?;
-    if timer.is_running() {
-        return Err(Error::InvalidStateTransition {
-            from: "Running".to_string(),
-            to: "NextTaskSwitch".to_string(),
-        });
-    }
-
-    let next_task = cycling_service
-        .cycle_to_next_active_task(current_task_id)
-        .await?;
-
-    if let Some(task) = next_task {
-        Ok(Some(task.id.to_string()))
-    } else {
-        Ok(None)
-    }
 }

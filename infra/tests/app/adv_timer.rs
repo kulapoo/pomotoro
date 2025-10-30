@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use domain::{Config, Phase, TaskCyclerService, TaskRepository, TaskStatus, TimerConfiguration, TimerRepository, TimerState, TimerStatus};
+use domain::{Config, Phase, TaskRepository, TaskStatus, TimerConfiguration, TimerRepository, TimerState, TimerStatus};
 use usecases::{
     CreateTaskCmd, create_task,
     timer::{StartTimerPhaseCmd, complete_timer_phase, pause_timer_phase, resume_timer_phase, start_timer_phase},
@@ -324,28 +324,28 @@ async fn timer_should_cycle_through_incomplete_tasks() {
     // Cycle through incomplete tasks
 
     // Get the incomplete task queue to verify setup
-    let incomplete_queue_before = ctx.task_cycling_service
-        .get_incomplete_task_queue()
+    let incomplete_queue_before = ctx.task_cycling_adapter
+        .get_incomplete_tasks()
         .await
         .expect("Failed to get incomplete task queue");
 
     // First cycle: None -> should get first incomplete task
-    let next1 = ctx.task_cycling_service
-        .cycle_to_next_incomplete_task(None)
+    let next1 = ctx.task_cycling_adapter
+        .cycle_to_next_incomplete(None)
         .await
         .expect("Failed to cycle to first task")
         .expect("Should have found an incomplete task");
 
     // Second cycle: current task -> should get next incomplete task
-    let next2 = ctx.task_cycling_service
-        .cycle_to_next_incomplete_task(Some(next1.id))
+    let next2 = ctx.task_cycling_adapter
+        .cycle_to_next_incomplete(Some(next1.id))
         .await
         .expect("Failed to cycle to second task")
         .expect("Should have found next incomplete task");
 
     // Third cycle: current task -> should get next incomplete task
-    let next3 = ctx.task_cycling_service
-        .cycle_to_next_incomplete_task(Some(next2.id))
+    let next3 = ctx.task_cycling_adapter
+        .cycle_to_next_incomplete(Some(next2.id))
         .await
         .expect("Failed to cycle to third task")
         .expect("Should have found another incomplete task");
@@ -384,8 +384,8 @@ async fn timer_should_cycle_through_incomplete_tasks() {
             "Should never cycle through completed Task 3");
 
     // Fourth cycle should wrap back to the beginning
-    let next4 = ctx.task_cycling_service
-        .cycle_to_next_incomplete_task(Some(next3.id))
+    let next4 = ctx.task_cycling_adapter
+        .cycle_to_next_incomplete(Some(next3.id))
         .await
         .expect("Failed to cycle to fourth task")
         .expect("Should wrap back to first task");
@@ -1209,8 +1209,8 @@ async fn complete_productivity_workflow_integration() {
     .expect("Failed to complete break phase");
 
     // Cycle to next task (should get task2)
-    let next_task = ctx.task_cycling_service
-        .cycle_to_next_incomplete_task(Some(task1.id))
+    let next_task = ctx.task_cycling_adapter
+        .cycle_to_next_incomplete(Some(task1.id))
         .await
         .expect("Failed to cycle task")
         .expect("Should have next task");
@@ -1349,8 +1349,8 @@ async fn complete_productivity_workflow_integration() {
         .unwrap();
 
     // Get incomplete task queue
-    let incomplete_queue = ctx.task_cycling_service
-        .get_incomplete_task_queue()
+    let incomplete_queue = ctx.task_cycling_adapter
+        .get_incomplete_tasks()
         .await
         .expect("Failed to get incomplete task queue");
 

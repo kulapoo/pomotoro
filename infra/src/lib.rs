@@ -83,7 +83,6 @@ pub fn run() {
                     app.manage(registry.timer_repository.clone());
                     app.manage(registry.audio_service.clone());
                     app.manage(registry.timer_tick_service.clone());
-                    app.manage(registry.task_cycling_service.clone());
                     app.manage(registry.event_publisher.clone());
 
                     log::info!("Application initialized successfully");

@@ -1,5 +1,5 @@
 pub mod builder;
-pub mod cycling_srv;
+pub mod cycling;
 pub mod events;
 pub mod id;
 pub mod repository;
@@ -11,7 +11,7 @@ mod test_builder;
 
 pub use self::task::{Task, TaskPatch};
 pub use builder::Builder;
-pub use cycling_srv::CyclerService;
+pub use cycling::{TaskCycling, TaskCyclingExt, PureTaskCycling};
 pub use events::{
     Completed, Created, SessionCompleted, StatusChanged,
     SwitchWorkflowCompleted, TaskDeleted, Updated, Reset,

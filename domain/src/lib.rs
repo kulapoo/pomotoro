@@ -12,11 +12,12 @@ pub use shared_kernel::{
 
 pub use task::{
     Builder as TaskBuilder, Completed as TaskCompleted, Created as TaskCreated,
-    CyclerService as TaskCyclerService, Id as TaskId, Marker as TaskMarker,
+    Id as TaskId, Marker as TaskMarker,
     Repository as TaskRepository, SessionCompleted as TaskSessionCompleted,
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
     SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskDeleted,
     TaskPatch, Updated as TaskUpdated, Reset as TaskReset,
+    TaskCycling, TaskCyclingExt, PureTaskCycling,
 };
 
 pub use timer::{

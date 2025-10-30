@@ -38,13 +38,15 @@ graph TB
 - **Rules**:
   - No I/O operations
   - No external dependencies
-  - Pure functions and data structures
+  - No application or usecase services
   - Define traits/interfaces for external dependencies
 
 #### Application Layer
 - **Purpose**: Orchestrate domain logic and infrastructure
 - **Rules**:
   - Use dependency injection
+  - All services should be a pure functions
+  - Pure functions and data structures
   - Coordinate between domain and infrastructure
   - Handle transaction boundaries
   - Implement use cases

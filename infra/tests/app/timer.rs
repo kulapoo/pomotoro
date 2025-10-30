@@ -6,7 +6,7 @@ use crate::utils::{
         timer::{get_timer, get_timer_state},
     };
 use domain::{
-    PhaseCompleted, PhaseSkipped, TaskCyclerService, TaskRepository, TimerPaused, TimerReset, TimerStarted,
+    PhaseCompleted, PhaseSkipped, TaskRepository, TimerPaused, TimerReset, TimerStarted,
     TimerState, TimerStatus, event_names,
     shared_kernel::events::AppStarted,
 };
@@ -129,7 +129,6 @@ async fn timer_should_prevent_task_switch_while_timer_is_running() {
     let result = switch_task(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
-        ctx.task_cycling_service.clone(),
         ctx.event_bus.clone(),
         SwitchTaskCmd { task_id },
     )
@@ -433,8 +432,8 @@ async fn task_queue_should_return_next_incomplete_task() {
         setup_ctx_with_timer("timer_should_start_with_default_task").await;
 
     let task_queue = ctx
-        .task_cycling_service
-        .get_incomplete_task_queue()
+        .task_cycling_adapter
+        .get_incomplete_tasks()
         .await
         .expect("Task queue should be set");
 

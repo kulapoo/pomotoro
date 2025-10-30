@@ -17,7 +17,7 @@ use crate::adapters::{
     },
     notifications::register_notification_handlers,
     run_migrations,
-    task::{DefaultCyclingService, register_task_handlers},
+    task::register_task_handlers,
     timer::event_handlers::register_timer_handlers,
 };
 use domain::TimerRepository;
@@ -25,7 +25,6 @@ use tauri::AppHandle;
 
 pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
-    pub task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
     pub config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     pub event_publisher: EventPublisherArc,
     pub timer_tick_service: Arc<TimerTickService>,
@@ -38,7 +37,6 @@ pub async fn register_handlers(
     app_handle: AppHandle,
     config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
-    task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync>,
     timer_tick_service: Arc<TimerTickService>,
     audio_service: Arc<AudioServiceWrapper>,
 ) -> Result<()> {
@@ -62,7 +60,6 @@ pub async fn register_handlers(
         task_repository.clone(),
         timer_tick_service.clone(),
         config_repository.clone(),
-        task_cycling_service,
     )
     .context("Failed to register task event handlers")?;
     register_config_handlers(event_bus.clone(), emitter.clone())
@@ -120,9 +117,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
             .context("Failed to initialize audio service")?,
     )));
 
-    let task_cycling_service: Arc<dyn domain::TaskCyclerService + Send + Sync> =
-        Arc::new(DefaultCyclingService::new(task_repository.clone()));
-
     // Create timer repository
     let timer_repository: Arc<dyn TimerRepository + Send + Sync> =
         Arc::new(SqliteTimerRepository::new(db_pool.clone()));
@@ -140,7 +134,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
         app_handle.clone(),
         config_repository.clone(),
         task_repository.clone(),
-        task_cycling_service.clone(),
         timer_tick_service.clone(),
         audio_service.clone(),
     )
@@ -162,7 +155,6 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
 
     let ctx = AppRegistry {
         task_repository,
-        task_cycling_service,
         config_repository,
         event_publisher,
         timer_tick_service,
