@@ -251,148 +251,6 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     assert_eq!(task_6_current_sessions, 5); // Fifth work session completed
 }
 
-// ### Test 22: Task cycling with multiple tasks
-// ```pseudo
-// TEST: "should_cycle_through_incomplete_tasks"
-// GIVEN:
-//     context = setup_test_context()
-//     task1 = create_task(context, "Task 1", TaskStatus::Active)
-//     task2 = create_task(context, "Task 2", TaskStatus::Queued)
-//     task3 = create_task(context, "Task 3", TaskStatus::Completed)
-
-//     // Set cycling strategy
-//     strategy = TaskCyclingStrategy::Sequential
-// WHEN:
-//     next1 = context.usecases.cycle_task.execute(strategy, None).value
-//     next2 = context.usecases.cycle_task.execute(strategy, Some(next1.id)).value
-//     next3 = context.usecases.cycle_task.execute(strategy, Some(next2.id)).value
-// THEN:
-//     assert next1.id == task1.id  // First incomplete
-//     assert next2.id == task2.id  // Second incomplete
-//     assert next3.id == task1.id  // Cycles back (task3 is completed)
-// ```
-#[tokio::test]
-async fn timer_should_cycle_through_incomplete_tasks() {
-    let ctx = setup_ctx("timer_should_cycle_through_incomplete_tasks").await;
-
-    // AAA
-
-    // Arrange
-    // Create three tasks with different statuses
-
-    // Task 1: Active (incomplete)
-    let task1 = TaskBuilder::new()
-        .name("Task 1")
-        .description("First task - active")
-        .max_sessions(4)
-        .status(TaskStatus::Active)
-        .build();
-
-    ctx.task_repo
-        .create(task1.clone())
-        .await
-        .expect("Failed to create task 1");
-
-    // Task 2: Queued (incomplete)
-    let task2 = TaskBuilder::new()
-        .name("Task 2")
-        .description("Second task - queued")
-        .max_sessions(4)
-        .status(TaskStatus::Queued)
-        .build();
-
-    ctx.task_repo
-        .create(task2.clone())
-        .await
-        .expect("Failed to create task 2");
-
-    // Task 3: Completed (should be skipped)
-    let task3 = TaskBuilder::new()
-        .name("Task 3")
-        .description("Third task - completed")
-        .max_sessions(2)
-        .current_sessions(2)
-        .status(TaskStatus::Completed)
-        .build();
-
-    ctx.task_repo
-        .create(task3.clone())
-        .await
-        .expect("Failed to create task 3");
-
-    // Act
-    // Cycle through incomplete tasks
-
-    // Get the incomplete task queue to verify setup
-    let incomplete_queue_before = ctx.task_cycling_adapter
-        .get_incomplete_tasks()
-        .await
-        .expect("Failed to get incomplete task queue");
-
-    // First cycle: None -> should get first incomplete task
-    let next1 = ctx.task_cycling_adapter
-        .cycle_to_next_incomplete(None)
-        .await
-        .expect("Failed to cycle to first task")
-        .expect("Should have found an incomplete task");
-
-    // Second cycle: current task -> should get next incomplete task
-    let next2 = ctx.task_cycling_adapter
-        .cycle_to_next_incomplete(Some(next1.id))
-        .await
-        .expect("Failed to cycle to second task")
-        .expect("Should have found next incomplete task");
-
-    // Third cycle: current task -> should get next incomplete task
-    let next3 = ctx.task_cycling_adapter
-        .cycle_to_next_incomplete(Some(next2.id))
-        .await
-        .expect("Failed to cycle to third task")
-        .expect("Should have found another incomplete task");
-
-    // Assert
-
-    // The test setup might include a default task, so we verify our tasks are in the queue
-    let has_task1 = incomplete_queue_before.iter().any(|t| t.name == "Task 1");
-    let has_task2 = incomplete_queue_before.iter().any(|t| t.name == "Task 2");
-    let has_task3 = incomplete_queue_before.iter().any(|t| t.name == "Task 3");
-
-    assert!(has_task1, "Task 1 should be in incomplete queue");
-    assert!(has_task2, "Task 2 should be in incomplete queue");
-    assert!(!has_task3, "Completed Task 3 should NOT be in incomplete queue");
-
-    // The cycling behavior should work correctly regardless of initial order
-    // Since there might be a default task, we have 3 incomplete tasks total
-    // We expect to cycle through all incomplete tasks
-
-    // Verify first three cycles return different tasks
-    assert_ne!(next1.id, next2.id, "First and second cycle should return different tasks");
-    assert_ne!(next2.id, next3.id, "Second and third cycle should return different tasks");
-
-    // Collect all cycled task names
-    let cycled_names = vec![next1.name.clone(), next2.name.clone(), next3.name.clone()];
-
-    // Verify our created incomplete tasks are being cycled through
-    let cycles_task1 = cycled_names.iter().any(|n| n == "Task 1");
-    let cycles_task2 = cycled_names.iter().any(|n| n == "Task 2");
-
-    assert!(cycles_task1, "Should cycle through Task 1");
-    assert!(cycles_task2, "Should cycle through Task 2");
-
-    // Verify completed task is never returned
-    assert!(!cycled_names.iter().any(|n| n == "Task 3"),
-            "Should never cycle through completed Task 3");
-
-    // Fourth cycle should wrap back to the beginning
-    let next4 = ctx.task_cycling_adapter
-        .cycle_to_next_incomplete(Some(next3.id))
-        .await
-        .expect("Failed to cycle to fourth task")
-        .expect("Should wrap back to first task");
-
-    // Verify it wraps back to the first task we got
-    assert_eq!(next4.id, next1.id, "Should cycle back to first task after going through all incomplete tasks");
-}
 
 // Test 23: Skip phase during work session
 #[tokio::test]
@@ -1208,23 +1066,14 @@ async fn complete_productivity_workflow_integration() {
     .await
     .expect("Failed to complete break phase");
 
-    // Cycle to next task (should get task2)
-    let next_task = ctx.task_cycling_adapter
-        .cycle_to_next_incomplete(Some(task1.id))
-        .await
-        .expect("Failed to cycle task")
-        .expect("Should have next task");
-
-    assert_eq!(next_task.id, task2.id, "Should cycle to task2");
-
     // The timer should already be in work phase after completing the break
-    // Just switch the active task instead of starting a new session
+    // Just switch the active task to task2
     usecases::timer::switch_timer_task(
         ctx.timer_repo.clone(),
         ctx.task_repo.clone(),
         ctx.event_bus.clone(),
         usecases::timer::SwitchTimerTaskCmd {
-            task_id: next_task.id,
+            task_id: task2.id,
         },
     )
     .await
@@ -1349,10 +1198,16 @@ async fn complete_productivity_workflow_integration() {
         .unwrap();
 
     // Get incomplete task queue
-    let incomplete_queue = ctx.task_cycling_adapter
-        .get_incomplete_tasks()
+    let all_tasks_final = ctx.task_repo
+        .get_all()
         .await
-        .expect("Failed to get incomplete task queue");
+        .expect("Failed to get all tasks");
+
+    let incomplete_queue: Vec<_> = all_tasks_final
+        .iter()
+        .filter(|t| !t.status.is_completed())
+        .cloned()
+        .collect();
 
     // Assert
     // Verify task states

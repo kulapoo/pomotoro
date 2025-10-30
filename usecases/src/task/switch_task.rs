@@ -1,12 +1,32 @@
 use domain::{
-    Error, EventPublisher, Result, TaskId, TaskRepository, TaskSwitchWorkflowCompleted, TimerRepository
+    Error, EventPublisher, Result, Task, TaskId, TaskRepository, TaskSwitchWorkflowCompleted, Timer, TimerRepository
 };
 use std::sync::Arc;
-use super::validate_task_switch;
 
 #[derive(Debug, Clone)]
 pub struct SwitchTaskCmd {
     pub task_id: TaskId,
+}
+
+/// Pure validation function for task switching
+pub fn validate_task_switch(
+    task: &Task,
+    timer: &Timer
+) -> Result<()> {
+    // Check if task is completed
+    if task.is_completed() {
+        return Err(Error::TaskAlreadyCompleted);
+    }
+
+    // Check if timer is running
+    if timer.is_running() {
+        return Err(Error::InvalidStateTransition {
+            from: "Running".to_string(),
+            to: "TaskSwitch".to_string(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Switch to a different task (requires async for state management)

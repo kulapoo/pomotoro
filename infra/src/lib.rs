@@ -6,11 +6,11 @@ mod schema;
 
 use commands::{
     add_custom_audio_asset, cleanup_finished_audio, clear_all_data,
-    complete_task, create_task, cycle_incomplete_task,
+    complete_task, create_task,
     delete_task, export_settings,
     filter_tasks_by_status, get_active_playbacks, get_active_tasks,
     get_all_tasks, get_audio_library, get_effective_audio_config,
-    get_global_config, get_incomplete_tasks, get_task, get_task_cycle_position,
+    get_global_config, get_incomplete_tasks, get_task,
     get_tasks_by_tags, get_timer_state,
     update_timer_secs,
     import_settings, open_data_directory, pause_audio, pause_timer, play_audio,
@@ -144,8 +144,6 @@ pub fn run() {
             search_tasks,
             search_tasks_fuzzy,
             filter_tasks_by_status,
-            cycle_incomplete_task,
-            get_task_cycle_position,
             get_incomplete_tasks,
             get_global_config,
             save_global_config,

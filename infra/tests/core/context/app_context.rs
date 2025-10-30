@@ -2,7 +2,7 @@ use domain::{Result, TaskRepository, TimerRepository};
 use infra::adapters::{
     database::SqliteConfigRepository,
     events::{EventSubscriber, mem_event_bus::InMemoryEventBus},
-    task::{TaskCyclingAdapter, SqliteTaskRepository},
+    task::SqliteTaskRepository,
     timer::{SqliteTimerRepository, TimerTickService},
 };
 use std::sync::Arc;
@@ -26,8 +26,6 @@ pub struct AppContext {
     pub timer_repo: Arc<SqliteTimerRepository>,
     /// Timer tick service (infrastructure)
     pub timer_tick_service: Arc<TimerTickService>,
-    /// Task cycling adapter
-    pub task_cycling_adapter: Arc<TaskCyclingAdapter>,
     /// Audio service mock
     pub audio_service: Arc<MockAudioService>,
 
@@ -66,9 +64,6 @@ impl AppContext {
             config_repo.clone(),
         ));
 
-        let task_cycling_adapter =
-            Arc::new(TaskCyclingAdapter::new(task_repo.clone()));
-
         let audio_service = Arc::new(MockAudioService::new());
 
         let ui_simulator = Arc::new(UiSimulator::new());
@@ -91,7 +86,6 @@ impl AppContext {
             config_repo,
             timer_repo,
             timer_tick_service,
-            task_cycling_adapter,
             audio_service,
             ui_simulator,
         })

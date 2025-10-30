@@ -431,11 +431,17 @@ async fn task_queue_should_return_next_incomplete_task() {
     let ctx =
         setup_ctx_with_timer("timer_should_start_with_default_task").await;
 
-    let task_queue = ctx
-        .task_cycling_adapter
-        .get_incomplete_tasks()
+    // Get all tasks and filter for incomplete ones
+    let all_tasks = ctx.task_repo
+        .get_all()
         .await
-        .expect("Task queue should be set");
+        .expect("Failed to get all tasks");
+
+    let task_queue: Vec<_> = all_tasks
+        .iter()
+        .filter(|t| !t.status.is_completed())
+        .cloned()
+        .collect();
 
     assert_eq!(task_queue.len(), 1);
     assert_eq!(

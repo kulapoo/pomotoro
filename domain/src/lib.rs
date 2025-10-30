@@ -17,7 +17,8 @@ pub use task::{
     Status as TaskStatus, StatusChanged as TaskStatusChanged,
     SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskDeleted,
     TaskPatch, Updated as TaskUpdated, Reset as TaskReset,
-    TaskCycling, TaskCyclingExt, PureTaskCycling,
+    RoundRobinCycling as TaskRoundRobinCycling,
+    AutoCycleService as TaskAutoCycleService,
 };
 
 pub use timer::{

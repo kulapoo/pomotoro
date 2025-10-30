@@ -4,7 +4,7 @@ use crate::adapters::TimerTickService;
 use async_trait::async_trait;
 use domain::{
     ConfigRepository, Event, Result, TaskRepository,
-    task::services::AutoCycleService,
+    task::AutoCycleService,
 };
 use serde_json::json;
 use std::any::TypeId;
