@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod app;
+mod app_vm;
 mod components;
 mod pages;
 mod utils;

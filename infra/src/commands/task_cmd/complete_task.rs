@@ -32,6 +32,6 @@ pub async fn complete_task(
         .ok_or_else(|| anyhow!("Task not found after completing"))
         .map_err(|e| e.to_string())?;
 
-    info!("Successfully completed task: id={}", task_id);
+    info!("Successfully completed task: id={}, name={}", task_id, task.name);
     Ok(task)
 }

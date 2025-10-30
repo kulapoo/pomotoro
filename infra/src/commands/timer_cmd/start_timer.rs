@@ -62,7 +62,7 @@ pub async fn start_timer(
         };
 
         let task_id = task.id;
-        info!("Starting timer for task {}", task_id);
+        info!("Starting timer for task {} - {}", task_id, task.name);
 
         let cmd = StartTimerPhaseCmd {
             task_id: Some(task_id),

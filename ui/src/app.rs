@@ -2,11 +2,19 @@ use leptos::prelude::*;
 use leptos_router::components::{Route, Router, Routes};
 use leptos_router::path;
 
+use crate::app_vm::AppViewModel;
 use crate::components::Sidebar;
 use crate::pages::{SettingsPage, TaskDirectoryPage, TaskFormPage, TimerPage};
+use crate::utils::ViewModel;
 
 #[component]
 pub fn App() -> impl IntoView {
+    // Create app-level ViewModel
+    let app_vm = StoredValue::new(AppViewModel::new());
+
+    // Provide to children via context
+    provide_context(app_vm);
+
     view! {
         <Router>
             <AppLayout />
