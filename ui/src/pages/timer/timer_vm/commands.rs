@@ -6,7 +6,6 @@ use crate::components::handle_command_error;
 use crate::utils::invoke;
 
 use super::TimerViewModel;
-use super::task_ops;
 
 impl TimerViewModel {
     pub fn start_pause_timer(&self) {
@@ -120,7 +119,28 @@ impl TimerViewModel {
                     if let Some(task_id) = timer.active_task_id() {
                         let task_id_str = task_id.to_string();
                         spawn_local(async move {
-                            task_ops::fetch_task_by_id(&task_id_str, set_active_task).await;
+                            use serde::Serialize;
+
+                            // Inline the fetch_task_by_id functionality
+                            if task_id_str.is_empty() {
+                                set_active_task.set(None);
+                                return;
+                            }
+
+                            #[derive(Serialize)]
+                            struct GetTaskArgs {
+                                id: String,
+                            }
+
+                            let args = GetTaskArgs {
+                                id: task_id_str,
+                            };
+
+                            let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
+                                .ok()
+                                .flatten();
+
+                            set_active_task.set(task);
                         });
                     } else {
                         set_active_task.set(None);

@@ -33,22 +33,10 @@ CREATE TABLE config (
     updated_at TEXT NOT NULL
 );
 
--- Create session_history table for tracking completed sessions
-CREATE TABLE session_history (
-    id TEXT PRIMARY KEY NOT NULL,
-    task_id TEXT NOT NULL,
-    session_type TEXT NOT NULL, -- 'work' or 'break'
-    duration_seconds INTEGER NOT NULL,
-    completed_at TEXT NOT NULL,
-    FOREIGN KEY (task_id) REFERENCES tasks(id)
-);
-
 -- Create indexes
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_default ON tasks(is_default);
 CREATE INDEX idx_timers_active_task ON timers(active_task_id);
-CREATE INDEX idx_session_history_task_id ON session_history(task_id);
-CREATE INDEX idx_session_history_completed_at ON session_history(completed_at);
 
 -- Insert the single default timer
 INSERT INTO timers (

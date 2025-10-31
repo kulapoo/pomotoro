@@ -1,5 +1,5 @@
-use domain::event_names::ui_listeners::timer as timer_event_names;
-use domain::{Timer, TimerState, TimerTick, event_names::commands};
+use domain::event_names::ui_listeners::{timer as timer_event_names, task as task_event_names};
+use domain::{Task, Timer, TimerState, TimerTick, event_names::commands};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -23,12 +23,15 @@ extern "C" {
 impl AppViewModel {
     pub(super) fn initialize(&self) {
         self.load_initial_timer_state();
+        self.load_initial_active_task();
         self.setup_timer_listeners();
+        self.setup_active_task_listeners();
     }
 
     fn load_initial_timer_state(&self) {
         let set_timer_state = self.set_timer_state;
         let set_error_state = self.set_error_state;
+        let set_active_task = self.set_active_task;
 
         spawn_local(async move {
             invoke::<Timer, ()>(commands::timer::GET_STATE, None).await
@@ -36,8 +39,26 @@ impl AppViewModel {
                 .ok()
                 .and_then(|timer| {
                     set_timer_state.set(timer.state().clone());
+
+                    // Also load the active task if there is one
+                    if let Some(task_id) = timer.active_task_id() {
+                        let task_id_str = task_id.to_string();
+                        spawn_local(async move {
+                            Self::fetch_task_by_id(&task_id_str, set_active_task).await;
+                        });
+                    }
+
                     Some(())
                 });
+        });
+    }
+
+    fn load_initial_active_task(&self) {
+        let set_active_task = self.set_active_task;
+
+        spawn_local(async move {
+            // Try to get the active task
+            Self::fetch_active_task(set_active_task).await;
         });
     }
 
@@ -126,5 +147,58 @@ impl AppViewModel {
             listen(timer_event_names::PHASE_SKIPPED, &callback).await;
             callback.forget();
         });
+    }
+
+    // Active Task management
+    fn setup_active_task_listeners(&self) {
+        self.setup_active_task_changed_listener();
+    }
+
+    fn setup_active_task_changed_listener(&self) {
+        let set_active_task = self.set_active_task;
+
+        spawn_local(async move {
+            let callback = Closure::new(move |_event: JsValue| {
+                spawn_local(async move {
+                    Self::fetch_active_task(set_active_task).await;
+                });
+            });
+
+            listen(task_event_names::ACTIVE_CHANGED, &callback).await;
+            callback.forget();
+        });
+    }
+
+    // Helper methods for fetching tasks
+    async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
+        let active_task = invoke::<Vec<Task>, ()>(commands::task::GET_ACTIVE, None).await
+            .ok()
+            .and_then(|tasks| tasks.into_iter().next());
+
+        set_active_task.set(active_task);
+    }
+
+    async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option<Task>>) {
+        use serde::Serialize;
+
+        if task_id.is_empty() {
+            set_active_task.set(None);
+            return;
+        }
+
+        #[derive(Serialize)]
+        struct GetTaskArgs {
+            id: String,
+        }
+
+        let args = GetTaskArgs {
+            id: task_id.to_string(),
+        };
+
+        let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
+            .ok()
+            .flatten();
+
+        set_active_task.set(task);
     }
 }

@@ -1,4 +1,4 @@
-use domain::{Phase, TimerState};
+use domain::{Phase, Task, TimerState};
 use leptos::prelude::*;
 use crate::components::ErrorInfo;
 
@@ -7,6 +7,14 @@ use super::AppViewModel;
 impl AppViewModel {
     pub fn timer_state(&self) -> ReadSignal<TimerState> {
         self.timer_state
+    }
+
+    pub fn active_task(&self) -> ReadSignal<Option<Task>> {
+        self.active_task
+    }
+
+    pub fn set_active_task(&self) -> WriteSignal<Option<Task>> {
+        self.set_active_task
     }
 
     pub fn error_state(&self) -> ReadSignal<Option<ErrorInfo>> {
@@ -78,5 +86,25 @@ impl AppViewModel {
         } else {
             format!("{} - {} remaining", self.phase_name(), self.format_time())
         }
+    }
+
+    // Active task helper methods
+    pub fn get_active_task(&self) -> Option<Task> {
+        self.active_task.get()
+    }
+
+    pub fn get_active_task_name(&self) -> String {
+        self.active_task
+            .get()
+            .map(|task| task.name.clone())
+            .unwrap_or_else(|| "No active task".to_string())
+    }
+
+    pub fn get_active_entity_id(&self) -> Option<String> {
+        self.active_task.get().map(|task| task.id.to_string())
+    }
+
+    pub fn is_active_task_completed(&self) -> bool {
+        self.active_task.get().map(|t| t.is_completed()).unwrap_or(false)
     }
 }

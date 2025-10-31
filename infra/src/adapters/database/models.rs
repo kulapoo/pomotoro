@@ -135,17 +135,6 @@ pub struct ConfigDb {
     pub updated_at: String,
 }
 
-#[derive(
-    Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
-)]
-#[diesel(table_name = crate::schema::session_history)]
-pub struct SessionHistoryDb {
-    pub id: String,
-    pub task_id: String,
-    pub session_type: String,
-    pub duration_seconds: i32,
-    pub completed_at: String,
-}
 
 impl From<Timer> for TimerDb {
     fn from(timer: Timer) -> Self {

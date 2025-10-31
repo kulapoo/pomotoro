@@ -4,6 +4,7 @@ use crate::{Task, TaskId};
 ///
 /// This pure domain trait contains only business logic with no I/O operations.
 /// All methods work with in-memory data and return computed results.
+#[allow(dead_code)]
 pub trait Cycling {
     /// Gets the next task in the cycling sequence.
     ///

@@ -1,6 +1,6 @@
 # AppViewModel Usage Guide
 
-The AppViewModel provides global timer state that persists across all pages and components. This is designed for system tray integration and global timer display.
+The AppViewModel provides global timer state and active task that persist across all pages and components. This is designed for system tray integration, global timer display, and active task management.
 
 ## How to Access AppViewModel
 
@@ -39,9 +39,17 @@ pub fn MyComponent() -> impl IntoView {
 
 ## Available Methods
 
-### Timer State Access
+### State Access
 - `timer_state()` - Get the timer state signal
+- `active_task()` - Get the active task signal
+- `set_active_task()` - Get the write signal for active task
 - `error_state()` - Get error state signal
+
+### Active Task Helpers
+- `get_active_task()` - Get the current active task Option<Task>
+- `get_active_task_name()` - Get the active task name or "No active task"
+- `get_active_entity_id()` - Get the active task ID as Option<String>
+- `is_active_task_completed()` - Check if the active task is completed
 
 ### Timer Status Checks
 - `is_running()` - Check if timer is actively counting
@@ -107,20 +115,25 @@ pub fn Sidebar() -> impl IntoView {
 
 ## Global Event Listeners
 
-The AppViewModel automatically sets up listeners for these timer events:
+The AppViewModel automatically sets up listeners for these events:
+
+### Timer Events
 - `timer:tick` - Updates remaining seconds every tick
 - `timer:status_changed` - Updates timer status
 - `timer:phase_completed` - Handles phase transitions
 - `timer:phase_skipped` - Handles skip events
 
+### Task Events
+- `task:active_changed` - Updates the active task when it changes
+
 These listeners are initialized once when the app starts and persist for the entire app lifetime.
 
 ## Notes
 
-1. **Single Source of Truth**: The AppViewModel maintains a single global timer state that updates automatically from backend events.
+1. **Single Source of Truth**: The AppViewModel maintains global timer state and active task that update automatically from backend events.
 
 2. **Performance**: Use `with_value` to access methods to avoid unnecessary clones of the StoredValue.
 
 3. **System Tray Ready**: The `tray_display()` and `tray_tooltip()` methods are specifically designed for system tray integration.
 
-4. **No Task Management**: This AppViewModel focuses only on timer state. Task switching remains in the timer page's ViewModel for now.
+4. **Global Task Management**: Active task is now managed globally at the app level, making it accessible from any component.

@@ -35,15 +35,6 @@ impl TryFrom<TimerConfigurationDto> for TimerConfiguration {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionHistoryDto {
-    pub task_id: String,
-    pub task_name: String,
-    pub phase: String,
-    pub duration_seconds: u32,
-    pub completed_at: DateTime<Utc>,
-    pub was_skipped: bool,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "state_type")]
@@ -157,5 +148,4 @@ impl TryFrom<TimerStateDto> for TimerState {
 pub struct TimerDataDto {
     pub state: TimerStateDto,
     pub last_saved: DateTime<Utc>,
-    pub session_history: Vec<SessionHistoryDto>,
 }

@@ -37,21 +37,8 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    session_history (id) {
-        id -> Text,
-        task_id -> Text,
-        session_type -> Text,
-        duration_seconds -> Integer,
-        completed_at -> Text,
-    }
-}
-
-diesel::joinable!(session_history -> tasks (task_id));
-
 diesel::allow_tables_to_appear_in_same_query!(
     timers,
     tasks,
     config,
-    session_history,
 );

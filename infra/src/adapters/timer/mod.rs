@@ -8,7 +8,6 @@ pub mod event_handlers;
 mod sqlite_repository;
 pub mod sqlite_service;
 pub mod timer_dto;
-pub mod timer_storage_dto;
 
 pub use sqlite_repository::SqliteTimerRepository;
 pub use sqlite_service::TimerTickService;

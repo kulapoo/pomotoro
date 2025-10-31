@@ -3,13 +3,11 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::interval;
 
-use super::timer_dto::SessionHistoryDto;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
-use chrono::Utc;
 use domain::TimerRepository;
 use domain::{
-    ConfigRepository, Error, Phase, Result as DomainResult, Task,
-    TaskId, TaskRepository, Timer, TimerConfiguration,
+    ConfigRepository, Error, Result as DomainResult, TaskId,
+    TaskRepository, Timer, TimerConfiguration,
 };
 
 /// Infrastructure service for managing timer tick loops and technical concerns
@@ -20,7 +18,6 @@ pub struct TimerTickService {
     event_publisher: EventPublisherArc,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
-    session_history: Arc<Mutex<Vec<SessionHistoryDto>>>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
@@ -32,7 +29,6 @@ impl Clone for TimerTickService {
             event_publisher: Arc::clone(&self.event_publisher),
             timer_repository: Arc::clone(&self.timer_repository),
             task_repository: Arc::clone(&self.task_repository),
-            session_history: Arc::clone(&self.session_history),
             config_repository: Arc::clone(&self.config_repository),
         }
     }
@@ -53,7 +49,6 @@ impl TimerTickService {
             event_publisher,
             timer_repository,
             task_repository,
-            session_history: Arc::new(Mutex::new(Vec::new())),
             config_repository,
         }
     }
@@ -66,38 +61,6 @@ impl TimerTickService {
             .map_err(|e| Error::RepositoryError {
                 message: e.to_string(),
             })
-    }
-
-    // TODO: Remove this once we have a proper session history implementation
-    #[allow(dead_code)]
-    async fn add_session_history(
-        &self,
-        task: Option<&Task>,
-        phase: Phase,
-        duration_seconds: u32,
-        was_skipped: bool,
-    ) {
-        if let Some(task) = task {
-            let history_entry = SessionHistoryDto {
-                task_id: task.id.to_string(),
-                task_name: task.name.clone(),
-                phase: phase.name().to_string(),
-                duration_seconds,
-                completed_at: Utc::now(),
-                was_skipped,
-            };
-
-            let mut history = self.session_history.lock().await;
-            history.push(history_entry);
-
-            // Limit history size to prevent unbounded growth
-            const MAX_HISTORY_SIZE: usize = 1000;
-            const ENTRIES_TO_REMOVE: usize = 100;
-
-            if history.len() > MAX_HISTORY_SIZE {
-                history.drain(0..ENTRIES_TO_REMOVE);
-            }
-        }
     }
 
     /// Start the infrastructure timer tick loop
@@ -214,10 +177,6 @@ impl TimerTickService {
         Ok(())
     }
 
-    /// Get session history
-    pub async fn get_session_history(&self) -> Vec<SessionHistoryDto> {
-        self.session_history.lock().await.clone()
-    }
 
     /// Reset the timer to initial state
     pub async fn reset_timer(&self, timer_config: TimerConfiguration) -> DomainResult<()> {
