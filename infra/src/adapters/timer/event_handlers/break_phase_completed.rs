@@ -1,0 +1,45 @@
+use async_trait::async_trait;
+use domain::{Event, Result, event_names::ui_listeners, BreakPhaseCompleted};
+use serde_json::json;
+use std::any::TypeId;
+use std::sync::Arc;
+
+use crate::adapters::events::EventHandler;
+use crate::adapters::events::app_emitter::Emitter;
+
+pub struct BreakPhaseCompletedHandler {
+    emitter: Arc<dyn Emitter>,
+}
+
+impl BreakPhaseCompletedHandler {
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        Self { emitter }
+    }
+}
+
+#[async_trait]
+impl EventHandler for BreakPhaseCompletedHandler {
+    fn subscribes_to(&self) -> TypeId {
+        TypeId::of::<BreakPhaseCompleted>()
+    }
+
+    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
+        let break_phase_completed = event
+            .as_any()
+            .downcast_ref::<BreakPhaseCompleted>()
+            .ok_or(domain::Error::EventHandlingError {
+                message: format!("Failed to complete break phase"),
+            })?;
+
+        self.emitter
+            .emit(
+                ui_listeners::timer::BREAK_PHASE_COMPLETED,
+                json!(break_phase_completed.clone()),
+            )
+            .map_err(|e| domain::Error::RepositoryError {
+                message: format!("Failed to emit break phase completed event: {e}"),
+            })?;
+
+        Ok(())
+    }
+}
