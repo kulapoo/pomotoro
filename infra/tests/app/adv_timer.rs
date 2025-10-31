@@ -782,11 +782,11 @@ async fn should_switch_active_task_during_timer_session() {
 
     // Act
     // Switch to task2
-    let switch_result = usecases::timer::switch_timer_task(
-        ctx.timer_repo.clone(),
+    let switch_result = usecases::task::switch_active_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::timer::SwitchTimerTaskCmd {
+        usecases::task::SwitchActiveTaskCmd {
             task_id: task2.id,
         },
     )
@@ -1068,11 +1068,11 @@ async fn complete_productivity_workflow_integration() {
 
     // The timer should already be in work phase after completing the break
     // Just switch the active task to task2
-    usecases::timer::switch_timer_task(
-        ctx.timer_repo.clone(),
+    usecases::task::switch_active_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::timer::SwitchTimerTaskCmd {
+        usecases::task::SwitchActiveTaskCmd {
             task_id: task2.id,
         },
     )
@@ -1104,11 +1104,11 @@ async fn complete_productivity_workflow_integration() {
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Switch to task3 manually
-    usecases::timer::switch_timer_task(
-        ctx.timer_repo.clone(),
+    usecases::task::switch_active_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::timer::SwitchTimerTaskCmd {
+        usecases::task::SwitchActiveTaskCmd {
             task_id: task3.id,
         },
     )

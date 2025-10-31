@@ -62,7 +62,8 @@
       "Bash(npm install)",
       "Read(///**)",
       "Bash(cargo clippy:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": [],

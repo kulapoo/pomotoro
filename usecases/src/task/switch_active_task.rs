@@ -1,49 +1,22 @@
 use domain::{
-    Error, EventPublisher, Result, Task, TaskId, TaskRepository, TaskStatus,
-    TaskSwitchWorkflowCompleted, TaskUpdated, Timer, TimerRepository,
+    Error, EventPublisher, Result, TaskId, TaskRepository, TaskStatus,
+    TaskSwitchWorkflowCompleted, TaskUpdated, TimerRepository,
 };
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct SwitchTaskCmd {
+pub struct SwitchActiveTaskCmd {
     pub task_id: TaskId,
 }
 
-/// Pure validation function for task switching
-pub fn validate_task_switch(
-    task: &Task,
-    timer: &Timer,
-) -> Result<()> {
-    // Check if task is completed
-    if task.is_completed() {
-        return Err(Error::TaskAlreadyCompleted);
-    }
-
-    // Check if timer is running
-    if timer.is_running() {
-        return Err(Error::InvalidStateTransition {
-            from: "Running".to_string(),
-            to: "TaskSwitch".to_string(),
-        });
-    }
-
-    Ok(())
-}
-
-/// Switch to a different task (requires async for state management)
-/// This function coordinates the task switching workflow
-///
-/// ## Business Rules
-/// - Task must exist and not be completed
-/// - Updates task statuses: previous task → Queued, new task → Active
-/// - Updates timer's active task reference
-/// - Publishes appropriate domain events
-/// - By default, prevents switching while timer is running (use switch_task_force for UI/bootstrap)
-pub async fn switch_task(
+/// Switch the active task without timer validation (for UI/bootstrap scenarios)
+/// This variant allows switching even while the timer is running, which is needed
+/// for UI operations and initial setup
+pub async fn switch_active_task(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
-    cmd: SwitchTaskCmd,
+    cmd: SwitchActiveTaskCmd,
 ) -> Result<()> {
     // Get the target task
     let mut task = task_repo.get_by_id(cmd.task_id).await?.ok_or_else(|| {
@@ -52,11 +25,13 @@ pub async fn switch_task(
         }
     })?;
 
+    // Check if task is completed (but skip timer check)
+    if task.is_completed() {
+        return Err(Error::TaskAlreadyCompleted);
+    }
+
     // Get the single timer instance
     let mut timer = timer_repo.get().await?;
-
-    // Use pure validation - check if timer is running
-    validate_task_switch(&task, &timer)?;
 
     // Handle previous active task status transition
     let previous_task_id = timer.active_task_id();

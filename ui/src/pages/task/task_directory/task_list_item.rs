@@ -14,14 +14,11 @@ where
 {
     let task_id = task.id;
     let task_for_edit = task.clone();
-    let task_status_for_button = task.status.clone();
-    let task_status_for_disabled1 = task.status.clone();
-    let task_status_for_disabled2 = task.status.clone();
-    let task_status_for_disabled3 = task.status.clone();
-    let task_status_for_disabled4 = task.status.clone();
-    let task_status_for_disabled5 = task.status.clone();
-    let task_status_for_disabled6 = task.status.clone();
-    let task_status_for_onclick = task.status.clone();
+
+    // Create a single derived signal for button state
+    let is_task_completed = task.status == TaskStatus::Completed;
+    let button_disabled = is_active || is_task_completed;
+    let button_enabled = !is_active && !is_task_completed;
 
     let progress_percentage = if task.max_sessions > 0 {
         (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
@@ -100,23 +97,22 @@ where
                         </div>
                     </div>
                     <button
-                        class="px-4 py-2 font-medium rounded-md transition-all duration-200 disabled:cursor-not-allowed"
-                        class=("bg-indigo-600", move || !is_active && task_status_for_disabled1 != TaskStatus::Completed)
-                        class=("text-white", move || !is_active && task_status_for_disabled2 != TaskStatus::Completed)
-                        class=("hover:bg-indigo-700", move || !is_active && task_status_for_disabled3 != TaskStatus::Completed)
-                        class=("bg-slate-300", move || is_active || task_status_for_disabled4 == TaskStatus::Completed)
-                        class=("text-slate-600", move || is_active || task_status_for_disabled5 == TaskStatus::Completed)
-                        disabled=move || is_active || task_status_for_disabled6 == TaskStatus::Completed
+                        class={format!(
+                            "px-4 py-2 font-medium rounded-md transition-all duration-200 {} {}",
+                            if button_enabled { "bg-indigo-600 text-white hover:bg-indigo-700" } else { "bg-slate-300 text-slate-600" },
+                            if button_disabled { "cursor-not-allowed" } else { "" }
+                        )}
+                        disabled=button_disabled
                         on:click=move |ev| {
                             ev.stop_propagation();
-                            if !is_active && task_status_for_onclick != TaskStatus::Completed {
+                            if button_enabled {
                                 vm.with_value(|v| v.switch_active_task(task_id));
                             }
                         }
                     >
                         {if is_active {
                             "Currently Active"
-                        } else if task_status_for_button == TaskStatus::Completed {
+                        } else if is_task_completed {
                             "Task Completed"
                         } else {
                             "Select Task"

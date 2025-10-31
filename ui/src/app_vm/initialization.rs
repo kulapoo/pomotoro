@@ -1,3 +1,4 @@
+use domain::TaskSwitchWorkflowCompleted;
 use domain::event_names::ui_listeners::{timer as timer_event_names, task as task_event_names};
 use domain::{Task, Timer, TimerState, TimerTick, event_names::commands};
 use js_sys;
@@ -151,17 +152,18 @@ impl AppViewModel {
 
     // Active Task management
     fn setup_active_task_listeners(&self) {
-        self.setup_active_task_changed_listener();
-    }
-
-    fn setup_active_task_changed_listener(&self) {
         let set_active_task = self.set_active_task;
 
         spawn_local(async move {
-            let callback = Closure::new(move |_event: JsValue| {
-                spawn_local(async move {
-                    Self::fetch_active_task(set_active_task).await;
-                });
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                if let Ok(task_switch) = serde_wasm_bindgen::from_value::<TaskSwitchWorkflowCompleted>(payload) {
+                    spawn_local(async move {
+                        Self::fetch_task_by_id(&task_switch.new_task_id.to_string(), set_active_task).await;
+                    });
+                }
             });
 
             listen(task_event_names::ACTIVE_CHANGED, &callback).await;

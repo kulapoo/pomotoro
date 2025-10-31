@@ -7,8 +7,7 @@ use domain::{
 use log::{debug, error, info};
 
 use crate::{
-    task::{CreateTaskCmd, SetDefaultTaskCmd, create_task, set_default_task},
-    timer::switch_timer_task,
+    task::{CreateTaskCmd, SetDefaultTaskCmd, SwitchActiveTaskCmd, create_task, set_default_task, switch_active_task},
 };
 
 pub async fn bootstrap(
@@ -123,11 +122,11 @@ pub async fn bootstrap(
     // Switch to the selected task if we found one
     if let Some(active_task) = task_for_timer {
         info!("Switching timer to task {:?}", active_task.id);
-        if let Err(e) = switch_timer_task(
-            timer_repo.clone(),
+        if let Err(e) = switch_active_task(
             task_repo.clone(),
+            timer_repo.clone(),
             event_publisher.clone(),
-            switch_timer_task::SwitchTimerTaskCmd {
+            SwitchActiveTaskCmd {
                 task_id: active_task.id,
             },
         )

@@ -20,6 +20,7 @@ pub mod reset_task;
 pub mod reset_task_settings;
 pub mod search_tasks;
 pub mod set_default_task;
+pub mod switch_active_task;
 pub mod switch_task;
 pub mod update_task;
 pub mod update_task_settings;
@@ -41,6 +42,7 @@ pub use search_tasks::{
 pub use set_default_task::{
     SetDefaultTaskCmd, get_default_task, set_default_task,
 };
+pub use switch_active_task::{SwitchActiveTaskCmd, switch_active_task};
 pub use switch_task::{SwitchTaskCmd, switch_task};
 pub use update_task::{UpdateTaskCmd, update_task};
 pub use update_task_settings::update_task_settings;

@@ -1,6 +1,6 @@
 use crate::utils::invoke;
 use domain::event_names::{ui_listeners::task as task_event_names, commands};
-use domain::Task;
+use domain::{Task, TaskId};
 use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -142,8 +142,10 @@ impl TaskDirectoryViewModel {
                     &format!("Active task changed event received: {:?}", payload).into(),
                 );
 
-                if let Ok(task) = from_value::<Task>(payload) {
-                    set_active_task.set(Some(task));
+                if let Ok(task_id) = from_value::<TaskId>(payload) {
+                    spawn_local(async move {
+                        Self::fetch_task_by_id(&task_id.to_string(), set_active_task).await;
+                    });
                 }
             });
 
@@ -242,5 +244,30 @@ impl TaskDirectoryViewModel {
                     set_active_task.set(None);
                 });
         });
+    }
+
+    // Helper method to fetch task by ID
+    async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option<Task>>) {
+        use serde::Serialize;
+
+        if task_id.is_empty() {
+            set_active_task.set(None);
+            return;
+        }
+
+        #[derive(Serialize)]
+        struct GetTaskArgs {
+            id: String,
+        }
+
+        let args = GetTaskArgs {
+            id: task_id.to_string(),
+        };
+
+        let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
+            .ok()
+            .flatten();
+
+        set_active_task.set(task);
     }
 }
