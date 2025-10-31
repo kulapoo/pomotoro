@@ -7,9 +7,11 @@ use crate::adapters::timer::event_handlers::TimerResetHandler;
 use crate::adapters::{TimerTickService, events::app_emitter::Emitter};
 
 use super::{
+    BreakPhaseCompletedHandler,
     PhaseCompletedHandler, PhaseSkippedHandler, TimerPausedHandler,
     TimerStartedHandler, TimerStatusChangedHandler,
     TimerTickHandler,
+    WorkPhaseCompletedHandler,
 };
 
 pub fn register_timer_handlers(
@@ -40,7 +42,8 @@ pub fn register_timer_handlers(
         timer_srv.clone(),
         task_repo.clone(),
     )))?;
-
+    event_bus.subscribe(Box::new(BreakPhaseCompletedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(WorkPhaseCompletedHandler::new(emitter.clone())))?;
     Ok(())
 }
 
@@ -55,5 +58,7 @@ pub fn unregister_timer_handlers(
         .clear_handlers_for_type(TypeId::of::<TimerStatusChangedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TimerResetHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TimerPausedHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<BreakPhaseCompletedHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<WorkPhaseCompletedHandler>())?;
     Ok(())
 }

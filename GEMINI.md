@@ -22,3 +22,6 @@ The project uses `just` as a command runner to simplify common development tasks
 ## Development Conventions
 
 The project uses `rustfmt` for code formatting and `clippy` for linting. The `justfile` provides convenient commands for running these tools. The project also has a multi-crate structure, which helps to keep the code organized and modular.
+
+
+> IMPORTANT: Dont push the code into github
