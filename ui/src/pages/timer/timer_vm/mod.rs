@@ -2,10 +2,9 @@ mod accessors;
 mod initialization;
 mod commands;
 mod display;
-mod utils;
+
 mod task_ops;
 
-use crate::app_vm::AppViewModel;
 use crate::components::ErrorInfo;
 use domain::{Task, TimerState};
 use leptos::prelude::*;
@@ -25,19 +24,9 @@ impl ViewModel for TimerViewModel {
     type State = TimerState;
 
     fn new() -> Self {
-        // Get the AppViewModel from context to sync timer state
-        let app_vm = expect_context::<StoredValue<AppViewModel>>();
-
-        // Create local signals that sync with global timer state
         let (timer_state, set_timer_state) = signal(TimerState::default());
         let (active_task, set_active_task) = signal(None::<Task>);
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
-
-        // Sync timer state from AppViewModel
-        Effect::new(move |_| {
-            let global_timer_state = app_vm.with_value(|v| v.timer_state());
-            set_timer_state.set(global_timer_state.get());
-        });
 
         let vm = Self {
             timer_state,

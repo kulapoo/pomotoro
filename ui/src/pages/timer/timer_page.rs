@@ -55,7 +55,7 @@ pub fn TimerPage() -> impl IntoView {
                     <div class="text-4xl font-bold text-indigo-600 mb-2" id="taskPomodoros">
                         {move || vm.with_value(|v| v.get_task_pomodoros())}
                     </div>
-                    <div class="text-sm text-slate-600 uppercase tracking-wide">"Task Pomodoros"</div>
+                    <div class="text-sm text-slate-600 uppercase tracking-wide">"Phase(s)"</div>
                 </div>
             </div>
         </div>

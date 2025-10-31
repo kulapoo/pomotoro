@@ -1,8 +1,9 @@
-use domain::{Task, Timer, event_names::{ui_listeners::timer as timer_event_names, commands, ui_listeners::task as task_event_names}};
+use domain::{Task, Timer, event_names::{commands, ui_listeners::task as task_event_names}};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 
+use crate::app_vm::AppViewModel;
 use crate::components::{ErrorInfo, handle_command_error};
 use crate::utils::invoke;
 
@@ -23,7 +24,18 @@ impl TimerViewModel {
     pub(super) fn initialize(&self) {
         let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
+        let set_timer_state = self.set_timer_state;
 
+        // Get the AppViewModel from context to sync timer state
+        let app_vm = expect_context::<StoredValue<AppViewModel>>();
+
+        // Setup timer state synchronization with global app state
+        Effect::new(move |_| {
+            let global_timer_state = app_vm.with_value(|v| v.timer_state());
+            set_timer_state.set(global_timer_state.get());
+        });
+
+        // Setup active task and listeners
         Effect::new(move |_| {
             // Load initial active task
             Self::setup_initial_active_task(
@@ -69,16 +81,16 @@ impl TimerViewModel {
             callback.forget();
         });
 
-        // Also listen for phase completed to update task progress
-        spawn_local(async move {
-            let callback = Closure::new(move |_event: JsValue| {
-                spawn_local(async move {
-                    task_ops::fetch_active_task(set_active_task).await;
-                });
-            });
+        // // Also listen for phase completed to update task progress
+        // spawn_local(async move {
+        //     let callback = Closure::new(move |_event: JsValue| {
+        //         spawn_local(async move {
+        //             task_ops::fetch_active_task(set_active_task).await;
+        //         });
+        //     });
 
-            listen(timer_event_names::PHASE_COMPLETED, &callback).await;
-            callback.forget();
-        });
+        //     listen(timer_event_names::PHASE_COMPLETED, &callback).await;
+        //     callback.forget();
+        // });
     }
 }
