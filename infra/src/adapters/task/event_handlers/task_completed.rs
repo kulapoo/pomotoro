@@ -2,6 +2,7 @@ use crate::adapters::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::TimerTickService;
 use async_trait::async_trait;
+use domain::TaskSwitchWorkflowCompleted;
 use domain::{
     ConfigRepository, Event, Result, TaskRepository,
     task::AutoCycleService,
@@ -80,11 +81,25 @@ impl EventHandler for TaskCompletedHandler {
                 // Log the auto-cycle action for debugging
                 tracing::info!(
                     "AutoCycle: Would switch from task {} to task {}",
-                    task_completed.task_id,
+                    task_completed.task_id.clone(),
                     next_task.id
                 );
-                // Note: The actual task switching would be handled by UI or another handler
-                // since we're now using pure functions without side effects
+
+                let switch_event = TaskSwitchWorkflowCompleted::new(
+                    Some(task_completed.task_id),
+                    next_task.id.clone(),
+                    format!("Switched to task: {}", next_task.name),
+                    1,
+                );
+
+                self.emitter.emit(
+                    domain::event_names::task::ACTIVE_CHANGED,
+                    json!(switch_event),
+                )
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!("Failed to emit task switch workflow completed event: {e}"),
+                })?;
+
             } else {
                 tracing::debug!("AutoCycle: No eligible tasks found for cycling");
             }
