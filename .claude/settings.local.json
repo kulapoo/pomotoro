@@ -68,7 +68,7 @@
     ],
     "deny": [],
     "ask": [],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "plan"
   },
   "hooks": {
     "PostToolUse": [

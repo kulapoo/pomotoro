@@ -1,11 +1,10 @@
 use crate::adapters::EventHandler;
-use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::TimerTickService;
+use crate::adapters::events::app_emitter::Emitter;
 use async_trait::async_trait;
 use domain::TaskSwitchWorkflowCompleted;
 use domain::{
-    ConfigRepository, Event, Result, TaskRepository,
-    task::AutoCycleService,
+    ConfigRepository, Event, Result, TaskRepository, task::AutoCycleService,
 };
 use serde_json::json;
 use std::any::TypeId;
@@ -45,65 +44,66 @@ impl EventHandler for TaskCompletedHandler {
             .as_any()
             .downcast_ref::<domain::TaskCompleted>()
             .ok_or(domain::Error::EventHandlingError {
-            message: "Failed to complete task".to_string(),
-        })?;
-        let task = self.task_repository.get_by_id(task_completed.task_id).await?.ok_or(
-            domain::Error::EventHandlingError {
                 message: "Failed to complete task".to_string(),
-            }
-        )?;
+            })?;
+        let task = self
+            .task_repository
+            .get_by_id(task_completed.task_id)
+            .await?
+            .ok_or(domain::Error::EventHandlingError {
+                message: "Failed to complete task".to_string(),
+            })?;
         let timer_config = task.get_config().timer.clone();
 
-        self.timer_srv.load_state().await?;
-        self.timer_srv
-            .stop_timer_tick_loop()
-            .await
-            .map_err(|e| domain::Error::EventHandlingError {
-                message: format!("Failed to stop timer tick loop: {e}"),
-            })?;
+        // self.timer_srv.load_state().await?;
+        // self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
+        //     domain::Error::EventHandlingError {
+        //         message: format!("Failed to stop timer tick loop: {e}"),
+        //     }
+        // })?;
 
         self.timer_srv.reset_timer(timer_config.clone()).await?;
 
         let timer = self.timer_srv.get_current_timer().await;
 
         // Check if AutoCycle is enabled and trigger cycling
-        let config = self.config_repository.get_config().await?;
-        if AutoCycleService::should_auto_cycle(&config.general) {
-            // Get available tasks for cycling
-            let available_tasks = self.task_repository.get_active_tasks().await?;
+        // let config = self.config_repository.get_config().await?;
+        // if AutoCycleService::should_auto_cycle(&config.general) {
+        //     // Get available tasks for cycling
+        //     let available_tasks = self.task_repository.get_active_tasks().await?;
 
-            // Find next task using pure domain logic
-            if let Some(next_task) = AutoCycleService::select_next_task(
-                &available_tasks,
-                Some(&task_completed.task_id),
-                &config.general.task_cycling_behavior,
-            ) {
-                // Log the auto-cycle action for debugging
-                tracing::info!(
-                    "AutoCycle: Would switch from task {} to task {}",
-                    task_completed.task_id.clone(),
-                    next_task.id
-                );
+        //     // Find next task using pure domain logic
+        //     if let Some(next_task) = AutoCycleService::select_next_task(
+        //         &available_tasks,
+        //         Some(&task_completed.task_id),
+        //         &config.general.task_cycling_behavior,
+        //     ) {
+        //         // Log the auto-cycle action for debugging
+        //         tracing::info!(
+        //             "AutoCycle: Would switch from task {} to task {}",
+        //             task_completed.task_id.clone(),
+        //             next_task.id
+        //         );
 
-                let switch_event = TaskSwitchWorkflowCompleted::new(
-                    Some(task_completed.task_id),
-                    next_task.id,
-                    format!("Switched to task: {}", next_task.name),
-                    1,
-                );
+        //         let switch_event = TaskSwitchWorkflowCompleted::new(
+        //             Some(task_completed.task_id),
+        //             next_task.id,
+        //             format!("Switched to task: {}", next_task.name),
+        //             1,
+        //         );
 
-                self.emitter.emit(
-                    domain::event_names::task::ACTIVE_CHANGED,
-                    json!(switch_event),
-                )
-                .map_err(|e| domain::Error::EventPublishingError {
-                    message: format!("Failed to emit task switch workflow completed event: {e}"),
-                })?;
+        //         self.emitter.emit(
+        //             domain::event_names::task::ACTIVE_CHANGED,
+        //             json!(switch_event),
+        //         )
+        //         .map_err(|e| domain::Error::EventPublishingError {
+        //             message: format!("Failed to emit task switch workflow completed event: {e}"),
+        //         })?;
 
-            } else {
-                tracing::debug!("AutoCycle: No eligible tasks found for cycling");
-            }
-        }
+        //     } else {
+        //         tracing::debug!("AutoCycle: No eligible tasks found for cycling");
+        //     }
+        // }
 
         self.emitter
             .emit(

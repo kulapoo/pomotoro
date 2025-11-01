@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::core::mocks::ui::app_handle::MockAppHandle;
 use anyhow::Result;
-use domain::{ConfigRepository, TaskRepository};
+use domain::{ConfigRepository, TaskRepository, TimerRepository, EventPublisher};
 use infra::adapters::TimerTickService;
 use infra::adapters::events::EventSubscriber;
 use infra::adapters::events::app_emitter::Emitter;
@@ -15,8 +15,10 @@ pub fn register_test_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     app_handle: MockAppHandle,
     task_repository: Arc<dyn TaskRepository>,
+    timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     timer_tick_service: Arc<TimerTickService>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let emitter: Arc<dyn Emitter> = Arc::new(app_handle);
 
@@ -33,7 +35,9 @@ pub fn register_test_handlers(
         emitter.clone(),
         timer_tick_service.clone(),
         task_repository.clone(),
+        timer_repository.clone(),
         config_repository.clone(),
+        event_publisher.clone(),
     )?;
     register_config_handlers(event_bus.clone(), emitter.clone())?;
 

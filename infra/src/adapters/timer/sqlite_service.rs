@@ -102,27 +102,77 @@ impl TimerTickService {
             interval.tick().await;
             loop {
                 interval.tick().await;
-                let should_continue = {
+                let (should_continue, phase_completed) = {
                     let mut timer = timer_clone.lock().await;
 
                     if !timer.is_running() {
-                        false
+                        (false, false)
                     } else {
-                        let continue_running = match timer.tick(&config_clone) {
+                        match timer.tick(&config_clone) {
                             Ok((phase_complete, events)) => {
                                 if !events.is_empty() {
                                     event_publisher_clone.publish_batch(events);
                                 }
-                                !phase_complete
+                                (!phase_complete, phase_complete)
                             }
                             Err(e) => {
                                 eprintln!("Timer tick error: {e}");
-                                false
+                                (false, false)
                             }
-                        };
-                        continue_running
+                        }
                     }
                 };
+
+                // If phase completed naturally (countdown reached 0), we need to handle completion
+                if phase_completed {
+                    // The timer has naturally expired, trigger phase completion
+                    // We publish events to indicate natural countdown expiration
+
+                    // Get the current phase and task_id before breaking
+                    let (current_phase, task_id) = {
+                        let timer = timer_clone.lock().await;
+                        (timer.get_current_phase(), timer.task_id())
+                    };
+
+                    // Always publish the generic CountdownExpired event
+                    use domain::timer::events::CountdownExpired;
+                    let expiration_event = CountdownExpired::new(current_phase);
+                    event_publisher_clone.publish(Box::new(expiration_event));
+
+                    // Additionally, publish phase-specific events based on the phase type
+                    use domain::timer::Phase;
+                    use domain::timer::events::{BreakPhaseCompleted, WorkPhaseCompleted};
+
+                    match current_phase {
+                        Phase::Work => {
+                            // Get work duration from config (convert Duration to seconds)
+                            let duration_seconds = config_clone.work_duration.as_secs() as u32;
+                            let work_completed = WorkPhaseCompleted::new(
+                                task_id,
+                                duration_seconds,
+                                1, // Using fixed version for now
+                            );
+                            event_publisher_clone.publish(Box::new(work_completed));
+                        }
+                        Phase::ShortBreak | Phase::LongBreak => {
+                            // Get break duration from config based on break type (convert Duration to seconds)
+                            let duration_seconds = match current_phase {
+                                Phase::ShortBreak => config_clone.short_break_duration.as_secs() as u32,
+                                Phase::LongBreak => config_clone.long_break_duration.as_secs() as u32,
+                                _ => unreachable!(),
+                            };
+                            let break_completed = BreakPhaseCompleted::new(
+                                task_id,
+                                current_phase,
+                                duration_seconds,
+                                1, // Using fixed version for now
+                            );
+                            event_publisher_clone.publish(Box::new(break_completed));
+                        }
+                    }
+
+                    break;
+                }
 
                 if !should_continue {
                     break;

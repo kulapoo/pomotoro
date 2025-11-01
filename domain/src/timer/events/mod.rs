@@ -1,6 +1,7 @@
 pub mod active_task_switched;
 pub mod break_phase_completed;
 pub mod break_phase_started;
+pub mod countdown_expired;
 pub mod phase_completed;
 pub mod phase_skipped;
 pub mod session_flow_reset;
@@ -15,6 +16,7 @@ pub mod work_phase_started;
 pub use active_task_switched::ActiveTaskSwitched;
 pub use break_phase_completed::BreakPhaseCompleted;
 pub use break_phase_started::BreakPhaseStarted;
+pub use countdown_expired::CountdownExpired;
 pub use phase_completed::PhaseCompleted;
 pub use phase_skipped::PhaseSkipped;
 pub use session_flow_reset::SessionFlowReset;

@@ -74,8 +74,10 @@ impl AppContext {
             event_bus.clone() as Arc<dyn EventSubscriber + Send + Sync>,
             app_handle,
             task_repo.clone(),
+            timer_repo.clone(),
             timer_tick_service.clone(),
             config_repo.clone(),
+            event_bus.clone(),
         )
         .unwrap();
 
