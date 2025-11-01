@@ -141,21 +141,26 @@ impl AppContextBuilder {
                 .await?
                 .ok_or(domain::Error::DefaultTaskNotFound)?;
 
-            ctx.timer_tick_service
-                .update_timer(|timer| {
-                    timer.set_active_task(task.id);
-                    let events =
-                        timer.start(&task.config.timer).map_err(|e| {
-                            domain::Error::RepositoryError {
-                                message: e.to_string(),
-                            }
-                        })?;
+            // Create a new timer for this task (not the DEFAULT_TASK_ID timer)
+            let mut timer = domain::Timer::new(task.id);
+            let events = timer.start(&task.config.timer).map_err(|e| {
+                domain::Error::RepositoryError {
+                    message: e.to_string(),
+                }
+            })?;
 
-                    (ctx.event_bus.clone() as Arc<dyn EventPublisher>)
-                        .publish_batch(events);
-                    Ok(())
-                })
-                .await?;
+            // Save the timer
+            ctx.timer_repo.save(&timer).await.map_err(|e| {
+                domain::Error::RepositoryError {
+                    message: e.to_string(),
+                }
+            })?;
+
+            // Publish events
+            (ctx.event_bus.clone() as Arc<dyn EventPublisher>)
+                .publish_batch(events);
+
+            // Start the tick loop
             ctx.timer_tick_service
                 .start_timer_tick_loop(Some(task.config.timer.clone()), Some(task.id))
                 .await

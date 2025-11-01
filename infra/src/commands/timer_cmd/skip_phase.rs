@@ -17,10 +17,8 @@ pub async fn skip_phase(
         .context("infra::commands::timer_cmd::skip_phase - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
-    // Get the active task ID from the timer
-    let task_id = current_timer
-        .active_task_id()
-        .ok_or("No active task in timer")?;
+    // Get the task ID from the timer
+    let task_id = current_timer.task_id();
 
     skip_timer_phase(
         task_repo.inner().clone(),

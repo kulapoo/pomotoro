@@ -19,7 +19,7 @@ pub fn TaskFormPage() -> impl IntoView {
             p.get("id").and_then(|id| {
                 Uuid::parse_str(&id)
                     .ok()
-                    .map(|uuid| TaskId::from_uuid(uuid))
+                    .map(TaskId::from_uuid)
             })
         })
     };
@@ -140,12 +140,9 @@ pub fn TaskFormPage() -> impl IntoView {
         move |_| {
             set_validation_error.set(None);
 
-            match validate_form() {
-                Err(error) => {
-                    set_validation_error.set(Some(error));
-                    return;
-                }
-                Ok(_) => {}
+            if let Err(error) = validate_form() {
+                set_validation_error.set(Some(error));
+                return;
             }
 
             if is_submitting.get() {
@@ -431,9 +428,7 @@ pub fn TaskFormPage() -> impl IntoView {
                     {move || {
                         if is_submitting.get() {
                             if is_update() { "Updating..." } else { "Creating..." }
-                        } else {
-                            if is_update() { "Update Task" } else { "Create Task" }
-                        }
+                        } else if is_update() { "Update Task" } else { "Create Task" }
                     }}
                 </button>
 

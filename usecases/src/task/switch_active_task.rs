@@ -31,10 +31,10 @@ pub async fn switch_active_task(
     }
 
     // Get the single timer instance
-    let mut timer = timer_repo.get().await?;
+    let timer = timer_repo.get().await?;
 
     // Handle previous active task status transition
-    let previous_task_id = timer.active_task_id();
+    let previous_task_id = Some(timer.task_id());
     if let Some(prev_task_id) = previous_task_id {
         if prev_task_id != cmd.task_id {
             if let Some(mut prev_task) = task_repo.get_by_id(prev_task_id).await? {
@@ -73,9 +73,10 @@ pub async fn switch_active_task(
         1,
     )));
 
-    // Update the timer's active task
-    timer.set_active_task(cmd.task_id);
-    timer_repo.save(&timer).await?;
+    // Create a new timer for the new task, preserving the state from the old timer
+    // This allows seamless task switching during active sessions
+    let new_timer = domain::Timer::with_state(cmd.task_id, timer.state().clone());
+    timer_repo.save(&new_timer).await?;
 
     // Publish TaskSwitchWorkflowCompleted event
     let switch_event = TaskSwitchWorkflowCompleted::new(

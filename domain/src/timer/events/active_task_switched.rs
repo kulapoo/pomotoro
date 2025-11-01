@@ -1,11 +1,11 @@
 use crate::timer::Phase;
-use crate::TimerId;
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ActiveTaskSwitched {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub phase: Phase,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
@@ -13,12 +13,12 @@ pub struct ActiveTaskSwitched {
 
 impl ActiveTaskSwitched {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         phase: Phase,
         version: u64,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             phase,
             version,
             occurred_at: Utc::now(),
@@ -32,7 +32,7 @@ impl crate::Event for ActiveTaskSwitched {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

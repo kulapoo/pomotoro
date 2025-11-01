@@ -16,10 +16,8 @@ pub async fn reset_timer(
         .context("infra::commands::timer_cmd::reset_timer - Failed to get current timer")
         .map_err(|e| e.to_string())?;
 
-    // Get the active task ID from the timer
-    let task_id = current_timer
-        .active_task_id()
-        .ok_or("No active task in timer")?;
+    // Get the task ID from the timer
+    let task_id = current_timer.task_id();
 
     reset_timer_phase(
         task_id,

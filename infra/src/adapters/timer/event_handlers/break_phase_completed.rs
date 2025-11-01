@@ -28,7 +28,7 @@ impl EventHandler for BreakPhaseCompletedHandler {
             .as_any()
             .downcast_ref::<BreakPhaseCompleted>()
             .ok_or(domain::Error::EventHandlingError {
-                message: format!("Failed to complete break phase"),
+                message: "Failed to complete break phase".to_string(),
             })?;
 
         self.emitter

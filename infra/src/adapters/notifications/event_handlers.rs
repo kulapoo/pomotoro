@@ -39,8 +39,8 @@ impl EventHandler for PhaseCompletedNotificationHandler {
             event.as_any().downcast_ref::<PhaseCompleted>()
         {
             let notification_event = NotificationEvent::PhaseCompleted {
-                from: phase_completed.completed_phase.clone(),
-                to: phase_completed.next_phase.clone(),
+                from: phase_completed.completed_phase,
+                to: phase_completed.next_phase,
             };
             self.notification_service
                 .send_notification(notification_event)
@@ -81,25 +81,20 @@ impl EventHandler for TimerStartedNotificationHandler {
         if let Some(timer_started) =
             event.as_any().downcast_ref::<TimerStarted>()
         {
-            let task_name =
-                if let Some(entity_id) = &timer_started.active_entity_id {
-                    if let Some(task) = self
-                        .task_repository
-                        .get_all()
-                        .await?
-                        .into_iter()
-                        .find(|t| t.id == *entity_id)
-                    {
-                        Some(task.name)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+            let task_name = if let Some(task) = self
+                .task_repository
+                .get_all()
+                .await?
+                .into_iter()
+                .find(|t| t.id == timer_started.task_id)
+            {
+                Some(task.name)
+            } else {
+                None
+            };
 
             let notification_event = NotificationEvent::SessionStarted {
-                phase: timer_started.phase.clone(),
+                phase: timer_started.phase,
                 task_name,
             };
             self.notification_service
@@ -138,7 +133,7 @@ impl EventHandler for TimerPausedNotificationHandler {
         if let Some(timer_paused) = event.as_any().downcast_ref::<TimerPaused>()
         {
             let notification_event = NotificationEvent::TimerPaused {
-                phase: timer_paused.phase.clone(),
+                phase: timer_paused.phase,
                 remaining_seconds: timer_paused.remaining_seconds,
             };
             self.notification_service
@@ -220,22 +215,17 @@ impl EventHandler for WorkPhaseCompletedNotificationHandler {
         if let Some(work_completed) =
             event.as_any().downcast_ref::<WorkPhaseCompleted>()
         {
-            let task_name =
-                if let Some(entity_id) = &work_completed.active_entity_id {
-                    if let Some(task) = self
-                        .task_repository
-                        .get_all()
-                        .await?
-                        .into_iter()
-                        .find(|t| t.id.to_string() == *entity_id)
-                    {
-                        Some(task.name)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+            let task_name = if let Some(task) = self
+                .task_repository
+                .get_all()
+                .await?
+                .into_iter()
+                .find(|t| t.id == work_completed.task_id)
+            {
+                Some(task.name)
+            } else {
+                None
+            };
 
             let notification_event = NotificationEvent::WorkPhaseCompleted {
                 task_name,
@@ -277,7 +267,7 @@ impl EventHandler for BreakStartedNotificationHandler {
             event.as_any().downcast_ref::<BreakPhaseStarted>()
         {
             let notification_event = NotificationEvent::BreakStarted {
-                break_type: break_started.phase.clone(),
+                break_type: break_started.phase,
                 duration_seconds: break_started.duration_seconds,
             };
             self.notification_service
@@ -317,7 +307,7 @@ impl EventHandler for BreakCompletedNotificationHandler {
             event.as_any().downcast_ref::<BreakPhaseCompleted>()
         {
             let notification_event = NotificationEvent::BreakCompleted {
-                break_type: break_completed.phase.clone(),
+                break_type: break_completed.phase,
             };
             self.notification_service
                 .send_notification(notification_event)

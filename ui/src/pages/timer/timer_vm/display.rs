@@ -7,7 +7,7 @@ impl TimerViewModel {
     pub fn get_phase_name(&self) -> String {
         let state = self.timer_state.get();
         match &state {
-            TimerState::Idle { .. } => "Idle".to_string(),
+            TimerState::Idle => "Idle".to_string(),
             TimerState::Working { .. } => "Focus Time".to_string(),
             TimerState::ShortBreak { .. } => "Short Break".to_string(),
             TimerState::LongBreak { .. } => "Long Break".to_string(),

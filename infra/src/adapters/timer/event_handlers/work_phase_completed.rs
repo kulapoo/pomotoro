@@ -28,7 +28,7 @@ impl EventHandler for WorkPhaseCompletedHandler {
             .as_any()
             .downcast_ref::<WorkPhaseCompleted>()
             .ok_or(domain::Error::EventHandlingError {
-                message: format!("Failed to complete work phase"),
+                message: "Failed to complete work phase".to_string(),
             })?;
 
         self.emitter

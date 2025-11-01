@@ -52,13 +52,8 @@ async fn timer_should_start_from_idle_state() {
 
     let timer_idle_state = timer_srv.get_current_timer().await.state().clone();
 
-    timer_srv
-        .update_timer(|timer| {
-            timer.set_active_task(task_id);
-            Ok(())
-        })
-        .await
-        .expect("Failed to update timer");
+    // Timer is already associated with task_id at construction time
+    // No need to set_active_task anymore
 
     let result = start_timer_phase(
         ctx.task_repo.clone(),
@@ -97,7 +92,7 @@ async fn timer_should_not_start_when_already_running() {
             .await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.active_task_id().expect("Task id should be set");
+    let task_id = timer.task_id();
 
     let result = start_timer_phase(
         ctx.task_repo.clone(),
@@ -124,7 +119,7 @@ async fn timer_should_prevent_task_switch_while_timer_is_running() {
     .await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.active_task_id().expect("Task id should be set");
+    let task_id = timer.task_id();
 
     let result = switch_task(
         ctx.task_repo.clone(),
@@ -144,7 +139,7 @@ async fn timer_should_pause_when_running() {
 
     let timer = get_timer(&ctx).await;
 
-    let task_id = timer.active_task_id().expect("Task id should be set");
+    let task_id = timer.task_id();
 
     // Act
     let result = pause_timer_phase(
@@ -163,7 +158,7 @@ async fn timer_should_pause_when_running() {
     assert_eq!(result.is_ok(), true);
 
     assert_eq!(timer.is_running(), true);
-    assert_eq!(timer.active_task_id(), Some(task_id));
+    assert_eq!(timer.task_id(), task_id);
 
     assert_eq!(timer_after_pause.is_paused(), true);
 
@@ -180,7 +175,7 @@ async fn timer_should_reset_to_initial_state() {
     let ctx = setup_ctx_with_timer("timer_should_reset_to_initial_state").await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.active_task_id().expect("Task id should be set");
+    let task_id = timer.task_id();
 
     let result = reset_timer_phase(
         task_id,
@@ -194,7 +189,7 @@ async fn timer_should_reset_to_initial_state() {
 
     assert_eq!(result.is_ok(), true);
     assert_eq!(timer_after_reset.remaining_seconds(None), 1500);
-    assert_eq!(timer_after_reset.active_task_id(), Some(task_id));
+    assert_eq!(timer_after_reset.task_id(), task_id);
 
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
@@ -210,13 +205,13 @@ async fn timer_should_start_with_specific_task() {
         setup_ctx_with_timer("should_start_timer_with_specific_task").await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.active_task_id().expect("Task id should be set");
+    let task_id = timer.task_id();
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     let timer = get_timer(&ctx).await;
 
-    assert_eq!(timer.active_task_id(), Some(task_id));
+    assert_eq!(timer.task_id(), task_id);
     assert_eq!(timer.state().status(), TimerStatus::Running);
     assert_eq!(timer.state().is_work_phase(), true);
     assert_eq!(timer.state().remaining_seconds(), 1500);
@@ -366,7 +361,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
 
     // Pause the timer
     let _ = pause_timer_phase(
-        timer.active_task_id().expect("Task id should be set"),
+        timer.task_id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -381,7 +376,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
             task_id: Some(
-                timer.active_task_id().expect("Task id should be set"),
+                timer.task_id(),
             ),
         },
     )
@@ -390,7 +385,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
 
     // Reset the timer
     let _ = reset_timer_phase(
-        timer.active_task_id().expect("Task id should be set"),
+        timer.task_id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -405,7 +400,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
             task_id: Some(
-                timer.active_task_id().expect("Task id should be set"),
+                timer.task_id(),
             ),
         },
     )

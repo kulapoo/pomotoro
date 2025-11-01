@@ -31,7 +31,7 @@ impl EventHandler for TimerPausedHandler {
             .as_any()
             .downcast_ref::<domain::TimerPaused>()
             .ok_or(domain::Error::EventHandlingError {
-                message: format!("Failed to pause timer"),
+                message: "Failed to pause timer".to_string(),
             })?;
 
         // Load the current state to get the full TimerState

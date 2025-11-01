@@ -29,10 +29,10 @@ pub async fn pause_timer_phase(
     // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
 
-    // Verify the timer has the expected active task
-    if timer.active_task_id() != Some(task_id) {
+    // Verify the timer is for the expected task
+    if timer.task_id() != task_id {
         return Err(domain::Error::InvalidStateTransition {
-            from: "different_task_active".to_string(),
+            from: "different_task".to_string(),
             to: "pause".to_string(),
         });
     }
@@ -69,10 +69,10 @@ pub async fn resume_timer_phase(
     // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
 
-    // Verify the timer has the expected active task
-    if timer.active_task_id() != Some(task_id) {
+    // Verify the timer is for the expected task
+    if timer.task_id() != task_id {
         return Err(domain::Error::InvalidStateTransition {
-            from: "different_task_active".to_string(),
+            from: "different_task".to_string(),
             to: "resume".to_string(),
         });
     }

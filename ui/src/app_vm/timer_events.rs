@@ -17,9 +17,9 @@ impl AppViewModel {
             invoke::<Timer, ()>(commands::timer::GET_STATE, None).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
-                .and_then(|timer| {
+                .map(|timer| {
                     set_timer_state.set(timer.state().clone());
-                    Some(())
+                    ()
                 });
         });
     }

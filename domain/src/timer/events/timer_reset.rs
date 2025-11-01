@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{timer::Phase, TimerConfiguration};
-use crate::TimerId;
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Reset {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub phase: Phase,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
@@ -15,13 +15,13 @@ pub struct Reset {
 
 impl Reset {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         phase: Phase,
         version: u64,
         timer_configuration: TimerConfiguration,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             phase,
             version,
             occurred_at: Utc::now(),
@@ -36,7 +36,7 @@ impl crate::Event for Reset {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

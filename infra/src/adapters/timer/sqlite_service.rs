@@ -56,7 +56,7 @@ impl TimerTickService {
     pub async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
         self.timer_repository
-            .save(&*timer_guard)
+            .save(&timer_guard)
             .await
             .map_err(|e| Error::RepositoryError {
                 message: e.to_string(),
@@ -159,7 +159,7 @@ impl TimerTickService {
     {
         {
             let mut timer = self.timer.lock().await;
-            update_fn(&mut *timer)?;
+            update_fn(&mut timer)?;
         }
         self.save_state().await
     }

@@ -428,7 +428,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
     // Get state after resume
     let state_after_resume = get_timer(&ctx).await.state().clone();
     let remaining_after_resume = state_after_resume.remaining_seconds();
-    let active_task_after_resume = get_timer(&ctx).await.active_task_id();
+    let active_task_after_resume = get_timer(&ctx).await.task_id();
 
     // Assert
     assert!(start_result.is_ok(), "Failed to start timer");
@@ -443,7 +443,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
 
     // Duration shouldn't change while paused
     assert_eq!(remaining_after_resume, remaining_before_pause, "Duration should remain the same after pause/resume");
-    assert_eq!(active_task_after_resume, Some(task.id), "Active task should be maintained after resume");
+    assert_eq!(active_task_after_resume, task.id, "Active task should be maintained after resume");
 }
 
 // Test 25: Task with custom timer settings
@@ -796,7 +796,7 @@ async fn should_switch_active_task_during_timer_session() {
 
     // Get state after switch
     let state_after_switch = get_timer(&ctx).await.state().clone();
-    let active_task_after_switch = get_timer(&ctx).await.active_task_id();
+    let active_task_after_switch = get_timer(&ctx).await.task_id();
     let remaining_after_switch = state_after_switch.remaining_seconds();
     let status_after_switch = state_after_switch.status();
 
@@ -857,7 +857,7 @@ async fn should_switch_active_task_during_timer_session() {
 
     // Assert
     assert!(switch_result.is_ok(), "Failed to switch task");
-    assert_eq!(active_task_after_switch, Some(task2.id), "Active task should be task2 after switch");
+    assert_eq!(active_task_after_switch, task2.id, "Active task should be task2 after switch");
     assert_eq!(remaining_after_switch, 15 * 60, "Timer should continue with remaining time");
     assert_eq!(status_after_switch, TimerStatus::Running, "Timer should continue running");
 

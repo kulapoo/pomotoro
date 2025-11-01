@@ -8,7 +8,7 @@ use super::events::{
     PhaseSkipped, Reset, Started, WorkPhaseCompleted, WorkPhaseStarted,
 };
 use super::state_machine::TimerState;
-use super::{Error, Phase, Result, TimerId};
+use super::{Error, Phase, Result};
 use crate::{Event, TaskId, TimerConfiguration};
 
 /// Result of a state transition containing new state and generated events.
@@ -28,9 +28,8 @@ impl StateTransitions {
     /// Returns error if not in Idle state.
     pub fn start(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
-        active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Idle => {
@@ -40,11 +39,10 @@ impl StateTransitions {
 
                 let events: Vec<Box<dyn Event>> = vec![
                     Box::new(
-                        Started::new(timer_id, Phase::Work, duration, 1)
-                            .with_active_entity(active_task_id),
+                        Started::new(task_id, Phase::Work, duration, 1),
                     ),
                     Box::new(WorkPhaseStarted::new(
-                        timer_id, duration, 1,
+                        task_id, duration, 1,
                     )),
                 ];
 
@@ -66,7 +64,7 @@ impl StateTransitions {
     /// Returns error if in Idle state.
     pub fn pause(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
         match state {
@@ -83,7 +81,7 @@ impl StateTransitions {
 
                 let events: Vec<Box<dyn Event>> = vec![
                     Box::new(Paused::new(
-                        timer_id,
+                        task_id,
                         phase,
                         remaining_seconds,
                         1,
@@ -116,9 +114,8 @@ impl StateTransitions {
     /// Returns error if not paused.
     pub fn resume(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         _configuration: &TimerConfiguration,
-        active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Paused { paused_from, remaining_seconds } => {
@@ -127,8 +124,7 @@ impl StateTransitions {
                 // Use the remaining_seconds from the Paused state, not from paused_from
                 let events: Vec<Box<dyn Event>> =
                     vec![Box::new(
-                        Started::new(timer_id, phase, remaining_seconds, 1)
-                            .with_active_entity(active_task_id)
+                        Started::new(task_id, phase, remaining_seconds, 1)
                     )];
 
                 // Create the resumed state with the correct remaining seconds
@@ -157,11 +153,11 @@ impl StateTransitions {
     /// Resets timer to Idle state from any state.
     pub fn reset(
         _state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
         let events: Vec<Box<dyn Event>> =
-            vec![Box::new(Reset::new(timer_id, Phase::Work, 1, configuration.clone()))];
+            vec![Box::new(Reset::new(task_id, Phase::Work, 1, configuration.clone()))];
 
         Ok(TransitionResult {
             new_state: TimerState::Idle,
@@ -171,7 +167,7 @@ impl StateTransitions {
 
     pub fn reset_phase(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
     ) -> Result<TransitionResult> {
         let phase = state.phase();
@@ -185,7 +181,7 @@ impl StateTransitions {
             TimerState::Idle => TimerState::Idle,
         };
 
-        let events: Vec<Box<dyn Event>> = vec![Box::new(Reset::new(timer_id, phase, 1, configuration.clone()))];
+        let events: Vec<Box<dyn Event>> = vec![Box::new(Reset::new(task_id, phase, 1, configuration.clone()))];
 
         Ok(TransitionResult {
             new_state,
@@ -198,7 +194,7 @@ impl StateTransitions {
     /// Generates appropriate session completion and start events.
     pub fn complete_phase(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
         next_phase: Phase,
     ) -> Result<TransitionResult> {
@@ -218,30 +214,30 @@ impl StateTransitions {
         };
 
         let mut events: Vec<Box<dyn Event>> = vec![Box::new(
-            PhaseCompleted::new(timer_id, from_phase, next_phase, 0, 1),
+            PhaseCompleted::new(task_id, from_phase, next_phase, 0, 1),
         )];
 
         match from_phase {
             Phase::Work => {
                 events.push(Box::new(WorkPhaseCompleted::new(
-                    timer_id,
+                    task_id,
                     configuration.get_phase_duration_seconds(Phase::Work),
                     1,
                 )));
                 events.push(Box::new(BreakPhaseStarted::new(
-                    timer_id, next_phase, duration, 1,
+                    task_id, next_phase, duration, 1,
                 )));
             }
             Phase::ShortBreak | Phase::LongBreak => {
                 events.push(Box::new(BreakPhaseCompleted::new(
-                    timer_id,
+                    task_id,
                     from_phase,
                     configuration.get_phase_duration_seconds(from_phase),
                     1,
                 )));
                 if next_phase == Phase::Work {
                     events.push(Box::new(WorkPhaseStarted::new(
-                        timer_id, duration, 1,
+                        task_id, duration, 1,
                     )));
                 }
             }
@@ -259,10 +255,9 @@ impl StateTransitions {
     /// The caller must determine the next_phase based on session counting logic.
     pub fn skip_phase(
         state: TimerState,
-        timer_id: TimerId,
+        task_id: TaskId,
         configuration: &TimerConfiguration,
         next_phase: Phase,
-        active_task_id: Option<TaskId>,
     ) -> Result<TransitionResult> {
         match state {
             TimerState::Working { .. }
@@ -272,7 +267,7 @@ impl StateTransitions {
 
                 let mut result = Self::complete_phase(
                     state.clone(),
-                    timer_id,
+                    task_id,
                     configuration,
                     next_phase,
                 )?;
@@ -290,22 +285,21 @@ impl StateTransitions {
                 result.events.insert(
                     0,
                     Box::new(PhaseSkipped::new(
-                        timer_id, from_phase, next_phase, 1,
+                        task_id, from_phase, next_phase, 1,
                     )),
                 );
 
                 result.events.insert(
                     1,
                     Box::new(
-                        Started::new(timer_id, next_phase, duration, 1)
-                            .with_active_entity(active_task_id)
+                        Started::new(task_id, next_phase, duration, 1)
                     ),
                 );
 
                 Ok(result)
             }
             TimerState::Paused { paused_from, .. } => {
-                Self::skip_phase(*paused_from, timer_id, configuration, next_phase, active_task_id)
+                Self::skip_phase(*paused_from, task_id, configuration, next_phase)
             }
             TimerState::Idle => Err(Error::InvalidStateTransition {
                 from: "Stopped".to_string(),
@@ -319,7 +313,7 @@ impl StateTransitions {
     /// Returns updated state and whether phase completed.
     pub fn tick(
         mut state: TimerState,
-        _timer_id: TimerId,
+        _task_id: TaskId,
         _configuration: &TimerConfiguration,
     ) -> Result<(TimerState, bool)> {
         let phase_complete = match &mut state {
@@ -506,9 +500,8 @@ mod tests {
 
         let result = StateTransitions::start(
             state,
-            crate::TimerId::new(),
+            crate::TaskId::new(),
             &config,
-            None,
         )
         .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
@@ -522,7 +515,7 @@ mod tests {
         let config = crate::TimerConfiguration::default();
 
         let result =
-            StateTransitions::pause(state, crate::TimerId::new(), &config)
+            StateTransitions::pause(state, crate::TaskId::new(), &config)
                 .unwrap();
         assert!(matches!(result.new_state, TimerState::Paused { .. }));
     }
@@ -540,7 +533,7 @@ mod tests {
         let config = crate::TimerConfiguration::default();
 
         let result =
-            StateTransitions::resume(paused, crate::TimerId::new(), &config, None)
+            StateTransitions::resume(paused, crate::TaskId::new(), &config)
                 .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
     }
@@ -554,7 +547,7 @@ mod tests {
 
         let result = StateTransitions::complete_phase(
             state,
-            crate::TimerId::new(),
+            crate::TaskId::new(),
             &config,
             Phase::ShortBreak,
         )
@@ -571,7 +564,7 @@ mod tests {
 
         let result = StateTransitions::complete_phase(
             state,
-            crate::TimerId::new(),
+            crate::TaskId::new(),
             &config,
             Phase::LongBreak,
         )
@@ -587,13 +580,13 @@ mod tests {
         let config = crate::TimerConfiguration::default();
 
         let (new_state, complete) =
-            StateTransitions::tick(state, crate::TimerId::new(), &config)
+            StateTransitions::tick(state, crate::TaskId::new(), &config)
                 .unwrap();
         assert!(!complete);
         assert_eq!(new_state.remaining_seconds(), 1);
 
         let (final_state, complete) =
-            StateTransitions::tick(new_state, crate::TimerId::new(), &config)
+            StateTransitions::tick(new_state, crate::TaskId::new(), &config)
                 .unwrap();
         assert!(complete);
         assert_eq!(final_state.remaining_seconds(), 0);

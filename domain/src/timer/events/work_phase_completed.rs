@@ -1,34 +1,27 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::TimerId;
+use crate::TaskId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkPhaseCompleted {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub duration_seconds: u32,
-    pub active_entity_id: Option<String>,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
 impl WorkPhaseCompleted {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         duration_seconds: u32,
         version: u64,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             duration_seconds,
-            active_entity_id: None,
             version,
             occurred_at: Utc::now(),
         }
-    }
-    
-    pub fn with_active_entity(mut self, entity_id: Option<String>) -> Self {
-        self.active_entity_id = entity_id;
-        self
     }
 }
 
@@ -38,7 +31,7 @@ impl crate::Event for WorkPhaseCompleted {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

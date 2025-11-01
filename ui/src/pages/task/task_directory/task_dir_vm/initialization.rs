@@ -221,7 +221,7 @@ impl TaskDirectoryViewModel {
                 .and_then(|task_id_str| {
                     domain::TaskId::from_string(&task_id_str)
                         .ok()
-                        .and_then(|task_id| {
+                        .map(|task_id| {
                             let tasks_list = tasks.get_untracked();
                             let active_task = tasks_list.iter().find(|t| t.id == task_id).cloned();
 
@@ -231,7 +231,7 @@ impl TaskDirectoryViewModel {
                                 web_sys::console::log_1(&format!("Active task not found in task list for ID: {}", task_id).into());
                             }
 
-                            Some(active_task)
+                            active_task
                         })
                         .or_else(|| {
                             web_sys::console::error_1(&"Failed to parse task ID string".into());

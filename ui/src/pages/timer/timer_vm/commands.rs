@@ -116,35 +116,32 @@ impl TimerViewModel {
                 .map(|timer| {
                     set_timer_state.set(timer.state().clone());
 
-                    if let Some(task_id) = timer.active_task_id() {
-                        let task_id_str = task_id.to_string();
-                        spawn_local(async move {
-                            use serde::Serialize;
+                    let task_id = timer.task_id();
+                    let task_id_str = task_id.to_string();
+                    spawn_local(async move {
+                        use serde::Serialize;
 
-                            // Inline the fetch_task_by_id functionality
-                            if task_id_str.is_empty() {
-                                set_active_task.set(None);
-                                return;
-                            }
+                        // Inline the fetch_task_by_id functionality
+                        if task_id_str.is_empty() {
+                            set_active_task.set(None);
+                            return;
+                        }
 
-                            #[derive(Serialize)]
-                            struct GetTaskArgs {
-                                id: String,
-                            }
+                        #[derive(Serialize)]
+                        struct GetTaskArgs {
+                            id: String,
+                        }
 
-                            let args = GetTaskArgs {
-                                id: task_id_str,
-                            };
+                        let args = GetTaskArgs {
+                            id: task_id_str,
+                        };
 
-                            let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
-                                .ok()
-                                .flatten();
+                        let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
+                            .ok()
+                            .flatten();
 
-                            set_active_task.set(task);
-                        });
-                    } else {
-                        set_active_task.set(None);
-                    }
+                        set_active_task.set(task);
+                    });
                 });
         });
     }
@@ -165,12 +162,9 @@ impl TimerViewModel {
         };
 
         spawn_local(async move {
-            invoke::<Task, CompleteTaskArgs>(commands::task::COMPLETE_TASK, Some(complete_args)).await
+            if let Some(task) = invoke::<Task, CompleteTaskArgs>(commands::task::COMPLETE_TASK, Some(complete_args)).await
                 .map_err(|e| handle_command_error(e, set_error_state))
-                .ok()
-                .map(|task| {
-                    set_active_task.set(Some(task));
-                });
+                .ok() { set_active_task.set(Some(task)); }
         });
     }
 }

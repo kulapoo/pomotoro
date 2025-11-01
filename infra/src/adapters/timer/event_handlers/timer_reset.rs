@@ -28,7 +28,7 @@ impl EventHandler for TimerResetHandler {
             .as_any()
             .downcast_ref::<domain::TimerReset>()
             .ok_or(domain::Error::EventHandlingError {
-            message: format!("Failed to reset timer"),
+            message: "Failed to reset timer".to_string(),
         })?;
 
 

@@ -28,7 +28,7 @@ impl EventHandler for TaskResetHandler {
             .as_any()
             .downcast_ref::<domain::TaskReset>()
             .ok_or(domain::Error::EventHandlingError {
-            message: format!("Failed to reset task"),
+            message: "Failed to reset task".to_string(),
         })?;
 
 

@@ -45,11 +45,11 @@ impl EventHandler for TaskCompletedHandler {
             .as_any()
             .downcast_ref::<domain::TaskCompleted>()
             .ok_or(domain::Error::EventHandlingError {
-            message: format!("Failed to complete task"),
+            message: "Failed to complete task".to_string(),
         })?;
-        let task = self.task_repository.get_by_id(task_completed.task_id.clone()).await?.ok_or(
+        let task = self.task_repository.get_by_id(task_completed.task_id).await?.ok_or(
             domain::Error::EventHandlingError {
-                message: format!("Failed to complete task"),
+                message: "Failed to complete task".to_string(),
             }
         )?;
         let timer_config = task.get_config().timer.clone();
@@ -87,7 +87,7 @@ impl EventHandler for TaskCompletedHandler {
 
                 let switch_event = TaskSwitchWorkflowCompleted::new(
                     Some(task_completed.task_id),
-                    next_task.id.clone(),
+                    next_task.id,
                     format!("Switched to task: {}", next_task.name),
                     1,
                 );

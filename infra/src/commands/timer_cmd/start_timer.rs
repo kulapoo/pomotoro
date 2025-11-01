@@ -19,10 +19,8 @@ pub async fn start_timer(
     let current_state = current_timer.state();
 
     if current_state.status() == TimerStatus::Paused {
-        // Get the active task ID from the timer
-        let task_id = current_timer
-            .active_task_id()
-            .ok_or("No active task in timer")?;
+        // Get the task ID from the timer
+        let task_id = current_timer.task_id();
 
         debug!("Resuming paused timer for task {}", task_id);
 

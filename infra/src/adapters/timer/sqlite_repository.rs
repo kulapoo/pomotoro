@@ -4,7 +4,7 @@ use crate::schema::timers;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use domain::timer::{Error, Result};
-use domain::{DEFAULT_TIMER_ID, Timer, TimerRepository};
+use domain::{DEFAULT_TASK_ID, Timer, TimerRepository};
 use std::sync::Arc;
 
 pub struct SqliteTimerRepository {
@@ -23,7 +23,7 @@ impl TimerRepository for SqliteTimerRepository {
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TIMER_ID.as_str();
+        let timer_id = DEFAULT_TASK_ID.as_str();
 
         let timer_db = timers::table
             .filter(timers::id.eq(&timer_id))
@@ -59,7 +59,7 @@ impl TimerRepository for SqliteTimerRepository {
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TIMER_ID.as_str();
+        let timer_id = DEFAULT_TASK_ID.as_str();
 
         // Try to update first
         let updated =

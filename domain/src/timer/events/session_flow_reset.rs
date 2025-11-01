@@ -1,18 +1,18 @@
-use crate::TimerId;
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SessionFlowReset {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
 impl SessionFlowReset {
-    pub fn new(timer_id: TimerId, version: u64) -> Self {
+    pub fn new(task_id: TaskId, version: u64) -> Self {
         Self {
-            timer_id,
+            task_id,
             version,
             occurred_at: Utc::now(),
         }
@@ -25,7 +25,7 @@ impl crate::Event for SessionFlowReset {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

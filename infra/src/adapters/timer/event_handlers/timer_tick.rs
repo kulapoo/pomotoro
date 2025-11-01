@@ -41,7 +41,7 @@ impl EventHandler for TimerTickHandler {
             .as_any()
             .downcast_ref::<domain::TimerTick>()
             .ok_or(domain::Error::EventHandlingError {
-                message: format!("Failed to start timer tick loop"),
+                message: "Failed to start timer tick loop".to_string(),
             })?;
 
         let config = self.config_repository.get_config().await?;

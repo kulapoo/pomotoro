@@ -7,7 +7,6 @@
 pub use domain::timer::events::{Paused as TimerPaused, Started as TimerStarted};
 pub use domain::{
     Event, EventPublisher, Phase, PhaseCompleted, TaskCompleted, TaskId, TimerConfiguration,
-    TimerId,
 };
 pub use std::sync::Arc;
 pub use tauri::State;

@@ -183,7 +183,7 @@ impl SettingsViewModel {
 
     pub fn save_settings(&self) -> std::result::Result<(), String> {
         if let Some(config) = self.config.get() {
-            if let Err(_) = config.validate() {
+            if config.validate().is_err() {
                 return Err("Invalid configuration settings".to_string());
             }
             self.save_config(config);

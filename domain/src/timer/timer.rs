@@ -1,6 +1,6 @@
 use super::events::*;
 use super::{
-    Error, Phase, Result, TimerId,
+    Error, Phase, Result,
     state_machine::TimerState,
     transitions::{StateTransitions, TransitionType},
 };
@@ -8,66 +8,53 @@ use crate::{Event, TaskId, TimerConfiguration};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-/// The single default timer ID used throughout the application
-pub static DEFAULT_TIMER_ID: Lazy<TimerId> = Lazy::new(|| {
-    TimerId::from_string("00000000-0000-0000-0000-000000000001")
-        .expect("Failed to create default timer ID")
+/// The single default task ID used throughout the application
+pub static DEFAULT_TASK_ID: Lazy<TaskId> = Lazy::new(|| {
+    TaskId::from_string("00000000-0000-0000-0000-000000000001")
+        .expect("Failed to create default task ID")
 });
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Timer {
-    id: TimerId,
-    active_task_id: Option<TaskId>,
+    task_id: TaskId,
     state: TimerState,
 }
 
 impl std::fmt::Debug for Timer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Timer")
-            .field("id", &self.id)
-            .field("active_task_id", &self.active_task_id)
+            .field("task_id", &self.task_id)
             .field("state", &self.state)
             .finish()
     }
 }
 
 impl Timer {
-    pub fn new(id: TimerId) -> Self {
+    pub fn new(task_id: TaskId) -> Self {
         Self {
-            id,
-            active_task_id: None,
+            task_id,
             state: TimerState::new(),
         }
     }
 
     /// Create the default timer instance
     pub fn default_timer() -> Self {
-        Self::new(DEFAULT_TIMER_ID.clone())
+        Self::new(DEFAULT_TASK_ID.clone())
     }
 
-    pub fn with_state(id: TimerId, state: TimerState) -> Self {
+    pub fn with_state(task_id: TaskId, state: TimerState) -> Self {
         Self {
-            id,
-            active_task_id: None,
+            task_id,
             state,
         }
     }
 
-    pub fn with_active_task(mut self, task_id: TaskId) -> Self {
-        self.active_task_id = Some(task_id);
-        self
-    }
-
-    pub fn id(&self) -> TimerId {
-        self.id
+    pub fn task_id(&self) -> TaskId {
+        self.task_id
     }
 
     pub fn state(&self) -> &TimerState {
         &self.state
-    }
-
-    pub fn active_task_id(&self) -> Option<TaskId> {
-        self.active_task_id
     }
 
     pub fn pause_from(&self) -> Option<&TimerState> {
@@ -75,14 +62,6 @@ impl Timer {
             TimerState::Paused { paused_from, .. } => Some(&paused_from),
             _ => None,
         }
-    }
-
-    pub fn set_active_task(&mut self, task_id: TaskId) {
-        self.active_task_id = Some(task_id);
-    }
-
-    pub fn clear_active_task(&mut self) {
-        self.active_task_id = None;
     }
 
     pub fn start(
@@ -99,9 +78,8 @@ impl Timer {
 
         let result = StateTransitions::start(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
-            self.active_task_id,
         )?;
 
         self.state = result.new_state;
@@ -123,7 +101,7 @@ impl Timer {
 
         let result = StateTransitions::pause(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -146,9 +124,8 @@ impl Timer {
 
         let result = StateTransitions::resume(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
-            self.active_task_id,
         )?;
 
         self.state = result.new_state;
@@ -161,7 +138,7 @@ impl Timer {
     ) -> Result<Vec<Box<dyn Event>>> {
         let result = StateTransitions::reset(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -174,7 +151,7 @@ impl Timer {
     ) -> Result<Vec<Box<dyn Event>>> {
         let result = StateTransitions::reset_phase(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -196,10 +173,9 @@ impl Timer {
 
         let result = StateTransitions::skip_phase(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
             next_phase,
-            self.active_task_id,
         )?;
         self.state = result.new_state;
         Ok(result.events)
@@ -210,14 +186,14 @@ impl Timer {
         configuration: &TimerConfiguration,
     ) -> Result<(bool, Vec<Box<dyn Event>>)> {
         let (new_state, phase_complete) =
-            StateTransitions::tick(self.state.clone(), self.id, configuration)?;
+            StateTransitions::tick(self.state.clone(), self.task_id, configuration)?;
         self.state = new_state.clone();
 
         let mut events: Vec<Box<dyn Event>> = vec![];
 
         let phase = self.get_current_phase();
         let tick_event = Tick::new(
-            self.id,
+            self.task_id,
             phase,
             self.state.remaining_seconds(),
             1,
@@ -321,7 +297,7 @@ impl Timer {
 
         let result = StateTransitions::complete_phase(
             self.state.clone(),
-            self.id,
+            self.task_id,
             configuration,
             next_phase,
         )?;
@@ -348,7 +324,7 @@ impl Timer {
         };
 
         let events: Vec<Box<dyn Event>> =
-            vec![Box::new(Started::new(self.id, phase, duration, 1))];
+            vec![Box::new(Started::new(self.task_id, phase, duration, 1))];
 
         Ok(events)
     }
@@ -361,7 +337,7 @@ mod tests {
     use std::time::Duration;
 
     fn create_test_timer() -> Timer {
-        Timer::new(TimerId::new())
+        Timer::new(TaskId::new())
     }
 
     fn create_test_config() -> TimerConfiguration {
@@ -472,20 +448,10 @@ mod tests {
     }
 
     #[test]
-    fn test_timer_active_task() {
-        let mut timer = create_test_timer();
+    fn test_timer_task_id() {
         let task_id = TaskId::new();
+        let timer = Timer::new(task_id);
 
-        assert!(timer.active_task_id().is_none());
-
-        timer.set_active_task(task_id);
-        assert_eq!(timer.active_task_id(), Some(task_id));
-
-        timer.clear_active_task();
-        assert!(timer.active_task_id().is_none());
-
-        let timer_with_task =
-            Timer::new(TimerId::new()).with_active_task(task_id);
-        assert_eq!(timer_with_task.active_task_id(), Some(task_id));
+        assert_eq!(timer.task_id(), task_id);
     }
 }

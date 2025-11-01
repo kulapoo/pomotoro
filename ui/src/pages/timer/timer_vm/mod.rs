@@ -36,16 +36,16 @@ impl ViewModel for TimerViewModel {
         // Local error state
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
-        let vm = Self {
+        
+
+        Self {
             timer_state,
             set_timer_state,
             active_task,
             set_active_task,
             error_state,
             set_error_state,
-        };
-
-        vm
+        }
     }
 
     fn state(&self) -> ReadSignal<Self::State> {

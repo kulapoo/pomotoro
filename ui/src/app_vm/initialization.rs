@@ -1,10 +1,8 @@
 use domain::TaskSwitchWorkflowCompleted;
 use domain::event_names::ui_listeners::{timer as timer_event_names, task as task_event_names};
 use domain::{Task, Timer, TimerState, TimerTick, event_names::commands};
-use js_sys;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
 use crate::components::handle_command_error;
@@ -38,18 +36,17 @@ impl AppViewModel {
             invoke::<Timer, ()>(commands::timer::GET_STATE, None).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
-                .and_then(|timer| {
+                .map(|timer| {
                     set_timer_state.set(timer.state().clone());
 
-                    // Also load the active task if there is one
-                    if let Some(task_id) = timer.active_task_id() {
-                        let task_id_str = task_id.to_string();
-                        spawn_local(async move {
-                            Self::fetch_task_by_id(&task_id_str, set_active_task).await;
-                        });
-                    }
+                    // Also load the task that this timer belongs to
+                    let task_id = timer.task_id();
+                    let task_id_str = task_id.to_string();
+                    spawn_local(async move {
+                        Self::fetch_task_by_id(&task_id_str, set_active_task).await;
+                    });
 
-                    Some(())
+                    ()
                 });
         });
     }

@@ -33,9 +33,9 @@ mod tests {
     #[test]
     fn should_have_correct_event_types() {
         let timer_started =
-            Started::new(crate::TimerId::new(), Phase::Work, 1500, 1);
+            Started::new(crate::TaskId::new(), Phase::Work, 1500, 1);
         let timer_paused = Paused::new(
-            crate::TimerId::new(),
+            crate::TaskId::new(),
             Phase::Work,
             1200,
             2,
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn should_serialize_timer_started_event() {
-        let event = Started::new(crate::TimerId::new(), Phase::Work, 1500, 1);
+        let event = Started::new(crate::TaskId::new(), Phase::Work, 1500, 1);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Started = serde_json::from_str(&serialized).unwrap();
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn should_serialize_phase_completed_event() {
         let event = PhaseCompleted::new(
-            crate::TimerId::new(),
+            crate::TaskId::new(),
             Phase::Work,
             Phase::ShortBreak,
             1,
@@ -81,7 +81,7 @@ mod tests {
         let _new_entity_id = uuid::Uuid::new_v4().to_string();
 
         let event =
-            ActiveTaskSwitched::new(crate::TimerId::new(), Phase::Work, 3);
+            ActiveTaskSwitched::new(crate::TaskId::new(), Phase::Work, 3);
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: ActiveTaskSwitched =

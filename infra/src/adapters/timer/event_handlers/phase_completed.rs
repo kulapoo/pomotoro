@@ -29,7 +29,7 @@ impl EventHandler for PhaseCompletedHandler {
             .as_any()
             .downcast_ref::<PhaseCompleted>()
             .ok_or(domain::Error::EventHandlingError {
-            message: format!("Failed to complete phase"),
+            message: "Failed to complete phase".to_string(),
         })?;
 
         self.emitter

@@ -7,7 +7,7 @@ pub async fn test_notification(
 ) -> Result<(), String> {
     let event: Box<dyn Event> = match notification_type.as_str() {
         "phase_completed" => Box::new(PhaseCompleted::new(
-            TimerId::new(),
+            TaskId::new(),
             Phase::Work,
             Phase::ShortBreak,
             1,
@@ -19,7 +19,7 @@ pub async fn test_notification(
             let default_config = TimerConfiguration::default();
             let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerStarted::new(
-                TimerId::new(),
+                TaskId::new(),
                 Phase::Work,
                 work_duration_seconds,
                 1,
@@ -30,7 +30,7 @@ pub async fn test_notification(
             let default_config = TimerConfiguration::default();
             let work_duration_seconds = default_config.get_phase_duration_seconds(Phase::Work);
             Box::new(TimerPaused::new(
-                TimerId::new(),
+                TaskId::new(),
                 Phase::Work,
                 work_duration_seconds / 2,
                 1,

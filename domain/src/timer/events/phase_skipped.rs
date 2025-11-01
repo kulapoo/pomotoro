@@ -1,11 +1,11 @@
-use crate::TimerId;
+use crate::TaskId;
 use crate::timer::Phase;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PhaseSkipped {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub skipped_phase: Phase,
     pub next_phase: Phase,
     pub version: u64,
@@ -14,13 +14,13 @@ pub struct PhaseSkipped {
 
 impl PhaseSkipped {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         skipped_phase: Phase,
         next_phase: Phase,
         version: u64,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             skipped_phase,
             next_phase,
             version,
@@ -35,7 +35,7 @@ impl crate::Event for PhaseSkipped {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

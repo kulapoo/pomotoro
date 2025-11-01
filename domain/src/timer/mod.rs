@@ -8,10 +8,9 @@ pub mod transitions;
 
 // Re-export core types
 pub use error::{Error, Result};
-pub use id::Id as TimerId;
 pub use repository::TimerRepository;
 pub use state_machine::TimerState;
-pub use timer::{Timer, DEFAULT_TIMER_ID};
+pub use timer::{Timer, DEFAULT_TASK_ID};
 pub use transitions::{StateTransitions, TransitionResult, TransitionType};
 
 // Timer-specific value objects

@@ -1,13 +1,13 @@
 use crate::{Event, TimerConfiguration};
 
-use crate::TimerId;
+use crate::TaskId;
 use crate::timer::Phase;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Tick {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub phase: Phase,
     pub remaining_seconds: u32,
     pub version: u64,
@@ -17,14 +17,14 @@ pub struct Tick {
 
 impl Tick {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         phase: Phase,
         remaining_seconds: u32,
         version: u64,
         config: TimerConfiguration,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             phase,
             remaining_seconds,
             version,
@@ -40,7 +40,7 @@ impl Event for Tick {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {
@@ -66,9 +66,9 @@ mod tests {
 
     #[test]
     fn should_create_timer_tick_event() {
-        let timer_id = TimerId::new();
+        let task_id = crate::TaskId::new();
         let event = Tick::new(
-            timer_id,
+            task_id,
             Phase::Work,
             1234,
             1,
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn should_serialize_timer_tick_event() {
         let event = Tick::new(
-            TimerId::new(),
+            crate::TaskId::new(),
             Phase::ShortBreak,
             300,
             2,

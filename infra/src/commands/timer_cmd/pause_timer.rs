@@ -33,10 +33,8 @@ pub async fn pause_timer(
             .map_err(|e| e.to_string());
     }
 
-    // Get the active task ID from the timer
-    let task_id = current_timer
-        .active_task_id()
-        .ok_or("No active task in timer")?;
+    // Get the task ID from the timer
+    let task_id = current_timer.task_id();
 
     info!("Pausing timer for task {}", task_id);
 

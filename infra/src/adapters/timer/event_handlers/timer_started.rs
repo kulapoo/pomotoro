@@ -37,13 +37,9 @@ impl EventHandler for TimerStartedHandler {
             .as_any()
             .downcast_ref::<domain::TimerStarted>()
             .ok_or(domain::Error::EventHandlingError {
-                message: format!("Failed to start timer tick loop"),
+                message: "Failed to start timer tick loop".to_string(),
             })?;
-        let task_id = timer_started.active_entity_id.ok_or(
-            domain::Error::InvalidTaskParams {
-                message: "missing task id".into(),
-            },
-        )?;
+        let task_id = timer_started.task_id;
 
         // Load the current state to get the full TimerState
         self.timer_srv.load_state().await?;

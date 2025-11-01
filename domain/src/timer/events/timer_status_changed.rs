@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::timer::{Phase, Status};
-use crate::TimerId;
+use crate::TaskId;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StatusChanged {
-    pub timer_id: TimerId,
+    pub task_id: TaskId,
     pub old_status: Status,
     pub new_status: Status,
     pub phase: Phase,
@@ -16,14 +16,14 @@ pub struct StatusChanged {
 
 impl StatusChanged {
     pub fn new(
-        timer_id: TimerId,
+        task_id: TaskId,
         old_status: Status,
         new_status: Status,
         phase: Phase,
         version: u64,
     ) -> Self {
         Self {
-            timer_id,
+            task_id,
             old_status,
             new_status,
             phase,
@@ -39,7 +39,7 @@ impl crate::Event for StatusChanged {
     }
 
     fn aggregate_id(&self) -> String {
-        self.timer_id.to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

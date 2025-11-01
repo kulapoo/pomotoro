@@ -63,7 +63,8 @@
       "Read(///**)",
       "Bash(cargo clippy:*)",
       "Bash(awk:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(RUST_BACKTRACE=1 cargo test:*)"
     ],
     "deny": [],
     "ask": [],

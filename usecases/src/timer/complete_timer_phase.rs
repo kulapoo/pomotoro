@@ -10,11 +10,7 @@ pub async fn complete_timer_phase(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let mut timer = timer_repo.get().await?;
-    let Some(task_id) = timer.active_task_id() else {
-        return Err(Error::InvalidTaskParams {
-            message: ("No active task".to_string()),
-        });
-    };
+    let task_id = timer.task_id();
 
     let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
         Error::TaskNotFound {

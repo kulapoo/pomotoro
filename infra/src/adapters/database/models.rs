@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use domain::{Task, TaskId, TaskStatus, Timer, TimerId, timer::TimerState};
+use domain::{Task, TaskId, TaskStatus, Timer, timer::TimerState};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -157,8 +157,8 @@ impl From<Timer> for TimerDb {
         };
 
         Self {
-            id: timer.id().to_string(),
-            active_task_id: timer.active_task_id().map(|id| id.to_string()),
+            id: timer.task_id().to_string(),
+            active_task_id: Some(timer.task_id().to_string()),
             state,
             paused_from,
             remaining_seconds: timer.state().remaining_seconds() as i32,
@@ -172,26 +172,20 @@ impl TryFrom<TimerDb> for Timer {
     type Error = domain::Error;
 
     fn try_from(db: TimerDb) -> Result<Self, Self::Error> {
-        let timer_uuid = Uuid::parse_str(&db.id).map_err(|e| {
-            domain::Error::SerializationError {
-                message: format!("Invalid timer ID: {}", e),
-            }
-        })?;
-        let timer_id = TimerId::from_uuid(timer_uuid);
-
-        let active_task_id = if let Some(task_id_str) = db.active_task_id {
+        // Parse the task_id from active_task_id field, or use DEFAULT_TASK_ID if not present
+        let task_id = if let Some(task_id_str) = db.active_task_id {
             if task_id_str.is_empty() {
-                None
+                *domain::DEFAULT_TASK_ID
             } else {
                 let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| {
                     domain::Error::SerializationError {
                         message: format!("Invalid task ID: {}", e),
                     }
                 })?;
-                Some(TaskId::from_uuid(task_uuid))
+                TaskId::from_uuid(task_uuid)
             }
         } else {
-            None
+            *domain::DEFAULT_TASK_ID
         };
 
         // Deserialize the timer state from simple string
@@ -230,10 +224,6 @@ impl TryFrom<TimerDb> for Timer {
             _ => TimerState::Idle, // Default to Idle for unknown states
         };
 
-        let mut timer = Timer::with_state(timer_id, state);
-        if let Some(task_id) = active_task_id {
-            timer.set_active_task(task_id);
-        }
-        Ok(timer)
+        Ok(Timer::with_state(task_id, state))
     }
 }
