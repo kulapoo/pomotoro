@@ -11,14 +11,13 @@ pub use shared_kernel::{
 };
 
 pub use task::{
-    Builder as TaskBuilder, Completed as TaskCompleted, Created as TaskCreated,
-    Id as TaskId, Marker as TaskMarker,
-    Repository as TaskRepository, SessionCompleted as TaskSessionCompleted,
-    Status as TaskStatus, StatusChanged as TaskStatusChanged,
-    SwitchWorkflowCompleted as TaskSwitchWorkflowCompleted, Task, TaskDeleted,
-    TaskPatch, Updated as TaskUpdated, Reset as TaskReset,
-    RoundRobinCycling as TaskRoundRobinCycling,
-    AutoCycleService as TaskAutoCycleService,
+    ActiveChanged as TaskActiveChanged,
+    AutoCycleService as TaskAutoCycleService, Builder as TaskBuilder,
+    Completed as TaskCompleted, Created as TaskCreated, Id as TaskId,
+    Marker as TaskMarker, Repository as TaskRepository, Reset as TaskReset,
+    RoundRobinCycling as TaskRoundRobinCycling, Status as TaskStatus,
+    StatusChanged as TaskStatusChanged, Task, TaskDeleted, TaskPatch,
+    Updated as TaskUpdated,
 };
 
 pub use timer::{
@@ -27,13 +26,14 @@ pub use timer::{
     PhaseCompleted, PhaseSkipped, Reset as TimerReset, Result as TimerResult,
     SessionFlowReset, Started as TimerStarted, StateTransitions,
     Status as TimerStatus, StatusChanged as TimerStatusChanged,
-    Tick as TimerTick, Timer, TimerRepository, TimerState,
-    TransitionResult, TransitionType, WorkPhaseCompleted, WorkPhaseStarted,
+    Tick as TimerTick, Timer, TimerRepository, TimerState, TransitionResult,
+    TransitionType, WorkPhaseCompleted, WorkPhaseStarted,
 };
 
 pub use config::{
-    AppearanceConfig, AudioConfig, Config, ConfigRepository, ConfigUpdated, ConfigReset, GeneralConfig,
-    NotificationConfig, NotificationPosition, TaskCyclingBehavior, Theme,
+    AppearanceConfig, AudioConfig, Config, ConfigRepository, ConfigReset,
+    ConfigUpdated, GeneralConfig, NotificationConfig, NotificationPosition,
+    TaskCyclingBehavior, Theme,
 };
 
 pub use audio::{

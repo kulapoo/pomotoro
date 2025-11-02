@@ -1,19 +1,29 @@
 use async_trait::async_trait;
-use domain::{Event, PhaseSkipped, Result, event_names::ui_listeners};
+use domain::{
+    Event, PhaseSkipped, Result,
+};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
+use crate::adapters::TimerTickService;
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
 
 pub struct PhaseSkippedHandler {
     emitter: Arc<dyn Emitter>,
+    timer_srv: Arc<TimerTickService>,
 }
 
 impl PhaseSkippedHandler {
-    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
-        Self { emitter }
+    pub fn new(
+        emitter: Arc<dyn Emitter>,
+        timer_srv: Arc<TimerTickService>,
+    ) -> Self {
+        Self {
+            emitter,
+            timer_srv,
+        }
     }
 }
 
@@ -24,18 +34,24 @@ impl EventHandler for PhaseSkippedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(phase_skipped) =
-            event.as_any().downcast_ref::<PhaseSkipped>()
-        {
-            self.emitter
-                .emit(
-                    ui_listeners::timer::PHASE_SKIPPED,
-                    json!(phase_skipped.clone()),
-                )
-                .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to emit phase skipped event: {e}"),
-                })?;
-        }
+        let phase_skipped = event
+            .as_any()
+            .downcast_ref::<domain::PhaseSkipped>()
+            .ok_or(domain::Error::EventHandlingError {
+                message: "Failed to skip phase".to_string(),
+            })?;
+
+        self.timer_srv.load_state().await?;
+        let timer = self.timer_srv.get_current_timer().await;
+        self.emitter
+            .emit(
+                domain::event_names::timer::PHASE_SKIPPED,
+                json!(timer.state()),
+            )
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!("Failed to emit phase skipped event: {e}"),
+            })?;
+
         Ok(())
     }
 

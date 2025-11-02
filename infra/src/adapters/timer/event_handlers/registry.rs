@@ -31,7 +31,10 @@ pub fn register_timer_handlers(
 
     event_bus
         .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
-    event_bus.subscribe(Box::new(PhaseSkippedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(PhaseSkippedHandler::new(
+        emitter.clone(),
+        timer_srv.clone(),
+    )))?;
     event_bus
         .subscribe(Box::new(TimerStatusChangedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TimerResetHandler::new(

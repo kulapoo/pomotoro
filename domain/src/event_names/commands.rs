@@ -42,7 +42,6 @@ pub mod task {
     pub const TASK_UPDATED: &str = "task_updated";
     pub const TASK_DELETED: &str = "task_deleted";
     pub const TASK_COMPLETED: &str = "task_completed";
-    pub const SESSION_COMPLETED: &str = "task_session_completed";
 }
 
 pub mod config {

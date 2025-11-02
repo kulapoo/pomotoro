@@ -1,5 +1,7 @@
-use domain::TaskSwitchWorkflowCompleted;
-use domain::event_names::ui_listeners::{timer as timer_event_names, task as task_event_names};
+use domain::TaskActiveChanged;
+use domain::event_names::ui_listeners::{
+    task as task_event_names, timer as timer_event_names,
+};
 use domain::{Task, Timer, TimerState, TimerTick, event_names::commands};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -33,7 +35,8 @@ impl AppViewModel {
         let set_active_task = self.set_active_task;
 
         spawn_local(async move {
-            invoke::<Timer, ()>(commands::timer::GET_STATE, None).await
+            invoke::<Timer, ()>(commands::timer::GET_STATE, None)
+                .await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
                 .map(|timer| {
@@ -43,7 +46,8 @@ impl AppViewModel {
                     let task_id = timer.task_id();
                     let task_id_str = task_id.to_string();
                     spawn_local(async move {
-                        Self::fetch_task_by_id(&task_id_str, set_active_task).await;
+                        Self::fetch_task_by_id(&task_id_str, set_active_task)
+                            .await;
                     });
 
                     ()
@@ -62,9 +66,48 @@ impl AppViewModel {
 
     fn setup_timer_listeners(&self) {
         self.setup_timer_tick_listener();
+        self.setup_timer_start_listener();
         self.setup_timer_status_listener();
         self.setup_phase_completed_listener();
         self.setup_phase_skipped_listener();
+    }
+
+    fn setup_timer_start_listener(&self) {
+        let set_timer_state = self.set_timer_state;
+        let set_error_state = self.set_error_state;
+        spawn_local(async move {
+            let callback = Closure::new(move |_event: JsValue| {
+                spawn_local(async move {
+                    let cmd = commands::timer::START;
+                    invoke::<Timer, ()>(cmd, None)
+                        .await
+                        .map(|timer| {
+                            let status = timer.state().status();
+
+                            web_sys::console::log_1(
+                                &format!(
+                                    "Timer updated after {}: {:?}",
+                                    cmd, timer
+                                )
+                                .into(),
+                            );
+                            set_timer_state.set(timer.state().clone());
+                            web_sys::console::log_1(
+                                &format!(
+                                    "Timer state updated after {}: {:?}",
+                                    cmd, status
+                                )
+                                .into(),
+                            );
+                        })
+                        .map_err(|e| handle_command_error(e, set_error_state))
+                        .ok();
+                });
+            });
+
+            listen(timer_event_names::START, &callback).await;
+            callback.forget();
+        });
     }
 
     fn setup_timer_tick_listener(&self) {
@@ -75,9 +118,13 @@ impl AppViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
-                if let Ok(timer_tick) = serde_wasm_bindgen::from_value::<TimerTick>(payload) {
+                if let Ok(timer_tick) =
+                    serde_wasm_bindgen::from_value::<TimerTick>(payload)
+                {
                     set_timer_state.update(|state| {
-                        *state = (timer_tick.phase, timer_tick.remaining_seconds).into();
+                        *state =
+                            (timer_tick.phase, timer_tick.remaining_seconds)
+                                .into();
                     });
                 }
             });
@@ -95,7 +142,9 @@ impl AppViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -116,7 +165,9 @@ impl AppViewModel {
                 // Log phase completion for debugging
                 web_sys::console::log_1(&"App: Phase completed".into());
 
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -137,7 +188,9 @@ impl AppViewModel {
                 // Log phase skip for debugging
                 web_sys::console::log_1(&"App: Phase skipped".into());
 
-                if let Ok(state) = serde_wasm_bindgen::from_value::<TimerState>(payload) {
+                if let Ok(state) =
+                    serde_wasm_bindgen::from_value::<TimerState>(payload)
+                {
                     set_timer_state.set(state);
                 }
             });
@@ -156,9 +209,15 @@ impl AppViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
-                if let Ok(task_switch) = serde_wasm_bindgen::from_value::<TaskSwitchWorkflowCompleted>(payload) {
+                if let Ok(task_switch) =
+                    serde_wasm_bindgen::from_value::<TaskActiveChanged>(payload)
+                {
                     spawn_local(async move {
-                        Self::fetch_task_by_id(&task_switch.new_task_id.to_string(), set_active_task).await;
+                        Self::fetch_task_by_id(
+                            &task_switch.new_task_id.to_string(),
+                            set_active_task,
+                        )
+                        .await;
                     });
                 }
             });
@@ -170,14 +229,19 @@ impl AppViewModel {
 
     // Helper methods for fetching tasks
     async fn fetch_active_task(set_active_task: WriteSignal<Option<Task>>) {
-        let active_task = invoke::<Vec<Task>, ()>(commands::task::GET_ACTIVE, None).await
-            .ok()
-            .and_then(|tasks| tasks.into_iter().next());
+        let active_task =
+            invoke::<Vec<Task>, ()>(commands::task::GET_ACTIVE, None)
+                .await
+                .ok()
+                .and_then(|tasks| tasks.into_iter().next());
 
         set_active_task.set(active_task);
     }
 
-    async fn fetch_task_by_id(task_id: &str, set_active_task: WriteSignal<Option<Task>>) {
+    async fn fetch_task_by_id(
+        task_id: &str,
+        set_active_task: WriteSignal<Option<Task>>,
+    ) {
         use serde::Serialize;
 
         if task_id.is_empty() {
@@ -194,7 +258,8 @@ impl AppViewModel {
             id: task_id.to_string(),
         };
 
-        let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args)).await
+        let task = invoke::<Option<Task>, _>(commands::task::GET, Some(args))
+            .await
             .ok()
             .flatten();
 

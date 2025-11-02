@@ -63,7 +63,6 @@ pub async fn register_handlers(
         emitter.clone(),
         task_repository.clone(),
         timer_tick_service.clone(),
-        config_repository.clone(),
     )
     .context("Failed to register task event handlers")?;
     register_config_handlers(event_bus.clone(), emitter.clone())

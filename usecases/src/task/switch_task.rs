@@ -1,6 +1,6 @@
 use domain::{
     Error, EventPublisher, Result, Task, TaskId, TaskRepository, TaskStatus,
-    TaskSwitchWorkflowCompleted, TaskUpdated, Timer, TimerRepository,
+    TaskActiveChanged, TaskUpdated, Timer, TimerRepository,
 };
 use std::sync::Arc;
 
@@ -103,8 +103,8 @@ pub async fn switch_task(
     let new_timer = domain::Timer::with_state(cmd.task_id, timer.state().clone());
     timer_repo.save(&new_timer).await?;
 
-    // Publish TaskSwitchWorkflowCompleted event
-    let switch_event = TaskSwitchWorkflowCompleted::new(
+    // Publish TaskActiveChanged event
+    let switch_event = TaskActiveChanged::new(
         previous_task_id,
         cmd.task_id,
         format!("Switched to task: {}", task_name),

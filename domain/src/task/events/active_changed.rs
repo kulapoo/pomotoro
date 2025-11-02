@@ -3,41 +3,38 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct SessionCompleted {
-    pub task_id: Id,
-    pub session_number: u8,
-    pub total_sessions: u8,
-    pub is_task_completed: bool,
+pub struct ActiveChanged {
+    pub old_task_id: Option<Id>,
+    pub new_task_id: Id,
+    pub workflow_result: String,
     pub version: u64,
     pub occurred_at: DateTime<Utc>,
 }
 
-impl SessionCompleted {
+impl ActiveChanged {
     pub fn new(
-        task_id: Id,
-        session_number: u8,
-        total_sessions: u8,
-        is_task_completed: bool,
+        old_task_id: Option<Id>,
+        new_task_id: Id,
+        workflow_result: String,
         version: u64,
     ) -> Self {
         Self {
-            task_id,
-            session_number,
-            total_sessions,
-            is_task_completed,
+            old_task_id,
+            new_task_id,
+            workflow_result,
             version,
             occurred_at: Utc::now(),
         }
     }
 }
 
-impl crate::Event for SessionCompleted {
+impl crate::Event for ActiveChanged {
     fn event_type(&self) -> &'static str {
-        "TaskSessionCompleted"
+        "ActiveChanged"
     }
 
     fn aggregate_id(&self) -> String {
-        self.task_id.to_string()
+        self.new_task_id.to_string()
     }
 
     fn version(&self) -> u64 {

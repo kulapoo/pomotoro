@@ -6,26 +6,26 @@ use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
-pub struct TaskSwitchWorkflowCompletedHandler {
+pub struct TaskActiveChangedHandler {
     emitter: Arc<dyn Emitter>,
 }
 
-impl TaskSwitchWorkflowCompletedHandler {
+impl TaskActiveChangedHandler {
     pub fn new(emitter: Arc<dyn Emitter>) -> Self {
-        TaskSwitchWorkflowCompletedHandler { emitter }
+        TaskActiveChangedHandler { emitter }
     }
 }
 
 #[async_trait]
-impl EventHandler for TaskSwitchWorkflowCompletedHandler {
+impl EventHandler for TaskActiveChangedHandler {
     fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<domain::TaskSwitchWorkflowCompleted>()
+        TypeId::of::<domain::TaskActiveChanged>()
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let task_switch = event
             .as_any()
-            .downcast_ref::<domain::TaskSwitchWorkflowCompleted>();
+            .downcast_ref::<domain::TaskActiveChanged>();
 
         self.emitter
             .emit(
@@ -34,7 +34,7 @@ impl EventHandler for TaskSwitchWorkflowCompletedHandler {
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(
-                    "Failed to emit task switch workflow completed event: {e}"
+                    "Failed to emit task active changed event: {e}"
                 ),
             })?;
         Ok(())

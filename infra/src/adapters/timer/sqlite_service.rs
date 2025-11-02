@@ -6,8 +6,8 @@ use tokio::time::interval;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use domain::TimerRepository;
 use domain::{
-    ConfigRepository, Error, Result as DomainResult, TaskId,
-    TaskRepository, Timer, TimerConfiguration,
+    ConfigRepository, Error, Result as DomainResult, TaskId, TaskRepository,
+    Timer, TimerConfiguration,
 };
 
 /// Infrastructure service for managing timer tick loops and technical concerns
@@ -55,12 +55,11 @@ impl TimerTickService {
 
     pub async fn save_state(&self) -> DomainResult<()> {
         let timer_guard = self.timer.lock().await;
-        self.timer_repository
-            .save(&timer_guard)
-            .await
-            .map_err(|e| Error::RepositoryError {
+        self.timer_repository.save(&timer_guard).await.map_err(|e| {
+            Error::RepositoryError {
                 message: e.to_string(),
-            })
+            }
+        })
     }
 
     /// Start the infrastructure timer tick loop
@@ -72,9 +71,9 @@ impl TimerTickService {
     ) -> Result<(), String> {
         // Reload timer from repository to ensure we have the latest state
         // This is crucial because the use case just saved the timer
-        self.load_state().await.map_err(|e| {
-            format!("Failed to reload timer state: {}", e)
-        })?;
+        self.load_state()
+            .await
+            .map_err(|e| format!("Failed to reload timer state: {}", e))?;
 
         // Get configuration from parameter or default from config repository
         let config = if let Some(config) = timer_config {
@@ -141,33 +140,31 @@ impl TimerTickService {
 
                     // Additionally, publish phase-specific events based on the phase type
                     use domain::timer::Phase;
-                    use domain::timer::events::{BreakPhaseCompleted, WorkPhaseCompleted};
+                    use domain::timer::events::{
+                        BreakPhaseCompleted, WorkPhaseCompleted,
+                    };
 
+                    let duration_seconds =
+                        config_clone.get_phase_duration_seconds(current_phase);
                     match current_phase {
                         Phase::Work => {
-                            // Get work duration from config (convert Duration to seconds)
-                            let duration_seconds = config_clone.work_duration.as_secs() as u32;
                             let work_completed = WorkPhaseCompleted::new(
                                 task_id,
                                 duration_seconds,
                                 1, // Using fixed version for now
                             );
-                            event_publisher_clone.publish(Box::new(work_completed));
+                            event_publisher_clone
+                                .publish(Box::new(work_completed));
                         }
                         Phase::ShortBreak | Phase::LongBreak => {
-                            // Get break duration from config based on break type (convert Duration to seconds)
-                            let duration_seconds = match current_phase {
-                                Phase::ShortBreak => config_clone.short_break_duration.as_secs() as u32,
-                                Phase::LongBreak => config_clone.long_break_duration.as_secs() as u32,
-                                _ => unreachable!(),
-                            };
                             let break_completed = BreakPhaseCompleted::new(
                                 task_id,
                                 current_phase,
                                 duration_seconds,
                                 1, // Using fixed version for now
                             );
-                            event_publisher_clone.publish(Box::new(break_completed));
+                            event_publisher_clone
+                                .publish(Box::new(break_completed));
                         }
                     }
 
@@ -227,9 +224,11 @@ impl TimerTickService {
         Ok(())
     }
 
-
     /// Reset the timer to initial state
-    pub async fn reset_timer(&self, timer_config: TimerConfiguration) -> DomainResult<()> {
+    pub async fn reset_timer(
+        &self,
+        timer_config: TimerConfiguration,
+    ) -> DomainResult<()> {
         // Reset the timer using the domain method (but we won't publish the events)
         {
             let mut timer = self.timer.lock().await;

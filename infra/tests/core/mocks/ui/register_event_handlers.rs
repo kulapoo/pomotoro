@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use crate::core::mocks::ui::app_handle::MockAppHandle;
 use anyhow::Result;
-use domain::{ConfigRepository, TaskRepository, TimerRepository, EventPublisher};
+use domain::{
+    ConfigRepository, EventPublisher, TaskRepository, TimerRepository,
+};
 use infra::adapters::TimerTickService;
+use infra::adapters::config::register_config_handlers;
 use infra::adapters::events::EventSubscriber;
 use infra::adapters::events::app_emitter::Emitter;
 use infra::adapters::events::app_started_handler::AppStartedHandler;
-use infra::adapters::config::register_config_handlers;
 use infra::adapters::task::event_handlers::register_task_handlers;
 use infra::adapters::timer::event_handlers::register_timer_handlers;
 
@@ -28,7 +30,6 @@ pub fn register_test_handlers(
         emitter.clone(),
         task_repository.clone(),
         timer_tick_service.clone(),
-        config_repository.clone(),
     )?;
     register_timer_handlers(
         event_bus.clone(),
