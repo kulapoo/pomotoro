@@ -21,7 +21,17 @@ pub mod timer {
 }
 
 pub mod task {
-    pub use super::commands::task::*;
+    // Commands
+    pub use super::commands::task::{
+        CREATE, UPDATE, DELETE, RESET, GET, GET_ALL, GET_ACTIVE,
+        GET_BY_TAGS, COMPLETE_TASK, RESET_TASK, SEARCH, SEARCH_FUZZY,
+        FILTER_BY_STATUS, CYCLE_INCOMPLETE_TASK, GET_TASK_CYCLE_POSITION,
+        GET_INCOMPLETE_TASKS, DEBUG_CREATE_TEST_TASK, TASK_CREATED,
+        TASK_UPDATED, TASK_DELETED,
+    };
+    // Business event (domain event)
+    pub use super::commands::task::TASK_COMPLETED as TASK_COMPLETED_EVENT;
+    // UI Listeners
     pub use super::ui_listeners::task::*;
 }
 

@@ -1,8 +1,8 @@
-use domain::TaskActiveChanged;
 use domain::event_names::ui_listeners::{
     task as task_event_names, timer as timer_event_names,
 };
 use domain::{Task, Timer, TimerState, TimerTick, event_names::commands};
+use domain::{TaskActiveChanged, TaskCompleted};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
@@ -26,7 +26,7 @@ impl AppViewModel {
         self.load_initial_timer_state();
         self.load_initial_active_task();
         self.setup_timer_listeners();
-        self.setup_active_task_listeners();
+        self.setup_task_listeners();
     }
 
     fn load_initial_timer_state(&self) {
@@ -200,8 +200,13 @@ impl AppViewModel {
         });
     }
 
-    // Active Task management
-    fn setup_active_task_listeners(&self) {
+    // Task management
+    fn setup_task_listeners(&self) {
+        self.setup_task_completed_listener();
+        self.setup_active_task_listener();
+    }
+
+    fn setup_active_task_listener(&self) {
         let set_active_task = self.set_active_task;
 
         spawn_local(async move {
@@ -223,6 +228,32 @@ impl AppViewModel {
             });
 
             listen(task_event_names::ACTIVE_CHANGED, &callback).await;
+            callback.forget();
+        });
+    }
+
+    fn setup_task_completed_listener(&self) {
+        let set_active_task = self.set_active_task;
+
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                if let Ok(task_completed) =
+                    serde_wasm_bindgen::from_value::<TaskCompleted>(payload)
+                {
+                    spawn_local(async move {
+                        Self::fetch_task_by_id(
+                            &task_completed.task_id.to_string(),
+                            set_active_task,
+                        )
+                        .await;
+                    });
+                }
+            });
+
+            listen(task_event_names::TASK_COMPLETED, &callback).await;
             callback.forget();
         });
     }

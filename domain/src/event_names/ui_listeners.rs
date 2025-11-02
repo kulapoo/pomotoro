@@ -16,6 +16,7 @@ pub mod task {
     pub const LIST_UPDATED: &str = "task:list_updated";
     pub const ACTIVE_CHANGED: &str = "task:active_changed";
     pub const PROGRESS_UPDATED: &str = "task:progress_updated";
+    pub const TASK_COMPLETED: &str = "task:task_completed";
 }
 
 pub mod config {

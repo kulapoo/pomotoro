@@ -1,5 +1,5 @@
 pub mod builder;
-pub mod cycle;
+mod cycle_service;
 pub mod events;
 pub mod id;
 pub mod repository;
@@ -18,5 +18,4 @@ pub use id::{Id, Marker};
 pub use repository::Repository;
 pub use status::Status;
 
-pub use cycle::{AutoCycleService, RoundRobinCycling};
-
+pub use cycle_service::CycleService;

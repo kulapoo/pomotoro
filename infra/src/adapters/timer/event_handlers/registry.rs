@@ -52,9 +52,14 @@ pub fn register_timer_handlers(
     )))?;
     event_bus.subscribe(Box::new(BreakPhaseCompletedHandler::new(
         emitter.clone(),
+        task_repo.clone(),
+        config_repo.clone(),
+        timer_srv.clone(),
     )))?;
-    event_bus
-        .subscribe(Box::new(WorkPhaseCompletedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(WorkPhaseCompletedHandler::new(
+        emitter.clone(),
+        task_repo.clone(),
+    )))?;
 
     // Register the countdown expired handler that triggers phase completion
     event_bus.subscribe(Box::new(CountdownExpiredHandler::new(

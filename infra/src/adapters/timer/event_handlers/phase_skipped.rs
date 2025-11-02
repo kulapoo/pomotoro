@@ -1,7 +1,5 @@
 use async_trait::async_trait;
-use domain::{
-    Event, PhaseSkipped, Result,
-};
+use domain::{Event, PhaseSkipped, Result};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
@@ -20,10 +18,7 @@ impl PhaseSkippedHandler {
         emitter: Arc<dyn Emitter>,
         timer_srv: Arc<TimerTickService>,
     ) -> Self {
-        Self {
-            emitter,
-            timer_srv,
-        }
+        Self { emitter, timer_srv }
     }
 }
 
@@ -34,7 +29,7 @@ impl EventHandler for PhaseSkippedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let phase_skipped = event
+        let _phase_skipped = event
             .as_any()
             .downcast_ref::<domain::PhaseSkipped>()
             .ok_or(domain::Error::EventHandlingError {

@@ -12,7 +12,10 @@ pub struct TimerResetHandler {
 }
 
 impl TimerResetHandler {
-    pub fn new(emitter: Arc<dyn Emitter>, timer_srv: Arc<TimerTickService>) -> Self {
+    pub fn new(
+        emitter: Arc<dyn Emitter>,
+        timer_srv: Arc<TimerTickService>,
+    ) -> Self {
         TimerResetHandler { emitter, timer_srv }
     }
 }
@@ -31,23 +34,13 @@ impl EventHandler for TimerResetHandler {
             message: "Failed to reset timer".to_string(),
         })?;
 
-
         self.timer_srv.load_state().await?;
 
-        self.timer_srv
-            .stop_timer_tick_loop()
-            .await
-            .map_err(|e| domain::Error::EventHandlingError {
+        self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
+            domain::Error::EventHandlingError {
                 message: format!("Failed to stop timer tick loop: {e}"),
-            })?;
-
-        self.timer_srv
-            .start_timer_tick_loop(Some(timer_reset.timer_configuration.clone()), None)
-            .await
-            .map_err(|e| domain::Error::EventHandlingError {
-                message: format!("Failed to start timer tick loop: {e}"),
-            })?;
-
+            }
+        })?;
 
         self.emitter
             .emit(

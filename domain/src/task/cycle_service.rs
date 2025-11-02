@@ -1,12 +1,12 @@
 use crate::config::{GeneralConfig, TaskCyclingBehavior};
-use crate::task::{Task, Id as TaskId};
+use crate::task::{Id as TaskId, Task};
 
 /// Pure domain service for auto-cycling logic.
 ///
 /// Contains only business logic with no I/O operations.
-pub struct AutoCycleService;
+pub struct CycleService;
 
-impl AutoCycleService {
+impl CycleService {
     /// Returns true if auto-cycling should be enabled based on configuration.
     pub fn should_auto_cycle(config: &GeneralConfig) -> bool {
         matches!(
@@ -28,7 +28,8 @@ impl AutoCycleService {
     ) -> Option<&'a Task> {
         match cycling_behavior {
             TaskCyclingBehavior::Manual => None,
-            TaskCyclingBehavior::AutoAdvance | TaskCyclingBehavior::RoundRobin => {
+            TaskCyclingBehavior::AutoAdvance
+            | TaskCyclingBehavior::RoundRobin => {
                 Self::next_round_robin_task(tasks, current_task_id)
             }
         }
@@ -69,8 +70,9 @@ impl AutoCycleService {
             return None;
         }
 
-        let current_pos = current_task_id
-            .and_then(|id| incomplete_tasks.iter().position(|task| &task.id == id));
+        let current_pos = current_task_id.and_then(|id| {
+            incomplete_tasks.iter().position(|task| &task.id == id)
+        });
 
         match current_pos {
             Some(pos) => {
@@ -85,7 +87,7 @@ impl AutoCycleService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::task::{Status, Builder as TaskBuilder};
+    use crate::task::{Builder as TaskBuilder, Status};
 
     fn create_config(behavior: TaskCyclingBehavior) -> GeneralConfig {
         GeneralConfig {
@@ -108,16 +110,23 @@ mod tests {
 
     #[test]
     fn test_should_auto_cycle() {
-        assert!(!AutoCycleService::should_auto_cycle(&create_config(TaskCyclingBehavior::Manual)));
-        assert!(AutoCycleService::should_auto_cycle(&create_config(TaskCyclingBehavior::AutoAdvance)));
-        assert!(AutoCycleService::should_auto_cycle(&create_config(TaskCyclingBehavior::RoundRobin)));
+        assert!(!CycleService::should_auto_cycle(&create_config(
+            TaskCyclingBehavior::Manual
+        )));
+        assert!(CycleService::should_auto_cycle(&create_config(
+            TaskCyclingBehavior::AutoAdvance
+        )));
+        assert!(CycleService::should_auto_cycle(&create_config(
+            TaskCyclingBehavior::RoundRobin
+        )));
     }
 
     #[test]
     fn test_select_next_task_manual_mode() {
-        let tasks = vec![create_task("Task 1", false), create_task("Task 2", false)];
+        let tasks =
+            vec![create_task("Task 1", false), create_task("Task 2", false)];
 
-        let result = AutoCycleService::select_next_task(
+        let result = CycleService::select_next_task(
             &tasks,
             None,
             &TaskCyclingBehavior::Manual,
@@ -134,57 +143,58 @@ mod tests {
             create_task("Task 3", false),
         ];
 
-        let result = AutoCycleService::select_next_task(
+        let result = CycleService::select_next_task(
             &tasks,
             Some(&tasks[0].id),
             &TaskCyclingBehavior::AutoAdvance,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(result.name, "Task 3");
     }
 
     #[test]
     fn test_select_next_task_wrap_around() {
-        let tasks = vec![
-            create_task("Task 1", false),
-            create_task("Task 2", false),
-        ];
+        let tasks =
+            vec![create_task("Task 1", false), create_task("Task 2", false)];
 
-        let result = AutoCycleService::select_next_task(
+        let result = CycleService::select_next_task(
             &tasks,
             Some(&tasks[1].id), // Last task
             &TaskCyclingBehavior::AutoAdvance,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(result.name, "Task 1"); // Wraps to beginning
     }
 
     #[test]
     fn test_select_next_task_no_current_returns_first() {
-        let tasks = vec![
-            create_task("Task 1", false),
-            create_task("Task 2", false),
-        ];
+        let tasks =
+            vec![create_task("Task 1", false), create_task("Task 2", false)];
 
-        let result = AutoCycleService::select_next_task(
+        let result = CycleService::select_next_task(
             &tasks,
             None,
             &TaskCyclingBehavior::AutoAdvance,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(result.name, "Task 1");
     }
 
     #[test]
     fn test_validate_cycling_conditions() {
-        assert!(AutoCycleService::validate_cycling_conditions(false, true).is_ok());
-        assert!(AutoCycleService::validate_cycling_conditions(true, true).is_err());
-        assert!(AutoCycleService::validate_cycling_conditions(false, false).is_err());
+        assert!(CycleService::validate_cycling_conditions(false, true).is_ok());
+        assert!(CycleService::validate_cycling_conditions(true, true).is_err());
+        assert!(
+            CycleService::validate_cycling_conditions(false, false).is_err()
+        );
     }
 
     #[test]
     fn test_is_task_eligible() {
-        assert!(AutoCycleService::is_task_eligible(&create_task("Task", false)));
-        assert!(!AutoCycleService::is_task_eligible(&create_task("Task", true)));
+        assert!(CycleService::is_task_eligible(&create_task("Task", false)));
+        assert!(!CycleService::is_task_eligible(&create_task("Task", true)));
     }
 }

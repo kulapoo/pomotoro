@@ -11,11 +11,10 @@ pub use shared_kernel::{
 };
 
 pub use task::{
-    ActiveChanged as TaskActiveChanged,
-    AutoCycleService as TaskAutoCycleService, Builder as TaskBuilder,
-    Completed as TaskCompleted, Created as TaskCreated, Id as TaskId,
-    Marker as TaskMarker, Repository as TaskRepository, Reset as TaskReset,
-    RoundRobinCycling as TaskRoundRobinCycling, Status as TaskStatus,
+    ActiveChanged as TaskActiveChanged, Builder as TaskBuilder,
+    Completed as TaskCompleted, Created as TaskCreated,
+    CycleService as TaskCycleService, Id as TaskId, Marker as TaskMarker,
+    Repository as TaskRepository, Reset as TaskReset, Status as TaskStatus,
     StatusChanged as TaskStatusChanged, Task, TaskDeleted, TaskPatch,
     Updated as TaskUpdated,
 };
