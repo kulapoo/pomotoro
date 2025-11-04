@@ -14,21 +14,11 @@ use std::sync::Arc;
 /// Event handler that triggers phase completion when countdown naturally expires
 pub struct CountdownExpiredHandler {
     emitter: Arc<dyn Emitter>,
-    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
-    timer_srv: Arc<TimerTickService>,
 }
 
 impl CountdownExpiredHandler {
-    pub fn new(
-        emitter: Arc<dyn Emitter>,
-        config_repository: Arc<dyn ConfigRepository + Send + Sync>,
-        timer_srv: Arc<TimerTickService>,
-    ) -> Self {
-        Self {
-            emitter,
-            config_repository,
-            timer_srv,
-        }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        Self { emitter }
     }
 }
 
@@ -39,7 +29,7 @@ impl EventHandler for CountdownExpiredHandler {
     }
 
     async fn handle(&self, event: Box<dyn domain::Event>) -> Result<(), Error> {
-        let countdown_expired = event
+        let _countdown_expired = event
             .as_any()
             .downcast_ref::<CountdownExpired>()
             .ok_or_else(|| Error::RepositoryError {
@@ -47,28 +37,64 @@ impl EventHandler for CountdownExpiredHandler {
                     .to_string(),
             })?;
 
-        let config = self.config_repository.get_config().await?;
+        // let config = self.config_repository.get_config().await?;
 
-        // let (should_auto_start) = match countdown_expired.phase {
-        //     Phase::Work => {
-        //         // Work phase expired, check if we should auto-start break
-        //         (
-        //             config.general.auto_start_breaks,
-        //             Phase::determine_next_break_type(task.cu, sessions_until_long_break)
-        //         )
-        //     }
-        //     Phase::ShortBreak | Phase::LongBreak => {
-        //         // Break phase expired, check if we should auto-start work
-        //         (config.general.auto_start_work_after_break)
-        //     }
-        // };
+        // let task = self
+        //     .task_repository
+        //     .get_by_id(countdown_expired.task_id)
+        //     .await?
+        //     .ok_or(domain::Error::RepositoryError {
+        //         message: format!(
+        //             "Countdown expired:: Task not found: {}",
+        //             countdown_expired.task_id
+        //         ),
+        //     })?;
+
+        // let (should_auto_start, next_phase) =
+        //     match countdown_expired.phase.clone() {
+        //         Phase::Work => {
+        //             // Work phase expired, check if we should auto-start break
+        //             (
+        //                 config.general.auto_start_breaks,
+        //                 Phase::determine_next_break_type(
+        //                     task.current_sessions,
+        //                     task.config.timer.sessions_until_long_break,
+        //                 ),
+        //             )
+        //         }
+        //         Phase::ShortBreak | Phase::LongBreak => {
+        //             // Break phase expired, check if we should auto-start work
+        //             (config.general.auto_start_work_after_break, Phase::Work)
+        //         }
+        //     };
 
         // if should_auto_start {
         //     self.timer_srv.load_state().await?;
 
         //     let timer = self.timer_srv.get_current_timer().await;
-        //     let next_phase = match
-        //     let result = timer.complete_phase(next_phase, configuration)?;
+        //     let _ = timer
+        //         .clone()
+        //         .complete_phase(next_phase, &task.config.timer)?;
+
+        //     self.timer_srv
+        //         .update_timer(|t| {
+        //             *t = timer.clone();
+        //             Ok(())
+        //         })
+        //         .await?;
+
+        //     log::info!(
+        //         "COUNTDOWN PHASE: phase - {:?}, next phase - {:?}, timer state - {:?}",
+        //         countdown_expired.phase,
+        //         next_phase,
+        //         timer.state()
+        //     );
+
+        //     let _ = self
+        //         .timer_srv
+        //         .start_timer_tick_loop(Some(task.config.timer.clone()), None)
+        //         .await
+        //         .map_err(|e| domain::Error::RepositoryError { message: e })?;
 
         //     self.emitter
         //         .emit(

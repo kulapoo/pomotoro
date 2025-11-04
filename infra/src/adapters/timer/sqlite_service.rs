@@ -93,6 +93,7 @@ impl TimerTickService {
             }
         }
         let timer_clone = Arc::clone(&self.timer);
+
         let event_publisher_clone = Arc::clone(&self.event_publisher);
         let config_clone = config.clone();
         let handle = tokio::spawn(async move {
@@ -135,7 +136,8 @@ impl TimerTickService {
 
                     // Always publish the generic CountdownExpired event
                     use domain::timer::events::CountdownExpired;
-                    let expiration_event = CountdownExpired::new(current_phase);
+                    let expiration_event =
+                        CountdownExpired::new(current_phase, task_id);
                     event_publisher_clone.publish(Box::new(expiration_event));
 
                     // Additionally, publish phase-specific events based on the phase type

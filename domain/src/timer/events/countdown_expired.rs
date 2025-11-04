@@ -1,5 +1,5 @@
-use crate::Event;
 use crate::timer::Phase;
+use crate::{Event, TaskId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::any::Any;
@@ -10,13 +10,15 @@ use std::any::Any;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CountdownExpired {
     pub phase: Phase,
+    pub task_id: TaskId,
     pub occurred_at: DateTime<Utc>,
 }
 
 impl CountdownExpired {
-    pub fn new(phase: Phase) -> Self {
+    pub fn new(phase: Phase, task_id: TaskId) -> Self {
         Self {
             phase,
+            task_id,
             occurred_at: Utc::now(),
         }
     }
@@ -28,7 +30,7 @@ impl Event for CountdownExpired {
     }
 
     fn aggregate_id(&self) -> String {
-        "timer".to_string()
+        self.task_id.to_string()
     }
 
     fn version(&self) -> u64 {

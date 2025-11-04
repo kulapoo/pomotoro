@@ -4,8 +4,8 @@
 //! ensuring valid state changes and generating appropriate domain events.
 
 use super::events::{
-    BreakPhaseCompleted, BreakPhaseStarted, Paused,
-    PhaseSkipped, Reset, Started, WorkPhaseCompleted, WorkPhaseStarted,
+    BreakPhaseCompleted, BreakPhaseStarted, Paused, PhaseSkipped, Reset,
+    Started, WorkPhaseCompleted, WorkPhaseStarted,
 };
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result};
@@ -37,10 +37,12 @@ impl StateTransitions {
                     configuration.work_duration.as_secs() as u32;
                 let duration = configuration.work_duration.as_secs() as u32;
 
-                let events: Vec<Box<dyn Event>> = vec![
-                    Box::new(Started::new(task_id, Phase::Work, duration, 1)),
-                    Box::new(WorkPhaseStarted::new(task_id, duration, 1)),
-                ];
+                let events: Vec<Box<dyn Event>> = vec![Box::new(Started::new(
+                    task_id,
+                    Phase::Work,
+                    duration,
+                    1,
+                ))];
 
                 Ok(TransitionResult {
                     new_state: TimerState::Working { remaining_seconds },
