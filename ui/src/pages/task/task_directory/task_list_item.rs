@@ -60,6 +60,10 @@ where
                     </span>
                 </div>
 
+                <p class="text-xs text-slate-400 font-mono mb-2">
+                    {format!("ID: {}", task_id.to_string().chars().take(8).collect::<String>())}
+                </p>
+
                 {task.description.clone().map(|desc| {
                     if !desc.is_empty() {
                         view! {

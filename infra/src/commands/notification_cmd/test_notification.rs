@@ -6,11 +6,9 @@ pub async fn test_notification(
     notification_type: String,
 ) -> Result<(), String> {
     let event: Box<dyn Event> = match notification_type.as_str() {
-        "phase_completed" => Box::new(PhaseCompleted::new(
+        "work_phase_completed" => Box::new(WorkPhaseCompleted::new(
             TaskId::new(),
-            Phase::Work,
-            Phase::ShortBreak,
-            1,
+            1500,
             1,
         )),
         "task_completed" => Box::new(TaskCompleted::new(TaskId::new(), 10, 1)),

@@ -22,7 +22,7 @@ pub use task::{
 pub use timer::{
     ActiveTaskSwitched, BreakPhaseCompleted, BreakPhaseStarted,
     DEFAULT_TASK_ID, Error as TimerError, Paused as TimerPaused, Phase,
-    PhaseCompleted, PhaseSkipped, Reset as TimerReset, Result as TimerResult,
+    PhaseSkipped, Reset as TimerReset, Result as TimerResult,
     SessionFlowReset, Started as TimerStarted, StateTransitions,
     Status as TimerStatus, StatusChanged as TimerStatusChanged,
     Tick as TimerTick, Timer, TimerRepository, TimerState, TransitionResult,

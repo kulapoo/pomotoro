@@ -54,29 +54,30 @@ impl EventHandler for WorkPhaseCompletedHandler {
                 ),
             })?;
 
-        // Check if this is the last work session and emit TaskCompleted event
-        if let Some(task) = self
+        let task = self
             .task_repository
             .get_by_id(work_phase_completed.task_id)
             .await?
-        {
-            if task.get_remaining_sessions() <= 1 {
-                let task_completed = TaskCompleted::new(
-                    work_phase_completed.task_id,
-                    task.max_sessions,
-                    1,
-                );
-                self.emitter
-                    .emit(
-                        ui_listeners::task::TASK_COMPLETED,
-                        json!(task_completed),
-                    )
-                    .map_err(|e| domain::Error::RepositoryError {
-                        message: format!(
-                            "Failed to emit task completed event: {e}"
-                        ),
-                    })?;
-            }
+            .ok_or(domain::Error::RepositoryError {
+                message: format!(
+                    "Work phase completed:: Task not found: {}",
+                    work_phase_completed.task_id
+                ),
+            })?;
+
+        if task.get_remaining_sessions() <= 1 {
+            let task_completed = TaskCompleted::new(
+                work_phase_completed.task_id,
+                task.max_sessions,
+                1,
+            );
+            self.emitter
+                .emit(ui_listeners::task::TASK_COMPLETED, json!(task_completed))
+                .map_err(|e| domain::Error::RepositoryError {
+                    message: format!(
+                        "Failed to emit task completed event: {e}"
+                    ),
+                })?;
         }
 
         Ok(())

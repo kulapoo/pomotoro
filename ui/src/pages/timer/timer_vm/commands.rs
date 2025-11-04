@@ -12,6 +12,13 @@ impl TimerViewModel {
         let current_state = self.timer_state.get_untracked();
         let set_timer_state = self.set_timer_state;
         let set_error_state = self.set_error_state;
+        let active_task_id = match self.get_active_entity_id() {
+            Some(id) => id,
+            None => {
+                handle_command_error("No active task".to_string(), set_error_state);
+                return;
+            }
+        };
 
         spawn_local(async move {
 
@@ -45,7 +52,16 @@ impl TimerViewModel {
                     .ok();
             }
 
-            invoke::<Timer, ()>(command, None).await
+            #[derive(serde::Serialize)]
+            struct TimerCommandArgs {
+                task_id: String,
+            }
+
+            let timer_args = TimerCommandArgs {
+                task_id: active_task_id,
+            };
+
+            invoke::<Timer, TimerCommandArgs>(command, Some(timer_args)).await
             .map(|timer| {
                 let status = timer.state().status();
 
@@ -66,9 +82,25 @@ impl TimerViewModel {
         let set_timer_state = self.set_timer_state;
         let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
+        let active_task_id = match self.get_active_entity_id() {
+            Some(id) => id,
+            None => {
+                handle_command_error("No active task".to_string(), set_error_state);
+                return;
+            }
+        };
+
+        #[derive(serde::Serialize)]
+        struct ResetTimerArgs {
+            task_id: String,
+        }
+
+        let reset_args = ResetTimerArgs {
+            task_id: active_task_id,
+        };
 
         spawn_local(async move {
-            invoke::<(Timer, Task), ()>(commands::timer::RESET, None).await
+            invoke::<(Timer, Task), ResetTimerArgs>(commands::timer::RESET, Some(reset_args)).await
                 .map(|(timer, task)| {
                     set_timer_state.set(timer.state().clone());
                     set_active_task.set(Some(task));
@@ -108,16 +140,31 @@ impl TimerViewModel {
         let set_timer_state = self.set_timer_state;
         let set_active_task = self.set_active_task;
         let set_error_state = self.set_error_state;
+        let active_task_id = match self.get_active_entity_id() {
+            Some(id) => id,
+            None => {
+                handle_command_error("No active task".to_string(), set_error_state);
+                return;
+            }
+        };
+
+        #[derive(serde::Serialize)]
+        struct SkipPhaseArgs {
+            task_id: String,
+        }
+
+        let skip_args = SkipPhaseArgs {
+            task_id: active_task_id.clone(),
+        };
 
         spawn_local(async move {
-            invoke::<Timer, ()>(commands::timer::SKIP_PHASE, None).await
+            invoke::<Timer, SkipPhaseArgs>(commands::timer::SKIP_PHASE, Some(skip_args)).await
                 .map_err(|e| handle_command_error(e, set_error_state))
                 .ok()
                 .map(|timer| {
                     set_timer_state.set(timer.state().clone());
 
-                    let task_id = timer.task_id();
-                    let task_id_str = task_id.to_string();
+                    let task_id_str = active_task_id;
                     spawn_local(async move {
                         use serde::Serialize;
 

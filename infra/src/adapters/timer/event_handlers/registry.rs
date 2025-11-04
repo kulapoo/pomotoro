@@ -9,9 +9,9 @@ use crate::adapters::timer::event_handlers::TimerResetHandler;
 use crate::adapters::{TimerTickService, events::app_emitter::Emitter};
 
 use super::{
-    BreakPhaseCompletedHandler, CountdownExpiredHandler, PhaseCompletedHandler,
-    PhaseSkippedHandler, TimerPausedHandler, TimerStartedHandler,
-    TimerStatusChangedHandler, TimerTickHandler, WorkPhaseCompletedHandler,
+    BreakPhaseCompletedHandler, CountdownExpiredHandler, PhaseSkippedHandler,
+    TimerPausedHandler, TimerStartedHandler, TimerStatusChangedHandler,
+    TimerTickHandler, WorkPhaseCompletedHandler,
 };
 
 pub fn register_timer_handlers(
@@ -21,7 +21,7 @@ pub fn register_timer_handlers(
     task_repo: Arc<dyn TaskRepository + Sync + Send>,
     _timer_repo: Arc<dyn TimerRepository + Sync + Send>,
     config_repo: Arc<dyn ConfigRepository + Sync + Send>,
-    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TimerTickHandler::new(
         emitter.clone(),
@@ -29,8 +29,6 @@ pub fn register_timer_handlers(
         config_repo.clone(),
     )))?;
 
-    event_bus
-        .subscribe(Box::new(PhaseCompletedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(PhaseSkippedHandler::new(
         emitter.clone(),
         timer_srv.clone(),
@@ -61,9 +59,10 @@ pub fn register_timer_handlers(
         task_repo.clone(),
     )))?;
 
-    // Register the countdown expired handler that triggers phase completion
     event_bus.subscribe(Box::new(CountdownExpiredHandler::new(
-        event_publisher.clone(),
+        emitter.clone(),
+        config_repo.clone(),
+        timer_srv.clone(),
     )))?;
 
     Ok(())
@@ -74,7 +73,6 @@ pub fn unregister_timer_handlers(
 ) -> Result<()> {
     event_bus.clear_handlers_for_type(TypeId::of::<TimerStartedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TimerTickHandler>())?;
-    event_bus.clear_handlers_for_type(TypeId::of::<PhaseCompletedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<PhaseSkippedHandler>())?;
     event_bus
         .clear_handlers_for_type(TypeId::of::<TimerStatusChangedHandler>())?;

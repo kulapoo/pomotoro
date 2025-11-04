@@ -21,6 +21,14 @@ pub fn TimerPage() -> impl IntoView {
                     <span class="font-semibold text-indigo-600">"Working on: "</span>
                     {move || vm.with_value(|v| v.get_active_task_name())}
                 </p>
+                {move || vm.with_value(|v| v.get_active_entity_id()).map(|id| {
+                    let short_id = id.chars().take(8).collect::<String>();
+                    view! {
+                        <p class="text-xs text-slate-400 font-mono mt-1">
+                            {format!("ID: {}", short_id)}
+                        </p>
+                    }
+                })}
             </div>
 
             <div class="text-center mb-4">

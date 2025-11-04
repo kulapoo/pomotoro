@@ -1,19 +1,34 @@
+use crate::adapters::{
+    TimerTickService,
+    events::{EventHandler, app_emitter::Emitter},
+};
 use async_trait::async_trait;
-use domain::timer::events::CountdownExpired;
+use domain::{
+    ConfigRepository, Phase, StateTransitions, timer::events::CountdownExpired,
+};
+use domain::{Error, EventPublisher, TaskRepository, TimerRepository};
+use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
-use crate::adapters::events::EventHandler;
-use domain::{Error, EventPublisher, TaskRepository, TimerRepository};
-
 /// Event handler that triggers phase completion when countdown naturally expires
 pub struct CountdownExpiredHandler {
-    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    emitter: Arc<dyn Emitter>,
+    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+    timer_srv: Arc<TimerTickService>,
 }
 
 impl CountdownExpiredHandler {
-    pub fn new(event_publisher: Arc<dyn EventPublisher + Send + Sync>) -> Self {
-        Self { event_publisher }
+    pub fn new(
+        emitter: Arc<dyn Emitter>,
+        config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+        timer_srv: Arc<TimerTickService>,
+    ) -> Self {
+        Self {
+            emitter,
+            config_repository,
+            timer_srv,
+        }
     }
 }
 
@@ -24,7 +39,7 @@ impl EventHandler for CountdownExpiredHandler {
     }
 
     async fn handle(&self, event: Box<dyn domain::Event>) -> Result<(), Error> {
-        let _countdown_expired = event
+        let countdown_expired = event
             .as_any()
             .downcast_ref::<CountdownExpired>()
             .ok_or_else(|| Error::RepositoryError {
@@ -32,11 +47,38 @@ impl EventHandler for CountdownExpiredHandler {
                     .to_string(),
             })?;
 
-        // Call the complete_timer_phase use case
-        // This will handle the phase completion logic without auto-cycling
+        let config = self.config_repository.get_config().await?;
 
-        // Auto-cycle behavior has been removed
-        // The timer will now stop after each phase completes
+        // let (should_auto_start) = match countdown_expired.phase {
+        //     Phase::Work => {
+        //         // Work phase expired, check if we should auto-start break
+        //         (
+        //             config.general.auto_start_breaks,
+        //             Phase::determine_next_break_type(task.cu, sessions_until_long_break)
+        //         )
+        //     }
+        //     Phase::ShortBreak | Phase::LongBreak => {
+        //         // Break phase expired, check if we should auto-start work
+        //         (config.general.auto_start_work_after_break)
+        //     }
+        // };
+
+        // if should_auto_start {
+        //     self.timer_srv.load_state().await?;
+
+        //     let timer = self.timer_srv.get_current_timer().await;
+        //     let next_phase = match
+        //     let result = timer.complete_phase(next_phase, configuration)?;
+
+        //     self.emitter
+        //         .emit(
+        //             domain::event_names::ui_listeners::timer::STATUS_CHANGED,
+        //             json!(timer.state()),
+        //         )
+        //         .map_err(|e| domain::Error::EventPublishingError {
+        //             message: format!("Failed to emit timer started event: {e}"),
+        //         })?;
+        // }
 
         Ok(())
     }

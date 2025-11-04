@@ -64,7 +64,8 @@
       "Bash(cargo clippy:*)",
       "Bash(awk:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(RUST_BACKTRACE=1 cargo test:*)"
+      "Bash(RUST_BACKTRACE=1 cargo test:*)",
+      "Bash(timeout 10 cargo tauri dev:*)"
     ],
     "deny": [],
     "ask": [],

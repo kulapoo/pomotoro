@@ -48,34 +48,17 @@ pub async fn start_timer_phase(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    let mut timer = timer_repo.get().await?;
+    // Check if timer is already running
+    let existing_timer = timer_repo.get().await?;
+    if existing_timer.is_running() {
+        return Err(Error::InvalidStateTransition {
+            from: "Running".to_string(),
+            to: "Start".to_string(),
+        });
+    }
 
     // Get the timer config before moving the task
     let timer_config = task.config.timer.clone();
-
-    // If there's a previous active task (different from the one we want to start), set it back to Queued
-    let prev_task_id = timer.task_id();
-    if prev_task_id != task_id {
-        if let Some(mut prev_task) = task_repo.get_by_id(prev_task_id).await? {
-            if prev_task.status != domain::TaskStatus::Completed {
-                prev_task.queue()?;
-                let prev_task_id = prev_task.id;
-                task_repo.update(prev_task).await?;
-                // Emit TaskUpdated event for previous task
-                event_publisher.publish(Box::new(domain::TaskUpdated::new(
-                    prev_task_id,
-                    None,
-                    None,
-                    None,
-                    None,
-                    1,
-                )));
-            }
-        }
-
-        // Create a new timer for the new task
-        timer = domain::Timer::new(task_id);
-    }
 
     // Set the new task status to Active
     task.activate()?;
@@ -94,6 +77,8 @@ pub async fn start_timer_phase(
         1,
     )));
 
+    // Create a new timer with the correct task_id
+    let mut timer = domain::Timer::new(task_id_for_event);
     let events = timer.start(&timer_config)?;
 
     timer_repo.save(&timer).await?;

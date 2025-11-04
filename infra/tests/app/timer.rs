@@ -6,7 +6,7 @@ use crate::utils::{
         timer::{get_timer, get_timer_state},
     };
 use domain::{
-    PhaseCompleted, PhaseSkipped, TaskRepository, TimerPaused, TimerReset, TimerStarted,
+    PhaseSkipped, TaskRepository, TimerPaused, TimerReset, TimerStarted,
     TimerState, TimerStatus, event_names,
     shared_kernel::events::AppStarted,
 };
@@ -251,13 +251,6 @@ async fn timer_should_complete_phase() {
 
     assert_eq!(old_task.current_sessions, 0);
     assert_eq!(task.current_sessions, 1);
-
-    assert_utils::assert_event_subscribed(&ctx, TypeId::of::<PhaseCompleted>());
-
-    assert_utils::assert_event_was_emitted(
-        &ctx.ui_simulator,
-        event_names::ui_listeners::timer::PHASE_COMPLETED,
-    );
 }
 
 #[tokio::test]

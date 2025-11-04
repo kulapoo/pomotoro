@@ -1,6 +1,5 @@
 mod break_phase_completed;
 mod countdown_expired;
-mod phase_completed;
 mod phase_skipped;
 mod registry;
 mod timer_paused;
@@ -12,7 +11,6 @@ mod work_phase_completed;
 
 pub(super) use break_phase_completed::BreakPhaseCompletedHandler;
 pub(super) use countdown_expired::CountdownExpiredHandler;
-pub(super) use phase_completed::PhaseCompletedHandler;
 pub(super) use phase_skipped::PhaseSkippedHandler;
 pub(super) use timer_paused::TimerPausedHandler;
 pub(super) use timer_reset::TimerResetHandler;

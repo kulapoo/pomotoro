@@ -29,12 +29,13 @@ impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
             task_cycling_behavior: TaskCyclingBehavior::Manual,
-            auto_start_breaks: true,
+            auto_start_breaks: false,
             auto_start_work_after_break: false,
             minimize_to_tray: true,
             start_minimized: false,
             enable_screen_blocking: false,
-            persistence_interval_seconds: default_persistence_interval_seconds(),
+            persistence_interval_seconds: default_persistence_interval_seconds(
+            ),
         }
     }
 }

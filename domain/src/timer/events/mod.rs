@@ -2,7 +2,6 @@ pub mod active_task_switched;
 pub mod break_phase_completed;
 pub mod break_phase_started;
 pub mod countdown_expired;
-pub mod phase_completed;
 pub mod phase_skipped;
 pub mod session_flow_reset;
 pub mod timer_paused;
@@ -17,7 +16,6 @@ pub use active_task_switched::ActiveTaskSwitched;
 pub use break_phase_completed::BreakPhaseCompleted;
 pub use break_phase_started::BreakPhaseStarted;
 pub use countdown_expired::CountdownExpired;
-pub use phase_completed::PhaseCompleted;
 pub use phase_skipped::PhaseSkipped;
 pub use session_flow_reset::SessionFlowReset;
 pub use timer_paused::Paused;
@@ -56,23 +54,6 @@ mod tests {
 
         let serialized = serde_json::to_string(&event).unwrap();
         let deserialized: Started = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(event, deserialized);
-    }
-
-    #[test]
-    fn should_serialize_phase_completed_event() {
-        let event = PhaseCompleted::new(
-            crate::TaskId::new(),
-            Phase::Work,
-            Phase::ShortBreak,
-            1,
-            2,
-        );
-
-        let serialized = serde_json::to_string(&event).unwrap();
-        let deserialized: PhaseCompleted =
-            serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(event, deserialized);
     }

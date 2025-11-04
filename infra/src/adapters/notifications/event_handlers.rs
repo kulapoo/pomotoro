@@ -3,7 +3,7 @@ use domain::timer::events::{
     BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
     Started as TimerStarted, WorkPhaseCompleted,
 };
-use domain::{ConfigRepository, Event, PhaseCompleted, Result, TaskCompleted};
+use domain::{ConfigRepository, Event, Result, TaskCompleted};
 use std::any::TypeId;
 use std::sync::Arc;
 use tauri::AppHandle;
@@ -13,46 +13,6 @@ use super::service::{
 };
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::EventSubscriber;
-
-pub struct PhaseCompletedNotificationHandler {
-    notification_service: Arc<dyn NotificationServiceTrait>,
-}
-
-impl PhaseCompletedNotificationHandler {
-    pub fn new(
-        notification_service: Arc<dyn NotificationServiceTrait>,
-    ) -> Self {
-        Self {
-            notification_service,
-        }
-    }
-}
-
-#[async_trait]
-impl EventHandler for PhaseCompletedNotificationHandler {
-    fn subscribes_to(&self) -> TypeId {
-        TypeId::of::<PhaseCompleted>()
-    }
-
-    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        if let Some(phase_completed) =
-            event.as_any().downcast_ref::<PhaseCompleted>()
-        {
-            let notification_event = NotificationEvent::PhaseCompleted {
-                from: phase_completed.completed_phase,
-                to: phase_completed.next_phase,
-            };
-            self.notification_service
-                .send_notification(notification_event)
-                .await?;
-        }
-        Ok(())
-    }
-
-    fn name(&self) -> &'static str {
-        "PhaseCompletedNotificationHandler"
-    }
-}
 
 pub struct TimerStartedNotificationHandler {
     notification_service: Arc<dyn NotificationServiceTrait>,
@@ -337,10 +297,6 @@ pub async fn register_notification_handlers(
 
     let notification_service: Arc<dyn NotificationServiceTrait> =
         Arc::new(NotificationService::new(app_handle, config.notification));
-
-    let _ = event_bus.subscribe(Box::new(
-        PhaseCompletedNotificationHandler::new(notification_service.clone()),
-    ));
 
     let _ =
         event_bus.subscribe(Box::new(TimerStartedNotificationHandler::new(

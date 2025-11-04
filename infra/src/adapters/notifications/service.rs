@@ -14,10 +14,6 @@ pub struct NotificationContext {
 
 #[derive(Debug, Clone)]
 pub enum NotificationEvent {
-    PhaseCompleted {
-        from: Phase,
-        to: Phase,
-    },
     SessionStarted {
         phase: Phase,
         task_name: Option<String>,
@@ -49,32 +45,6 @@ pub enum NotificationEvent {
 impl NotificationEvent {
     pub fn to_context(&self) -> NotificationContext {
         match self {
-            NotificationEvent::PhaseCompleted { from, to } => {
-                let (title, body) = match (from, to) {
-                    (Phase::Work, Phase::ShortBreak) => (
-                        "Great work!".to_string(),
-                        "Time for a short break. Rest your eyes and stretch!".to_string(),
-                    ),
-                    (Phase::Work, Phase::LongBreak) => (
-                        "Excellent!".to_string(),
-                        "You've completed your focus sessions! Time for a long break.".to_string(),
-                    ),
-                    (Phase::ShortBreak, Phase::Work) | (Phase::LongBreak, Phase::Work) => (
-                        "Break's over!".to_string(),
-                        "Ready to focus? Let's get back to work!".to_string(),
-                    ),
-                    _ => return NotificationContext {
-                        title: "Phase Changed".to_string(),
-                        body: format!("Switched from {:?} to {:?}", from, to),
-                        icon: None,
-                    },
-                };
-                NotificationContext {
-                    title,
-                    body,
-                    icon: None,
-                }
-            }
             NotificationEvent::SessionStarted { phase, task_name } => {
                 let title = match phase {
                     Phase::Work => "Focus Session Started".to_string(),
@@ -234,8 +204,7 @@ impl NotificationService {
         }
 
         match event {
-            NotificationEvent::PhaseCompleted { .. }
-            | NotificationEvent::WorkPhaseCompleted { .. }
+            NotificationEvent::WorkPhaseCompleted { .. }
             | NotificationEvent::BreakStarted { .. }
             | NotificationEvent::BreakCompleted { .. } => {
                 config.show_phase_transition_notifications
