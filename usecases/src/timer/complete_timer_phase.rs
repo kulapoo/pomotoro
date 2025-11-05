@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, EventPublisher, Phase, Result, TaskRepository, TimerRepository,
+    Error, EventPublisher, Phase, Result, TaskId, TaskRepository, TimerRepository,
 };
 
 pub async fn complete_timer_phase(
+    task_id: TaskId,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     let mut timer = timer_repo.get().await?;
-    let task_id = timer.task_id();
 
     let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
         Error::TaskNotFound {

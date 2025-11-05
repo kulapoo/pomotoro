@@ -71,6 +71,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     // Complete first work session
 
     let session1_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -87,6 +88,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     // Complete first short break
 
     let session1_short_break_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -102,6 +104,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Session 2 Work
     let session2_work_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -116,6 +119,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Session 2 Short Break
     let session2_break_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -129,6 +133,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Session 3 Work
     let session3_work_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -143,6 +148,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Session 3 Short Break
     let session3_break_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -158,6 +164,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Session 4 Work - This should trigger LONG BREAK
     let session4_work_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -175,6 +182,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete Long Break
     let long_break_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -191,6 +199,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     // Complete one more work session to verify cycle continues (should go to short break, not long)
     let session5_work_result = complete_timer_phase(
+        task1_id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -503,6 +512,7 @@ async fn task_with_custom_settings_overrides_defaults() {
 
     // Complete work phase to trigger break with custom duration
     let complete_work_result = complete_timer_phase(
+        task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -670,6 +680,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
     for i in 0..3 {
         // Complete work phase
         complete_timer_phase(
+            task.id,
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -689,6 +700,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
 
         // Complete short break
         complete_timer_phase(
+            task.id,
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -702,6 +714,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
     // The timer should already be in work phase after completing the 3rd break
     // Complete 4th work phase - should trigger long break
     let complete_4th_result = complete_timer_phase(
+        task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -817,6 +830,7 @@ async fn should_switch_active_task_during_timer_session() {
             println!("Phase complete after {} ticks", ticks_completed);
             // Complete the phase to move to break
             complete_timer_phase(
+                task2.id,
                 ctx.task_repo.clone(),
                 ctx.timer_repo.clone(),
                 ctx.event_bus.clone(),
@@ -832,6 +846,7 @@ async fn should_switch_active_task_during_timer_session() {
         println!("Warning: Completed all 900 ticks without phase completion");
         // Force complete the phase
         complete_timer_phase(
+            task2.id,
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -1032,6 +1047,7 @@ async fn complete_productivity_workflow_integration() {
 
     // Complete work phase
     complete_timer_phase(
+        task1.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1059,6 +1075,7 @@ async fn complete_productivity_workflow_integration() {
 
     // Complete break
     complete_timer_phase(
+        task1.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1142,6 +1159,7 @@ async fn complete_productivity_workflow_integration() {
             phase_was_completed = true;
             // Complete the work phase
             complete_timer_phase(
+                task3.id,
                 ctx.task_repo.clone(),
                 ctx.timer_repo.clone(),
                 ctx.event_bus.clone(),
@@ -1156,6 +1174,7 @@ async fn complete_productivity_workflow_integration() {
         println!("Phase was not completed after 60 ticks, forcing completion");
         // Force complete the phase since we've done the required work
         complete_timer_phase(
+            task3.id,
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),

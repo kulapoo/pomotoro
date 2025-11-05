@@ -59,8 +59,12 @@ pub fn register_timer_handlers(
         task_repo.clone(),
     )))?;
 
-    event_bus
-        .subscribe(Box::new(CountdownExpiredHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(CountdownExpiredHandler::new(
+        emitter.clone(),
+        timer_srv.clone(),
+        task_repo.clone(),
+        config_repo.clone(),
+    )))?;
 
     Ok(())
 }

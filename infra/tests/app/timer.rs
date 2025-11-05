@@ -233,6 +233,7 @@ async fn timer_should_complete_phase() {
     let old_task = utils::task::get_active_task(&ctx).await;
 
     let complete_work_phase_result = complete_timer_phase(
+        old_task.id,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),

@@ -242,4 +242,20 @@ impl TimerTickService {
         // Save the reset state to the repository
         self.save_state().await
     }
+
+    pub async fn reset_timer_phase(
+        &self,
+        timer_config: TimerConfiguration,
+    ) -> DomainResult<()> {
+        // Reset the timer using the domain method (but we won't publish the events)
+        {
+            let mut timer = self.timer.lock().await;
+            // Call reset on the timer - this returns events but we ignore them
+            // since the requirement is no event publishing
+            let _ = timer.reset_phase(&timer_config)?;
+        }
+
+        // Save the reset state to the repository
+        self.save_state().await
+    }
 }
