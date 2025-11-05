@@ -121,53 +121,27 @@ impl EventHandler for CountdownExpiredHandler {
             // Get the current timer state AFTER all operations complete
             let current_timer = self.timer_srv.get_current_timer().await;
 
-            log::info!(
-                "Phase {:?}, Timer {:?}",
-                current_timer.get_current_phase(),
-                current_timer
-            );
-
-            log::info!(
-                "About to emit STATUS_CHANGED with state: {:?}",
-                current_timer.state()
-            );
-
             self.emitter
                 .emit(
                     domain::event_names::ui_listeners::timer::STATUS_CHANGED,
                     json!(current_timer.state()),
                 )
-                .map_err(|e| {
-                    log::error!("Failed to emit STATUS_CHANGED: {}", e);
-                    domain::Error::EventPublishingError {
-                        message: format!(
-                            "Failed to emit timer status changed event: {e}"
-                        ),
-                    }
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!(
+                        "Failed to emit timer status changed event: {e}"
+                    ),
                 })?;
-
-            log::info!("STATUS_CHANGED event emitted successfully");
-
-            log::info!(
-                "About to emit PHASE_COMPLETED with state: {:?}",
-                current_timer.state()
-            );
 
             self.emitter
                 .emit(
                     domain::event_names::ui_listeners::timer::PHASE_COMPLETED,
                     json!(current_timer.state()),
                 )
-                .map_err(|e| {
-                    log::error!("Failed to emit PHASE_COMPLETED: {}", e);
-                    domain::Error::EventPublishingError {
-                        message: format!(
-                            "Failed to emit timer phase completed event: {e}"
-                        ),
-                    }
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!(
+                        "Failed to emit timer phase completed event: {e}"
+                    ),
                 })?;
-
-            log::info!("PHASE_COMPLETED event emitted successfully");
 
             // Also emit task state to ensure UI has latest task info (sessions, etc.)
             self.emitter
@@ -175,16 +149,11 @@ impl EventHandler for CountdownExpiredHandler {
                     domain::event_names::ui_listeners::task::PROGRESS_UPDATED,
                     json!(task),
                 )
-                .map_err(|e| {
-                    log::error!("Failed to emit PROGRESS_UPDATED: {}", e);
-                    domain::Error::EventPublishingError {
-                        message: format!(
-                            "Failed to emit task progress updated event: {e}"
-                        ),
-                    }
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!(
+                        "Failed to emit task progress updated event: {e}"
+                    ),
                 })?;
-
-            log::info!("PROGRESS_UPDATED event emitted successfully");
 
             // log::info!(
             //     "Timer auto-started in phase {:?} with {} seconds remaining",
