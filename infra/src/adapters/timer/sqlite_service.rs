@@ -136,39 +136,11 @@ impl TimerTickService {
 
                     // Always publish the generic CountdownExpired event
                     use domain::timer::events::CountdownExpired;
+
                     let expiration_event =
                         CountdownExpired::new(current_phase, task_id);
+
                     event_publisher_clone.publish(Box::new(expiration_event));
-
-                    // Additionally, publish phase-specific events based on the phase type
-                    use domain::timer::Phase;
-                    use domain::timer::events::{
-                        BreakPhaseCompleted, WorkPhaseCompleted,
-                    };
-
-                    let duration_seconds =
-                        config_clone.get_phase_duration_seconds(current_phase);
-                    match current_phase {
-                        Phase::Work => {
-                            let work_completed = WorkPhaseCompleted::new(
-                                task_id,
-                                duration_seconds,
-                                1, // Using fixed version for now
-                            );
-                            event_publisher_clone
-                                .publish(Box::new(work_completed));
-                        }
-                        Phase::ShortBreak | Phase::LongBreak => {
-                            let break_completed = BreakPhaseCompleted::new(
-                                task_id,
-                                current_phase,
-                                duration_seconds,
-                                1, // Using fixed version for now
-                            );
-                            event_publisher_clone
-                                .publish(Box::new(break_completed));
-                        }
-                    }
 
                     break;
                 }

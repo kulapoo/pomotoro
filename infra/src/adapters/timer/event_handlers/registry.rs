@@ -19,9 +19,9 @@ pub fn register_timer_handlers(
     emitter: Arc<dyn Emitter>,
     timer_srv: Arc<TimerTickService>,
     task_repo: Arc<dyn TaskRepository + Sync + Send>,
-    _timer_repo: Arc<dyn TimerRepository + Sync + Send>,
+    timer_repo: Arc<dyn TimerRepository + Sync + Send>,
     config_repo: Arc<dyn ConfigRepository + Sync + Send>,
-    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TimerTickHandler::new(
         emitter.clone(),
@@ -64,6 +64,8 @@ pub fn register_timer_handlers(
         timer_srv.clone(),
         task_repo.clone(),
         config_repo.clone(),
+        timer_repo.clone(),
+        event_publisher.clone(),
     )))?;
 
     Ok(())

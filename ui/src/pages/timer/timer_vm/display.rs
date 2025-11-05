@@ -6,6 +6,7 @@ use super::TimerViewModel;
 impl TimerViewModel {
     pub fn get_phase_name(&self) -> String {
         let state = self.timer_state.get();
+        web_sys::console::log_1(&format!("get_phase_name called, state: {:?}", state).into());
         match &state {
             TimerState::Idle => "Idle".to_string(),
             TimerState::Working { .. } => "Focus Time".to_string(),
@@ -34,6 +35,8 @@ impl TimerViewModel {
         let mut seconds = state.remaining_seconds();
         let mut minutes = seconds / 60;
         let mut secs = seconds % 60;
+
+        web_sys::console::log_1(&format!("format_time called, remaining: {}", seconds).into());
 
         if state == TimerState::Idle {
             seconds = active_task.map(|t| t.config.timer.work_duration.as_secs() as u32).unwrap_or_default();

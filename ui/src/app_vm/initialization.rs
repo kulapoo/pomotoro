@@ -142,10 +142,25 @@ impl AppViewModel {
                 let payload = js_sys::Reflect::get(&event, &"payload".into())
                     .unwrap_or(JsValue::NULL);
 
+                web_sys::console::log_1(&format!("STATUS_CHANGED event payload: {:?}", payload).into());
+
                 if let Ok(state) =
                     serde_wasm_bindgen::from_value::<TimerState>(payload)
                 {
-                    set_timer_state.set(state);
+                    web_sys::console::log_1(&format!("Parsed TimerState: phase={:?}, remaining={}, status={:?}",
+                        state.phase(), state.remaining_seconds(), state.status()).into());
+                    web_sys::console::log_1(&format!("About to set timer_state signal to: {:?}", state).into());
+
+                    // Use update instead of set to ensure reactivity triggers
+                    set_timer_state.update(|current_state| {
+                        web_sys::console::log_1(&format!("Inside update closure, old state: {:?}", current_state).into());
+                        *current_state = state.clone();
+                        web_sys::console::log_1(&format!("Inside update closure, new state: {:?}", current_state).into());
+                    });
+
+                    web_sys::console::log_1(&"Timer state signal updated".into());
+                    // Force a read to verify the signal was updated
+                    web_sys::console::log_1(&format!("Signal value after update (via callback): {:?}", state).into());
                 }
             });
 
@@ -164,11 +179,20 @@ impl AppViewModel {
 
                 // Log phase completion for debugging
                 web_sys::console::log_1(&"App: Phase completed".into());
+                web_sys::console::log_1(&format!("PHASE_COMPLETED event payload: {:?}", payload).into());
 
                 if let Ok(state) =
                     serde_wasm_bindgen::from_value::<TimerState>(payload)
                 {
-                    set_timer_state.set(state);
+                    web_sys::console::log_1(&format!("Parsed TimerState: phase={:?}, remaining={}, status={:?}",
+                        state.phase(), state.remaining_seconds(), state.status()).into());
+
+                    // Use update instead of set to ensure reactivity triggers
+                    set_timer_state.update(|current_state| {
+                        *current_state = state.clone();
+                    });
+
+                    web_sys::console::log_1(&"Timer state signal updated after phase completion".into());
                 }
             });
 
@@ -204,6 +228,7 @@ impl AppViewModel {
     fn setup_task_listeners(&self) {
         self.setup_task_completed_listener();
         self.setup_active_task_listener();
+        self.setup_task_progress_updated_listener();
     }
 
     fn setup_active_task_listener(&self) {
@@ -254,6 +279,32 @@ impl AppViewModel {
             });
 
             listen(task_event_names::TASK_COMPLETED, &callback).await;
+            callback.forget();
+        });
+    }
+
+    fn setup_task_progress_updated_listener(&self) {
+        let set_active_task = self.set_active_task;
+
+        spawn_local(async move {
+            let callback = Closure::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &"payload".into())
+                    .unwrap_or(JsValue::NULL);
+
+                web_sys::console::log_1(&"PROGRESS_UPDATED event received".into());
+
+                if let Ok(task) =
+                    serde_wasm_bindgen::from_value::<Task>(payload)
+                {
+                    web_sys::console::log_1(&format!("Task updated: sessions={}", task.current_sessions).into());
+                    set_active_task.update(|current_task| {
+                        *current_task = Some(task);
+                    });
+                    web_sys::console::log_1(&"Active task updated".into());
+                }
+            });
+
+            listen(task_event_names::PROGRESS_UPDATED, &callback).await;
             callback.forget();
         });
     }

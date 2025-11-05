@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, EventPublisher, Phase, Result, TaskId, TaskRepository, TimerRepository,
+    Error, EventPublisher, Phase, Result, Task, TaskId, TaskRepository, Timer, TimerRepository,
 };
 
 pub async fn complete_timer_phase(
@@ -9,7 +9,7 @@ pub async fn complete_timer_phase(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
-) -> Result<()> {
+) -> Result<(Task, Timer)> {
     let mut timer = timer_repo.get().await?;
 
     let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
@@ -35,7 +35,7 @@ pub async fn complete_timer_phase(
 
     let events = timer.complete_phase(next_phase, &task.config.timer)?;
 
-    task_repo.update(task).await?;
+    task_repo.update(task.clone()).await?;
 
     timer_repo.save(&timer).await?;
 
@@ -43,7 +43,7 @@ pub async fn complete_timer_phase(
         event_publisher.publish(event);
     }
 
-    Ok(())
+    Ok((task, timer))
 }
 
 #[cfg(test)]

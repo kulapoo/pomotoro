@@ -33,10 +33,18 @@ pub fn TimerPage() -> impl IntoView {
 
             <div class="text-center mb-4">
                 <div class="text-2xl font-semibold text-slate-800 mb-2" id="timerLabel">
-                    {move || vm.with_value(|v| v.get_phase_name())}
+                    {move || {
+                        // Access timer_state directly to ensure reactivity
+                        let _state = timer_state.get();
+                        vm.with_value(|v| v.get_phase_name())
+                    }}
                 </div>
                 <div class="text-6xl font-bold text-indigo-600 mb-8" id="timerDisplay">
-                    {move || vm.with_value(|v| v.format_time())}
+                    {move || {
+                        // Access timer_state directly to ensure reactivity
+                        let _state = timer_state.get();
+                        vm.with_value(|v| v.format_time())
+                    }}
                 </div>
             </div>
 

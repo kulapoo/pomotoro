@@ -23,9 +23,8 @@ impl EventHandler for TaskActiveChangedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let task_switch = event
-            .as_any()
-            .downcast_ref::<domain::TaskActiveChanged>();
+        let task_switch =
+            event.as_any().downcast_ref::<domain::TaskActiveChanged>();
 
         self.emitter
             .emit(
