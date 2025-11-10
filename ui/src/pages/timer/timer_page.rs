@@ -11,7 +11,9 @@ pub fn TimerPage() -> impl IntoView {
     let error_state = vm.with_value(|v| v.error_state());
     let set_error_state = vm.with_value(|v| v.set_error_state());
 
-    web_sys::console::log_1(&format!("Timer state: {:?}", timer_state.get_untracked()).into());
+    web_sys::console::log_1(
+        &format!("Timer state: {:?}", timer_state.get_untracked()).into(),
+    );
 
     view! {
         <ErrorToast error_signal=error_state set_error=set_error_state />
@@ -47,7 +49,10 @@ pub fn TimerPage() -> impl IntoView {
             <div class="flex justify-center gap-2 mb-8" id="sessionDots">
                 {move || {
                     let sessions_completed = vm.with_value(|v| v.get_sessions_completed());
-                    (0..4).map(|i| {
+                    let max_sessions = vm.with_value(|v| v.get_active_task())
+                        .map(|task| task.max_sessions as usize)
+                        .unwrap_or(4);
+                    (0..max_sessions).map(|i| {
                         let class = if i < sessions_completed {
                             "w-3 h-3 rounded-full bg-indigo-600 shadow-sm"
                         } else {
