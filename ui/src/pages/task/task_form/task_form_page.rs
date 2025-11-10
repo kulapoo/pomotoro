@@ -1,6 +1,12 @@
 use super::TaskFormViewModel;
 use crate::utils::{ViewModel, invoke};
-use domain::{Task, TaskId, TimerConfiguration};
+use domain::{
+    Task, TaskId, TimerConfiguration,
+    MIN_WORK_DURATION, MAX_WORK_DURATION,
+    MIN_SHORT_BREAK_DURATION, MAX_SHORT_BREAK_DURATION,
+    MIN_LONG_BREAK_DURATION, MAX_LONG_BREAK_DURATION,
+    MIN_SESSIONS_UNTIL_LONG_BREAK, MAX_SESSIONS_UNTIL_LONG_BREAK,
+};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -63,6 +69,7 @@ pub fn TaskFormPage() -> impl IntoView {
     let (max_sessions, set_max_sessions) = signal(4u32);
     let (tags_input, set_tags_input) = signal(String::new());
     let (use_custom_config, set_use_custom_config) = signal(false);
+    let (use_seconds_for_duration, set_use_seconds_for_duration) = signal(false);
     let (work_duration, set_work_duration) = signal(25u64);
     let (short_break, set_short_break) = signal(5u64);
     let (long_break, set_long_break) = signal(15u64);
@@ -83,10 +90,29 @@ pub fn TaskFormPage() -> impl IntoView {
             set_use_custom_config.set(has_custom_config);
 
             let timer_config = &loaded_task.config.timer;
-            set_work_duration.set(timer_config.work_duration.as_secs() / 60);
-            set_short_break
-                .set(timer_config.short_break_duration.as_secs() / 60);
-            set_long_break.set(timer_config.long_break_duration.as_secs() / 60);
+
+            // Detect if we should use seconds mode based on stored values
+            // If any duration is not divisible by 60, we should use seconds mode
+            let has_seconds_precision =
+                timer_config.work_duration.as_secs() % 60 != 0 ||
+                timer_config.short_break_duration.as_secs() % 60 != 0 ||
+                timer_config.long_break_duration.as_secs() % 60 != 0;
+
+            if has_seconds_precision {
+                set_use_seconds_for_duration.set(true);
+            }
+
+            // Load values based on detected mode
+            if use_seconds_for_duration.get() || has_seconds_precision {
+                set_work_duration.set(timer_config.work_duration.as_secs());
+                set_short_break.set(timer_config.short_break_duration.as_secs());
+                set_long_break.set(timer_config.long_break_duration.as_secs());
+            } else {
+                set_work_duration.set(timer_config.work_duration.as_secs() / 60);
+                set_short_break
+                    .set(timer_config.short_break_duration.as_secs() / 60);
+                set_long_break.set(timer_config.long_break_duration.as_secs() / 60);
+            }
             set_sessions_until_long_break
                 .set(timer_config.sessions_until_long_break as usize);
         }
@@ -109,27 +135,68 @@ pub fn TaskFormPage() -> impl IntoView {
             return Err("Max sessions must be between 1 and 100".to_string());
         }
         if use_custom_config.get() {
-            if work_duration.get() < 1 || work_duration.get() > 90 {
-                return Err("Work duration must be between 1 and 90 minutes"
-                    .to_string());
-            }
-            if short_break.get() < 1 || short_break.get() > 30 {
-                return Err(
-                    "Short break must be between 1 and 30 minutes".to_string()
-                );
-            }
-            if long_break.get() < 5 || long_break.get() > 60 {
-                return Err(
-                    "Long break must be between 5 and 60 minutes".to_string()
-                );
-            }
-            if sessions_until_long_break.get() < 2
-                || sessions_until_long_break.get() > 10
+            let is_seconds_mode = use_seconds_for_duration.get();
+
+            // Validate work duration
+            let work_secs = if is_seconds_mode {
+                work_duration.get()
+            } else {
+                work_duration.get() * 60
+            };
+            if work_secs < MIN_WORK_DURATION.as_secs()
+                || work_secs > MAX_WORK_DURATION.as_secs()
             {
-                return Err(
-                    "Sessions until long break must be between 2 and 10"
-                        .to_string(),
-                );
+                return Err(format!(
+                    "Work duration must be between {} and {} {}",
+                    if is_seconds_mode { MIN_WORK_DURATION.as_secs() } else { MIN_WORK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { MAX_WORK_DURATION.as_secs() } else { MAX_WORK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { "seconds" } else { "minutes" }
+                ));
+            }
+
+            // Validate short break
+            let short_break_secs = if is_seconds_mode {
+                short_break.get()
+            } else {
+                short_break.get() * 60
+            };
+            if short_break_secs < MIN_SHORT_BREAK_DURATION.as_secs()
+                || short_break_secs > MAX_SHORT_BREAK_DURATION.as_secs()
+            {
+                return Err(format!(
+                    "Short break must be between {} and {} {}",
+                    if is_seconds_mode { MIN_SHORT_BREAK_DURATION.as_secs() } else { MIN_SHORT_BREAK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { MAX_SHORT_BREAK_DURATION.as_secs() } else { MAX_SHORT_BREAK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { "seconds" } else { "minutes" }
+                ));
+            }
+
+            // Validate long break
+            let long_break_secs = if is_seconds_mode {
+                long_break.get()
+            } else {
+                long_break.get() * 60
+            };
+            if long_break_secs < MIN_LONG_BREAK_DURATION.as_secs()
+                || long_break_secs > MAX_LONG_BREAK_DURATION.as_secs()
+            {
+                return Err(format!(
+                    "Long break must be between {} and {} {}",
+                    if is_seconds_mode { MIN_LONG_BREAK_DURATION.as_secs() } else { MIN_LONG_BREAK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { MAX_LONG_BREAK_DURATION.as_secs() } else { MAX_LONG_BREAK_DURATION.as_secs() / 60 },
+                    if is_seconds_mode { "seconds" } else { "minutes" }
+                ));
+            }
+
+            // Validate sessions until long break
+            if sessions_until_long_break.get() < MIN_SESSIONS_UNTIL_LONG_BREAK as usize
+                || sessions_until_long_break.get() > MAX_SESSIONS_UNTIL_LONG_BREAK as usize
+            {
+                return Err(format!(
+                    "Sessions until long break must be between {} and {}",
+                    MIN_SESSIONS_UNTIL_LONG_BREAK,
+                    MAX_SESSIONS_UNTIL_LONG_BREAK
+                ));
             }
         }
         Ok(())
@@ -170,18 +237,34 @@ pub fn TaskFormPage() -> impl IntoView {
             };
 
             // Prepare individual timer config fields
+            let is_seconds_mode = use_seconds_for_duration.get();
             let timer_work_duration = if use_custom_config.get() {
-                Some(Duration::from_secs(work_duration.get() * 60))
+                let secs = if is_seconds_mode {
+                    work_duration.get()
+                } else {
+                    work_duration.get() * 60
+                };
+                Some(Duration::from_secs(secs))
             } else {
                 None
             };
             let timer_short_break = if use_custom_config.get() {
-                Some(Duration::from_secs(short_break.get() * 60))
+                let secs = if is_seconds_mode {
+                    short_break.get()
+                } else {
+                    short_break.get() * 60
+                };
+                Some(Duration::from_secs(secs))
             } else {
                 None
             };
             let timer_long_break = if use_custom_config.get() {
-                Some(Duration::from_secs(long_break.get() * 60))
+                let secs = if is_seconds_mode {
+                    long_break.get()
+                } else {
+                    long_break.get() * 60
+                };
+                Some(Duration::from_secs(secs))
             } else {
                 None
             };
@@ -351,15 +434,33 @@ pub fn TaskFormPage() -> impl IntoView {
                     <h5 class="text-lg font-semibold text-slate-800 mb-4">"Custom Timer Settings"</h5>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-2">"Work Duration (minutes)"</label>
+                        <label class="flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-2 focus:ring-indigo-600 disabled:cursor-not-allowed"
+                                prop:checked=move || use_seconds_for_duration.get()
+                                on:change=move |ev| {
+                                    set_use_seconds_for_duration.set(event_target_checked(&ev));
+                                }
+                                prop:disabled=move || is_submitting.get()
+                            />
+                            <span class="ml-2 text-sm text-slate-700">"Use seconds instead of minutes for durations"</span>
+                        </label>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            {move || if use_seconds_for_duration.get() { "Work Duration (seconds)" } else { "Work Duration (minutes)" }}
+                        </label>
                         <input
                             type="number"
                             class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
-                            min="1"
-                            max="90"
+                            prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                            prop:max=move || if use_seconds_for_duration.get() { "10800" } else { "180" }
                             prop:value=move || work_duration.get()
                             on:input=move |ev| {
-                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(25);
+                                let default_val = if use_seconds_for_duration.get() { 1500 } else { 25 };
+                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
                                 set_work_duration.set(value);
                             }
                             prop:disabled=move || is_submitting.get()
@@ -367,15 +468,18 @@ pub fn TaskFormPage() -> impl IntoView {
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-2">"Short Break (minutes)"</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            {move || if use_seconds_for_duration.get() { "Short Break (seconds)" } else { "Short Break (minutes)" }}
+                        </label>
                         <input
                             type="number"
                             class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
-                            min="1"
-                            max="30"
+                            prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                            prop:max=move || if use_seconds_for_duration.get() { "3600" } else { "60" }
                             prop:value=move || short_break.get()
                             on:input=move |ev| {
-                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(5);
+                                let default_val = if use_seconds_for_duration.get() { 300 } else { 5 };
+                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
                                 set_short_break.set(value);
                             }
                             prop:disabled=move || is_submitting.get()
@@ -383,15 +487,18 @@ pub fn TaskFormPage() -> impl IntoView {
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-2">"Long Break (minutes)"</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            {move || if use_seconds_for_duration.get() { "Long Break (seconds)" } else { "Long Break (minutes)" }}
+                        </label>
                         <input
                             type="number"
                             class="w-full px-4 py-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
-                            min="5"
-                            max="60"
+                            prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                            prop:max=move || if use_seconds_for_duration.get() { "7200" } else { "120" }
                             prop:value=move || long_break.get()
                             on:input=move |ev| {
-                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(15);
+                                let default_val = if use_seconds_for_duration.get() { 900 } else { 15 };
+                                let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
                                 set_long_break.set(value);
                             }
                             prop:disabled=move || is_submitting.get()

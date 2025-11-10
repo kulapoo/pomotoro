@@ -3,14 +3,14 @@ use std::time::Duration;
 
 use crate::{Error, Phase, Result, duration_serde};
 
-const MIN_WORK_DURATION: Duration = Duration::from_secs(60); // 1 minute minimum
-const MAX_WORK_DURATION: Duration = Duration::from_secs(10800); // 3 hours maximum
-const MIN_SHORT_BREAK_DURATION: Duration = Duration::from_secs(60); // 1 minute minimum
-const MAX_SHORT_BREAK_DURATION: Duration = Duration::from_secs(3600); // 1 hour maximum
-const MIN_LONG_BREAK_DURATION: Duration = Duration::from_secs(60); // 1 minute minimum
-const MAX_LONG_BREAK_DURATION: Duration = Duration::from_secs(7200); // 2 hours maximum
-const MIN_SESSIONS_UNTIL_LONG_BREAK: u8 = 1;
-const MAX_SESSIONS_UNTIL_LONG_BREAK: u8 = 20;
+pub const MIN_WORK_DURATION: Duration = Duration::from_secs(5); // 5 seconds minimum
+pub const MAX_WORK_DURATION: Duration = Duration::from_secs(10800); // 3 hours maximum
+pub const MIN_SHORT_BREAK_DURATION: Duration = Duration::from_secs(5); // 5 seconds minimum
+pub const MAX_SHORT_BREAK_DURATION: Duration = Duration::from_secs(3600); // 1 hour maximum
+pub const MIN_LONG_BREAK_DURATION: Duration = Duration::from_secs(5); // 5 seconds minimum
+pub const MAX_LONG_BREAK_DURATION: Duration = Duration::from_secs(7200); // 2 hours maximum
+pub const MIN_SESSIONS_UNTIL_LONG_BREAK: u8 = 1;
+pub const MAX_SESSIONS_UNTIL_LONG_BREAK: u8 = 20;
 
 /// Timer configuration value object for timing-related settings.
 ///
@@ -19,9 +19,9 @@ const MAX_SESSIONS_UNTIL_LONG_BREAK: u8 = 20;
 /// timing rules for pomodoro sessions in a domain-agnostic way.
 ///
 /// # Domain Invariants
-/// - Work duration must be between 1 minute and 3 hours
-/// - Short break duration must be between 30 seconds and 1 hour
-/// - Long break duration must be between 1 minute and 2 hours
+/// - Work duration must be between 5 seconds and 3 hours
+/// - Short break duration must be between 5 seconds and 1 hour
+/// - Long break duration must be between 5 seconds and 2 hours
 /// - Sessions until long break must be between 1 and 20
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimerConfiguration {
@@ -89,7 +89,10 @@ impl TimerConfiguration {
     }
 
     /// Update short break duration, returning a new validated configuration.
-    pub fn with_short_break_duration(&self, duration: Duration) -> Result<Self> {
+    pub fn with_short_break_duration(
+        &self,
+        duration: Duration,
+    ) -> Result<Self> {
         Self::new(
             self.work_duration,
             duration,
@@ -121,7 +124,7 @@ impl TimerConfiguration {
     /// Validate the timer configuration invariants.
     /// More flexible validation - allows wider ranges for customization
     pub fn validate(&self) -> Result<()> {
-        // Work duration: minimum 1 sec, maximum 3 hours
+        // Work duration: minimum 5 seconds, maximum 3 hours
         let work_secs = self.work_duration.as_secs();
         if work_secs < MIN_WORK_DURATION.as_secs()
             || work_secs > MAX_WORK_DURATION.as_secs()
@@ -131,7 +134,7 @@ impl TimerConfiguration {
             });
         }
 
-        // Short break duration: minimum 1 seconds, maximum 1 hour
+        // Short break duration: minimum 5 seconds, maximum 1 hour
         let short_break_secs = self.short_break_duration.as_secs();
         if short_break_secs < MIN_SHORT_BREAK_DURATION.as_secs()
             || short_break_secs > MAX_SHORT_BREAK_DURATION.as_secs()
@@ -141,7 +144,7 @@ impl TimerConfiguration {
             });
         }
 
-        // Long break duration: minimum 1 sec, maximum 2 hours
+        // Long break duration: minimum 5 seconds, maximum 2 hours
         let long_break_secs = self.long_break_duration.as_secs();
         if long_break_secs < MIN_LONG_BREAK_DURATION.as_secs()
             || long_break_secs > MAX_LONG_BREAK_DURATION.as_secs()
@@ -185,9 +188,9 @@ mod tests {
 
     #[test]
     fn should_reject_invalid_work_duration() {
-        // Test below minimum (< 1 minute)
+        // Test below minimum (< 5 seconds)
         let config = TimerConfiguration {
-            work_duration: Duration::from_secs(59),
+            work_duration: Duration::from_secs(4),
             ..Default::default()
         };
         assert!(config.validate().is_err());
@@ -252,32 +255,30 @@ mod tests {
     #[test]
     fn should_update_single_field_with_builder_methods() {
         let original = TimerConfiguration::default();
-        
+
         // Test updating work duration
         let updated = original
             .with_work_duration(Duration::from_secs(30 * 60))
             .unwrap();
         assert_eq!(updated.work_duration, Duration::from_secs(30 * 60));
         assert_eq!(updated.short_break_duration, original.short_break_duration);
-        
+
         // Test updating short break duration
         let updated = original
             .with_short_break_duration(Duration::from_secs(10 * 60))
             .unwrap();
         assert_eq!(updated.short_break_duration, Duration::from_secs(10 * 60));
         assert_eq!(updated.work_duration, original.work_duration);
-        
+
         // Test updating long break duration
         let updated = original
             .with_long_break_duration(Duration::from_secs(20 * 60))
             .unwrap();
         assert_eq!(updated.long_break_duration, Duration::from_secs(20 * 60));
         assert_eq!(updated.work_duration, original.work_duration);
-        
+
         // Test updating sessions until long break
-        let updated = original
-            .with_sessions_until_long_break(6)
-            .unwrap();
+        let updated = original.with_sessions_until_long_break(6).unwrap();
         assert_eq!(updated.sessions_until_long_break, 6);
         assert_eq!(updated.work_duration, original.work_duration);
     }
@@ -287,18 +288,15 @@ mod tests {
         let original = TimerConfiguration::default();
 
         // Invalid work duration (below minimum)
-        let result = original
-            .with_work_duration(Duration::from_secs(59)); // < 1 minute
+        let result = original.with_work_duration(Duration::from_secs(4)); // < 5 seconds
         assert!(result.is_err());
 
         // Invalid sessions count
-        let result = original
-            .with_sessions_until_long_break(0);
+        let result = original.with_sessions_until_long_break(0);
         assert!(result.is_err());
 
         // Invalid sessions count (above maximum)
-        let result = original
-            .with_sessions_until_long_break(21); // > 20
+        let result = original.with_sessions_until_long_break(21); // > 20
         assert!(result.is_err());
     }
 }

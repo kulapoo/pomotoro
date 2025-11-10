@@ -11,23 +11,54 @@ pub fn TaskSettingsModal(
     on_close: impl Fn() + 'static,
 ) -> impl IntoView {
     let (use_global, set_use_global) = signal(false);
+    let (use_seconds_for_duration, set_use_seconds_for_duration) = signal(false);
 
-    let (work_minutes, set_work_minutes) = signal(
+    // Detect if we should use seconds mode based on stored values
+    // If any duration is not divisible by 60, we should use seconds mode
+    let initial_seconds_mode = settings.as_ref().map(|s| {
+        s.timer.work_duration.as_secs() % 60 != 0 ||
+        s.timer.short_break_duration.as_secs() % 60 != 0 ||
+        s.timer.long_break_duration.as_secs() % 60 != 0
+    }).unwrap_or(false);
+
+    if initial_seconds_mode {
+        set_use_seconds_for_duration.set(true);
+    }
+
+    let (work_duration, set_work_duration) = signal(
         settings.as_ref()
-            .map(|s| (s.timer.work_duration.as_secs() / 60) as u32)
-            .unwrap_or(25)
+            .map(|s| {
+                if initial_seconds_mode {
+                    s.timer.work_duration.as_secs() as u32
+                } else {
+                    (s.timer.work_duration.as_secs() / 60) as u32
+                }
+            })
+            .unwrap_or(if initial_seconds_mode { 1500 } else { 25 })
     );
 
-    let (short_break_minutes, set_short_break_minutes) = signal(
+    let (short_break_duration, set_short_break_duration) = signal(
         settings.as_ref()
-            .map(|s| (s.timer.short_break_duration.as_secs() / 60) as u32)
-            .unwrap_or(5)
+            .map(|s| {
+                if initial_seconds_mode {
+                    s.timer.short_break_duration.as_secs() as u32
+                } else {
+                    (s.timer.short_break_duration.as_secs() / 60) as u32
+                }
+            })
+            .unwrap_or(if initial_seconds_mode { 300 } else { 5 })
     );
 
-    let (long_break_minutes, set_long_break_minutes) = signal(
+    let (long_break_duration, set_long_break_duration) = signal(
         settings.as_ref()
-            .map(|s| (s.timer.long_break_duration.as_secs() / 60) as u32)
-            .unwrap_or(15)
+            .map(|s| {
+                if initial_seconds_mode {
+                    s.timer.long_break_duration.as_secs() as u32
+                } else {
+                    (s.timer.long_break_duration.as_secs() / 60) as u32
+                }
+            })
+            .unwrap_or(if initial_seconds_mode { 900 } else { 15 })
     );
 
     let (sessions_until_long_break, set_sessions_until_long_break) = signal(
@@ -46,11 +77,31 @@ pub fn TaskSettingsModal(
 
     let handle_save = move |_| {
         use std::time::Duration;
+        let is_seconds_mode = use_seconds_for_duration.get();
+
+        let work_secs = if is_seconds_mode {
+            work_duration.get() as u64
+        } else {
+            work_duration.get() as u64 * 60
+        };
+
+        let short_break_secs = if is_seconds_mode {
+            short_break_duration.get() as u64
+        } else {
+            short_break_duration.get() as u64 * 60
+        };
+
+        let long_break_secs = if is_seconds_mode {
+            long_break_duration.get() as u64
+        } else {
+            long_break_duration.get() as u64 * 60
+        };
+
         let new_config = Config {
             timer: TimerConfiguration {
-                work_duration: Duration::from_secs(work_minutes.get() as u64 * 60),
-                short_break_duration: Duration::from_secs(short_break_minutes.get() as u64 * 60),
-                long_break_duration: Duration::from_secs(long_break_minutes.get() as u64 * 60),
+                work_duration: Duration::from_secs(work_secs),
+                short_break_duration: Duration::from_secs(short_break_secs),
+                long_break_duration: Duration::from_secs(long_break_secs),
                 sessions_until_long_break: sessions_until_long_break.get(),
             },
             audio: settings.as_ref().map(|s| s.audio.clone()).unwrap_or_default(),
@@ -104,48 +155,66 @@ pub fn TaskSettingsModal(
 
                     <div class="settings-form" class:disabled=use_global>
                         <div class="form-group">
-                            <label>"Work Duration (minutes):"</label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked=use_seconds_for_duration
+                                    disabled=use_global
+                                    on:change=move |ev| set_use_seconds_for_duration.set(event_target_checked(&ev))
+                                />
+                                " Use seconds instead of minutes for durations"
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                {move || if use_seconds_for_duration.get() { "Work Duration (seconds):" } else { "Work Duration (minutes):" }}
+                            </label>
                             <input
                                 type="number"
-                                min="1"
-                                max="60"
-                                value=work_minutes
+                                prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                                prop:max=move || if use_seconds_for_duration.get() { "10800" } else { "180" }
+                                value=work_duration
                                 disabled=use_global
                                 on:input=move |ev| {
                                     if let Ok(val) = event_target_value(&ev).parse::<u32>() {
-                                        set_work_minutes.set(val);
+                                        set_work_duration.set(val);
                                     }
                                 }
                             />
                         </div>
 
                         <div class="form-group">
-                            <label>"Short Break (minutes):"</label>
+                            <label>
+                                {move || if use_seconds_for_duration.get() { "Short Break (seconds):" } else { "Short Break (minutes):" }}
+                            </label>
                             <input
                                 type="number"
-                                min="1"
-                                max="30"
-                                value=short_break_minutes
+                                prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                                prop:max=move || if use_seconds_for_duration.get() { "3600" } else { "60" }
+                                value=short_break_duration
                                 disabled=use_global
                                 on:input=move |ev| {
                                     if let Ok(val) = event_target_value(&ev).parse::<u32>() {
-                                        set_short_break_minutes.set(val);
+                                        set_short_break_duration.set(val);
                                     }
                                 }
                             />
                         </div>
 
                         <div class="form-group">
-                            <label>"Long Break (minutes):"</label>
+                            <label>
+                                {move || if use_seconds_for_duration.get() { "Long Break (seconds):" } else { "Long Break (minutes):" }}
+                            </label>
                             <input
                                 type="number"
-                                min="5"
-                                max="60"
-                                value=long_break_minutes
+                                prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                                prop:max=move || if use_seconds_for_duration.get() { "7200" } else { "120" }
+                                value=long_break_duration
                                 disabled=use_global
                                 on:input=move |ev| {
                                     if let Ok(val) = event_target_value(&ev).parse::<u32>() {
-                                        set_long_break_minutes.set(val);
+                                        set_long_break_duration.set(val);
                                     }
                                 }
                             />

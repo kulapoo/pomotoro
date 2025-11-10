@@ -10,6 +10,14 @@ pub use shared_kernel::{
     Result, Tag, TimerConfiguration, Timestamp, duration_serde,
 };
 
+// Re-export timer configuration constants
+pub use shared_kernel::value_objects::timer_configuration::{
+    MIN_WORK_DURATION, MAX_WORK_DURATION,
+    MIN_SHORT_BREAK_DURATION, MAX_SHORT_BREAK_DURATION,
+    MIN_LONG_BREAK_DURATION, MAX_LONG_BREAK_DURATION,
+    MIN_SESSIONS_UNTIL_LONG_BREAK, MAX_SESSIONS_UNTIL_LONG_BREAK,
+};
+
 pub use task::{
     ActiveChanged as TaskActiveChanged, Builder as TaskBuilder,
     Completed as TaskCompleted, Created as TaskCreated,

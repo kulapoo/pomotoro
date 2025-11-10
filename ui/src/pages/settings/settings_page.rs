@@ -204,14 +204,51 @@ fn TimerSettings(
     #[allow(unused)] config: Config,
     vm: StoredValue<SettingsViewModel>
 ) -> impl IntoView {
+    let (use_seconds_for_duration, set_use_seconds_for_duration) = signal(false);
+
+    // Detect if we should use seconds mode based on stored values
+    // If any duration is not divisible by 60, we should use seconds mode
+    Effect::new(move |_| {
+        vm.with_value(|v| {
+            if let Some(cfg) = v.get_config() {
+                let has_seconds_precision =
+                    cfg.timer.work_duration.as_secs() % 60 != 0 ||
+                    cfg.timer.short_break_duration.as_secs() % 60 != 0 ||
+                    cfg.timer.long_break_duration.as_secs() % 60 != 0;
+
+                if has_seconds_precision && !use_seconds_for_duration.get() {
+                    set_use_seconds_for_duration.set(true);
+                }
+            }
+        });
+    });
+
     let work_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.timer.work_duration.as_secs() / 60).unwrap_or(25)
+        v.get_config().map(|c| {
+            if use_seconds_for_duration.get() {
+                c.timer.work_duration.as_secs()
+            } else {
+                c.timer.work_duration.as_secs() / 60
+            }
+        }).unwrap_or(if use_seconds_for_duration.get() { 1500 } else { 25 })
     });
     let short_break_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.timer.short_break_duration.as_secs() / 60).unwrap_or(5)
+        v.get_config().map(|c| {
+            if use_seconds_for_duration.get() {
+                c.timer.short_break_duration.as_secs()
+            } else {
+                c.timer.short_break_duration.as_secs() / 60
+            }
+        }).unwrap_or(if use_seconds_for_duration.get() { 300 } else { 5 })
     });
     let long_break_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.timer.long_break_duration.as_secs() / 60).unwrap_or(15)
+        v.get_config().map(|c| {
+            if use_seconds_for_duration.get() {
+                c.timer.long_break_duration.as_secs()
+            } else {
+                c.timer.long_break_duration.as_secs() / 60
+            }
+        }).unwrap_or(if use_seconds_for_duration.get() { 900 } else { 15 })
     });
     let sessions_until_long_break = move || vm.with_value(|v| {
         v.get_config().map(|c| c.timer.sessions_until_long_break).unwrap_or(4)
@@ -222,66 +259,122 @@ fn TimerSettings(
             <h3 class="text-xl font-semibold text-slate-800 mb-6">"Timer Settings"</h3>
 
             <div class="mb-6">
-                <label class="block text-sm font-medium text-slate-700 mb-2">"Work Duration (minutes)"</label>
-                <input
-                    type="number"
-                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
-                    value=work_duration
-                    min="1"
-                    max="90"
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(25);
-                        vm.with_value(|v| {
-                            if let Some(mut cfg) = v.get_config() {
-                                cfg.timer.work_duration = std::time::Duration::from_secs(value * 60);
-                                v.update_timer(cfg.timer);
-                            }
-                        });
-                    }
-                />
-                <span class="text-xs text-slate-600 mt-1 block">"Duration of work sessions (1-90 minutes)"</span>
+                <label class="flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-2 focus:ring-indigo-600"
+                        prop:checked=move || use_seconds_for_duration.get()
+                        on:change=move |ev| {
+                            set_use_seconds_for_duration.set(event_target_checked(&ev));
+                        }
+                    />
+                    <span class="ml-2 text-sm text-slate-700">"Use seconds instead of minutes for durations"</span>
+                </label>
             </div>
 
             <div class="mb-6">
-                <label class="block text-sm font-medium text-slate-700 mb-2">"Short Break Duration (minutes)"</label>
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                    {move || if use_seconds_for_duration.get() { "Work Duration (seconds)" } else { "Work Duration (minutes)" }}
+                </label>
                 <input
                     type="number"
                     class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
-                    value=short_break_duration
-                    min="1"
-                    max="30"
+                    prop:value=work_duration
+                    prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                    prop:max=move || if use_seconds_for_duration.get() { "10800" } else { "180" }
                     on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(5);
+                        let is_seconds = use_seconds_for_duration.get();
+                        let default_val = if is_seconds { 1500 } else { 25 };
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
                         vm.with_value(|v| {
                             if let Some(mut cfg) = v.get_config() {
-                                cfg.timer.short_break_duration = std::time::Duration::from_secs(value * 60);
+                                cfg.timer.work_duration = if is_seconds {
+                                    std::time::Duration::from_secs(value)
+                                } else {
+                                    std::time::Duration::from_secs(value * 60)
+                                };
                                 v.update_timer(cfg.timer);
                             }
                         });
                     }
                 />
-                <span class="text-xs text-slate-600 mt-1 block">"Duration of short breaks (1-30 minutes)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">
+                    {move || if use_seconds_for_duration.get() {
+                        "Duration of work sessions (5-10800 seconds)"
+                    } else {
+                        "Duration of work sessions (1-180 minutes)"
+                    }}
+                </span>
             </div>
 
             <div class="mb-6">
-                <label class="block text-sm font-medium text-slate-700 mb-2">"Long Break Duration (minutes)"</label>
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                    {move || if use_seconds_for_duration.get() { "Short Break Duration (seconds)" } else { "Short Break Duration (minutes)" }}
+                </label>
                 <input
                     type="number"
                     class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
-                    value=long_break_duration
-                    min="5"
-                    max="60"
+                    prop:value=short_break_duration
+                    prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                    prop:max=move || if use_seconds_for_duration.get() { "3600" } else { "60" }
                     on:input=move |ev| {
-                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(15);
+                        let is_seconds = use_seconds_for_duration.get();
+                        let default_val = if is_seconds { 300 } else { 5 };
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
                         vm.with_value(|v| {
                             if let Some(mut cfg) = v.get_config() {
-                                cfg.timer.long_break_duration = std::time::Duration::from_secs(value * 60);
+                                cfg.timer.short_break_duration = if is_seconds {
+                                    std::time::Duration::from_secs(value)
+                                } else {
+                                    std::time::Duration::from_secs(value * 60)
+                                };
                                 v.update_timer(cfg.timer);
                             }
                         });
                     }
                 />
-                <span class="text-xs text-slate-600 mt-1 block">"Duration of long breaks (5-60 minutes)"</span>
+                <span class="text-xs text-slate-600 mt-1 block">
+                    {move || if use_seconds_for_duration.get() {
+                        "Duration of short breaks (5-3600 seconds)"
+                    } else {
+                        "Duration of short breaks (1-60 minutes)"
+                    }}
+                </span>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">
+                    {move || if use_seconds_for_duration.get() { "Long Break Duration (seconds)" } else { "Long Break Duration (minutes)" }}
+                </label>
+                <input
+                    type="number"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
+                    prop:value=long_break_duration
+                    prop:min=move || if use_seconds_for_duration.get() { "5" } else { "1" }
+                    prop:max=move || if use_seconds_for_duration.get() { "7200" } else { "120" }
+                    on:input=move |ev| {
+                        let is_seconds = use_seconds_for_duration.get();
+                        let default_val = if is_seconds { 900 } else { 15 };
+                        let value = event_target_value(&ev).parse::<u64>().unwrap_or(default_val);
+                        vm.with_value(|v| {
+                            if let Some(mut cfg) = v.get_config() {
+                                cfg.timer.long_break_duration = if is_seconds {
+                                    std::time::Duration::from_secs(value)
+                                } else {
+                                    std::time::Duration::from_secs(value * 60)
+                                };
+                                v.update_timer(cfg.timer);
+                            }
+                        });
+                    }
+                />
+                <span class="text-xs text-slate-600 mt-1 block">
+                    {move || if use_seconds_for_duration.get() {
+                        "Duration of long breaks (5-7200 seconds)"
+                    } else {
+                        "Duration of long breaks (1-120 minutes)"
+                    }}
+                </span>
             </div>
 
             <div class="mb-6">
