@@ -1,6 +1,7 @@
 use super::TaskDirectoryViewModel;
 use domain::{Task, TaskStatus};
 use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn TaskListItem<F>(
@@ -14,6 +15,7 @@ where
 {
     let task_id = task.id;
     let task_for_edit = task.clone();
+    let navigate = use_navigate();
 
     // Create a single derived signal for button state
     let is_task_completed = task.status == TaskStatus::Completed;
@@ -39,7 +41,7 @@ where
     view! {
         <div class={format!("rounded-lg shadow-sm border border-slate-200 transition-all duration-200 hover:shadow-md {}", task_classes)}>
             <div class="p-4 cursor-pointer" on:click=move |_| {
-                vm.with_value(|v| v.switch_active_task(task_id));
+                vm.with_value(|v| v.switch_active_task(task_id, None));
             }>
                 <div class="flex justify-between items-start mb-3">
                     <h3 class="text-lg font-semibold text-slate-800">{task.name.clone()}</h3>
@@ -110,7 +112,11 @@ where
                         on:click=move |ev| {
                             ev.stop_propagation();
                             if button_enabled {
-                                vm.with_value(|v| v.switch_active_task(task_id));
+                                let navigate = navigate.clone();
+                                vm.with_value(|v| v.switch_active_task(
+                                    task_id,
+                                    Some(Box::new(move || navigate("/timer", Default::default())))
+                                ));
                             }
                         }
                     >

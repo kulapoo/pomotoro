@@ -76,7 +76,7 @@ impl TaskDirectoryViewModel {
         true
     }
 
-    pub fn switch_active_task(&self, task_id: TaskId) {
+    pub fn switch_active_task(&self, task_id: TaskId, on_success: Option<Box<dyn Fn() + 'static>>) {
         let set_active_task = self.set_active_task;
         let tasks = self.tasks;
         let set_error_state = self.set_error_state;
@@ -115,6 +115,11 @@ impl TaskDirectoryViewModel {
                     );
                     // Clear any existing errors on success
                     set_error_state.set(None);
+
+                    // Call the success callback if provided
+                    if let Some(callback) = on_success {
+                        callback();
+                    }
                 })
                 .map_err(|e| {
                     handle_command_error(format!("Failed to switch active task: {}", e), set_error_state);
