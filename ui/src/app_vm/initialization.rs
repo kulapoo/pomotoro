@@ -145,6 +145,10 @@ impl AppViewModel {
                 if let Ok(state) =
                     serde_wasm_bindgen::from_value::<TimerState>(payload)
                 {
+                    web_sys::console::log_1(
+                        &format!("Timer status changed: {:?}", state.clone())
+                            .into(),
+                    );
                     set_timer_state.set(state);
                 }
             });

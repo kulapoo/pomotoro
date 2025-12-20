@@ -71,6 +71,7 @@
     "ask": [],
     "defaultMode": "plan"
   },
+
   "hooks": {
     "PostToolUse": [
       {

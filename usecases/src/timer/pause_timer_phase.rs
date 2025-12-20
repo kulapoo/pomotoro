@@ -1,6 +1,5 @@
 use domain::{
-    EventPublisher, Result, TaskId, TaskRepository, TimerRepository,
-    TimerStatus,
+    EventPublisher, Result, TaskId, TaskRepository, Timer, TimerRepository,
 };
 use std::sync::Arc;
 
@@ -25,7 +24,7 @@ pub async fn pause_timer_phase(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
-) -> Result<TimerStatus> {
+) -> Result<Timer> {
     // Load the timer aggregate
     let mut timer = timer_repo.get().await?;
 
@@ -54,5 +53,5 @@ pub async fn pause_timer_phase(
         event_publisher.publish(event);
     }
 
-    Ok(timer.status())
+    Ok(timer)
 }

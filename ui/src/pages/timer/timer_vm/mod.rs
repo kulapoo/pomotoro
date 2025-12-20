@@ -36,7 +36,7 @@ impl ViewModel for TimerViewModel {
         // Local error state
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
-        
+
 
         Self {
             timer_state,

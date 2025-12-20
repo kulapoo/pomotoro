@@ -3,8 +3,10 @@ use std::{any::TypeId, sync::Arc};
 use domain::{
     ConfigRepository, EventPublisher, Result, TaskRepository, TimerRepository,
 };
+use tracing::event;
 
 use crate::adapters::events::EventSubscriber;
+use crate::adapters::task;
 use crate::adapters::timer::event_handlers::TimerResetHandler;
 use crate::adapters::{TimerTickService, events::app_emitter::Emitter};
 
@@ -37,6 +39,9 @@ pub fn register_timer_handlers(
         .subscribe(Box::new(TimerStatusChangedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TimerResetHandler::new(
         emitter.clone(),
+        task_repo.clone(),
+        timer_repo.clone(),
+        event_publisher.clone(),
         timer_srv.clone(),
     )))?;
     event_bus.subscribe(Box::new(TimerPausedHandler::new(

@@ -9,7 +9,7 @@ pub async fn complete_timer_phase(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
-) -> Result<(Task, Timer)> {
+) -> Result<(Task, Timer, Phase)> {
     let mut timer = timer_repo.get().await?;
 
     let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
@@ -46,7 +46,7 @@ pub async fn complete_timer_phase(
         event_publisher.publish(event);
     }
 
-    Ok((task, timer))
+    Ok((task, timer, next_phase))
 }
 
 #[cfg(test)]
