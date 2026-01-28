@@ -1,7 +1,6 @@
 use crate::pages::timer::TimerViewModel;
-use leptos::prelude::*;
-use domain::TimerStatus;
 use crate::utils::ViewModel;
+use leptos::prelude::*;
 
 #[component]
 pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
@@ -29,7 +28,8 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
         vm.with_value(|v| v.reset_task());
     };
 
-    let can_toggle_start_pause = move || vm.with_value(|v| v.can_toggle_start_pause());
+    let can_toggle_start_pause =
+        move || vm.with_value(|v| v.can_toggle_start_pause());
 
     let can_skip = move || vm.with_value(|v| v.can_skip());
 
@@ -42,7 +42,6 @@ pub fn TimerControls(vm: StoredValue<TimerViewModel>) -> impl IntoView {
             v.skip_phase();
         });
     };
-
 
     let is_task_completed = move || vm.with_value(|v| v.is_task_completed());
 

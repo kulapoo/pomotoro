@@ -84,13 +84,6 @@ impl EventHandler for CountdownExpiredHandler {
                 self.event_publisher.clone(),
             )
             .await?;
-            log::info!(
-                "task session: {:?} ||| max sessions: {:?} ||| status: {:?} ||| phase: {:?}",
-                task.current_sessions,
-                task.max_sessions,
-                task.status,
-                next_phase,
-            );
 
             self.timer_srv.load_state().await?;
 

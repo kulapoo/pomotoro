@@ -36,7 +36,9 @@ impl TimerViewModel {
         let mut secs = seconds % 60;
 
         if state == TimerState::Idle {
-            seconds = active_task.map(|t| t.config.timer.work_duration.as_secs() as u32).unwrap_or_default();
+            seconds = active_task
+                .map(|t| t.config.timer.work_duration.as_secs() as u32)
+                .unwrap_or_default();
             minutes = seconds / 60;
             secs = seconds % 60;
         }
@@ -90,15 +92,9 @@ impl TimerViewModel {
         }
     }
 
-    pub fn get_start_pause_button_text(&self) -> &'static str {
-        match self.timer_state.get().status() {
-            TimerStatus::Running => "Pause",
-            _ => "Start",
-        }
-    }
-
-    // Static method that takes the signal directly for reactive use in components
-    pub fn get_start_pause_button_text_from(timer_state: ReadSignal<TimerState>) -> &'static str {
+    pub fn get_start_pause_button_text_from(
+        timer_state: ReadSignal<TimerState>,
+    ) -> &'static str {
         match timer_state.get().status() {
             TimerStatus::Running => "Pause",
             _ => "Start",
@@ -107,7 +103,9 @@ impl TimerViewModel {
 
     pub fn get_sessions_completed(&self) -> usize {
         if let Some(task) = self.active_task.get() {
-            (task.current_sessions % task.config.timer.sessions_until_long_break) as usize
+            (task.current_sessions
+                % task.config.timer.sessions_until_long_break)
+                as usize
         } else {
             0
         }

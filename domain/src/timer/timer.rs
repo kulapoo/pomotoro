@@ -43,10 +43,7 @@ impl Timer {
     }
 
     pub fn with_state(task_id: TaskId, state: TimerState) -> Self {
-        Self {
-            task_id,
-            state,
-        }
+        Self { task_id, state }
     }
 
     pub fn task_id(&self) -> TaskId {
@@ -185,8 +182,11 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<(bool, Vec<Box<dyn Event>>)> {
-        let (new_state, phase_complete) =
-            StateTransitions::tick(self.state.clone(), self.task_id, configuration)?;
+        let (new_state, phase_complete) = StateTransitions::tick(
+            self.state.clone(),
+            self.task_id,
+            configuration,
+        )?;
         self.state = new_state.clone();
 
         let mut events: Vec<Box<dyn Event>> = vec![];
