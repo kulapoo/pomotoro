@@ -119,7 +119,6 @@ impl EventHandler for CountdownExpiredHandler {
                     })?;
             }
 
-            // Also emit task state to ensure UI has latest task info (sessions, etc.)
             self.emitter
                 .emit(
                     domain::event_names::ui_listeners::task::PROGRESS_UPDATED,

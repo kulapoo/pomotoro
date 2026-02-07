@@ -51,8 +51,10 @@ pub fn register_timer_handlers(
     event_bus.subscribe(Box::new(BreakPhaseCompletedHandler::new(
         emitter.clone(),
         task_repo.clone(),
+        timer_repo.clone(),
         config_repo.clone(),
         timer_srv.clone(),
+        event_publisher.clone(),
     )))?;
     event_bus.subscribe(Box::new(WorkPhaseCompletedHandler::new(
         emitter.clone(),
