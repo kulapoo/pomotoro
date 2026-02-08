@@ -11,7 +11,7 @@ use domain::{Error, TaskRepository};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
-use usecases::timer::complete_timer_phase;
+use usecases::timer::{complete_timer_phase, reset_timer_phase};
 
 /// Event handler that triggers phase completion when countdown naturally expires
 /// and handles auto-start of next phase based on configuration
@@ -87,16 +87,22 @@ impl EventHandler for CountdownExpiredHandler {
 
             self.timer_srv.load_state().await?;
 
+            // Reset the timer phase using the usecase (business operation)
+            reset_timer_phase(
+                task.id(),
+                self.task_repository.clone(),
+                self.timer_repository.clone(),
+                self.event_publisher.clone(),
+            )
+            .await?;
+
+            // Load the updated state into the infrastructure service
+            self.timer_srv.load_state().await?;
+
             let timer_config = task.config.timer.clone();
 
-            self.timer_srv
-                .reset_timer_phase(timer_config.clone())
-                .await
-                .map_err(|e| domain::Error::RepositoryError {
-                    message: format!("Failed to reset timer: {}", e),
-                })?;
-
             if !(task.is_completed() && next_phase == Phase::Work) {
+                // Start the timer tick loop (infrastructure concern)
                 self.timer_srv
                     .start_timer_tick_loop(Some(timer_config), None)
                     .await
