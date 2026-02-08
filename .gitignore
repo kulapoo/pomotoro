@@ -10,3 +10,4 @@ ai_contexts
 /infra/dist/
 /docs/.obsidian
 /docs/**/.obsidian
+.aider*
