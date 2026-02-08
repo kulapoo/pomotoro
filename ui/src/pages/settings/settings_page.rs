@@ -1,32 +1,35 @@
 use crate::pages::settings::SettingsViewModel;
 use crate::utils::ViewModel;
+use domain::*;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use domain::*;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     let vm = SettingsViewModel::new();
     let (active_tab, set_active_tab) = signal("timer");
-    let (validation_errors, set_validation_errors) = signal(Vec::<String>::new());
+    let (validation_errors, set_validation_errors) =
+        signal(Vec::<String>::new());
     let (success_message, set_success_message) = signal(None::<String>);
-    
+
     // Store VM in a StoredValue for access in closures
     let vm_stored = StoredValue::new(vm);
 
     let handle_save = move |_| {
         set_validation_errors.set(Vec::new());
         set_success_message.set(None);
-        
+
         vm_stored.with_value(|v| {
             if let Err(e) = v.save_settings() {
-                set_validation_errors.update(|errors| errors.push(e.to_string()));
+                set_validation_errors
+                    .update(|errors| errors.push(e.to_string()));
             } else {
-                set_success_message.set(Some("Settings saved successfully".to_string()));
+                set_success_message
+                    .set(Some("Settings saved successfully".to_string()));
                 spawn_local(async move {
                     leptos::prelude::set_timeout(
                         move || set_success_message.set(None),
-                        std::time::Duration::from_secs(3)
+                        std::time::Duration::from_secs(3),
                     );
                 });
             }
@@ -36,14 +39,15 @@ pub fn SettingsPage() -> impl IntoView {
     let handle_reset = move |_| {
         set_validation_errors.set(Vec::new());
         set_success_message.set(None);
-        
+
         vm_stored.with_value(|v| {
             v.reset_to_defaults();
-            set_success_message.set(Some("Settings reset to defaults".to_string()));
+            set_success_message
+                .set(Some("Settings reset to defaults".to_string()));
             spawn_local(async move {
                 leptos::prelude::set_timeout(
                     move || set_success_message.set(None),
-                    std::time::Duration::from_secs(3)
+                    std::time::Duration::from_secs(3),
                 );
             });
         });
@@ -52,11 +56,12 @@ pub fn SettingsPage() -> impl IntoView {
     let handle_export = move |_| {
         vm_stored.with_value(|v| {
             v.export_settings();
-            set_success_message.set(Some("Settings exported successfully".to_string()));
+            set_success_message
+                .set(Some("Settings exported successfully".to_string()));
             spawn_local(async move {
                 leptos::prelude::set_timeout(
                     move || set_success_message.set(None),
-                    std::time::Duration::from_secs(3)
+                    std::time::Duration::from_secs(3),
                 );
             });
         });
@@ -65,13 +70,15 @@ pub fn SettingsPage() -> impl IntoView {
     let handle_import = move |_| {
         vm_stored.with_value(|v| {
             if let Err(e) = v.import_settings() {
-                set_validation_errors.update(|errors| errors.push(e.to_string()));
+                set_validation_errors
+                    .update(|errors| errors.push(e.to_string()));
             } else {
-                set_success_message.set(Some("Settings imported successfully".to_string()));
+                set_success_message
+                    .set(Some("Settings imported successfully".to_string()));
                 spawn_local(async move {
                     leptos::prelude::set_timeout(
                         move || set_success_message.set(None),
-                        std::time::Duration::from_secs(3)
+                        std::time::Duration::from_secs(3),
                     );
                 });
             }
@@ -198,13 +205,13 @@ pub fn SettingsPage() -> impl IntoView {
     }
 }
 
-
 #[component]
 fn TimerSettings(
     #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
+    vm: StoredValue<SettingsViewModel>,
 ) -> impl IntoView {
-    let (use_seconds_for_duration, set_use_seconds_for_duration) = signal(false);
+    let (use_seconds_for_duration, set_use_seconds_for_duration) =
+        signal(false);
 
     // Detect if we should use seconds mode based on stored values
     // If any duration is not divisible by 60, we should use seconds mode
@@ -212,9 +219,9 @@ fn TimerSettings(
         vm.with_value(|v| {
             if let Some(cfg) = v.get_config() {
                 let has_seconds_precision =
-                    cfg.timer.work_duration.as_secs() % 60 != 0 ||
-                    cfg.timer.short_break_duration.as_secs() % 60 != 0 ||
-                    cfg.timer.long_break_duration.as_secs() % 60 != 0;
+                    cfg.timer.work_duration.as_secs() % 60 != 0
+                        || cfg.timer.short_break_duration.as_secs() % 60 != 0
+                        || cfg.timer.long_break_duration.as_secs() % 60 != 0;
 
                 if has_seconds_precision && !use_seconds_for_duration.get() {
                     set_use_seconds_for_duration.set(true);
@@ -223,36 +230,64 @@ fn TimerSettings(
         });
     });
 
-    let work_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| {
-            if use_seconds_for_duration.get() {
-                c.timer.work_duration.as_secs()
-            } else {
-                c.timer.work_duration.as_secs() / 60
-            }
-        }).unwrap_or(if use_seconds_for_duration.get() { 1500 } else { 25 })
-    });
-    let short_break_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| {
-            if use_seconds_for_duration.get() {
-                c.timer.short_break_duration.as_secs()
-            } else {
-                c.timer.short_break_duration.as_secs() / 60
-            }
-        }).unwrap_or(if use_seconds_for_duration.get() { 300 } else { 5 })
-    });
-    let long_break_duration = move || vm.with_value(|v| {
-        v.get_config().map(|c| {
-            if use_seconds_for_duration.get() {
-                c.timer.long_break_duration.as_secs()
-            } else {
-                c.timer.long_break_duration.as_secs() / 60
-            }
-        }).unwrap_or(if use_seconds_for_duration.get() { 900 } else { 15 })
-    });
-    let sessions_until_long_break = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.timer.sessions_until_long_break).unwrap_or(4)
-    });
+    let work_duration = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    if use_seconds_for_duration.get() {
+                        c.timer.work_duration.as_secs()
+                    } else {
+                        c.timer.work_duration.as_secs() / 60
+                    }
+                })
+                .unwrap_or(if use_seconds_for_duration.get() {
+                    1500
+                } else {
+                    25
+                })
+        })
+    };
+    let short_break_duration = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    if use_seconds_for_duration.get() {
+                        c.timer.short_break_duration.as_secs()
+                    } else {
+                        c.timer.short_break_duration.as_secs() / 60
+                    }
+                })
+                .unwrap_or(if use_seconds_for_duration.get() {
+                    300
+                } else {
+                    5
+                })
+        })
+    };
+    let long_break_duration = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    if use_seconds_for_duration.get() {
+                        c.timer.long_break_duration.as_secs()
+                    } else {
+                        c.timer.long_break_duration.as_secs() / 60
+                    }
+                })
+                .unwrap_or(if use_seconds_for_duration.get() {
+                    900
+                } else {
+                    15
+                })
+        })
+    };
+    let sessions_until_long_break = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.timer.sessions_until_long_break)
+                .unwrap_or(4)
+        })
+    };
 
     view! {
         <div>
@@ -404,38 +439,103 @@ fn TimerSettings(
 #[component]
 fn NotificationSettings(
     #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
+    vm: StoredValue<SettingsViewModel>,
 ) -> impl IntoView {
-    let enable_desktop = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.notification.enable_desktop_notifications).unwrap_or(true)
-    });
-    let enable_sound = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.notification.enable_sound_notifications).unwrap_or(true)
-    });
-    let show_phase_transitions = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.notification.show_phase_transition_notifications).unwrap_or(true)
-    });
-    let show_task_completions = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.notification.show_task_completion_notifications).unwrap_or(true)
-    });
-    let auto_dismiss_delay = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.notification.auto_dismiss_delay_seconds).unwrap_or(5)
-    });
-    let is_position_top_right = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::TopRight)).unwrap_or(true)
-    });
-    let is_position_top_left = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::TopLeft)).unwrap_or(false)
-    });
-    let is_position_bottom_right = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::BottomRight)).unwrap_or(false)
-    });
-    let is_position_bottom_left = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::BottomLeft)).unwrap_or(false)
-    });
-    let is_position_center = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.notification.notification_position, NotificationPosition::Center)).unwrap_or(false)
-    });
+    let enable_desktop = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.notification.enable_desktop_notifications)
+                .unwrap_or(true)
+        })
+    };
+    let enable_sound = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.notification.enable_sound_notifications)
+                .unwrap_or(true)
+        })
+    };
+    let show_phase_transitions = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.notification.show_phase_transition_notifications)
+                .unwrap_or(true)
+        })
+    };
+    let show_task_completions = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.notification.show_task_completion_notifications)
+                .unwrap_or(true)
+        })
+    };
+    let auto_dismiss_delay = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.notification.auto_dismiss_delay_seconds)
+                .unwrap_or(5)
+        })
+    };
+    let is_position_top_right = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.notification.notification_position,
+                        NotificationPosition::TopRight
+                    )
+                })
+                .unwrap_or(true)
+        })
+    };
+    let is_position_top_left = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.notification.notification_position,
+                        NotificationPosition::TopLeft
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
+    let is_position_bottom_right = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.notification.notification_position,
+                        NotificationPosition::BottomRight
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
+    let is_position_bottom_left = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.notification.notification_position,
+                        NotificationPosition::BottomLeft
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
+    let is_position_center = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.notification.notification_position,
+                        NotificationPosition::Center
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
 
     view! {
         <div>
@@ -580,32 +680,54 @@ fn NotificationSettings(
 #[component]
 fn AudioSettings(
     #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
+    vm: StoredValue<SettingsViewModel>,
 ) -> impl IntoView {
-    let volume = move || vm.with_value(|v| {
-        v.get_config().map(|c| (c.audio.volume * 100.0) as u32).unwrap_or(50)
-    });
-    let enable_background = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.audio.enable_background_audio).unwrap_or(false)
-    });
-    let muted = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.audio.muted).unwrap_or(false)
-    });
+    let volume = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| (c.audio.volume * 100.0) as u32)
+                .unwrap_or(50)
+        })
+    };
+    let enable_background = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.audio.enable_background_audio)
+                .unwrap_or(false)
+        })
+    };
+    let muted = move || {
+        vm.with_value(|v| {
+            v.get_config().map(|c| c.audio.muted).unwrap_or(false)
+        })
+    };
     let audio_enabled = move || !muted();
-    let has_no_work_sound = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.audio.work_notification_sound.is_none()).unwrap_or(true)
-    });
-    let has_no_break_sound = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.audio.break_notification_sound.is_none()).unwrap_or(true)
-    });
-    let has_no_bg_sound = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.audio.background_sound.is_none()).unwrap_or(true)
-    });
+    let has_no_work_sound = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.audio.work_notification_sound.is_none())
+                .unwrap_or(true)
+        })
+    };
+    let has_no_break_sound = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.audio.break_notification_sound.is_none())
+                .unwrap_or(true)
+        })
+    };
+    let has_no_bg_sound = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.audio.background_sound.is_none())
+                .unwrap_or(true)
+        })
+    };
 
     view! {
         <div class="">
             <h3 class="text-xl font-semibold text-slate-800 mb-6">"Audio Settings"</h3>
-            
+
             <div class="mb-6">
                 <label class="flex items-center cursor-pointer">
                     <input
@@ -755,37 +877,69 @@ fn AudioSettings(
 #[component]
 fn AppearanceSettings(
     #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
+    vm: StoredValue<SettingsViewModel>,
 ) -> impl IntoView {
-    let show_seconds = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.appearance.show_seconds_in_display).unwrap_or(true)
-    });
-    let always_on_top = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.appearance.always_on_top).unwrap_or(false)
-    });
-    let compact_mode = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.appearance.compact_mode).unwrap_or(false)
-    });
-    let show_sidebar = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.appearance.show_task_list_sidebar).unwrap_or(true)
-    });
-    let animate_progress = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.appearance.animate_progress).unwrap_or(true)
-    });
-    let is_theme_system = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.appearance.theme, Theme::System)).unwrap_or(true)
-    });
-    let is_theme_light = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.appearance.theme, Theme::Light)).unwrap_or(false)
-    });
-    let is_theme_dark = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.appearance.theme, Theme::Dark)).unwrap_or(false)
-    });
+    let show_seconds = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.appearance.show_seconds_in_display)
+                .unwrap_or(true)
+        })
+    };
+    let always_on_top = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.appearance.always_on_top)
+                .unwrap_or(false)
+        })
+    };
+    let compact_mode = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.appearance.compact_mode)
+                .unwrap_or(false)
+        })
+    };
+    let show_sidebar = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.appearance.show_task_list_sidebar)
+                .unwrap_or(true)
+        })
+    };
+    let animate_progress = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.appearance.animate_progress)
+                .unwrap_or(true)
+        })
+    };
+    let is_theme_system = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| matches!(c.appearance.theme, Theme::System))
+                .unwrap_or(true)
+        })
+    };
+    let is_theme_light = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| matches!(c.appearance.theme, Theme::Light))
+                .unwrap_or(false)
+        })
+    };
+    let is_theme_dark = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| matches!(c.appearance.theme, Theme::Dark))
+                .unwrap_or(false)
+        })
+    };
 
     view! {
         <div class="">
             <h3 class="text-xl font-semibold text-slate-800 mb-6">"Appearance Settings"</h3>
-            
+
             <div class="mb-6">
                 <label class="block text-sm font-medium text-slate-700 mb-2">"Theme"</label>
                 <select
@@ -918,34 +1072,77 @@ fn AppearanceSettings(
 #[component]
 fn GeneralSettings(
     #[allow(unused)] config: Config,
-    vm: StoredValue<SettingsViewModel>
+    vm: StoredValue<SettingsViewModel>,
 ) -> impl IntoView {
-    let auto_start_breaks = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.general.auto_start_breaks).unwrap_or(true)
-    });
-    let auto_start_work = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.general.auto_start_work_after_break).unwrap_or(false)
-    });
-    let minimize_to_tray = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.general.minimize_to_tray).unwrap_or(true)
-    });
-    let start_minimized = move || vm.with_value(|v| {
-        v.get_config().map(|c| c.general.start_minimized).unwrap_or(false)
-    });
-    let is_cycling_manual = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::Manual)).unwrap_or(true)
-    });
-    let is_cycling_auto_advance = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::AutoAdvance)).unwrap_or(false)
-    });
-    let is_cycling_round_robin = move || vm.with_value(|v| {
-        v.get_config().map(|c| matches!(c.general.task_cycling_behavior, TaskCyclingBehavior::RoundRobin)).unwrap_or(false)
-    });
+    let auto_start_breaks = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.auto_start_breaks)
+                .unwrap_or(true)
+        })
+    };
+    let auto_start_work = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.auto_start_work_after_break)
+                .unwrap_or(false)
+        })
+    };
+    let minimize_to_tray = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.minimize_to_tray)
+                .unwrap_or(true)
+        })
+    };
+    let start_minimized = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.start_minimized)
+                .unwrap_or(false)
+        })
+    };
+    let is_cycling_manual = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.general.task_cycling_behavior,
+                        TaskCyclingBehavior::Manual
+                    )
+                })
+                .unwrap_or(true)
+        })
+    };
+    let is_cycling_auto_advance = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.general.task_cycling_behavior,
+                        TaskCyclingBehavior::AutoAdvance
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
+    let is_cycling_round_robin = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| {
+                    matches!(
+                        c.general.task_cycling_behavior,
+                        TaskCyclingBehavior::RoundRobin
+                    )
+                })
+                .unwrap_or(false)
+        })
+    };
 
     view! {
         <div class="">
             <h3 class="text-xl font-semibold text-slate-800 mb-6">"General Settings"</h3>
-            
+
             <div class="mb-6">
                 <label class="block text-sm font-medium text-slate-700 mb-2">"Task Cycling Behavior"</label>
                 <select
@@ -966,7 +1163,7 @@ fn GeneralSettings(
                     }
                 >
                     <option value="Manual" selected=is_cycling_manual>"Manual"</option>
-                    <option value="AutoAdvance" selected=is_cycling_auto_advance>"Auto Advance"</option>
+                    <option value="AutoAdvance" selected=is_cycling_auto_advance>"Auto Advance (Auto start work after break must be enabled)"</option>
                     <option value="RoundRobin" selected=is_cycling_round_robin>"Round Robin"</option>
                 </select>
                 <span class="text-xs text-slate-600 mt-1 block">"How tasks cycle after completion"</span>
@@ -1056,9 +1253,7 @@ fn GeneralSettings(
 }
 
 #[component]
-fn StorageSettings(
-    vm: StoredValue<SettingsViewModel>
-) -> impl IntoView {
+fn StorageSettings(vm: StoredValue<SettingsViewModel>) -> impl IntoView {
     let (storage_path, set_storage_path) = signal(String::from(""));
     let (validation_error, set_validation_error) = signal(None::<String>);
 
@@ -1072,7 +1267,7 @@ fn StorageSettings(
     view! {
         <div class="">
             <h3 class="text-xl font-semibold text-slate-800 mb-6">"Storage Settings"</h3>
-            
+
             <div class="mb-6">
                 <label class="block text-sm font-medium text-slate-700 mb-2">"Data Directory"</label>
                 <div class="flex gap-2">

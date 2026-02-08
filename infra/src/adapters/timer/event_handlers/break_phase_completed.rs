@@ -159,8 +159,6 @@ impl EventHandler for BreakPhaseCompletedHandler {
                 )
                 .await?;
 
-                self.timer_srv.load_state().await?;
-
                 if config.general.auto_start_work_after_break {
                     start_timer_phase(
                         self.task_repository.clone(),

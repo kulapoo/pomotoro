@@ -5,13 +5,15 @@ use crate::adapters::{
 use async_trait::async_trait;
 use domain::{
     ConfigRepository, EventPublisher, Phase, TimerRepository,
-    timer::events::CountdownExpired,
+    event_names::ui_listeners, timer::events::CountdownExpired,
 };
 use domain::{Error, TaskRepository};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
-use usecases::timer::{complete_timer_phase, reset_timer_phase};
+use usecases::timer::{
+    complete_timer_phase, pause_timer_phase, reset_timer_phase,
+};
 
 /// Event handler that triggers phase completion when countdown naturally expires
 /// and handles auto-start of next phase based on configuration
@@ -71,10 +73,8 @@ impl EventHandler for CountdownExpiredHandler {
                 config.general.auto_start_work_after_break
             }
         };
-        
+        let task_id = countdown_expired.task_id.clone();
         if should_auto_start {
-            let task_id = countdown_expired.task_id.clone();
-
             let (task, _timer, next_phase) = complete_timer_phase(
                 task_id,
                 self.task_repository.clone(),
@@ -145,6 +145,30 @@ impl EventHandler for CountdownExpiredHandler {
                 "Auto-start not enabled for transition from {:?} phase",
                 countdown_expired.phase
             );
+            let timer = pause_timer_phase(
+                task_id,
+                self.task_repository.clone(),
+                self.timer_repository.clone(),
+                self.event_publisher.clone(),
+            )
+            .await?;
+            complete_timer_phase(
+                task_id,
+                self.task_repository.clone(),
+                self.timer_repository.clone(),
+                self.event_publisher.clone(),
+            )
+            .await?;
+
+            self.timer_srv.load_state().await?;
+
+            self.emitter
+                .emit(ui_listeners::timer::STATUS_CHANGED, json!(timer.state()))
+                .map_err(|e| domain::Error::RepositoryError {
+                    message: format!(
+                        "Failed to emit timer status changed event: {e}"
+                    ),
+                })?;
         }
 
         Ok(())
