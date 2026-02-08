@@ -62,18 +62,16 @@ impl EventHandler for CountdownExpiredHandler {
         // Get configuration to check auto-start settings
         let config = self.config_repository.get_config().await?;
 
-        // Get the task to access its timer configuration
-
         let should_auto_start = match countdown_expired.phase.clone() {
             Phase::Work => {
                 // Work phase expired, check if we should auto-start break
-
                 config.general.auto_start_breaks
             }
             Phase::ShortBreak | Phase::LongBreak => {
                 config.general.auto_start_work_after_break
             }
         };
+        
         if should_auto_start {
             let task_id = countdown_expired.task_id.clone();
 
@@ -85,6 +83,7 @@ impl EventHandler for CountdownExpiredHandler {
             )
             .await?;
 
+            // Load the state after complete_timer_phase saves to repository
             self.timer_srv.load_state().await?;
 
             // Reset the timer phase using the usecase (business operation)
@@ -96,7 +95,7 @@ impl EventHandler for CountdownExpiredHandler {
             )
             .await?;
 
-            // Load the updated state into the infrastructure service
+            // Load the updated state after reset_timer_phase
             self.timer_srv.load_state().await?;
 
             let timer_config = task.config.timer.clone();
