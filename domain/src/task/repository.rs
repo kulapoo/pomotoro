@@ -83,10 +83,8 @@ pub trait Repository: Send + Sync {
     async fn delete(&self, id: Id) -> Result<bool>;
     async fn get_by_tags(&self, tags: &[String]) -> Result<Vec<Task>>;
     async fn get_by_status(&self, status: Status) -> Result<Vec<Task>>;
-    async fn exists(&self, id: Id) -> Result<bool>;
     async fn get_default_task(&self) -> Result<Option<Task>>;
     async fn search(&self, options: SearchOptions) -> Result<Vec<Task>>;
     async fn search_fuzzy(&self, query: &str) -> Result<Vec<Task>>;
     async fn get_incomplete_tasks(&self) -> Result<Vec<Task>>;
-    async fn get_completed_tasks(&self) -> Result<Vec<Task>>;
 }

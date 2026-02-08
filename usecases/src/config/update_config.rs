@@ -61,14 +61,15 @@ pub async fn update_config(
 
 pub async fn update_full_config(
     config_repo: Arc<dyn ConfigRepository + Send + Sync>,
-    _event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     new_config: Config,
 ) -> Result<Config> {
     new_config.validate()?;
 
     config_repo.save_config(&new_config).await?;
 
-    // TODO: Publish ConfigUpdated event when domain events are implemented
+    // Publish ConfigUpdated event
+    event_publisher.publish(Box::new(ConfigUpdated::new(new_config.clone())));
 
     Ok(new_config)
 }

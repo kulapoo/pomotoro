@@ -178,22 +178,6 @@ impl TaskRepository for SqliteTaskRepository {
         tasks_db.into_iter().map(Task::try_from).collect()
     }
 
-    async fn exists(&self, id: TaskId) -> Result<bool> {
-        let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
-            message: format!("Failed to get connection: {}", e),
-        })?;
-
-        let exists = tasks::table
-            .filter(tasks::id.eq(id.to_string()))
-            .count()
-            .get_result::<i64>(&mut conn)
-            .map_err(|e| Error::RepositoryError {
-                message: format!("Failed to check task existence: {}", e),
-            })?;
-
-        Ok(exists > 0)
-    }
-
     async fn get_default_task(&self) -> Result<Option<Task>> {
         let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
             message: format!("Failed to get connection: {}", e),
@@ -325,21 +309,6 @@ impl TaskRepository for SqliteTaskRepository {
             .load::<TaskDb>(&mut conn)
             .map_err(|e| Error::RepositoryError {
                 message: format!("Failed to get incomplete tasks: {}", e),
-            })?;
-
-        tasks_db.into_iter().map(Task::try_from).collect()
-    }
-
-    async fn get_completed_tasks(&self) -> Result<Vec<Task>> {
-        let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
-            message: format!("Failed to get connection: {}", e),
-        })?;
-
-        let tasks_db = tasks::table
-            .filter(tasks::status.eq("completed"))
-            .load::<TaskDb>(&mut conn)
-            .map_err(|e| Error::RepositoryError {
-                message: format!("Failed to get completed tasks: {}", e),
             })?;
 
         tasks_db.into_iter().map(Task::try_from).collect()

@@ -1,4 +1,7 @@
-use domain::{Config, ConfigRepository, EventPublisher, Result, config::events::ConfigReset};
+use domain::{
+    Config, ConfigRepository, EventPublisher, Result,
+    config::events::ConfigReset,
+};
 use std::sync::Arc;
 
 pub async fn reset_config(
@@ -16,13 +19,15 @@ pub async fn reset_config(
 
 pub async fn reset_config_to_factory_defaults(
     config_repo: &Arc<dyn ConfigRepository + Send + Sync>,
-    _event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
+    event_publisher: &Arc<dyn EventPublisher + Send + Sync>,
 ) -> Result<Config> {
     let factory_config = Config::default();
 
     config_repo.save_config(&factory_config).await?;
 
-    // TODO: Publish ConfigFactoryReset event when domain events are implemented
+    // Publish ConfigReset event for factory defaults
+    let event = ConfigReset::new(factory_config.clone());
+    event_publisher.publish(Box::new(event));
 
     Ok(factory_config)
 }

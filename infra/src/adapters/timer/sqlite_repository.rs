@@ -43,8 +43,8 @@ impl TimerRepository for SqliteTimerRepository {
                 })
             }
             None => {
-                // TODO: Remove this once we have a proper timer implementation
-                // Timer doesn't exist, create the default one
+                // NOTE: Lazily create default timer on first access
+                // This ensures backwards compatibility and simplifies initialization
                 println!("Timer doesn't exist, creating the default one");
                 let timer = Timer::default_timer();
                 self.save(&timer).await?;
