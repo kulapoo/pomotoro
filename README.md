@@ -40,14 +40,14 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 Install the following CLI tools that orchestrate the build process:
 
 ```bash
+# Task runner - REQUIRED for all development commands
+cargo install just
+
 # WASM application bundler (builds the Leptos frontend)
 cargo install trunk
 
 # Desktop application packager (creates native app with embedded web UI)
 cargo install tauri-cli
-
-# Optional: Task runner for simplified commands
-cargo install just
 ```
 
 ## Project Structure
@@ -56,18 +56,22 @@ Pomotoro follows Clean Architecture principles with a decoupled infrastructure l
 
 ```
 pomotoro/
-├── domain/          # Business logic and entities (framework-agnostic)
-├── usecases/        # Application services (framework-agnostic)
-├── infra/           # Core infrastructure (framework-agnostic)
+├── core/
+│   ├── domain/      # Business logic and entities (framework-agnostic)
+│   ├── usecases/    # Application services (framework-agnostic)
+│   └── infra/       # Core infrastructure (framework-agnostic)
 │                    # - Repositories, Event Bus, Audio, Timer Tick Service
 │                    # - Zero Tauri dependencies - reusable across clients
-├── tauri-app/       # Tauri desktop client (Tauri-specific)
-│                    # - Command handlers, Tauri plugins, UI emission
-│                    # - Thin wrapper around infra core
-└── ui/              # Leptos frontend (WebAssembly)
+└── apps/
+    ├── tauri-app/   # Tauri desktop client (Tauri-specific)
+    │                # - Command handlers, Tauri plugins, UI emission
+    │                # - Thin wrapper around infra core
+    ├── leptos-ui/   # Leptos frontend (WebAssembly)
+    ├── pomotoro-cli/    # CLI client (coming soon)
+    └── cosmic-de/       # Cosmic DE applet (coming soon)
 ```
 
-**Key Design**: The `infra/` crate is completely framework-agnostic and can be reused by any Rust client (Tauri, Cosmic applet, CLI, etc.) without bringing in Tauri dependencies.
+**Key Design**: The `core/infra/` crate is completely framework-agnostic and can be reused by any Rust client (Tauri, Cosmic applet, CLI, etc.) without bringing in Tauri dependencies.
 
 # Optional: Database migration tool (requires SQLite dev libraries - see below)
 cargo install diesel_cli --no-default-features --features sqlite
@@ -81,8 +85,11 @@ cargo install diesel_cli --no-default-features --features sqlite
 
 **Option 1: Use the automated installer script (Recommended)**
 ```bash
-# Run the dependency installation script
-./install-deps.sh
+# Using just (if installed)
+just install-deps
+
+# Or run the script directly
+./scripts/install-deps.sh
 ```
 
 **Option 2: Manual installation**
@@ -127,13 +134,13 @@ sudo apt install \
 
 **For other Linux distributions:**
 
-The `install-deps.sh` script supports multiple distributions:
+The `scripts/install-deps.sh` script supports multiple distributions:
 - ✅ Debian/Ubuntu/Pop!_OS
 - ✅ Fedora/RHEL/CentOS
 - ✅ Arch Linux/Manjaro
 - ✅ Alpine Linux
 
-Just run `./install-deps.sh` and it will detect your distribution automatically!
+Just run `./scripts/install-deps.sh` and it will detect your distribution automatically!
 
 **Manual installation commands:**
 - **Fedora/RHEL/CentOS**: 
@@ -180,17 +187,16 @@ rustup target list --installed | grep wasm32
 
 3. **Run in development mode:**
 ```bash
-# Using just (if installed)
+# Using just (recommended)
 just dev
 
 # Or using cargo directly
-cd tauri-app && cargo tauri dev
-
-# Or using the dev script
-./dev.sh dev
+cd apps/tauri-app && cargo tauri dev
 ```
 
 The app will open automatically with hot-reload enabled for both frontend and backend changes.
+
+**Note**: Run `just` without arguments to see all available commands.
 
 ## Understanding the Build Stack
 
@@ -216,68 +222,83 @@ This project uses a **two-stage build process** that requires separate tools:
 
 ```
 pomotoro/
-├── domain/             # Core business logic & entities (pure Rust, no frameworks)
-│   ├── src/
-│   │   ├── entities/  # Domain models (Task, Timer, Session)
-│   │   └── traits/    # Repository interfaces
-│   └── Cargo.toml
-├── usecases/          # Application business rules
-│   ├── src/
-│   │   └── *.rs      # Use case implementations
-│   └── Cargo.toml
-├── infra/             # Infrastructure layer
-│   ├── src/
-│   │   ├── main.rs   # Tauri application entry
-│   │   ├── commands/ # Tauri command handlers
-│   │   └── repos/    # Database implementations
-│   ├── migrations/   # Database schema migrations
-│   ├── Trunk.toml   # Frontend build configuration
-│   └── tauri.conf.json
-├── ui/               # Leptos WASM frontend
-│   ├── src/
-│   │   ├── pages/   # Application pages/routes
-│   │   ├── components/ # Reusable UI components
-│   │   └── main.rs  # Frontend entry point
-│   └── index.html   # HTML template
-├── assets/          # Sounds and icons
-├── dev.sh          # Development helper script
-└── justfile        # Task definitions for `just`
+├── core/              # Framework-agnostic core engine
+│   ├── domain/        # Core business logic & entities
+│   │   ├── src/
+│   │   │   ├── entities/  # Domain models (Task, Timer, Session)
+│   │   │   └── traits/    # Repository interfaces
+│   │   └── Cargo.toml
+│   ├── usecases/      # Application business rules
+│   │   ├── src/
+│   │   │   └── *.rs   # Use case implementations
+│   │   └── Cargo.toml
+│   └── infra/         # Infrastructure layer
+│       ├── src/
+│       │   ├── adapters/  # Event bus, audio, repositories
+│       │   └── bootstrap.rs
+│       ├── migrations/    # Database schema migrations
+│       └── Cargo.toml
+├── apps/              # Client applications
+│   ├── tauri-app/     # Tauri desktop client
+│   │   ├── src/
+│   │   │   ├── main.rs   # Tauri application entry
+│   │   │   └── commands/ # Tauri command handlers
+│   │   ├── tauri.conf.json
+│   │   └── Cargo.toml
+│   ├── leptos-ui/     # Leptos WASM frontend
+│   │   ├── src/
+│   │   │   ├── pages/   # Application pages/routes
+│   │   │   ├── components/ # Reusable UI components
+│   │   │   └── main.rs  # Frontend entry point
+│   │   ├── index.html   # HTML template
+│   │   └── Cargo.toml
+│   ├── pomotoro-cli/  # CLI client (stub)
+│   └── cosmic-de/     # Cosmic DE applet (stub)
+├── assets/            # Sounds and icons
+├── scripts/           # Utility scripts
+│   └── install-deps.sh # System dependency installer
+├── Trunk.toml         # Frontend build configuration
+└── justfile           # Task runner - all development commands
 ```
 
 ## Development Commands
 
-### Using `just` (Recommended)
+**All development tasks are managed through `just`** - run `just` to see all available commands.
+
+### Common Commands
 | Command | Description |
 |---------|-------------|
-| `just dev` | Start development server with hot reload |
+| `just` | List all available commands |
+| `just dev` | Start development server (info-level logging) |
+| `just dev-debug` | Start development server (debug-level logging) |
+| `just dev-trace` | Start development server (trace-level logging) |
 | `just build` | Create production build |
 | `just serve` | Run frontend dev server only |
 | `just test` | Run all tests |
+| `just test-infra` | Run infrastructure tests only |
+| `just test-domain` | Run domain tests only |
+| `just test-usecases` | Run use cases tests only |
+| `just check` | Check code without building |
 | `just fmt` | Format code |
+| `just fmt-check` | Check code formatting |
 | `just clippy` | Run linter |
+| `just ci` | Run all checks (test, check, fmt, clippy) |
 | `just clean` | Clean build artifacts |
+| `just install-deps` | Install system dependencies (Linux only) |
 
-### Using Cargo/Trunk Directly
+### Using Cargo/Trunk Directly (if needed)
 | Command | Description |
 |---------|-------------|
-| `cd infra && cargo tauri dev` | Start development server |
-| `cd infra && cargo tauri build` | Build for production |
-| `cd infra && trunk serve` | Frontend dev server only |
+| `cd apps/tauri-app && cargo tauri dev` | Start development server |
+| `cd apps/tauri-app && cargo tauri build` | Build for production |
+| `trunk serve` | Frontend dev server only |
 | `cargo test --workspace` | Run tests |
 | `cargo fmt --all` | Format code |
 | `cargo clippy --workspace` | Run linter |
 
-### Using Dev Script
-```bash
-./dev.sh dev        # Start development server
-./dev.sh build      # Build for production
-./dev.sh test       # Run tests
-./dev.sh fmt        # Format code
-```
-
 ### Database Migrations
 ```bash
-cd infra
+cd core/infra
 diesel migration run     # Apply migrations
 diesel migration revert  # Rollback last migration
 diesel migration redo    # Revert and reapply
@@ -288,9 +309,11 @@ diesel migration redo    # Revert and reapply
 Create optimized builds for distribution:
 
 ```bash
+# Recommended: using just
 just build
-# or
-cd infra && cargo tauri build
+
+# Or using cargo directly
+cd apps/tauri-app && cargo tauri build
 ```
 
 The built application will be available in:
@@ -375,7 +398,7 @@ sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-
 # Clean and rebuild
 cargo clean
 rm -rf dist
-cd infra && trunk build
+trunk build
 ```
 
 #### 7. "unable to find library -lsqlite3" during diesel_cli installation

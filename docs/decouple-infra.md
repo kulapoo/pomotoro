@@ -12,13 +12,13 @@ Allow any Rust-based client to depend on a `pomotoro-core` (or similar) crate th
 
 | Location | Tauri Dependency | Purpose |
 |---|---|---|
-| `infra/src/lib.rs` | `tauri::Builder`, `tauri::Manager`, `tauri::Emitter` | App setup, state management, command registration |
-| `infra/src/bootstrap.rs` | `tauri::AppHandle` | Passed to `register_handlers` for emitter + notifications |
-| `infra/src/commands/` (43 commands) | `#[tauri::command]`, `State<'_, T>` | Frontend-backend bridge |
-| `infra/src/adapters/events/app_emitter.rs` | `tauri::AppHandle`, `tauri::Emitter` | `TauriAppHandleEmitter` implements `Emitter` trait |
-| `infra/src/adapters/notifications/service.rs` | `tauri::AppHandle`, `tauri_plugin_notification` | Desktop notifications via Tauri plugin |
-| `infra/src/adapters/notifications/event_handlers.rs` | `tauri::AppHandle` | Constructs `NotificationService` |
-| `infra/Cargo.toml` | `tauri`, `tauri-plugin-*`, `tauri-build` | Direct dependencies |
+| `core/infra/src/lib.rs` | `tauri::Builder`, `tauri::Manager`, `tauri::Emitter` | App setup, state management, command registration |
+| `core/infra/src/bootstrap.rs` | `tauri::AppHandle` | Passed to `register_handlers` for emitter + notifications |
+| `core/infra/src/commands/` (43 commands) | `#[tauri::command]`, `State<'_, T>` | Frontend-backend bridge |
+| `core/infra/src/adapters/events/app_emitter.rs` | `tauri::AppHandle`, `tauri::Emitter` | `TauriAppHandleEmitter` implements `Emitter` trait |
+| `core/infra/src/adapters/notifications/service.rs` | `tauri::AppHandle`, `tauri_plugin_notification` | Desktop notifications via Tauri plugin |
+| `core/infra/src/adapters/notifications/event_handlers.rs` | `tauri::AppHandle` | Constructs `NotificationService` |
+| `core/infra/Cargo.toml` | `tauri`, `tauri-plugin-*`, `tauri-build` | Direct dependencies |
 
 ## Architecture After Decoupling
 
@@ -26,14 +26,15 @@ Allow any Rust-based client to depend on a `pomotoro-core` (or similar) crate th
 ┌──────────────────────────────────────────────┐
 │  Clients (each their own crate)              │
 │  ┌─────────────┐  ┌──────────────────────┐   │
-│  │ tauri-app/  │  │ cosmic-applet/       │   │
-│  │ (Tauri cmds,│  │ (Cosmic DE widgets,  │   │
-│  │  plugins,   │  │  libcosmic UI,       │   │
-│  │  UI emit)   │  │  D-Bus notifs)       │   │
+│  │apps/tauri-  │  │ apps/cosmic-de/      │   │
+│  │  app/       │  │ (Cosmic DE widgets,  │   │
+│  │ (Tauri cmds,│  │  libcosmic UI,       │   │
+│  │  plugins,   │  │  D-Bus notifs)       │   │
+│  │  UI emit)   │  │                      │   │
 │  └──────┬──────┘  └──────────┬───────────┘   │
 │         │                    │               │
 │  ┌──────▼────────────────────▼───────────┐   │
-│  │  infra/  (pomotoro-core)              │   │
+│  │  core/infra/  (pomotoro-core)         │   │
 │  │  - Repositories (SQLite)              │   │
 │  │  - Event Bus (InMemoryEventBus)       │   │
 │  │  - Timer Tick Service                 │   │
@@ -44,21 +45,21 @@ Allow any Rust-based client to depend on a `pomotoro-core` (or similar) crate th
 │  │  - NotificationServiceTrait (abstract)│   │
 │  └──────────────────┬───────────────────┘    │
 │  ┌──────────────────▼───────────────────┐    │
-│  │  usecases/                            │   │
+│  │  core/usecases/                       │   │
 │  └──────────────────┬───────────────────┘    │
 │  ┌──────────────────▼───────────────────┐    │
-│  │  domain/                              │   │
+│  │  core/domain/                         │   │
 │  └──────────────────────────────────────┘    │
 └──────────────────────────────────────────────┘
 ```
 
 ## Implementation Plan
 
-### Step 1: Extract Tauri commands into a new `tauri-app/` crate
+### Step 1: Extract Tauri commands into a new `apps/tauri-app/` crate
 
-Create a new workspace member `tauri-app/` that owns everything Tauri-specific:
+Create a new workspace member `apps/tauri-app/` that owns everything Tauri-specific:
 
-**Moves from `infra/` → `tauri-app/`:**
+**Moves from `core/infra/` → `apps/tauri-app/`:**
 - `src/lib.rs` (the `run()` function with `tauri::Builder`)
 - `src/commands/` (all 43 command handlers)
 - `src/adapters/events/app_emitter.rs` → `TauriAppHandleEmitter` impl
@@ -66,15 +67,15 @@ Create a new workspace member `tauri-app/` that owns everything Tauri-specific:
 - `src/adapters/notifications/event_handlers.rs` → notification handler registration
 - `tauri.conf.json`, `build.rs`, `capabilities/`, `icons/`, `gen/`, `.taurignore`
 
-**`tauri-app/Cargo.toml` dependencies:**
-- `infra` (path dependency — the core engine)
-- `domain`, `usecases`
+**`apps/tauri-app/Cargo.toml` dependencies:**
+- `infra` (path dependency — the core engine: `path = "../../core/infra"`)
+- `domain`, `usecases` (paths: `../../core/domain`, `../../core/usecases`)
 - `tauri`, all `tauri-plugin-*` crates
 - `serde`, `serde_json`
 
-### Step 2: Make `infra/` Tauri-free
+### Step 2: Make `core/infra/` Tauri-free
 
-**Remove from `infra/`:**
+**Remove from `core/infra/`:**
 - All `tauri` and `tauri-plugin-*` dependencies from `Cargo.toml`
 - Remove `tauri-build` from build-dependencies
 - Remove `build.rs` (Tauri build script)
@@ -86,31 +87,31 @@ Create a new workspace member `tauri-app/` that owns everything Tauri-specific:
 - Clients provide their own `Emitter` and `NotificationServiceTrait` implementations
 
 ```rust
-// infra/src/bootstrap.rs — AFTER
+// core/infra/src/bootstrap.rs — AFTER
 pub async fn bootstrap(
     emitter: Arc<dyn Emitter>,
     notification_service: Arc<dyn NotificationServiceTrait>,
 ) -> Result<AppRegistry> { ... }
 ```
 
-**Keep the `Emitter` trait in `infra/`** (it's already abstract):
+**Keep the `Emitter` trait in `core/infra/`** (it's already abstract):
 ```rust
-// infra/src/adapters/events/app_emitter.rs — keep only the trait
+// core/infra/src/adapters/events/app_emitter.rs — keep only the trait
 pub trait Emitter: Send + Sync {
     fn emit(&self, event: &str, payload: Value) -> anyhow::Result<()>;
 }
 ```
 
-**Keep `NotificationServiceTrait` in `infra/`** (already abstract):
-- Move `NotificationContext`, `NotificationEvent`, and the trait to stay in `infra/`
-- Delete only the `NotificationService` struct (Tauri impl) — that moves to `tauri-app/`
+**Keep `NotificationServiceTrait` in `core/infra/`** (already abstract):
+- Move `NotificationContext`, `NotificationEvent`, and the trait to stay in `core/infra/`
+- Delete only the `NotificationService` struct (Tauri impl) — that moves to `apps/tauri-app/`
 
 ### Step 3: Update notification handler registration
 
 Currently `register_notification_handlers` takes `AppHandle` and constructs `NotificationService` internally. Refactor to accept `Arc<dyn NotificationServiceTrait>` instead:
 
 ```rust
-// infra — AFTER
+// core/infra — AFTER
 pub async fn register_notification_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     notification_service: Arc<dyn NotificationServiceTrait>,
@@ -124,19 +125,25 @@ pub async fn register_notification_handlers(
 ```toml
 # Cargo.toml (workspace root)
 [workspace]
-members = ["ui", "usecases", "infra", "domain", "tauri-app"]
+members = [
+    "core/domain",
+    "core/usecases",
+    "core/infra",
+    "apps/tauri-app",
+    "apps/leptos-ui",
+]
 ```
 
 **Rename `infra` package** (optional but recommended):
-- `name = "pomotoro-core"` in `infra/Cargo.toml`
+- `name = "pomotoro-core"` in `core/infra/Cargo.toml`
 - Or keep `infra` name — the directory name communicates the layer
 
-### Step 5: Wire up `tauri-app/`
+### Step 5: Wire up `apps/tauri-app/`
 
-The new `tauri-app/src/lib.rs` does what `infra/src/lib.rs` does today:
+The new `apps/tauri-app/src/lib.rs` does what `core/infra/src/lib.rs` does today:
 
 ```rust
-// tauri-app/src/lib.rs
+// apps/tauri-app/src/lib.rs
 pub fn run() {
     tauri::Builder::default()
         .setup(move |app| {
@@ -156,21 +163,21 @@ pub fn run() {
 }
 ```
 
-Commands in `tauri-app/src/commands/` are thin wrappers that extract `State<T>` and delegate to `usecases`.
+Commands in `apps/tauri-app/src/commands/` are thin wrappers that extract `State<T>` and delegate to `usecases`.
 
 ## Files Modified
 
 | File | Action |
 |---|---|
-| `Cargo.toml` (workspace) | Add `tauri-app` member |
-| `infra/Cargo.toml` | Remove all `tauri*` deps |
-| `infra/src/lib.rs` | Remove `run()`, keep `pub mod adapters` |
-| `infra/src/bootstrap.rs` | Replace `AppHandle` with trait objects |
-| `infra/src/adapters/events/app_emitter.rs` | Keep trait only, remove `TauriAppHandleEmitter` |
-| `infra/src/adapters/notifications/service.rs` | Keep trait + enums, remove Tauri impl |
-| `infra/src/adapters/notifications/mod.rs` | Update registration signature |
-| `infra/src/commands/` | **Move entirely** to `tauri-app/` |
-| `tauri-app/` (new) | New crate with all Tauri-specific code |
+| `Cargo.toml` (workspace) | Add `apps/tauri-app` member |
+| `core/infra/Cargo.toml` | Remove all `tauri*` deps |
+| `core/infra/src/lib.rs` | Remove `run()`, keep `pub mod adapters` |
+| `core/infra/src/bootstrap.rs` | Replace `AppHandle` with trait objects |
+| `core/infra/src/adapters/events/app_emitter.rs` | Keep trait only, remove `TauriAppHandleEmitter` |
+| `core/infra/src/adapters/notifications/service.rs` | Keep trait + enums, remove Tauri impl |
+| `core/infra/src/adapters/notifications/mod.rs` | Update registration signature |
+| `core/infra/src/commands/` | **Move entirely** to `apps/tauri-app/` |
+| `apps/tauri-app/` (new) | New crate with all Tauri-specific code |
 
 ## Test Migration Strategy
 
@@ -178,7 +185,7 @@ Commands in `tauri-app/src/commands/` are thin wrappers that extract `State<T>` 
 
 The existing tests in `infra/tests/` fall into two categories:
 
-**Pure infrastructure tests (stay in `infra/`):** ~25 tests
+**Pure infrastructure tests (stay in `core/infra/`):** ~25 tests
 - `InMemoryEventBus` unit tests (11 tests in `src/adapters/events/mem_event_bus.rs`)
 - `TestDatabase` tests (3 tests in `tests/core/database/test_database.rs`)
 - `AppContext` unit tests (3 tests in `tests/core/context/app_context.rs`)
@@ -186,7 +193,7 @@ The existing tests in `infra/tests/` fall into two categories:
 - `MockAudioService` unit tests (6 tests in `tests/core/mocks/audio_service.rs`)
 - Config/task fixture tests (2 tests)
 
-**Integration tests using MockAppHandle (stay in `infra/`):** ~35 tests
+**Integration tests using MockAppHandle (stay in `core/infra/`):** ~35 tests
 - `tests/app/setup.rs` — bootstrap & initialization
 - `tests/app/task.rs` — task CRUD + event flow (5 tests)
 - `tests/app/timer.rs` — timer lifecycle (14 tests)
@@ -200,7 +207,7 @@ The test infrastructure already decouples from Tauri:
 - `UiSimulator` uses `MockAppHandle` — no Tauri types involved
 - `AppContext` injects `MockAppHandle` as the emitter
 
-This means **all ~60 tests stay in `infra/` unchanged** after decoupling. They never depended on real Tauri types — they only depend on the `Emitter` trait which remains in `infra/`.
+This means **all ~60 tests stay in `core/infra/` unchanged** after decoupling. They never depended on real Tauri types — they only depend on the `Emitter` trait which remains in `core/infra/`.
 
 ### What Changes for Tests
 
@@ -208,7 +215,7 @@ This means **all ~60 tests stay in `infra/` unchanged** after decoupling. They n
 
 2. **Notification tests** — if any integration tests exercise notification handlers, they need a `MockNotificationService` implementing `NotificationServiceTrait`. Check if one exists; if not, create a simple no-op mock. The trait is already defined so this is trivial.
 
-3. **No test files move to `tauri-app/`** — the current tests don't test Tauri commands directly (they test through repositories and event bus). If command-level tests are needed later, they'd go in `tauri-app/tests/`.
+3. **No test files move to `apps/tauri-app/`** — the current tests don't test Tauri commands directly (they test through repositories and event bus). If command-level tests are needed later, they'd go in `apps/tauri-app/tests/`.
 
 ### Regression Checklist
 
@@ -246,5 +253,5 @@ cargo tauri dev  # (from tauri-app/ directory)
 2. `cargo build -p tauri-app` — compiles and runs the desktop app as before
 3. `cargo test -p infra` — all ~60 existing tests pass unchanged
 4. `cargo test -p domain && cargo test -p usecases` — domain and usecase tests unaffected
-5. `cargo tauri dev` — app launches and works identically from user perspective
+5. `cd apps/tauri-app && cargo tauri dev` — app launches and works identically from user perspective
 6. Verify dependency tree: `cargo tree -p infra | grep -i tauri` returns nothing

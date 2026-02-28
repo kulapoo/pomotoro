@@ -1,0 +1,11 @@
+[package]
+name = "pomotoro-cosmic"
+version = "0.1.0"
+edition = "2021"
+description = "Cosmic DE applet for Pomotoro"
+
+[dependencies]
+domain = { path = "../../core/domain" }
+usecases = { path = "../../core/usecases" }
+infra = { path = "../../core/infra" }
+tokio = { workspace = true }

@@ -1,5 +1,13 @@
 [workspace]
-members = ["ui", "usecases", "infra", "domain", "tauri-app"]
+members = [
+    "core/domain",
+    "core/usecases",
+    "core/infra",
+    "apps/tauri-app",
+    "apps/leptos-ui",
+    "apps/pomotoro-cli",
+    "apps/cosmic-de",
+]
 resolver = "3"
 
 [workspace.dependencies]

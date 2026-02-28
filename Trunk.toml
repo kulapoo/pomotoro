@@ -1,11 +1,11 @@
 [build]
-target = "ui/index.html"
+target = "apps/leptos-ui/index.html"
 
 [tools]
 tailwindcss = "4.1.13"
 
 [watch]
-ignore = ["infra"]
+ignore = ["core/infra"]
 
 [serve]
 port = 1420

@@ -1,0 +1,117 @@
+use std::sync::Arc;
+
+use domain::{
+    Error, EventPublisher, Phase, Result, Task, TaskId, TaskRepository, Timer,
+    TimerRepository,
+};
+
+pub async fn complete_timer_phase(
+    task_id: TaskId,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: Arc<dyn TimerRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+) -> Result<(Task, Timer, Phase)> {
+    let mut timer = timer_repo.get().await?;
+
+    let mut task = task_repo.get_by_id(task_id).await?.ok_or_else(|| {
+        Error::TaskNotFound {
+            id: task_id.as_str(),
+        }
+    })?;
+
+    // Get the current phase before completing it
+    let current_phase = timer.get_current_phase();
+
+    // Only increment session when completing a Work phase
+    let next_phase = if current_phase == Phase::Work {
+        // Determine next phase BEFORE incrementing session
+        // because the logic checks if current_sessions is divisible by sessions_until_long_break
+        let next = Phase::determine_next_break_type(
+            task.current_sessions + 1, // Pass the future session count
+            task.config.timer.sessions_until_long_break,
+        );
+        task.increment_session()?;
+        next
+    } else {
+        // After a break, always go back to Work
+        Phase::Work
+    };
+
+    let events = timer.complete_phase(next_phase, &task.config.timer)?;
+
+    task_repo.update(task.clone()).await?;
+
+    timer_repo.save(&timer).await?;
+
+    for event in events {
+        event_publisher.publish(event);
+    }
+
+    Ok((task, timer, next_phase))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::{Config, TaskBuilder, TaskId};
+
+    #[test]
+    fn should_determine_short_break_after_first_session() {
+        let task = TaskBuilder::new()
+            .id(TaskId::new())
+            .name("Test Task".to_string())
+            .max_sessions(8)
+            .current_sessions(1)
+            .config(Config::default())
+            .build()
+            .unwrap();
+
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
+        assert_eq!(next_phase, Phase::ShortBreak);
+    }
+
+    #[test]
+    fn should_determine_long_break_after_fourth_session() {
+        let task = TaskBuilder::new()
+            .id(TaskId::new())
+            .name("Test Task".to_string())
+            .max_sessions(8)
+            .current_sessions(4)
+            .config(Config::default())
+            .build()
+            .unwrap();
+
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
+        assert_eq!(next_phase, Phase::LongBreak);
+    }
+
+    #[test]
+    fn should_cycle_back_to_short_break_after_long_break() {
+        let task = TaskBuilder::new()
+            .id(TaskId::new())
+            .name("Test Task".to_string())
+            .max_sessions(10)
+            .current_sessions(5)
+            .config(Config::default())
+            .build()
+            .unwrap();
+
+        // Timer configuration is now managed through task.config.timer
+
+        let next_phase = Phase::determine_next_break_type(
+            task.current_sessions,
+            task.config.timer.sessions_until_long_break,
+        );
+        assert_eq!(next_phase, Phase::ShortBreak);
+    }
+}
