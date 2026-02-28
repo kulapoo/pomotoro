@@ -49,16 +49,28 @@ cargo install tauri-cli
 # Optional: Task runner for simplified commands
 cargo install just
 
-# Optional: Database migration tool
+# Optional: Database migration tool (requires SQLite dev libraries - see below)
 cargo install diesel_cli --no-default-features --features sqlite
 ```
+
+**Note**: Installing `diesel_cli` requires SQLite development libraries to be installed first. See the System Dependencies section below.
 
 #### 3. System Dependencies
 
 ##### Linux (Debian/Ubuntu)
+
+**Option 1: Use the automated installer script (Recommended)**
 ```bash
-# Core Tauri dependencies
-sudo apt install libwebkit2gtk-4.1-dev \
+# Run the dependency installation script
+./install-deps.sh
+```
+
+**Option 2: Manual installation**
+```bash
+# Install all required dependencies at once
+sudo apt update
+sudo apt install \
+  libwebkit2gtk-4.1-dev \
   build-essential \
   curl \
   wget \
@@ -66,11 +78,59 @@ sudo apt install libwebkit2gtk-4.1-dev \
   libxdo-dev \
   libssl-dev \
   libayatana-appindicator3-dev \
-  librsvg2-dev
+  librsvg2-dev \
+  libsqlite3-dev \
+  libasound2-dev \
+  libgtk-3-dev \
+  libpango1.0-dev \
+  libgdk-pixbuf2.0-dev \
+  libcairo2-dev \
+  libsoup-3.0-dev \
+  libjavascriptcoregtk-4.1-dev
 
-# Audio support for sound notifications
-sudo apt install libasound2-dev
+# Breakdown:
+# - libwebkit2gtk-4.1-dev: Core Tauri webview
+# - build-essential: C/C++ compiler toolchain
+# - libxdo-dev: Window manipulation
+# - libssl-dev: Cryptography support
+# - libayatana-appindicator3-dev: System tray support
+# - librsvg2-dev: SVG rendering
+# - libsqlite3-dev: Database (required for diesel_cli)
+# - libasound2-dev: Audio/sound notifications (REQUIRED)
+# - libgtk-3-dev: GTK3 development libraries
+# - libpango1.0-dev: Text rendering and layout
+# - libgdk-pixbuf2.0-dev: Image loading library
+# - libcairo2-dev: 2D graphics library
+# - libsoup-3.0-dev: HTTP library for WebKit
+# - libjavascriptcoregtk-4.1-dev: JavaScript engine for WebKit
 ```
+
+**For other Linux distributions:**
+
+The `install-deps.sh` script supports multiple distributions:
+- ✅ Debian/Ubuntu/Pop!_OS
+- ✅ Fedora/RHEL/CentOS
+- ✅ Arch Linux/Manjaro
+- ✅ Alpine Linux
+
+Just run `./install-deps.sh` and it will detect your distribution automatically!
+
+**Manual installation commands:**
+- **Fedora/RHEL/CentOS**: 
+  ```bash
+  sudo dnf install webkit2gtk4.1-devel gtk3-devel sqlite-devel alsa-lib-devel \
+    openssl-devel libayatana-appindicator-gtk3-devel librsvg2-devel
+  ```
+- **Arch Linux**: 
+  ```bash
+  sudo pacman -S webkit2gtk-4.1 gtk3 sqlite alsa-lib openssl \
+    libayatana-appindicator librsvg
+  ```
+- **Alpine Linux**: 
+  ```bash
+  sudo apk add webkit2gtk-4.1-dev gtk+3.0-dev sqlite-dev alsa-lib-dev \
+    openssl-dev libayatana-appindicator-dev librsvg-dev
+  ```
 
 ##### macOS
 - Xcode Command Line Tools: `xcode-select --install`
@@ -243,18 +303,49 @@ cargo install trunk
 cargo install tauri-cli
 ```
 
-#### 4. Audio not working on Linux
-**Problem**: Missing ALSA development libraries
+#### 4. "pkg-config exited with status code 1" - Missing system libraries
+**Problem**: Missing GTK3, Pango, GDK, ALSA, or other system development libraries
 **Solution**:
+
+This usually means you're missing one or more of the comprehensive dependency list. Run the full installation command:
+
 ```bash
-sudo apt install libasound2-dev
+# Debian/Ubuntu - Install ALL dependencies at once
+sudo apt update
+sudo apt install \
+  libwebkit2gtk-4.1-dev \
+  build-essential \
+  curl \
+  wget \
+  file \
+  libxdo-dev \
+  libssl-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev \
+  libsqlite3-dev \
+  libasound2-dev \
+  libgtk-3-dev \
+  libpango1.0-dev \
+  libgdk-pixbuf2.0-dev \
+  libcairo2-dev \
+  libsoup-3.0-dev \
+  libjavascriptcoregtk-4.1-dev
+
+# Then clean and rebuild
+cargo clean
 ```
+
+**Common specific errors:**
+- `library 'alsa' required by crate 'alsa-sys' was not found` → Install `libasound2-dev`
+- `library 'pango' required by crate 'pango-sys' was not found` → Install `libpango1.0-dev` and `libgtk-3-dev`
+- `library 'gdk-3.0' required by crate 'gdk-sys' was not found` → Install `libgtk-3-dev`
+- `library 'libsoup-3.0' was not found` → Install `libsoup-3.0-dev`
 
 #### 5. Build fails on Linux with webkit2gtk errors
 **Problem**: Missing WebKit development libraries
 **Solution**:
 ```bash
-sudo apt install libwebkit2gtk-4.1-dev
+sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev
 ```
 
 #### 6. "Failed to load module" errors in development
@@ -265,6 +356,26 @@ sudo apt install libwebkit2gtk-4.1-dev
 cargo clean
 rm -rf dist
 cd infra && trunk build
+```
+
+#### 7. "unable to find library -lsqlite3" during diesel_cli installation
+**Problem**: SQLite development libraries not installed
+**Solution**:
+```bash
+# Debian/Ubuntu
+sudo apt install libsqlite3-dev
+
+# Fedora/RHEL/CentOS
+sudo dnf install sqlite-devel
+
+# Arch Linux
+sudo pacman -S sqlite
+
+# Alpine Linux
+sudo apk add sqlite-dev
+
+# Then retry the installation
+cargo install diesel_cli --no-default-features --features sqlite
 ```
 
 ## Usage
