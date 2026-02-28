@@ -6,7 +6,9 @@ use super::TaskDirectoryViewModel;
 
 impl TaskDirectoryViewModel {
     pub fn get_tasks(&self) -> Vec<Task> {
-        if self.search_query.get().is_empty() && self.status_filter.get() == "all" {
+        if self.search_query.get().is_empty()
+            && self.status_filter.get() == "all"
+        {
             self.tasks.get()
         } else {
             self.filtered_tasks.get()
@@ -23,10 +25,6 @@ impl TaskDirectoryViewModel {
 
     pub fn get_search_query(&self) -> String {
         self.search_query.get()
-    }
-
-    pub fn get_sort_by(&self) -> String {
-        self.sort_by.get()
     }
 
     pub fn get_status_filter(&self) -> String {

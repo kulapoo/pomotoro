@@ -44,7 +44,10 @@ pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
 pub use events::{EventHandler, InMemoryEventBus, audio_events};
 
 // Notifications infrastructure
-pub use notifications::{NotificationService, register_notification_handlers};
+pub use notifications::{
+    NotificationContext, NotificationEvent, NotificationServiceTrait,
+    register_notification_handlers,
+};
 
 // Database infrastructure
 pub use database::{

@@ -4,7 +4,7 @@
 //! for external audio control requests.
 
 // Common imports and types used across multiple audio commands
-pub use crate::adapters::audio::AudioServiceWrapper;
+pub use infra::adapters::audio::AudioServiceWrapper;
 pub use anyhow::Context;
 pub use domain::{AudioAsset, AudioLibrary, PlaybackHandle, PlaybackRequest};
 pub use tauri::State;

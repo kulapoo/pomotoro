@@ -4,7 +4,7 @@
 //! for external task settings management requests.
 
 // Common imports and types used across task settings commands
-pub use crate::adapters::events::mem_event_bus::EventPublisherArc;
+pub use infra::adapters::events::mem_event_bus::EventPublisherArc;
 pub use domain::{Config, TaskId, TaskRepository};
 pub use serde::{Deserialize, Serialize};
 pub use std::sync::Arc;

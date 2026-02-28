@@ -3,14 +3,11 @@ use domain::timer::events::{
     BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
     Started as TimerStarted, WorkPhaseCompleted,
 };
-use domain::{ConfigRepository, Event, Result, TaskCompleted};
+use domain::{Event, Result, TaskCompleted};
 use std::any::TypeId;
 use std::sync::Arc;
-use tauri::AppHandle;
 
-use super::service::{
-    NotificationEvent, NotificationService, NotificationServiceTrait,
-};
+use super::service::{NotificationEvent, NotificationServiceTrait};
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::EventSubscriber;
 
@@ -187,9 +184,8 @@ impl EventHandler for WorkPhaseCompletedNotificationHandler {
                 None
             };
 
-            let notification_event = NotificationEvent::WorkPhaseCompleted {
-                task_name,
-            };
+            let notification_event =
+                NotificationEvent::WorkPhaseCompleted { task_name };
             self.notification_service
                 .send_notification(notification_event)
                 .await?;
@@ -283,21 +279,9 @@ impl EventHandler for BreakCompletedNotificationHandler {
 
 pub async fn register_notification_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
-    app_handle: AppHandle,
-    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+    notification_service: Arc<dyn NotificationServiceTrait>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
 ) -> Result<()> {
-    let config = config_repository.get_config().await.map_err(|e| {
-        eprintln!(
-            "Failed to get config in register_notification_handlers: {:?}",
-            e
-        );
-        e
-    })?;
-
-    let notification_service: Arc<dyn NotificationServiceTrait> =
-        Arc::new(NotificationService::new(app_handle, config.notification));
-
     let _ =
         event_bus.subscribe(Box::new(TimerStartedNotificationHandler::new(
             notification_service.clone(),

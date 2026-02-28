@@ -1,7 +1,7 @@
-use crate::utils::invoke;
 use crate::components::error_toast::handle_command_error;
-use domain::event_names::commands;
+use crate::utils::invoke;
 use domain::Task;
+use domain::event_names::commands;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -17,7 +17,6 @@ impl TaskDirectoryViewModel {
         }
 
         let set_filtered = self.set_filtered_tasks;
-        let sort_by = self.sort_by.get();
         let status_filter = self.status_filter.get();
         let set_error_state = self.set_error_state;
 
@@ -47,29 +46,28 @@ impl TaskDirectoryViewModel {
                     } else {
                         Some(status_filter)
                     },
-                    sort_by: Some(sort_by),
-                    sort_order: Some("asc".to_string()),
+                    sort_by: None,
+                    sort_order: None,
                     limit: None,
                     offset: None,
                 },
             };
 
-            invoke::<Vec<Task>, SearchArgs>(commands::task::SEARCH, Some(args)).await
+            invoke::<Vec<Task>, SearchArgs>(commands::task::SEARCH, Some(args))
+                .await
                 .map(|task_list| {
                     set_filtered.set(task_list);
                     // Clear any existing errors on success
                     set_error_state.set(None);
                 })
                 .map_err(|e| {
-                    handle_command_error(format!("Failed to search tasks: {}", e), set_error_state);
+                    handle_command_error(
+                        format!("Failed to search tasks: {}", e),
+                        set_error_state,
+                    );
                 })
                 .ok();
         });
-    }
-
-    pub fn set_sort(&self, sort_by: String) {
-        self.set_sort_by.set(sort_by);
-        self.search_tasks(self.search_query.get());
     }
 
     pub fn set_status_filter(&self, status: String) {

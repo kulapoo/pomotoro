@@ -22,7 +22,7 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 - **Backend**: [Tauri](https://tauri.app/) - Secure, lightweight desktop app framework
 - **Language**: Rust - Memory safe, blazing fast native performance
 - **Database**: SQLite with Diesel ORM for session persistence
-- **Architecture**: Clean Architecture with Domain-Driven Design
+- **Architecture**: Clean Architecture with Domain-Driven Design, decoupled infrastructure layer
 
 ## Quick Start
 
@@ -48,6 +48,26 @@ cargo install tauri-cli
 
 # Optional: Task runner for simplified commands
 cargo install just
+```
+
+## Project Structure
+
+Pomotoro follows Clean Architecture principles with a decoupled infrastructure layer:
+
+```
+pomotoro/
+├── domain/          # Business logic and entities (framework-agnostic)
+├── usecases/        # Application services (framework-agnostic)
+├── infra/           # Core infrastructure (framework-agnostic)
+│                    # - Repositories, Event Bus, Audio, Timer Tick Service
+│                    # - Zero Tauri dependencies - reusable across clients
+├── tauri-app/       # Tauri desktop client (Tauri-specific)
+│                    # - Command handlers, Tauri plugins, UI emission
+│                    # - Thin wrapper around infra core
+└── ui/              # Leptos frontend (WebAssembly)
+```
+
+**Key Design**: The `infra/` crate is completely framework-agnostic and can be reused by any Rust client (Tauri, Cosmic applet, CLI, etc.) without bringing in Tauri dependencies.
 
 # Optional: Database migration tool (requires SQLite dev libraries - see below)
 cargo install diesel_cli --no-default-features --features sqlite
@@ -164,7 +184,7 @@ rustup target list --installed | grep wasm32
 just dev
 
 # Or using cargo directly
-cd infra && cargo tauri dev
+cd tauri-app && cargo tauri dev
 
 # Or using the dev script
 ./dev.sh dev

@@ -23,19 +23,19 @@ print_error() {
 case "$1" in
     dev)
         print_msg "Starting development server..."
-        cd infra && cargo tauri dev
+        cd tauri-app && cargo tauri dev
         ;;
     build)
         print_msg "Building for production..."
-        cd infra && cargo tauri build
+        cd tauri-app && cargo tauri build
         ;;
     serve)
         print_msg "Starting frontend dev server only..."
-        cd infra && trunk serve --config Trunk.toml
+        trunk serve
         ;;
     build-frontend)
         print_msg "Building frontend only..."
-        cd infra && trunk build --config Trunk.toml
+        trunk build
         ;;
     test)
         print_msg "Running tests..."

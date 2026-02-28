@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use domain::EventPublisher;
-use std::sync::Arc;
 use log::info;
+use std::sync::Arc;
 
 use crate::adapters::{
     InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
@@ -10,18 +10,16 @@ use crate::adapters::{
     config::register_config_handlers,
     establish_connection,
     events::{
-        EventSubscriber,
-        app_emitter::{Emitter, TauriAppHandleEmitter},
+        EventSubscriber, app_emitter::Emitter,
         app_started_handler::AppStartedHandler,
         mem_event_bus::EventPublisherArc,
     },
-    notifications::register_notification_handlers,
+    notifications::{NotificationServiceTrait, register_notification_handlers},
     run_migrations,
     task::register_task_handlers,
     timer::event_handlers::register_timer_handlers,
 };
 use domain::TimerRepository;
-use tauri::AppHandle;
 
 pub struct AppRegistry {
     pub task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
@@ -34,7 +32,8 @@ pub struct AppRegistry {
 
 pub async fn register_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
-    app_handle: AppHandle,
+    emitter: Arc<dyn Emitter>,
+    notification_service: Arc<dyn NotificationServiceTrait>,
     config_repository: Arc<dyn domain::ConfigRepository + Send + Sync>,
     task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     timer_repository: Arc<dyn domain::TimerRepository + Send + Sync>,
@@ -42,10 +41,6 @@ pub async fn register_handlers(
     audio_service: Arc<AudioServiceWrapper>,
     event_publisher: Arc<dyn domain::EventPublisher + Send + Sync>,
 ) -> Result<()> {
-    // Create the emitter that will be shared by all event handlers
-    let emitter: Arc<dyn Emitter> =
-        Arc::new(TauriAppHandleEmitter::new(app_handle.clone()));
-
     event_bus.subscribe(Box::new(AppStartedHandler::new(emitter.clone())))?;
 
     register_timer_handlers(
@@ -58,6 +53,7 @@ pub async fn register_handlers(
         event_publisher.clone(),
     )
     .context("Failed to register timer event handlers")?;
+
     register_task_handlers(
         event_bus.clone(),
         emitter.clone(),
@@ -65,12 +61,13 @@ pub async fn register_handlers(
         timer_tick_service.clone(),
     )
     .context("Failed to register task event handlers")?;
+
     register_config_handlers(event_bus.clone(), emitter.clone())
         .context("Failed to register config event handlers")?;
+
     register_notification_handlers(
         event_bus.clone(),
-        app_handle,
-        config_repository.clone(),
+        notification_service,
         task_repository,
     )
     .await
@@ -78,13 +75,17 @@ pub async fn register_handlers(
         log::error!("Error in register_notification_handlers: {:?}", e)
     })
     .context("Failed to register notification event handlers")?;
+
     register_audio_event_handlers(event_bus, audio_service, config_repository)
         .context("Failed to register audio event handlers")?;
 
     Ok(())
 }
 
-pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
+pub async fn bootstrap(
+    emitter: Arc<dyn Emitter>,
+    notification_service: Arc<dyn NotificationServiceTrait>,
+) -> Result<AppRegistry> {
     // Get default storage path for database
     let storage_path = dirs::data_dir()
         .context("Failed to get user data directory")?
@@ -134,7 +135,8 @@ pub async fn bootstrap(app_handle: AppHandle) -> Result<AppRegistry> {
     // Register all event handlers
     register_handlers(
         event_bus.clone(),
-        app_handle.clone(),
+        emitter,
+        notification_service,
         config_repository.clone(),
         task_repository.clone(),
         timer_repository.clone(),

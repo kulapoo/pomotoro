@@ -6,17 +6,10 @@ use wasm_bindgen::JsCast;
 pub fn TaskFilter(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
     let handle_search = move |ev: leptos::ev::Event| {
         if let Some(target) = ev.target() {
-            let input_elem = target.unchecked_into::<web_sys::HtmlInputElement>();
+            let input_elem =
+                target.unchecked_into::<web_sys::HtmlInputElement>();
             let query = input_elem.value();
             vm.with_value(|v| v.search_tasks(query));
-        }
-    };
-
-    let handle_sort_change = move |ev: leptos::ev::Event| {
-        if let Some(target) = ev.target() {
-            let select = target.unchecked_into::<web_sys::HtmlSelectElement>();
-            let sort_by = select.value();
-            vm.with_value(|v| v.set_sort(sort_by));
         }
     };
 
@@ -50,37 +43,20 @@ pub fn TaskFilter(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-4 mb-4">
-                <div class="flex-1">
-                    <label for="sort-select" class="block text-sm font-medium text-slate-700 mb-2">Sort by:</label>
-                    <select
-                        id="sort-select"
-                        class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
-                        on:change=handle_sort_change
-                        prop:value=move || vm.with_value(|v| v.get_sort_by())
-                    >
-                        <option value="name">Name</option>
-                        <option value="created_at" selected>Created Date</option>
-                        <option value="sessions_completed">Sessions Completed</option>
-                        <option value="status">Status</option>
-                    </select>
-                </div>
-
-                <div class="flex-1">
-                    <label for="status-select" class="block text-sm font-medium text-slate-700 mb-2">Status:</label>
-                    <select
-                        id="status-select"
-                        class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
-                        on:change=handle_status_change
-                        prop:value=move || vm.with_value(|v| v.get_status_filter())
-                    >
-                        <option value="all" selected>All Tasks</option>
-                        <option value="active">Active</option>
-                        <option value="queued">Queued</option>
-                        <option value="paused">Paused</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
+            <div class="mb-4">
+                <label for="status-select" class="block text-sm font-medium text-slate-700 mb-2">Status:</label>
+                <select
+                    id="status-select"
+                    class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all bg-white"
+                    on:change=handle_status_change
+                    prop:value=move || vm.with_value(|v| v.get_status_filter())
+                >
+                    <option value="all" selected>All Tasks</option>
+                    <option value="active">Active</option>
+                    <option value="queued">Queued</option>
+                    <option value="paused">Paused</option>
+                    <option value="completed">Completed</option>
+                </select>
             </div>
 
             <div class="text-sm text-slate-600">

@@ -4,7 +4,7 @@
 //! for external configuration management requests.
 
 // Common imports and types used across multiple config commands
-pub use crate::adapters::events::mem_event_bus::EventPublisherArc;
+pub use infra::adapters::events::mem_event_bus::EventPublisherArc;
 pub use anyhow::Context;
 pub use domain::{
     AppearanceConfig, AudioConfig, Config, ConfigRepository, ConfigReset, ConfigUpdated,

@@ -1,8 +1,8 @@
-mod initialization;
 mod accessors;
-mod task_ops;
+mod initialization;
 mod search;
 mod selection;
+mod task_ops;
 
 use crate::components::ErrorInfo;
 use domain::{Task, TaskId};
@@ -21,8 +21,6 @@ pub struct TaskDirectoryViewModel {
     pub(super) set_selected_task: WriteSignal<Option<TaskId>>,
     pub(super) search_query: ReadSignal<String>,
     pub(super) set_search_query: WriteSignal<String>,
-    pub(super) sort_by: ReadSignal<String>,
-    pub(super) set_sort_by: WriteSignal<String>,
     pub(super) status_filter: ReadSignal<String>,
     pub(super) set_status_filter: WriteSignal<String>,
     pub(super) error_state: ReadSignal<Option<ErrorInfo>>,
@@ -38,7 +36,6 @@ impl ViewModel for TaskDirectoryViewModel {
         let (active_task, set_active_task) = signal(None::<Task>);
         let (selected_task, set_selected_task) = signal(None::<TaskId>);
         let (search_query, set_search_query) = signal(String::new());
-        let (sort_by, set_sort_by) = signal("created_at".to_string());
         let (status_filter, set_status_filter) = signal("all".to_string());
         let (error_state, set_error_state) = signal(None::<ErrorInfo>);
 
@@ -53,8 +50,6 @@ impl ViewModel for TaskDirectoryViewModel {
             set_selected_task,
             search_query,
             set_search_query,
-            sort_by,
-            set_sort_by,
             status_filter,
             set_status_filter,
             error_state,
