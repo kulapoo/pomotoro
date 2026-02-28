@@ -193,7 +193,7 @@ cat src/task/cycling_srv.rs
 ```
 
 **Key Concepts:**
-- Round-robin task cycling
+- Automatic task cycling
 - Automatic vs manual task switching
 - Queue management for active tasks
 

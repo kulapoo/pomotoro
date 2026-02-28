@@ -53,46 +53,12 @@ pub fn SettingsPage() -> impl IntoView {
         });
     };
 
-    let handle_export = move |_| {
-        vm_stored.with_value(|v| {
-            v.export_settings();
-            set_success_message
-                .set(Some("Settings exported successfully".to_string()));
-            spawn_local(async move {
-                leptos::prelude::set_timeout(
-                    move || set_success_message.set(None),
-                    std::time::Duration::from_secs(3),
-                );
-            });
-        });
-    };
-
-    let handle_import = move |_| {
-        vm_stored.with_value(|v| {
-            if let Err(e) = v.import_settings() {
-                set_validation_errors
-                    .update(|errors| errors.push(e.to_string()));
-            } else {
-                set_success_message
-                    .set(Some("Settings imported successfully".to_string()));
-                spawn_local(async move {
-                    leptos::prelude::set_timeout(
-                        move || set_success_message.set(None),
-                        std::time::Duration::from_secs(3),
-                    );
-                });
-            }
-        });
-    };
-
     view! {
         <div class="max-w-4xl mx-auto">
         <div class="bg-white rounded-lg shadow-md">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-6 border-b border-slate-200 gap-4">
                 <h2 class="text-3xl font-bold text-slate-800">"Global Settings"</h2>
                 <div class="flex flex-wrap gap-3">
-                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_export>"Export"</button>
-                    <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_import>"Import"</button>
                     <button class="px-4 py-2 bg-slate-600 text-white font-medium rounded-md shadow-sm hover:bg-slate-700 hover:shadow-md transition-all duration-200" on:click=handle_reset>"Reset to Defaults"</button>
                 </div>
             </div>
@@ -1126,18 +1092,6 @@ fn GeneralSettings(
                 .unwrap_or(false)
         })
     };
-    let is_cycling_round_robin = move || {
-        vm.with_value(|v| {
-            v.get_config()
-                .map(|c| {
-                    matches!(
-                        c.general.task_cycling_behavior,
-                        TaskCyclingBehavior::RoundRobin
-                    )
-                })
-                .unwrap_or(false)
-        })
-    };
 
     view! {
         <div class="">
@@ -1151,7 +1105,6 @@ fn GeneralSettings(
                         let value = event_target_value(&ev);
                         let behavior = match value.as_str() {
                             "AutoAdvance" => TaskCyclingBehavior::AutoAdvance,
-                            "RoundRobin" => TaskCyclingBehavior::RoundRobin,
                             _ => TaskCyclingBehavior::Manual,
                         };
                         vm.with_value(|v| {
@@ -1164,7 +1117,6 @@ fn GeneralSettings(
                 >
                     <option value="Manual" selected=is_cycling_manual>"Manual"</option>
                     <option value="AutoAdvance" selected=is_cycling_auto_advance>"Auto Advance (Auto start work after break must be enabled)"</option>
-                    <option value="RoundRobin" selected=is_cycling_round_robin>"Round Robin"</option>
                 </select>
                 <span class="text-xs text-slate-600 mt-1 block">"How tasks cycle after completion"</span>
             </div>

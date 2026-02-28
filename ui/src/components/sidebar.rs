@@ -39,10 +39,10 @@ pub fn Sidebar() -> impl IntoView {
             <div class="flex items-center justify-between p-md border-b border-slate-200 h-16">
                 <span class={move || format!(
                     "text-xl font-bold text-indigo-600 transition-opacity duration-200 {}",
-                    if collapsed.get() { "opacity-0 w-0" } else { "opacity-100" }
+                    if collapsed.get() { "opacity-0 w-0 overflow-hidden" } else { "opacity-100" }
                 )}>"Pomotoro"</span>
                 <button
-                    class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-all duration-200"
+                    class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-all duration-200 flex-shrink-0"
                     on:click=toggle_sidebar
                 >"☰"</button>
             </div>

@@ -11,11 +11,13 @@ impl CycleService {
     pub fn should_auto_cycle(config: &GeneralConfig) -> bool {
         matches!(
             config.task_cycling_behavior,
-            TaskCyclingBehavior::AutoAdvance | TaskCyclingBehavior::RoundRobin
+            TaskCyclingBehavior::AutoAdvance
         )
     }
 
-    /// Selects the next task for auto-cycling using round-robin strategy.
+    /// Selects the next task for auto-cycling.
+    ///
+    /// Uses a round-robin strategy internally to cycle through incomplete tasks.
     ///
     /// Returns `None` if:
     /// - Manual mode is enabled
@@ -28,8 +30,7 @@ impl CycleService {
     ) -> Option<&'a Task> {
         match cycling_behavior {
             TaskCyclingBehavior::Manual => None,
-            TaskCyclingBehavior::AutoAdvance
-            | TaskCyclingBehavior::RoundRobin => {
+            TaskCyclingBehavior::AutoAdvance => {
                 Self::next_round_robin_task(tasks, current_task_id)
             }
         }
@@ -56,7 +57,9 @@ impl CycleService {
         !task.status.is_completed()
     }
 
-    /// Round-robin implementation that cycles through incomplete tasks.
+    /// Internal round-robin implementation that cycles through incomplete tasks.
+    ///
+    /// This is used by AutoAdvance mode to automatically select the next task.
     fn next_round_robin_task<'a>(
         tasks: &'a [Task],
         current_task_id: Option<&TaskId>,
@@ -115,9 +118,6 @@ mod tests {
         )));
         assert!(CycleService::should_auto_cycle(&create_config(
             TaskCyclingBehavior::AutoAdvance
-        )));
-        assert!(CycleService::should_auto_cycle(&create_config(
-            TaskCyclingBehavior::RoundRobin
         )));
     }
 

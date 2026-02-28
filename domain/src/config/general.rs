@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 pub enum TaskCyclingBehavior {
     Manual,
     AutoAdvance,
-    RoundRobin,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -29,8 +28,8 @@ impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
             task_cycling_behavior: TaskCyclingBehavior::Manual,
-            auto_start_breaks: false,
-            auto_start_work_after_break: false,
+            auto_start_breaks: true,
+            auto_start_work_after_break: true,
             minimize_to_tray: true,
             start_minimized: false,
             enable_screen_blocking: false,
