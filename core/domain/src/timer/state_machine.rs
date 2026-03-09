@@ -9,10 +9,11 @@ use serde::{Deserialize, Serialize};
 ///
 /// Each state variant contains the data relevant to that state.
 /// The state machine ensures type-safe transitions and makes invalid states unrepresentable.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(tag = "state", content = "data")]
 pub enum TimerState {
     /// Timer is stopped and ready to start.
+    #[default]
     Idle,
 
     /// Active work session.
@@ -29,12 +30,6 @@ pub enum TimerState {
         paused_from: Box<TimerState>,
         remaining_seconds: u32,
     },
-}
-
-impl Default for TimerState {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 impl TimerState {

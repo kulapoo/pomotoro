@@ -5,7 +5,7 @@ use domain::{Error, Result, Task, TaskRepository, TaskStatus};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SearchTasksQuery {
     pub query: Option<String>,
     pub tags: Option<Vec<String>>,
@@ -14,20 +14,6 @@ pub struct SearchTasksQuery {
     pub sort_order: Option<String>,
     pub limit: Option<usize>,
     pub offset: Option<usize>,
-}
-
-impl Default for SearchTasksQuery {
-    fn default() -> Self {
-        Self {
-            query: None,
-            tags: None,
-            status: None,
-            sort_by: None,
-            sort_order: None,
-            limit: None,
-            offset: None,
-        }
-    }
 }
 
 pub async fn search_tasks(

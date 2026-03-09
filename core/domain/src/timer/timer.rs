@@ -39,7 +39,7 @@ impl Timer {
 
     /// Create the default timer instance
     pub fn default_timer() -> Self {
-        Self::new(DEFAULT_TASK_ID.clone())
+        Self::new(*DEFAULT_TASK_ID)
     }
 
     pub fn with_state(task_id: TaskId, state: TimerState) -> Self {
@@ -56,7 +56,7 @@ impl Timer {
 
     pub fn pause_from(&self) -> Option<&TimerState> {
         match &self.state {
-            TimerState::Paused { paused_from, .. } => Some(&paused_from),
+            TimerState::Paused { paused_from, .. } => Some(paused_from),
             _ => None,
         }
     }

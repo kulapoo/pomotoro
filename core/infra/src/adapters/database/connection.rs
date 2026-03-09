@@ -4,14 +4,14 @@ use diesel_migrations::{
     EmbeddedMigrations, MigrationHarness, embed_migrations,
 };
 use domain::{Error, Result};
-use std::path::PathBuf;
+use std::path::Path;
 
 pub type DbConnection = SqliteConnection;
 pub type DbPool = r2d2::Pool<ConnectionManager<DbConnection>>;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-pub fn establish_connection(database_path: &PathBuf) -> Result<DbPool> {
+pub fn establish_connection(database_path: &Path) -> Result<DbPool> {
     // Add SQLite pragmas for better concurrent access and test isolation
     let database_url = format!("sqlite://{}?mode=rwc", database_path.display());
 

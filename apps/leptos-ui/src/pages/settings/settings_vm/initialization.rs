@@ -166,12 +166,12 @@ impl SettingsViewModel {
                             _ => Theme::System,
                         };
 
-                        config_for_theme.get_untracked().map(
-                            |mut current_config| {
-                                current_config.appearance.theme = theme;
-                                set_config_for_theme.set(Some(current_config));
-                            },
-                        );
+                        if let Some(mut current_config) =
+                            config_for_theme.get_untracked()
+                        {
+                            current_config.appearance.theme = theme;
+                            set_config_for_theme.set(Some(current_config));
+                        }
                     })
                     .unwrap_or_else(|| {
                         web_sys::console::error_1(

@@ -4,6 +4,7 @@ pub mod events;
 pub mod id;
 pub mod repository;
 pub mod status;
+#[allow(clippy::module_inception)]
 mod task;
 #[cfg(test)]
 mod test_builder;

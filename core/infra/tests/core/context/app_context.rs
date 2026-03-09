@@ -60,7 +60,6 @@ impl AppContext {
         let timer_tick_service = Arc::new(TimerTickService::new(
             event_bus.clone(),
             timer_repo.clone(),
-            task_repo.clone(),
             config_repo.clone(),
         ));
 

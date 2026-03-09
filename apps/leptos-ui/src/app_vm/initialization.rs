@@ -35,23 +35,20 @@ impl AppViewModel {
         let set_active_task = self.set_active_task;
 
         spawn_local(async move {
-            invoke::<Timer, ()>(commands::timer::GET_STATE, None)
-                .await
-                .map_err(|e| handle_command_error(e, set_error_state))
-                .ok()
-                .map(|timer| {
-                    set_timer_state.set(timer.state().clone());
+            if let Ok(timer) =
+                invoke::<Timer, ()>(commands::timer::GET_STATE, None)
+                    .await
+                    .map_err(|e| handle_command_error(e, set_error_state))
+            {
+                set_timer_state.set(timer.state().clone());
 
-                    // Also load the task that this timer belongs to
-                    let task_id = timer.task_id();
-                    let task_id_str = task_id.to_string();
-                    spawn_local(async move {
-                        Self::fetch_task_by_id(&task_id_str, set_active_task)
-                            .await;
-                    });
-
-                    ()
+                // Also load the task that this timer belongs to
+                let task_id = timer.task_id();
+                let task_id_str = task_id.to_string();
+                spawn_local(async move {
+                    Self::fetch_task_by_id(&task_id_str, set_active_task).await;
                 });
+            }
         });
     }
 

@@ -14,14 +14,13 @@ impl AppViewModel {
         let set_error_state = self.set_error_state;
 
         spawn_local(async move {
-            invoke::<Timer, ()>(commands::timer::GET_STATE, None)
-                .await
-                .map_err(|e| handle_command_error(e, set_error_state))
-                .ok()
-                .map(|timer| {
-                    set_timer_state.set(timer.state().clone());
-                    ()
-                });
+            if let Ok(timer) =
+                invoke::<Timer, ()>(commands::timer::GET_STATE, None)
+                    .await
+                    .map_err(|e| handle_command_error(e, set_error_state))
+            {
+                set_timer_state.set(timer.state().clone());
+            }
         });
     }
 

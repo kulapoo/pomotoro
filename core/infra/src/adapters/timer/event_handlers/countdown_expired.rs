@@ -64,7 +64,7 @@ impl EventHandler for CountdownExpiredHandler {
         // Get configuration to check auto-start settings
         let config = self.config_repository.get_config().await?;
 
-        let should_auto_start = match countdown_expired.phase.clone() {
+        let should_auto_start = match countdown_expired.phase {
             Phase::Work => {
                 // Work phase expired, check if we should auto-start break
                 config.general.auto_start_breaks
@@ -73,7 +73,7 @@ impl EventHandler for CountdownExpiredHandler {
                 config.general.auto_start_work_after_break
             }
         };
-        let task_id = countdown_expired.task_id.clone();
+        let task_id = countdown_expired.task_id;
         if should_auto_start {
             let (task, _timer, next_phase) = complete_timer_phase(
                 task_id,

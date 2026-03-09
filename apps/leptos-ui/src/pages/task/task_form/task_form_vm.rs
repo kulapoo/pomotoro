@@ -122,6 +122,7 @@ impl TaskFormViewModel {
         self.set_error_state.set(None);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn create_task_full(
         &self,
         name: String,
@@ -173,35 +174,33 @@ impl TaskFormViewModel {
 
             let args = CreateTaskArgs { request };
 
-            invoke::<Task, _>(commands::task::CREATE, Some(args))
-                .await
-                .map_err(|e| {
-                    handle_command_error(
-                        format!("Failed to create task: {}", e),
-                        set_error_state,
-                    );
-                    set_is_creating.set(false);
-                })
-                .ok()
-                .map(|new_task| {
-                    web_sys::console::log_1(
-                        &format!("Create task result: {:?}", new_task).into(),
-                    );
+            if let Ok(new_task) =
+                invoke::<Task, _>(commands::task::CREATE, Some(args))
+                    .await
+                    .map_err(|e| {
+                        handle_command_error(
+                            format!("Failed to create task: {}", e),
+                            set_error_state,
+                        );
+                        set_is_creating.set(false);
+                    })
+            {
+                web_sys::console::log_1(
+                    &format!("Create task result: {:?}", new_task).into(),
+                );
 
-                    web_sys::console::log_1(
-                        &format!(
-                            "Successfully created task: {}",
-                            new_task.name
-                        )
+                web_sys::console::log_1(
+                    &format!("Successfully created task: {}", new_task.name)
                         .into(),
-                    );
-                    set_is_creating.set(false);
-                    // Clear any existing errors on success
-                    set_error_state.set(None);
-                });
+                );
+                set_is_creating.set(false);
+                // Clear any existing errors on success
+                set_error_state.set(None);
+            }
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_task(
         &self,
         task_id: TaskId,

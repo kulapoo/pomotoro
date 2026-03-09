@@ -21,7 +21,7 @@ dev-trace:
     cd apps/tauri-app && RUST_LOG=trace cargo tauri dev
 
 # Build for production
-build:
+build: clippy fmt-check
     cd apps/tauri-app && cargo tauri build
 
 # Build frontend only
@@ -84,8 +84,13 @@ clippy:
 install-deps:
     ./scripts/install-deps.sh
 
+# Install git hooks
+install-hooks:
+    cp scripts/pre-commit .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+
 # Build all Rust dependencies
-install:
+install: install-hooks
     cargo build --workspace
 
 # ==============================================================================

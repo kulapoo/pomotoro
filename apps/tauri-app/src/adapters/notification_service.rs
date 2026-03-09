@@ -64,10 +64,10 @@ impl NotificationService {
                 PermissionState::Denied => false,
                 PermissionState::Prompt
                 | PermissionState::PromptWithRationale => {
-                    match self.app_handle.notification().request_permission() {
-                        Ok(PermissionState::Granted) => true,
-                        _ => false,
-                    }
+                    matches!(
+                        self.app_handle.notification().request_permission(),
+                        Ok(PermissionState::Granted)
+                    )
                 }
             },
             Err(_) => false,

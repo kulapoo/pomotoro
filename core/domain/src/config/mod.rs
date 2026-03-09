@@ -1,5 +1,6 @@
 pub mod appearance;
 pub mod audio;
+#[allow(clippy::module_inception)]
 mod config;
 pub mod events;
 pub mod general;

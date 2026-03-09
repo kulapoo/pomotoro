@@ -6,8 +6,8 @@ use tokio::time::interval;
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use domain::TimerRepository;
 use domain::{
-    ConfigRepository, Error, Result as DomainResult, TaskId, TaskRepository,
-    Timer, TimerConfiguration,
+    ConfigRepository, Error, Result as DomainResult, TaskId, Timer,
+    TimerConfiguration,
 };
 
 /// Infrastructure service for managing timer tick loops and technical concerns
@@ -18,7 +18,6 @@ pub struct TimerTickService {
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
     event_publisher: EventPublisherArc,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
-    task_repository: Arc<dyn TaskRepository + Send + Sync>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
 }
 
@@ -26,7 +25,6 @@ impl TimerTickService {
     pub fn new(
         event_publisher: EventPublisherArc,
         timer_repository: Arc<dyn TimerRepository + Send + Sync>,
-        task_repository: Arc<dyn TaskRepository + Send + Sync>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
         let timer = Timer::default_timer();
@@ -36,7 +34,6 @@ impl TimerTickService {
             cancel_handle: Arc::new(Mutex::new(None)),
             event_publisher,
             timer_repository,
-            task_repository,
             config_repository,
         }
     }

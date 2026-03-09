@@ -3,6 +3,7 @@ pub mod events;
 pub mod id;
 pub mod repository;
 pub mod state_machine;
+#[allow(clippy::module_inception)]
 pub mod timer;
 pub mod transitions;
 
@@ -43,7 +44,7 @@ impl Phase {
         current_sessions: u8,
         sessions_until_long_break: u8,
     ) -> Phase {
-        if current_sessions % sessions_until_long_break == 0 {
+        if current_sessions.is_multiple_of(sessions_until_long_break) {
             Phase::LongBreak
         } else {
             Phase::ShortBreak

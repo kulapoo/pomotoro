@@ -30,6 +30,7 @@ pub struct AppRegistry {
     pub audio_service: Arc<AudioServiceWrapper>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn register_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     emitter: Arc<dyn Emitter>,
@@ -128,7 +129,6 @@ pub async fn bootstrap(
     let timer_tick_service = Arc::new(TimerTickService::new(
         event_publisher.clone(),
         timer_repository.clone(),
-        task_repository.clone(),
         config_repository.clone(),
     ));
 

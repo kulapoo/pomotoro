@@ -68,7 +68,7 @@ impl TryFrom<TaskDb> for Task {
             "active" => TaskStatus::Active,
             "completed" => TaskStatus::Completed,
             "paused" => TaskStatus::Paused,
-            "queued" | _ => TaskStatus::Queued,
+            _ => TaskStatus::Queued,
         };
 
         let uuid = Uuid::parse_str(&db.id).map_err(|_e| {

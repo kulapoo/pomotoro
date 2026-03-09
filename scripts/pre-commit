@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+echo "Running clippy..."
+cargo clippy --workspace -- -D warnings
+echo "Checking formatting..."
+cargo fmt --all -- --check

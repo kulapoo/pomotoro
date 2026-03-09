@@ -47,10 +47,7 @@ pub fn Sidebar() -> impl IntoView {
                 >"☰"</button>
             </div>
             <ul class="flex flex-col py-md">
-                <li class={move || format!(
-                    "mb-xs {}",
-                    if is_active("/timer") { "" } else { "" }
-                )}>
+                <li class="mb-xs">
                     <A href="/timer" attr:class={move || format!(
                         "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
                         if is_active("/timer") {
@@ -66,10 +63,7 @@ pub fn Sidebar() -> impl IntoView {
                         )}>"Timer"</span>
                     </A>
                 </li>
-                <li class={move || format!(
-                    "mb-xs {}",
-                    if is_active("/tasks") { "" } else { "" }
-                )}>
+                <li class="mb-xs">
                     <A href="/tasks" attr:class={move || format!(
                         "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
                         if is_active("/tasks") {
@@ -85,10 +79,7 @@ pub fn Sidebar() -> impl IntoView {
                         )}>"Tasks"</span>
                     </A>
                 </li>
-                <li class={move || format!(
-                    "mb-xs {}",
-                    if is_active("/settings") { "" } else { "" }
-                )}>
+                <li class="mb-xs">
                     <A href="/settings" attr:class={move || format!(
                         "flex items-center px-md py-3 mx-2 rounded-md transition-all duration-200 no-underline {}",
                         if is_active("/settings") {

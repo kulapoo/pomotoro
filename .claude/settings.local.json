@@ -65,13 +65,13 @@
       "Bash(awk:*)",
       "mcp__ide__getDiagnostics",
       "Bash(RUST_BACKTRACE=1 cargo test:*)",
-      "Bash(timeout 10 cargo tauri dev:*)"
+      "Bash(timeout 10 cargo tauri dev:*)",
+      "Bash(cargo fmt:*)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "plan"
   },
-
   "hooks": {
     "PostToolUse": [
       {

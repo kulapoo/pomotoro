@@ -191,14 +191,13 @@ impl TimerViewModel {
         };
 
         spawn_local(async move {
-            invoke::<Timer, SkipPhaseArgs>(
+            if let Ok(timer) = invoke::<Timer, SkipPhaseArgs>(
                 commands::timer::SKIP_PHASE,
                 Some(skip_args),
             )
             .await
             .map_err(|e| handle_command_error(e, set_error_state))
-            .ok()
-            .map(|timer| {
+            {
                 set_timer_state.set(timer.state().clone());
 
                 let task_id_str = active_task_id;
@@ -228,7 +227,7 @@ impl TimerViewModel {
 
                     set_active_task.set(task);
                 });
-            });
+            }
         });
     }
 
@@ -250,13 +249,12 @@ impl TimerViewModel {
         };
 
         spawn_local(async move {
-            if let Some(task) = invoke::<Task, CompleteTaskArgs>(
+            if let Ok(task) = invoke::<Task, CompleteTaskArgs>(
                 commands::task::COMPLETE_TASK,
                 Some(complete_args),
             )
             .await
             .map_err(|e| handle_command_error(e, set_error_state))
-            .ok()
             {
                 set_active_task.set(Some(task));
             }

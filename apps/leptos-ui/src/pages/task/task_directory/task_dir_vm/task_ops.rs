@@ -270,19 +270,19 @@ impl TaskDirectoryViewModel {
                 task_id: task_id.to_string(),
             };
 
-            invoke::<(domain::Timer, Task), _>(
-                commands::task::RESET_TASK,
-                Some(args),
-            )
-            .await
-            .map_err(|e| {
-                handle_command_error(
-                    format!("Failed to reset task status: {}", e),
-                    set_error_state,
-                );
-            })
-            .ok()
-            .map(|(_timer, updated_task)| {
+            if let Ok((_timer, updated_task)) =
+                invoke::<(domain::Timer, Task), _>(
+                    commands::task::RESET_TASK,
+                    Some(args),
+                )
+                .await
+                .map_err(|e| {
+                    handle_command_error(
+                        format!("Failed to reset task status: {}", e),
+                        set_error_state,
+                    );
+                })
+            {
                 web_sys::console::log_1(
                     &format!("Reset task status result: {:?}", updated_task)
                         .into(),
@@ -303,7 +303,7 @@ impl TaskDirectoryViewModel {
                 }
                 // Clear any existing errors on success
                 set_error_state.set(None);
-            });
+            }
         });
     }
 }

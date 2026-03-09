@@ -56,21 +56,11 @@ pub enum SortOrder {
     Descending,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SearchOptions {
     pub criteria: SearchCriteria,
     pub sort_by: Option<SortBy>,
     pub sort_order: Option<SortOrder>,
-}
-
-impl Default for SearchOptions {
-    fn default() -> Self {
-        Self {
-            criteria: SearchCriteria::default(),
-            sort_by: None,
-            sort_order: None,
-        }
-    }
 }
 
 #[async_trait]
