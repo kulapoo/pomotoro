@@ -85,11 +85,11 @@ impl EventHandler for BreakPhaseCompletedHandler {
 
         self.timer_srv.load_state().await?;
 
-        let timer = self.timer_srv.get_current_timer().await;
+        let is_running = self.timer_srv.with_timer(|t| t.is_running()).await;
         let config = self.config_repository.get_config().await?;
 
         // Only proceed if timer is running and task is completed
-        if timer.is_running() && task.is_completed() {
+        if is_running && task.is_completed() {
             let current_task_id = break_phase_completed.task_id;
 
             // Check if auto-cycling is enabled

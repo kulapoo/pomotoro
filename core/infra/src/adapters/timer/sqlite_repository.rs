@@ -54,31 +54,24 @@ impl TimerRepository for SqliteTimerRepository {
     }
 
     async fn save(&self, timer: &Timer) -> Result<()> {
-        let timer_db = TimerDb::from(timer.clone());
+        let mut timer_db = TimerDb::from(timer.clone());
+        // Ensure consistent row identity: always use DEFAULT_TASK_ID as the
+        // primary key so that `get()` can find the row by the same key.
+        timer_db.id = DEFAULT_TASK_ID.as_str().to_string();
 
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TASK_ID.as_str();
 
-        // Try to update first
-        let updated =
-            diesel::update(timers::table.filter(timers::id.eq(&timer_id)))
-                .set(&timer_db)
-                .execute(&mut conn)
-                .map_err(|e| Error::RepositoryError {
-                    message: format!("Failed to update timer: {}", e),
-                })?;
-
-        // If no rows were updated, insert the timer
-        if updated == 0 {
-            diesel::insert_into(timers::table)
-                .values(&timer_db)
-                .execute(&mut conn)
-                .map_err(|e| Error::RepositoryError {
-                    message: format!("Failed to create timer: {}", e),
-                })?;
-        }
+        // Single UPSERT: SQLite's INSERT OR REPLACE inserts if the row
+        // doesn't exist or replaces it when the primary key conflicts.
+        // This replaces the previous two-statement update-then-insert pattern.
+        diesel::replace_into(timers::table)
+            .values(&timer_db)
+            .execute(&mut conn)
+            .map_err(|e| Error::RepositoryError {
+                message: format!("Failed to save timer: {}", e),
+            })?;
 
         Ok(())
     }

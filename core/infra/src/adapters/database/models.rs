@@ -137,6 +137,8 @@ pub struct ConfigDb {
 
 impl From<Timer> for TimerDb {
     fn from(timer: Timer) -> Self {
+        let now = Utc::now().to_rfc3339();
+
         // Determine the state and paused_from values
         let (state, paused_from) = match timer.state() {
             TimerState::Idle => ("Idle".to_string(), None),
@@ -161,8 +163,8 @@ impl From<Timer> for TimerDb {
             state,
             paused_from,
             remaining_seconds: timer.state().remaining_seconds() as i32,
-            created_at: Utc::now().to_rfc3339(),
-            updated_at: Utc::now().to_rfc3339(),
+            created_at: now.clone(),
+            updated_at: now,
         }
     }
 }
@@ -220,7 +222,14 @@ impl TryFrom<TimerDb> for Timer {
                     remaining_seconds: db.remaining_seconds as u32,
                 }
             }
-            _ => TimerState::Idle, // Default to Idle for unknown states
+            unknown => {
+                return Err(domain::Error::SerializationError {
+                    message: format!(
+                        "Unknown timer state in database: '{}'. Possible data corruption.",
+                        unknown
+                    ),
+                });
+            }
         };
 
         Ok(Timer::with_state(task_id, state))

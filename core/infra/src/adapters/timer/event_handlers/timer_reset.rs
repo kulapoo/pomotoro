@@ -36,14 +36,18 @@ impl EventHandler for TimerResetHandler {
 
         self.timer_srv.load_state().await?;
 
-        let timer = self.timer_srv.get_current_timer().await;
-
-        log::info!("{:?} timer reset", timer);
+        let state_json = self
+            .timer_srv
+            .with_timer(|t| {
+                log::info!("{:?} timer reset", t);
+                json!(t.state())
+            })
+            .await;
 
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::RESET,
-                json!(timer.state()),
+                state_json.clone(),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer reset event: {e}"),
@@ -52,7 +56,7 @@ impl EventHandler for TimerResetHandler {
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::STATUS_CHANGED,
-                json!(timer.state()),
+                state_json,
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(

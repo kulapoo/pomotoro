@@ -58,7 +58,9 @@ impl EventHandler for TimerTickHandler {
             && elapsed_seconds > 0
         {
             let timer_srv = self.timer_srv.clone();
-            println!("TIMER SAVE: {:?}", timer_srv.get_current_timer().await);
+            let timer_debug =
+                timer_srv.with_timer(|t| format!("{:?}", t)).await;
+            println!("TIMER SAVE: {}", timer_debug);
             tokio::spawn(async move {
                 if let Err(e) = timer_srv.save_state().await {
                     eprintln!("Failed to save timer state: {e}");

@@ -12,6 +12,7 @@ use domain::{
 
 /// Infrastructure service for managing timer tick loops and technical concerns
 /// This is NOT a domain service - it handles infrastructure-specific timer management
+#[derive(Clone)]
 pub struct TimerTickService {
     timer: Arc<Mutex<Timer>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
@@ -19,19 +20,6 @@ pub struct TimerTickService {
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
-}
-
-impl Clone for TimerTickService {
-    fn clone(&self) -> Self {
-        Self {
-            timer: Arc::clone(&self.timer),
-            cancel_handle: Arc::clone(&self.cancel_handle),
-            event_publisher: Arc::clone(&self.event_publisher),
-            timer_repository: Arc::clone(&self.timer_repository),
-            task_repository: Arc::clone(&self.task_repository),
-            config_repository: Arc::clone(&self.config_repository),
-        }
-    }
 }
 
 impl TimerTickService {
@@ -93,48 +81,48 @@ impl TimerTickService {
             }
         }
         let timer_clone = Arc::clone(&self.timer);
-
         let event_publisher_clone = Arc::clone(&self.event_publisher);
-        let config_clone = config.clone();
+
+        // Move config directly into the spawn — no clone needed
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             // Skip the first tick which completes immediately
             interval.tick().await;
             loop {
                 interval.tick().await;
-                let (should_continue, phase_completed) = {
+
+                // Hold the lock only for tick computation; collect events to publish outside
+                let (should_continue, phase_completed, events_to_publish) = {
                     let mut timer = timer_clone.lock().await;
 
                     if !timer.is_running() {
-                        (false, false)
+                        (false, false, Vec::new())
                     } else {
-                        match timer.tick(&config_clone) {
+                        match timer.tick(&config) {
                             Ok((phase_complete, events)) => {
-                                if !events.is_empty() {
-                                    event_publisher_clone.publish_batch(events);
-                                }
-                                (!phase_complete, phase_complete)
+                                (!phase_complete, phase_complete, events)
                             }
                             Err(e) => {
                                 eprintln!("Timer tick error: {e}");
-                                (false, false)
+                                (false, false, Vec::new())
                             }
                         }
                     }
                 };
+                // Lock released — publish events outside the critical section
+                if !events_to_publish.is_empty() {
+                    event_publisher_clone.publish_batch(events_to_publish);
+                }
 
-                // If phase completed naturally (countdown reached 0), we need to handle completion
+                // If phase completed naturally (countdown reached 0), handle completion
                 if phase_completed {
-                    // The timer has naturally expired, trigger phase completion
-                    // We publish events to indicate natural countdown expiration
-
                     // Get the current phase and task_id before breaking
                     let (current_phase, task_id) = {
                         let timer = timer_clone.lock().await;
                         (timer.get_current_phase(), timer.task_id())
                     };
 
-                    // Always publish the generic CountdownExpired event
+                    // Publish the generic CountdownExpired event
                     use domain::timer::events::CountdownExpired;
 
                     let expiration_event =
@@ -171,6 +159,16 @@ impl TimerTickService {
     /// Get the current timer for infrastructure purposes
     pub async fn get_current_timer(&self) -> Timer {
         self.timer.lock().await.clone()
+    }
+
+    /// Access the timer by reference without cloning.
+    /// Callers that only need to read a field should prefer this over `get_current_timer()`.
+    pub async fn with_timer<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Timer) -> R,
+    {
+        let timer = self.timer.lock().await;
+        f(&timer)
     }
 
     /// Update the timer (for infrastructure use only)

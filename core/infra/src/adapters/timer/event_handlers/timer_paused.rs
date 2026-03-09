@@ -39,14 +39,11 @@ impl EventHandler for TimerPausedHandler {
 
         self.timer_srv.stop_timer_tick_loop().await?;
 
-        // Get the current timer state to emit to UI
-        let timer = self.timer_srv.get_current_timer().await;
+        // Get only the timer state to emit to UI (avoids cloning entire Timer)
+        let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;
 
         self.emitter
-            .emit(
-                domain::event_names::ui_listeners::timer::PAUSE,
-                json!(timer.state()),
-            )
+            .emit(domain::event_names::ui_listeners::timer::PAUSE, state_json)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer paused event: {e}"),
             })?;

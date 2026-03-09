@@ -59,7 +59,7 @@ impl EventHandler for TaskCompletedHandler {
         self.timer_srv.reset_timer(timer_config.clone()).await?;
         self.timer_srv.load_state().await?;
 
-        let timer = self.timer_srv.get_current_timer().await;
+        let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;
 
         self.emitter
             .emit(
@@ -71,10 +71,7 @@ impl EventHandler for TaskCompletedHandler {
             })?;
 
         self.emitter
-            .emit(
-                domain::event_names::timer::STATUS_CHANGED,
-                json!(timer.state()),
-            )
+            .emit(domain::event_names::timer::STATUS_CHANGED, state_json)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task completed event: {e}"),
             })?;

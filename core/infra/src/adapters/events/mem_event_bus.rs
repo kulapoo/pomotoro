@@ -1,9 +1,10 @@
 use super::EventHandler;
 use domain::{Event, EventPublisher};
+use parking_lot::RwLock;
 use std::any::TypeId;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
 use tokio::sync::Semaphore;
 use tracing::{debug, error, warn};
 
@@ -30,7 +31,7 @@ pub trait EventBus: EventPublisher + EventSubscriber + Send + Sync {}
 /// A simplified async event bus that bridges sync publish with async handlers.
 #[derive(Clone)]
 pub struct InMemoryEventBus {
-    handlers: Arc<Mutex<HandlersMap>>,
+    handlers: Arc<RwLock<HandlersMap>>,
     next_handler_id: Arc<AtomicU64>,
     /// Semaphore to limit concurrent handler executions
     /// Default: 100 concurrent handlers max
@@ -52,7 +53,7 @@ impl InMemoryEventBus {
     /// Creates a new empty event bus with specified concurrency limit
     pub fn with_concurrency_limit(max_concurrent_handlers: usize) -> Self {
         Self {
-            handlers: Arc::new(Mutex::new(HashMap::new())),
+            handlers: Arc::new(RwLock::new(HashMap::new())),
             next_handler_id: Arc::new(AtomicU64::new(1)),
             concurrency_limiter: Arc::new(Semaphore::new(
                 max_concurrent_handlers,
@@ -62,19 +63,19 @@ impl InMemoryEventBus {
 
     /// Returns the total number of registered handlers across all event types
     pub fn handler_count(&self) -> usize {
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
         handlers.values().map(|v| v.len()).sum()
     }
 
     /// Returns the number of handlers for a specific event type
     pub fn handler_count_for_type(&self, event_type: TypeId) -> usize {
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
         handlers.get(&event_type).map(|v| v.len()).unwrap_or(0)
     }
 
     /// Lists all handler names for a specific event type
     pub fn list_handlers_for_type(&self, event_type: TypeId) -> Vec<String> {
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
         handlers
             .get(&event_type)
             .map(|handlers| handlers.iter().map(|h| h.name.clone()).collect())
@@ -83,7 +84,7 @@ impl InMemoryEventBus {
 
     /// Returns handler IDs for a specific event type (useful for debugging)
     pub fn list_handler_ids_for_type(&self, event_type: TypeId) -> Vec<u64> {
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
         handlers
             .get(&event_type)
             .map(|handlers| handlers.iter().map(|h| h.id).collect())
@@ -91,7 +92,7 @@ impl InMemoryEventBus {
     }
 
     pub fn has_event_type(&self, event_type: TypeId) -> bool {
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
 
         handlers.keys().any(|k| *k == event_type)
     }
@@ -104,7 +105,7 @@ impl EventPublisher for InMemoryEventBus {
             return;
         }
 
-        let handlers = self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let handlers = self.handlers.read();
         let type_id = event.as_any().type_id();
 
         if let Some(event_handlers) = handlers.get(&type_id) {
@@ -175,8 +176,7 @@ impl EventSubscriber for InMemoryEventBus {
         };
 
         self.handlers
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .write()
             .entry(event_type)
             .or_default()
             .push(handler_metadata);
@@ -188,8 +188,7 @@ impl EventSubscriber for InMemoryEventBus {
         &self,
         event_type: TypeId,
     ) -> domain::Result<()> {
-        let mut handlers =
-            self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let mut handlers = self.handlers.write();
         let removed_count =
             handlers.remove(&event_type).map(|v| v.len()).unwrap_or(0);
 
@@ -205,8 +204,7 @@ impl EventSubscriber for InMemoryEventBus {
         event_type: TypeId,
         handler_name: &str,
     ) -> domain::Result<bool> {
-        let mut handlers =
-            self.handlers.lock().unwrap_or_else(|e| e.into_inner());
+        let mut handlers = self.handlers.write();
 
         if let Some(event_handlers) = handlers.get_mut(&event_type) {
             let initial_len = event_handlers.len();

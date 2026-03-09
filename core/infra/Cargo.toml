@@ -28,6 +28,7 @@ tracing = { workspace = true }
 anyhow = "1.0.98"
 open = "5.0"
 futures = "0.3"
+parking_lot = "0.12"
 
 # Database dependencies
 diesel = { workspace = true }

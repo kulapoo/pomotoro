@@ -95,9 +95,6 @@ impl EventHandler for CountdownExpiredHandler {
             )
             .await?;
 
-            // Load the updated state after reset_timer_phase
-            self.timer_srv.load_state().await?;
-
             let timer_config = task.config.timer.clone();
 
             if !(task.is_completed() && next_phase == Phase::Work) {
@@ -109,13 +106,14 @@ impl EventHandler for CountdownExpiredHandler {
                         message: format!("Failed to auto-start timer: {}", e),
                     })?;
 
-                // Get the current timer state AFTER all operations complete
-                let current_timer = self.timer_srv.get_current_timer().await;
+                // Get the current timer state AFTER all operations complete (avoids cloning entire Timer)
+                let state_json =
+                    self.timer_srv.with_timer(|t| json!(t.state())).await;
 
                 self.emitter
                     .emit(
                         domain::event_names::ui_listeners::timer::PHASE_COMPLETED,
-                        json!(current_timer.state()),
+                        state_json,
                     )
                     .map_err(|e| domain::Error::EventPublishingError {
                         message: format!(
