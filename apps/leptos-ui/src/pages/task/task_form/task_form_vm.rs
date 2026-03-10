@@ -190,7 +190,7 @@ impl TaskFormViewModel {
                 );
 
                 web_sys::console::log_1(
-                    &format!("Successfully created task: {}", new_task.name)
+                    &format!("Successfully created task: {}", new_task.name())
                         .into(),
                 );
                 set_is_creating.set(false);

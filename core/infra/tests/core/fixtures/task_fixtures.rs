@@ -139,8 +139,8 @@ mod tests {
     #[test]
     fn creates_simple_task() {
         let task = TaskFixtures::simple("Test Task");
-        assert_eq!(task.name, "Test Task");
-        assert_eq!(task.max_sessions, 4);
+        assert_eq!(task.name(), "Test Task");
+        assert_eq!(task.max_sessions(), 4);
     }
 
     #[test]
@@ -151,16 +151,16 @@ mod tests {
             .as_active()
             .build();
 
-        assert_eq!(task.name, "Custom Task");
-        assert_eq!(task.max_sessions, 6);
-        assert_eq!(task.status, TaskStatus::Active);
+        assert_eq!(task.name(), "Custom Task");
+        assert_eq!(task.max_sessions(), 6);
+        assert_eq!(task.status(), TaskStatus::Active);
     }
 
     #[test]
     fn creates_task_collection() {
         let tasks = TaskFixtures::collection(3);
         assert_eq!(tasks.len(), 3);
-        assert_eq!(tasks[0].name, "Task 1");
-        assert_eq!(tasks[2].name, "Task 3");
+        assert_eq!(tasks[0].name(), "Task 1");
+        assert_eq!(tasks[2].name(), "Task 3");
     }
 }

@@ -58,12 +58,12 @@ pub async fn start_timer_phase(
     }
 
     // Get the timer config before moving the task
-    let timer_config = task.config.timer.clone();
+    let timer_config = task.config().timer.clone();
 
     // Set the new task status to Active
     task.activate()?;
 
-    let task_id_for_event = task.id;
+    let task_id_for_event = task.id();
 
     task_repo.update(task).await?;
 

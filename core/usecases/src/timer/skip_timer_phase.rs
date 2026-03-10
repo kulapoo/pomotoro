@@ -56,13 +56,13 @@ pub async fn skip_timer_phase(
     log::info!(
         "Skipping to phase: {}-{}-{}-{}",
         next_phase.name(),
-        task.current_sessions,
-        task.config.timer.sessions_until_long_break,
+        task.current_sessions(),
+        task.config().timer.sessions_until_long_break,
         task.is_completed()
     );
 
     // Skip to the determined phase
-    let events = timer.skip_phase(&task.config.timer, next_phase)?;
+    let events = timer.skip_phase(&task.config().timer, next_phase)?;
 
     task_repo.update(task).await?;
 
@@ -80,8 +80,8 @@ pub async fn skip_timer_phase(
 /// Determine whether the next break should be short or long
 /// based on the current session count and configuration.
 fn determine_next_break_type(task: &domain::Task) -> Phase {
-    let sessions_until_long = task.config.timer.sessions_until_long_break;
-    let remainder = task.current_sessions % sessions_until_long;
+    let sessions_until_long = task.config().timer.sessions_until_long_break;
+    let remainder = task.current_sessions() % sessions_until_long;
 
     let phase = if remainder == 0 {
         Phase::LongBreak
@@ -91,7 +91,7 @@ fn determine_next_break_type(task: &domain::Task) -> Phase {
 
     log::info!(
         "Determining break type: current_sessions={}, sessions_until_long={}, remainder={}, next_phase={:?}",
-        task.current_sessions,
+        task.current_sessions(),
         sessions_until_long,
         remainder,
         phase

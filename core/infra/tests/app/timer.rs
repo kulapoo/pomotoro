@@ -43,7 +43,7 @@ async fn timer_should_start_from_idle_state() {
         .await
         .expect("Task should be created");
 
-    let task_id = task.expect("Task should be created").id;
+    let task_id = task.expect("Task should be created").id();
 
     let timer_srv = ctx.timer_tick_service.clone();
 
@@ -230,7 +230,7 @@ async fn timer_should_complete_phase() {
     let old_task = utils::task::get_active_task(&ctx).await;
 
     let complete_work_phase_result = complete_timer_phase(
-        old_task.id,
+        old_task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -247,8 +247,8 @@ async fn timer_should_complete_phase() {
     assert_eq!(old_timer.state().is_work_phase(), true);
     assert_eq!(new_timer.state().is_break_phase(), true);
 
-    assert_eq!(old_task.current_sessions, 0);
-    assert_eq!(task.current_sessions, 1);
+    assert_eq!(old_task.current_sessions(), 0);
+    assert_eq!(task.current_sessions(), 1);
 }
 
 #[tokio::test]
@@ -262,7 +262,7 @@ async fn timer_should_skip_phase() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        old_task.id,
+        old_task.id(),
     )
     .await;
 
@@ -276,8 +276,8 @@ async fn timer_should_skip_phase() {
     assert_eq!(old_timer.state().is_work_phase(), true);
     assert_eq!(new_timer.state().is_break_phase(), true);
 
-    assert_eq!(old_task.current_sessions, 0);
-    assert_eq!(new_task.current_sessions, 1);
+    assert_eq!(old_task.current_sessions(), 0);
+    assert_eq!(new_task.current_sessions(), 1);
 
     assert_utils::assert_event_subscribed(&ctx, TypeId::of::<PhaseSkipped>());
 }
@@ -290,7 +290,7 @@ async fn timer_should_decrement_timer_counter() {
     let old_task = utils::task::get_active_task(&ctx).await;
 
     let pause_timer_result = pause_timer_phase(
-        old_task.id,
+        old_task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -422,18 +422,18 @@ async fn task_queue_should_return_next_incomplete_task() {
 
     let task_queue: Vec<_> = all_tasks
         .iter()
-        .filter(|t| !t.status.is_completed())
+        .filter(|t| !t.status().is_completed())
         .cloned()
         .collect();
 
     assert_eq!(task_queue.len(), 1);
     assert_eq!(
-        task_queue[0].id,
+        task_queue[0].id(),
         ctx.task_repo
             .get_default_task()
             .await
             .unwrap()
             .expect("Task should be set")
-            .id
+            .id()
     );
 }

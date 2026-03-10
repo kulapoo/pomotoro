@@ -39,14 +39,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .create(task.clone())
                 .await
                 .expect("Failed to save task");
-            println!("Task created with ID: {}", task.id);
+            println!("Task created with ID: {}", task.id());
 
             let loaded = task_repo
-                .get_by_id(task.id)
+                .get_by_id(task.id())
                 .await
                 .expect("Failed to load task");
             if let Some(loaded_task) = loaded {
-                println!("Task loaded successfully: {}", loaded_task.name);
+                println!("Task loaded successfully: {}", loaded_task.name());
             }
         });
     } else {

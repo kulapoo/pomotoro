@@ -27,8 +27,8 @@ pub async fn complete_timer_phase(
         // Determine next phase BEFORE incrementing session
         // because the logic checks if current_sessions is divisible by sessions_until_long_break
         let next = Phase::determine_next_break_type(
-            task.current_sessions + 1, // Pass the future session count
-            task.config.timer.sessions_until_long_break,
+            task.current_sessions() + 1, // Pass the future session count
+            task.config().timer.sessions_until_long_break,
         );
         task.increment_session()?;
         next
@@ -37,7 +37,7 @@ pub async fn complete_timer_phase(
         Phase::Work
     };
 
-    let events = timer.complete_phase(next_phase, &task.config.timer)?;
+    let events = timer.complete_phase(next_phase, &task.config().timer)?;
 
     task_repo.update(task.clone()).await?;
 
@@ -69,8 +69,8 @@ mod tests {
         // Timer configuration is now managed through task.config.timer
 
         let next_phase = Phase::determine_next_break_type(
-            task.current_sessions,
-            task.config.timer.sessions_until_long_break,
+            task.current_sessions(),
+            task.config().timer.sessions_until_long_break,
         );
         assert_eq!(next_phase, Phase::ShortBreak);
     }
@@ -89,8 +89,8 @@ mod tests {
         // Timer configuration is now managed through task.config.timer
 
         let next_phase = Phase::determine_next_break_type(
-            task.current_sessions,
-            task.config.timer.sessions_until_long_break,
+            task.current_sessions(),
+            task.config().timer.sessions_until_long_break,
         );
         assert_eq!(next_phase, Phase::LongBreak);
     }
@@ -109,8 +109,8 @@ mod tests {
         // Timer configuration is now managed through task.config.timer
 
         let next_phase = Phase::determine_next_break_type(
-            task.current_sessions,
-            task.config.timer.sessions_until_long_break,
+            task.current_sessions(),
+            task.config().timer.sessions_until_long_break,
         );
         assert_eq!(next_phase, Phase::ShortBreak);
     }

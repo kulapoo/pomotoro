@@ -44,7 +44,9 @@ pub fn TaskFormPage() -> impl IntoView {
             .await
             .ok()
             .and_then(|tasks| {
-                tasks.into_iter().find(|fetched_task| fetched_task.id == id)
+                tasks
+                    .into_iter()
+                    .find(|fetched_task| fetched_task.id() == id)
             })
             .map(|fetched_task| set_task.set(Some(fetched_task)))
             .unwrap_or_else(|| {
@@ -74,17 +76,17 @@ pub fn TaskFormPage() -> impl IntoView {
     // Update form fields when task is loaded
     Effect::new(move || {
         if let Some(loaded_task) = task.get() {
-            set_task_name.set(loaded_task.name.clone());
+            set_task_name.set(loaded_task.name().to_string());
             set_task_description
-                .set(loaded_task.description.clone().unwrap_or_default());
-            set_max_sessions.set(loaded_task.max_sessions as u32);
-            set_tags_input.set(loaded_task.tags.join(", "));
+                .set(loaded_task.description().unwrap_or_default().to_string());
+            set_max_sessions.set(loaded_task.max_sessions() as u32);
+            set_tags_input.set(loaded_task.tags().join(", "));
 
             let has_custom_config =
-                loaded_task.config.timer != TimerConfiguration::default();
+                loaded_task.config().timer != TimerConfiguration::default();
             set_use_custom_config.set(has_custom_config);
 
-            let timer_config = &loaded_task.config.timer;
+            let timer_config = &loaded_task.config().timer;
 
             // Detect if we should use seconds mode based on stored values
             // If any duration is not divisible by 60, we should use seconds mode

@@ -189,8 +189,9 @@ impl TaskDirectoryViewModel {
 
                 if let Ok(updated_task) = from_value::<Task>(payload) {
                     set_tasks.update(|tasks| {
-                        if let Some(index) =
-                            tasks.iter().position(|t| t.id == updated_task.id)
+                        if let Some(index) = tasks
+                            .iter()
+                            .position(|t| t.id() == updated_task.id())
                         {
                             tasks[index] = updated_task;
                         }
@@ -248,10 +249,10 @@ impl TaskDirectoryViewModel {
                         .ok()
                         .map(|task_id| {
                             let tasks_list = tasks.get_untracked();
-                            let active_task = tasks_list.iter().find(|t| t.id == task_id).cloned();
+                            let active_task = tasks_list.iter().find(|t| t.id() == task_id).cloned();
 
                             if let Some(ref task) = active_task {
-                                web_sys::console::log_1(&format!("Found active task: {}", task.name).into());
+                                web_sys::console::log_1(&format!("Found active task: {}", task.name()).into());
                             } else {
                                 web_sys::console::log_1(&format!("Active task not found in task list for ID: {}", task_id).into());
                             }

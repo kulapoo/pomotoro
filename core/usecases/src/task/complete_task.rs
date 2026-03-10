@@ -10,16 +10,15 @@ pub async fn complete_task(
 ) -> Result<()> {
     let mut task = get_task_by_id(task_repo, task_id).await?;
 
-    // Mark all sessions as complete
-    task.current_sessions = task.max_sessions;
-    task.status = domain::TaskStatus::Completed;
+    // Mark all sessions as complete via domain method
+    task.complete();
 
     task_repo.update(task.clone()).await?;
 
     let completed_event = TaskCompleted::new(
-        task.id,
-        task.current_sessions,
-        task.current_sessions as u64 + 1,
+        task.id(),
+        task.current_sessions(),
+        task.current_sessions() as u64 + 1,
     );
 
     event_publisher.publish(Box::new(completed_event));

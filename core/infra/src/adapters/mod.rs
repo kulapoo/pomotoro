@@ -38,7 +38,7 @@ pub type TimerRepositoryArc =
     std::sync::Arc<dyn domain::TimerRepository + Send + Sync>;
 
 // Audio infrastructure
-pub use audio::{BG_SOUNDS, DefaultAudioAssetProvider, RodioAudioService};
+pub use audio::{AudioThread, BG_SOUNDS, DefaultAudioAssetProvider};
 
 // Events infrastructure
 pub use events::{EventHandler, InMemoryEventBus, audio_events};

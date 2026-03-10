@@ -54,7 +54,8 @@ pub async fn reset_task(
 
     info!(
         "Successfully reset task: id={}, new_status={:?}",
-        task_id, task.status
+        task_id,
+        task.status()
     );
 
     let timer = timer_repo.get().await.map_err(|e| e.to_string())?;

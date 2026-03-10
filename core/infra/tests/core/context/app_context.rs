@@ -121,6 +121,6 @@ mod tests {
         // Retrieve the task
         let retrieved = ctx.task_repo.get_by_id(task_id).await.unwrap();
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().name, "Test Task");
+        assert_eq!(retrieved.unwrap().name(), "Test Task");
     }
 }

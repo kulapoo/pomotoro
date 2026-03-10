@@ -94,12 +94,14 @@ impl TaskRepository for SqliteTaskRepository {
             message: format!("Failed to get connection: {}", e),
         })?;
 
-        diesel::update(tasks::table.filter(tasks::id.eq(task.id.to_string())))
-            .set(&task_db)
-            .execute(&mut conn)
-            .map_err(|e| Error::RepositoryError {
-                message: format!("Failed to update task: {}", e),
-            })?;
+        diesel::update(
+            tasks::table.filter(tasks::id.eq(task.id().to_string())),
+        )
+        .set(&task_db)
+        .execute(&mut conn)
+        .map_err(|e| Error::RepositoryError {
+            message: format!("Failed to update task: {}", e),
+        })?;
 
         Ok(())
     }

@@ -24,8 +24,8 @@ impl TaskDirectoryViewModel {
             .tasks
             .get()
             .iter()
-            .find(|t| t.id == task_id)
-            .map(|t| t.name.clone())
+            .find(|t| t.id() == task_id)
+            .map(|t| t.name().to_string())
             .unwrap_or_else(|| "this task".to_string());
 
         let confirmed = leptos::prelude::window()
@@ -69,7 +69,7 @@ impl TaskDirectoryViewModel {
                             .into(),
                     );
                     let mut current_tasks = tasks.get_untracked();
-                    current_tasks.retain(|t| t.id != task_id);
+                    current_tasks.retain(|t| t.id() != task_id);
                     set_tasks.set(current_tasks);
                     set_selected_task.set(None);
                     // Clear any existing errors on success
@@ -130,8 +130,9 @@ impl TaskDirectoryViewModel {
                 let active_id = task_id;
                 let task_list = tasks.get_untracked();
                 let active_task =
-                    task_list.iter().find(|t| t.id == active_id).cloned();
-                let task_name = active_task.as_ref().map(|t| t.name.clone());
+                    task_list.iter().find(|t| t.id() == active_id).cloned();
+                let task_name =
+                    active_task.as_ref().map(|t| t.name().to_string());
                 set_active_task.set(active_task);
                 web_sys::console::log_1(
                     &format!("Active task set to: {:?}", task_name).into(),
@@ -167,7 +168,7 @@ impl TaskDirectoryViewModel {
             }
 
             let current_id =
-                tasks.get_untracked().first().map(|t| t.id.to_string());
+                tasks.get_untracked().first().map(|t| t.id().to_string());
 
             let args = CycleArgs {
                 current_task_id: current_id,
@@ -216,7 +217,7 @@ impl TaskDirectoryViewModel {
             }
 
             let current_id =
-                tasks.get_untracked().first().map(|t| t.id.to_string());
+                tasks.get_untracked().first().map(|t| t.id().to_string());
 
             let args = CycleArgs {
                 current_task_id: current_id,
@@ -290,13 +291,14 @@ impl TaskDirectoryViewModel {
                 web_sys::console::log_1(
                     &format!(
                         "Successfully reset task: id={}, status={:?}",
-                        updated_task.id, updated_task.status
+                        updated_task.id(),
+                        updated_task.status()
                     )
                     .into(),
                 );
                 let mut current_tasks = tasks.get_untracked();
                 if let Some(index) =
-                    current_tasks.iter().position(|t| t.id == task_id)
+                    current_tasks.iter().position(|t| t.id() == task_id)
                 {
                     current_tasks[index] = updated_task;
                     set_tasks.set(current_tasks);

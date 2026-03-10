@@ -4,7 +4,7 @@ use log::info;
 use std::sync::Arc;
 
 use crate::adapters::{
-    InMemoryEventBus, RodioAudioService, SqliteConfigRepository,
+    AudioThread, InMemoryEventBus, SqliteConfigRepository,
     SqliteTaskRepository, SqliteTimerRepository, TimerTickService,
     audio::{AudioServiceWrapper, register_audio_event_handlers},
     config::register_config_handlers,
@@ -118,8 +118,7 @@ pub async fn bootstrap(
         event_bus.clone();
 
     let audio_service = Arc::new(AudioServiceWrapper::new(Box::new(
-        RodioAudioService::new()
-            .context("Failed to initialize audio service")?,
+        AudioThread::new().context("Failed to initialize audio service")?,
     )));
 
     // Create timer repository

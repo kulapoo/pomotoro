@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use domain::{Task, TaskId, TaskStatus, Timer, timer::TimerState};
+use domain::{Task, TaskBuilder, TaskId, TaskStatus, Timer, timer::TimerState};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -24,21 +24,21 @@ pub struct TaskDb {
 
 impl From<Task> for TaskDb {
     fn from(task: Task) -> Self {
-        let tags = if task.tags.is_empty() {
+        let tags = if task.tags().is_empty() {
             None
         } else {
-            Some(serde_json::to_string(&task.tags).unwrap_or_default())
+            Some(serde_json::to_string(task.tags()).unwrap_or_default())
         };
 
-        let config = serde_json::to_string(&task.config).unwrap_or_default();
+        let config = serde_json::to_string(task.config()).unwrap_or_default();
 
         Self {
-            id: task.id.to_string(),
-            name: task.name,
-            description: task.description,
-            sessions: task.max_sessions as i32,
-            current_sessions: task.current_sessions as i32,
-            status: match task.status {
+            id: task.id().to_string(),
+            name: task.name().to_string(),
+            description: task.description().map(|s| s.to_string()),
+            sessions: task.max_sessions() as i32,
+            current_sessions: task.current_sessions() as i32,
+            status: match task.status() {
                 TaskStatus::Active => "active",
                 TaskStatus::Completed => "completed",
                 TaskStatus::Paused => "paused",
@@ -47,9 +47,9 @@ impl From<Task> for TaskDb {
             .to_string(),
             tags,
             config,
-            is_default: task.default,
-            created_at: task.created_at.to_rfc3339(),
-            updated_at: task.created_at.to_rfc3339(),
+            is_default: task.is_default(),
+            created_at: task.created_at().to_rfc3339(),
+            updated_at: task.updated_at().to_rfc3339(),
         }
     }
 }
@@ -93,20 +93,31 @@ impl TryFrom<TaskDb> for Task {
         let config: domain::Config = serde_json::from_str(&db.config)
             .unwrap_or_else(|_| domain::Config::default());
 
-        Ok(Task {
-            id: task_id,
-            name: db.name,
-            description: db.description,
-            max_sessions: db.sessions as u8,
-            current_sessions: db.current_sessions as u8,
-            status,
-            tags,
-            default: db.is_default,
-            created_at,
-            completed_at: None,
-            updated_at,
-            config,
-        })
+        let mut builder = TaskBuilder::new()
+            .id(task_id)
+            .name(db.name)
+            .max_sessions(db.sessions as u8)
+            .current_sessions(db.current_sessions as u8)
+            .status(status)
+            .tags(tags)
+            .default(db.is_default)
+            .created_at(created_at)
+            .config(config);
+
+        if let Some(description) = db.description {
+            builder = builder.description(description);
+        }
+
+        let mut task = builder.build()?;
+
+        // The builder sets updated_at to Utc::now(), so we need to
+        // override it with the stored value via patch
+        task.patch(domain::TaskPatch {
+            updated_at: Some(updated_at),
+            ..Default::default()
+        });
+
+        Ok(task)
     }
 }
 

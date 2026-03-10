@@ -27,7 +27,7 @@ pub fn TaskList(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
                     move || {
                         let tasks = vm.with_value(|v| v.get_tasks());
                         let active_task_id = vm.with_value(|v| {
-                            v.get_active_task().as_ref().map(|t| t.id)
+                            v.get_active_task().as_ref().map(|t| t.id())
                         });
 
                         view! {
@@ -40,12 +40,12 @@ pub fn TaskList(vm: StoredValue<TaskDirectoryViewModel>) -> impl IntoView {
 
                                 <For
                                     each=move || vm.with_value(|v| v.get_tasks())
-                                    key=|task| task.id
+                                    key=|task| task.id()
                                     children={
                                         let navigate = navigate.clone();
                                         move |task| {
-                                            let is_active = active_task_id == Some(task.id);
-                                            let task_id = task.id;
+                                            let is_active = active_task_id == Some(task.id());
+                                            let task_id = task.id();
                                             let edit_url = format!("/tasks/{}/edit", task_id);
                                             let navigate = navigate.clone();
                                             view! {

@@ -6,18 +6,18 @@ use crate::{Config, Error, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
-    pub id: Id,
-    pub name: String,
-    pub description: Option<String>,
-    pub max_sessions: u8,
-    pub current_sessions: u8,
-    pub tags: Vec<String>,
-    pub config: Config,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub completed_at: Option<DateTime<Utc>>,
-    pub status: Status,
-    pub default: bool,
+    pub(crate) id: Id,
+    pub(crate) name: String,
+    pub(crate) description: Option<String>,
+    pub(crate) max_sessions: u8,
+    pub(crate) current_sessions: u8,
+    pub(crate) tags: Vec<String>,
+    pub(crate) config: Config,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) updated_at: DateTime<Utc>,
+    pub(crate) completed_at: Option<DateTime<Utc>>,
+    pub(crate) status: Status,
+    pub(crate) default: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -35,9 +35,102 @@ pub struct TaskPatch {
 }
 
 impl Task {
+    // ---- Getters ----
+
     pub fn id(&self) -> Id {
         self.id
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn max_sessions(&self) -> u8 {
+        self.max_sessions
+    }
+
+    pub fn current_sessions(&self) -> u8 {
+        self.current_sessions
+    }
+
+    pub fn tags(&self) -> &[String] {
+        &self.tags
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
+    }
+
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    pub fn updated_at(&self) -> DateTime<Utc> {
+        self.updated_at
+    }
+
+    pub fn completed_at(&self) -> Option<DateTime<Utc>> {
+        self.completed_at
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    // ---- Domain mutation methods ----
+
+    /// Force-complete the task by setting sessions to max and status to Completed.
+    pub fn complete(&mut self) {
+        self.current_sessions = self.max_sessions;
+        self.status = Status::Completed;
+        self.completed_at = Some(Utc::now());
+    }
+
+    /// Update the task name. Returns error if name is empty.
+    pub fn set_name(&mut self, name: String) -> Result<()> {
+        let trimmed = name.trim().to_string();
+        if trimmed.is_empty() {
+            return Err(Error::EmptyTaskName);
+        }
+        self.name = trimmed;
+        Ok(())
+    }
+
+    /// Set the task description.
+    pub fn set_description(&mut self, description: String) {
+        self.description = Some(description);
+    }
+
+    /// Update max sessions. If current sessions already exceed the new max,
+    /// the task is automatically completed.
+    pub fn set_max_sessions(&mut self, max_sessions: u8) -> Result<()> {
+        if max_sessions == 0 {
+            return Err(Error::InvalidSessionCount {
+                count: max_sessions,
+            });
+        }
+        self.max_sessions = max_sessions;
+        if self.current_sessions >= max_sessions {
+            self.status = Status::Completed;
+            self.completed_at = Some(Utc::now());
+        }
+        Ok(())
+    }
+
+    /// Replace the task's tags.
+    pub fn set_tags(&mut self, tags: Vec<String>) {
+        self.tags = tags;
+    }
+
+    // ---- Constructors ----
 
     pub fn new_default() -> Result<Self> {
         use super::builder::Builder;
@@ -169,7 +262,7 @@ impl Task {
             self.default = default;
         }
         if let Some(updated_at) = update.updated_at {
-            self.created_at = updated_at;
+            self.updated_at = updated_at;
         }
         if let Some(status) = update.status {
             self.status = status;
@@ -212,11 +305,11 @@ mod tests {
     #[test]
     fn test_task_creation() {
         let task = create_test_task();
-        assert_eq!(task.name, "Test Task");
-        assert_eq!(task.max_sessions, 5);
-        assert_eq!(task.current_sessions, 0);
-        assert_eq!(task.status, Status::Active);
-        assert!(!task.default);
+        assert_eq!(task.name(), "Test Task");
+        assert_eq!(task.max_sessions(), 5);
+        assert_eq!(task.current_sessions(), 0);
+        assert_eq!(task.status(), Status::Active);
+        assert!(!task.is_default());
     }
 
     #[test]
@@ -234,13 +327,13 @@ mod tests {
         let mut task = create_test_task();
 
         assert!(task.increment_session().is_ok());
-        assert_eq!(task.current_sessions, 1);
+        assert_eq!(task.current_sessions(), 1);
 
         task.current_sessions = 4;
         assert!(task.increment_session().is_ok());
-        assert_eq!(task.current_sessions, 5);
-        assert_eq!(task.status, Status::Completed);
-        assert!(task.completed_at.is_some());
+        assert_eq!(task.current_sessions(), 5);
+        assert_eq!(task.status(), Status::Completed);
+        assert!(task.completed_at().is_some());
 
         assert!(task.increment_session().is_err());
     }
@@ -254,9 +347,9 @@ mod tests {
 
         task.reset_sessions();
 
-        assert_eq!(task.current_sessions, 0);
-        assert_eq!(task.status, Status::Active);
-        assert!(task.completed_at.is_none());
+        assert_eq!(task.current_sessions(), 0);
+        assert_eq!(task.status(), Status::Active);
+        assert!(task.completed_at().is_none());
     }
 
     #[test]
@@ -294,7 +387,7 @@ mod tests {
         let mut task = create_test_task();
 
         assert!(task.pause().is_ok());
-        assert_eq!(task.status, Status::Paused);
+        assert_eq!(task.status(), Status::Paused);
 
         task.status = Status::Completed;
         assert!(task.pause().is_err());
@@ -306,7 +399,7 @@ mod tests {
         task.status = Status::Paused;
 
         assert!(task.activate().is_ok());
-        assert_eq!(task.status, Status::Active);
+        assert_eq!(task.status(), Status::Active);
 
         task.status = Status::Completed;
         assert!(task.activate().is_err());
@@ -317,7 +410,7 @@ mod tests {
         let mut task = create_test_task();
 
         assert!(task.queue().is_ok());
-        assert_eq!(task.status, Status::Queued);
+        assert_eq!(task.status(), Status::Queued);
 
         task.status = Status::Completed;
         assert!(task.queue().is_err());

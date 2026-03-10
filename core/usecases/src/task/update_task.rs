@@ -41,70 +41,62 @@ pub async fn update_task(
     let updated_tags = cmd.tags.clone();
 
     if let Some(name) = cmd.name {
-        if name.trim().is_empty() {
-            return Err(Error::InvalidSessionCount { count: 0 });
-        }
-        task.name = name.trim().to_string();
+        task.set_name(name)?;
     }
 
     if let Some(description) = cmd.description {
-        task.description = Some(description);
+        task.set_description(description);
     }
 
     if let Some(max_sessions) = cmd.max_sessions {
-        if max_sessions == 0 {
-            return Err(Error::InvalidSessionCount {
-                count: max_sessions,
-            });
-        }
-        task.max_sessions = max_sessions;
-
-        if task.current_sessions >= max_sessions {
-            task.status = domain::TaskStatus::Completed;
-            task.completed_at = Some(chrono::Utc::now());
-        }
+        task.set_max_sessions(max_sessions)?;
     }
 
     if let Some(tags) = cmd.tags {
-        task.tags = tags;
+        task.set_tags(tags);
     }
 
     // Update timer settings if any provided (using builder methods for validation)
     if let Some(work_duration) = cmd.work_duration {
-        task.config.timer =
-            task.config.timer.with_work_duration(work_duration)?;
+        let new_timer =
+            task.config().timer.with_work_duration(work_duration)?;
+        task.config_mut().timer = new_timer;
     }
     if let Some(short_break_duration) = cmd.short_break_duration {
-        task.config.timer = task
-            .config
+        let new_timer = task
+            .config()
             .timer
             .with_short_break_duration(short_break_duration)?;
+        task.config_mut().timer = new_timer;
     }
     if let Some(long_break_duration) = cmd.long_break_duration {
-        task.config.timer = task
-            .config
+        let new_timer = task
+            .config()
             .timer
             .with_long_break_duration(long_break_duration)?;
+        task.config_mut().timer = new_timer;
     }
     if let Some(sessions_until_long_break) = cmd.sessions_until_long_break {
-        task.config.timer = task
-            .config
+        let new_timer = task
+            .config()
             .timer
             .with_sessions_until_long_break(sessions_until_long_break)?;
+        task.config_mut().timer = new_timer;
     }
     if let Some(enable_screen_blocking) = cmd.enable_screen_blocking {
-        task.config.general.enable_screen_blocking = enable_screen_blocking;
+        task.config_mut().general.enable_screen_blocking =
+            enable_screen_blocking;
     }
 
     if let Some(audio_config) = cmd.audio_config {
         audio_config.validate()?;
-        task.config.audio = audio_config;
+        task.config_mut().audio = audio_config;
     }
 
     task_repo.update(task.clone()).await?;
 
     let updated_event = TaskUpdated::new(
-        task.id,
+        task.id(),
         updated_name,
         updated_description,
         updated_max_sessions,

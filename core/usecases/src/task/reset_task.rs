@@ -41,10 +41,10 @@ pub async fn reset_task(
 
     event_publisher.publish(Box::new(domain::TaskReset::new(
         task_id,
-        Some(task_event.name),
-        task_event.description,
-        Some(task_event.max_sessions),
-        Some(task_event.tags),
+        Some(task_event.name().to_string()),
+        task_event.description().map(|s| s.to_string()),
+        Some(task_event.max_sessions()),
+        Some(task_event.tags().to_vec()),
         1,
     )));
 

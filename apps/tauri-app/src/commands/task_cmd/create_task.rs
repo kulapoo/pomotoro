@@ -101,7 +101,7 @@ pub async fn create_task(
     .await
     {
         Ok(task) => {
-            info!("Created task: id={}, name='{}'", task.id, task.name);
+            info!("Created task: id={}, name='{}'", task.id(), task.name());
             Ok(task)
         }
         Err(e) => {

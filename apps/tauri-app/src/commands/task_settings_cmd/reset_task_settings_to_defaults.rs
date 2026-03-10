@@ -19,6 +19,6 @@ pub async fn reset_task_settings_to_defaults(
 
     Ok(TaskSettingsResponse {
         task_id: updated_task.id().to_string(),
-        settings: Some(updated_task.config.clone()),
+        settings: Some(updated_task.config().clone()),
     })
 }

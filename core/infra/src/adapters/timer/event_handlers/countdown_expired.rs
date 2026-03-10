@@ -95,7 +95,7 @@ impl EventHandler for CountdownExpiredHandler {
             )
             .await?;
 
-            let timer_config = task.config.timer.clone();
+            let timer_config = task.config().timer.clone();
 
             if !(task.is_completed() && next_phase == Phase::Work) {
                 // Start the timer tick loop (infrastructure concern)

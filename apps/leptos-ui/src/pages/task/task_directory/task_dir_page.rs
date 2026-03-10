@@ -14,8 +14,8 @@ pub fn TaskDirectoryPage() -> impl IntoView {
                     {move || {
                         let tasks = vm.with_value(|v| v.get_tasks());
                         let total = tasks.len();
-                        let completed = tasks.iter().filter(|t| t.status == domain::TaskStatus::Completed).count();
-                        let active = tasks.iter().filter(|t| t.status == domain::TaskStatus::Active).count();
+                        let completed = tasks.iter().filter(|t| t.status() == domain::TaskStatus::Completed).count();
+                        let active = tasks.iter().filter(|t| t.status() == domain::TaskStatus::Active).count();
                         view! {
                             <div class="flex flex-col items-center px-4 py-2 bg-white rounded-lg shadow-sm border border-slate-200">
                                 <span class="text-2xl font-bold text-slate-800">{total}</span>

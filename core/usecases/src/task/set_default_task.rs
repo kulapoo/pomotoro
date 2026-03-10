@@ -30,7 +30,7 @@ pub async fn set_default_task(
 
         // Publish event for the previously default task
         let updated_event =
-            TaskUpdated::new(current_default.id, None, None, None, None, 1);
+            TaskUpdated::new(current_default.id(), None, None, None, None, 1);
         event_publisher.publish(Box::new(updated_event));
     }
 
@@ -38,7 +38,7 @@ pub async fn set_default_task(
     task_repo.update(task.clone()).await?;
 
     // Publish event for the newly default task
-    let updated_event = TaskUpdated::new(task.id, None, None, None, None, 1);
+    let updated_event = TaskUpdated::new(task.id(), None, None, None, None, 1);
     event_publisher.publish(Box::new(updated_event));
 
     Ok(task)

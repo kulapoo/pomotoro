@@ -23,12 +23,14 @@ pub fn TaskCompletionIndicator(
                 if t.is_completed() {
                     format!(
                         "✓ Complete ({}/{})",
-                        t.current_sessions, t.max_sessions
+                        t.current_sessions(),
+                        t.max_sessions()
                     )
                 } else {
                     format!(
                         "{}/{} sessions",
-                        t.current_sessions, t.max_sessions
+                        t.current_sessions(),
+                        t.max_sessions()
                     )
                 }
             })

@@ -63,9 +63,9 @@ pub async fn switch_task(
             if let Some(mut prev_task) =
                 task_repo.get_by_id(prev_task_id).await?
             {
-                if prev_task.status != TaskStatus::Completed {
+                if prev_task.status() != TaskStatus::Completed {
                     prev_task.queue()?;
-                    let prev_id = prev_task.id;
+                    let prev_id = prev_task.id();
                     task_repo.update(prev_task).await?;
 
                     // Publish TaskUpdated event for previous task
@@ -79,8 +79,8 @@ pub async fn switch_task(
 
     // Set new task status to Active
     task.activate()?;
-    let task_name = task.name.clone();
-    let task_id = task.id;
+    let task_name = task.name().to_string();
+    let task_id = task.id();
     task_repo.update(task).await?;
 
     // Publish TaskUpdated event for new active task

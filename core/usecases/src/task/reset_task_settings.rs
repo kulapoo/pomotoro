@@ -20,10 +20,10 @@ pub async fn reset_task_settings_to_defaults(
 
     publisher.publish(Box::new(TaskUpdated::new(
         task_id,
-        Some(task.name.clone()),
-        task.description.clone(),
-        Some(task.max_sessions),
-        Some(task.tags.clone()),
+        Some(task.name().to_string()),
+        task.description().map(|s| s.to_string()),
+        Some(task.max_sessions()),
+        Some(task.tags().to_vec()),
         0,
     )));
 

@@ -139,8 +139,8 @@ impl AppContextBuilder {
                 .ok_or(domain::Error::DefaultTaskNotFound)?;
 
             // Create a new timer for this task (not the DEFAULT_TASK_ID timer)
-            let mut timer = domain::Timer::new(task.id);
-            let events = timer.start(&task.config.timer).map_err(|e| {
+            let mut timer = domain::Timer::new(task.id());
+            let events = timer.start(&task.config().timer).map_err(|e| {
                 domain::Error::RepositoryError {
                     message: e.to_string(),
                 }
@@ -160,8 +160,8 @@ impl AppContextBuilder {
             // Start the tick loop
             ctx.timer_tick_service
                 .start_timer_tick_loop(
-                    Some(task.config.timer.clone()),
-                    Some(task.id),
+                    Some(task.config().timer.clone()),
+                    Some(task.id()),
                 )
                 .await
                 .map_err(|e| domain::Error::RepositoryError { message: e })?;

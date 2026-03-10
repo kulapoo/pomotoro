@@ -38,17 +38,13 @@ impl EventHandler for TimerStartedNotificationHandler {
         if let Some(timer_started) =
             event.as_any().downcast_ref::<TimerStarted>()
         {
-            let task_name = if let Some(task) = self
+            let task_name = self
                 .task_repository
                 .get_all()
                 .await?
                 .into_iter()
-                .find(|t| t.id == timer_started.task_id)
-            {
-                Some(task.name)
-            } else {
-                None
-            };
+                .find(|t| t.id() == timer_started.task_id)
+                .map(|task| task.name().to_string());
 
             let notification_event = NotificationEvent::SessionStarted {
                 phase: timer_started.phase,
@@ -172,17 +168,13 @@ impl EventHandler for WorkPhaseCompletedNotificationHandler {
         if let Some(work_completed) =
             event.as_any().downcast_ref::<WorkPhaseCompleted>()
         {
-            let task_name = if let Some(task) = self
+            let task_name = self
                 .task_repository
                 .get_all()
                 .await?
                 .into_iter()
-                .find(|t| t.id == work_completed.task_id)
-            {
-                Some(task.name)
-            } else {
-                None
-            };
+                .find(|t| t.id() == work_completed.task_id)
+                .map(|task| task.name().to_string());
 
             let notification_event =
                 NotificationEvent::WorkPhaseCompleted { task_name };

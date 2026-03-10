@@ -8,9 +8,6 @@ pub struct AudioServiceWrapper {
     inner: Mutex<Box<dyn AudioService>>,
 }
 
-unsafe impl Send for AudioServiceWrapper {}
-unsafe impl Sync for AudioServiceWrapper {}
-
 impl AudioServiceWrapper {
     pub fn new(service: Box<dyn AudioService>) -> Self {
         Self {

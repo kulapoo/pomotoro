@@ -34,7 +34,8 @@ pub async fn complete_task(
 
     info!(
         "Successfully completed task: id={}, name={}",
-        task_id, task.name
+        task_id,
+        task.name()
     );
     Ok(task)
 }

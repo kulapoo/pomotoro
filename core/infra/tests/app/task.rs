@@ -24,10 +24,10 @@ async fn task_should_create_with_name() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: task.name,
-            description: task.description,
-            max_sessions: task.max_sessions,
-            tags: task.tags,
+            name: task.name().to_string(),
+            description: task.description().map(String::from),
+            max_sessions: task.max_sessions(),
+            tags: task.tags().to_vec(),
             config: None,
         },
     )
@@ -56,10 +56,10 @@ async fn task_should_have_unique_ids() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: task1.name,
-            description: task1.description,
-            max_sessions: task1.max_sessions,
-            tags: task1.tags,
+            name: task1.name().to_string(),
+            description: task1.description().map(String::from),
+            max_sessions: task1.max_sessions(),
+            tags: task1.tags().to_vec(),
             config: None,
         },
     )
@@ -70,10 +70,10 @@ async fn task_should_have_unique_ids() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: task2.name,
-            description: task2.description,
-            max_sessions: task2.max_sessions,
-            tags: task2.tags,
+            name: task2.name().to_string(),
+            description: task2.description().map(String::from),
+            max_sessions: task2.max_sessions(),
+            tags: task2.tags().to_vec(),
             config: None,
         },
     )
@@ -96,11 +96,14 @@ async fn task_should_have_unique_ids() {
     );
     assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskCreated>());
 
-    assert_ne!(&result1.clone().unwrap().id, &result2.clone().unwrap().id);
+    assert_ne!(
+        &result1.clone().unwrap().id(),
+        &result2.clone().unwrap().id()
+    );
 
     assert_ne!(
-        result1.clone().unwrap().id.inner(),
-        result2.clone().unwrap().id.inner()
+        result1.clone().unwrap().id().inner(),
+        result2.clone().unwrap().id().inner()
     );
 }
 
@@ -116,10 +119,10 @@ async fn task_should_find_task_by_id() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: fixture.name.clone(),
-            description: fixture.description.clone(),
-            max_sessions: fixture.max_sessions,
-            tags: fixture.tags.clone(),
+            name: fixture.name().to_string(),
+            description: fixture.description().map(String::from),
+            max_sessions: fixture.max_sessions(),
+            tags: fixture.tags().to_vec(),
             config: None,
         },
     )
@@ -144,13 +147,13 @@ async fn task_should_find_task_by_id() {
         .expect("Task not found");
 
     // Verify the retrieved task matches both the created result and original fixture
-    assert_eq!(retrieved_task.id, created_task.id());
-    assert_eq!(retrieved_task.id, created_task.id);
-    assert_eq!(retrieved_task.name, fixture.name);
-    assert_eq!(retrieved_task.description, fixture.description);
-    assert_eq!(retrieved_task.max_sessions, fixture.max_sessions);
-    assert_eq!(retrieved_task.tags, fixture.tags);
-    assert_eq!(retrieved_task.status, fixture.status);
+    assert_eq!(retrieved_task.id(), created_task.id());
+    assert_eq!(retrieved_task.id(), created_task.id());
+    assert_eq!(retrieved_task.name(), fixture.name());
+    assert_eq!(retrieved_task.description(), fixture.description());
+    assert_eq!(retrieved_task.max_sessions(), fixture.max_sessions());
+    assert_eq!(retrieved_task.tags(), fixture.tags());
+    assert_eq!(retrieved_task.status(), fixture.status());
 }
 
 #[tokio::test]
@@ -164,10 +167,10 @@ async fn task_should_update_task() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: fixture.name,
-            description: fixture.description,
-            max_sessions: fixture.max_sessions,
-            tags: fixture.tags,
+            name: fixture.name().to_string(),
+            description: fixture.description().map(String::from),
+            max_sessions: fixture.max_sessions(),
+            tags: fixture.tags().to_vec(),
             config: None,
         },
     )
@@ -194,7 +197,7 @@ async fn task_should_update_task() {
     );
     assert_utils::assert_event_subscribed(&ctx, TypeId::of::<TaskUpdated>());
 
-    assert_eq!(updated_task.name, "Updated Task");
+    assert_eq!(updated_task.name(), "Updated Task");
 }
 
 #[tokio::test]
@@ -208,10 +211,10 @@ async fn task_should_delete_task() {
         ctx.config_repo.clone(),
         ctx.event_bus.clone(),
         CreateTaskCmd {
-            name: fixture.name,
-            description: fixture.description,
-            max_sessions: fixture.max_sessions,
-            tags: fixture.tags,
+            name: fixture.name().to_string(),
+            description: fixture.description().map(String::from),
+            max_sessions: fixture.max_sessions(),
+            tags: fixture.tags().to_vec(),
             config: None,
         },
     )

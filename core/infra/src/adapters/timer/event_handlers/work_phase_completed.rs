@@ -68,7 +68,7 @@ impl EventHandler for WorkPhaseCompletedHandler {
         if task.get_remaining_sessions() <= 1 {
             let task_completed = TaskCompleted::new(
                 work_phase_completed.task_id,
-                task.max_sessions,
+                task.max_sessions(),
                 1,
             );
             self.emitter

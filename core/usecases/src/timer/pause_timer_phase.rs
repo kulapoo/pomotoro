@@ -44,7 +44,7 @@ pub async fn pause_timer_phase(
     )?;
 
     // Execute domain logic: pause the timer
-    let events = timer.pause(&task.config.timer)?;
+    let events = timer.pause(&task.config().timer)?;
     // Save the timer state
     timer_repo.save(&timer).await?;
 

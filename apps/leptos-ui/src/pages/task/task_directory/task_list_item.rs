@@ -13,22 +13,23 @@ pub fn TaskListItem<F>(
 where
     F: Fn(Task) + 'static + Clone,
 {
-    let task_id = task.id;
+    let task_id = task.id();
     let task_for_edit = task.clone();
     let navigate = use_navigate();
 
     // Create a single derived signal for button state
-    let is_task_completed = task.status == TaskStatus::Completed;
+    let is_task_completed = task.status() == TaskStatus::Completed;
     let button_disabled = is_active || is_task_completed;
     let button_enabled = !is_active && !is_task_completed;
 
-    let progress_percentage = if task.max_sessions > 0 {
-        (task.current_sessions as f64 / task.max_sessions as f64) * 100.0
+    let progress_percentage = if task.max_sessions() > 0 {
+        (task.current_sessions() as f64 / task.max_sessions() as f64) * 100.0
     } else {
         0.0
     };
 
-    let task_classes = match (&task.status, is_active) {
+    let task_status = task.status();
+    let task_classes = match (task_status, is_active) {
         (_, true) => "bg-indigo-600/5 border-l-4 border-indigo-600 shadow-md",
         (TaskStatus::Completed, _) => "bg-slate-50 opacity-75",
         (TaskStatus::Paused, _) => "bg-amber-500/5 border-l-4 border-amber-500",
@@ -36,7 +37,13 @@ where
         _ => "bg-white",
     };
 
-    web_sys::console::log_1(&format!("Task {:?}", task.status).into());
+    web_sys::console::log_1(&format!("Task {:?}", task.status()).into());
+
+    let task_name = task.name().to_string();
+    let task_description = task.description().map(|s| s.to_string());
+    let task_tags = task.tags().to_vec();
+    let current_sessions = task.current_sessions();
+    let max_sessions = task.max_sessions();
 
     view! {
         <div class={format!("rounded-lg shadow-sm border border-slate-200 transition-all duration-200 hover:shadow-md {}", task_classes)}>
@@ -44,16 +51,16 @@ where
                 vm.with_value(|v| v.switch_active_task(task_id, None));
             }>
                 <div class="flex justify-between items-start mb-3">
-                    <h3 class="text-lg font-semibold text-slate-800">{task.name.clone()}</h3>
+                    <h3 class="text-lg font-semibold text-slate-800">{task_name.clone()}</h3>
                     <span class={format!("px-3 py-1 text-xs font-medium rounded-full {}",
-                        match &task.status {
+                        match task_status {
                             TaskStatus::Active => "bg-indigo-600 text-white",
                             TaskStatus::Completed => "bg-emerald-500 text-white",
                             TaskStatus::Paused => "bg-amber-500 text-white",
                             TaskStatus::Queued => "bg-slate-600 text-white",
                         }
                     )}>
-                        {match &task.status {
+                        {match task_status {
                             TaskStatus::Active => "Active",
                             TaskStatus::Completed => "Completed",
                             TaskStatus::Paused => "Paused",
@@ -66,7 +73,7 @@ where
                     {format!("ID: {}", task_id.to_string().chars().take(8).collect::<String>())}
                 </p>
 
-                {task.description.clone().map(|desc| {
+                {task_description.clone().map(|desc| {
                     if !desc.is_empty() {
                         view! {
                             <p class="text-slate-600 text-sm mb-3">{desc}</p>
@@ -76,10 +83,11 @@ where
                     }
                 })}
 
-                {if !task.tags.is_empty() {
+                {if !task_tags.is_empty() {
+                    let tags_view = task_tags.clone();
                     view! {
                         <div class="flex flex-wrap gap-2 mb-3">
-                            {task.tags.iter().map(|tag| {
+                            {tags_view.iter().map(|tag| {
                                 view! {
                                     <span class="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded-md">{tag.clone()}</span>
                                 }
@@ -93,7 +101,7 @@ where
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="flex-1">
                         <span class="text-sm text-slate-600 mb-2 block">
-                            {format!("{} of {} pomodoros completed", task.current_sessions, task.max_sessions)}
+                            {format!("{} of {} pomodoros completed", current_sessions, max_sessions)}
                         </span>
                         <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                             <div
@@ -132,7 +140,7 @@ where
             </div>
 
             <div class="flex gap-2 px-4 pb-4 border-t border-slate-200 pt-3">
-                {if task.status == TaskStatus::Completed {
+                {if task_status == TaskStatus::Completed {
                     view! {
                         <button
                             class="p-2 text-2xl hover:bg-slate-100 rounded-md transition-all duration-200"

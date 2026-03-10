@@ -20,6 +20,6 @@ pub async fn update_task_settings(
 
     Ok(TaskSettingsResponse {
         task_id: updated_task.id().to_string(),
-        settings: Some(updated_task.config.clone()),
+        settings: Some(updated_task.config().clone()),
     })
 }

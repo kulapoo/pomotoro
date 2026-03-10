@@ -22,7 +22,7 @@ pub async fn delete_task(
     let deleted = task_repo.delete(cmd.id).await?;
 
     if deleted {
-        let deleted_event = TaskDeleted::new(task.id, 1);
+        let deleted_event = TaskDeleted::new(task.id(), 1);
         event_publisher.publish(Box::new(deleted_event));
     }
 

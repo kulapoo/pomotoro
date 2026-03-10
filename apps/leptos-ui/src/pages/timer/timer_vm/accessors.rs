@@ -22,12 +22,12 @@ impl TimerViewModel {
     pub fn get_active_task_name(&self) -> String {
         self.active_task
             .get()
-            .map(|t| t.name.clone())
+            .map(|t| t.name().to_string())
             .unwrap_or_else(|| "No Task Selected".to_string())
     }
 
     pub fn get_active_entity_id(&self) -> Option<String> {
-        self.active_task.get().map(|task| task.id.to_string())
+        self.active_task.get().map(|task| task.id().to_string())
     }
 
     pub fn can_skip(&self) -> bool {

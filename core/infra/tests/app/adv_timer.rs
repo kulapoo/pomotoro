@@ -52,7 +52,7 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     )
     .await;
 
-    let task1_id = task1_result.clone().expect("Failed to create task").id;
+    let task1_id = task1_result.clone().expect("Failed to create task").id();
 
     let session0_timer_is_idle = get_timer(&ctx).await.state().is_idle();
 
@@ -75,7 +75,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     let session1_timer_status = get_timer(&ctx).await.state().status();
 
-    let task_1_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_1_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // Complete first work session
 
@@ -92,7 +93,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     let session1_timer_is_break_phase =
         get_timer(&ctx).await.state().is_break_phase();
 
-    let task_2_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_2_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // Complete first short break
 
@@ -124,7 +126,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     let session2_timer_is_break_phase =
         get_timer(&ctx).await.state().is_break_phase();
-    let task_3_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_3_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // Complete Session 2 Short Break
     let session2_break_result = complete_timer_phase(
@@ -153,7 +156,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
 
     let session3_timer_is_break_phase =
         get_timer(&ctx).await.state().is_break_phase();
-    let task_4_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_4_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // Complete Session 3 Short Break
     let session3_break_result = complete_timer_phase(
@@ -185,7 +189,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     let session4_timer_state = get_timer(&ctx).await.state().clone();
     let session4_timer_is_long_break =
         matches!(session4_timer_state, TimerState::LongBreak { .. });
-    let task_5_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_5_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // Complete long break
 
@@ -219,7 +224,8 @@ async fn timer_should_complete_full_pomodoro_cycle() {
     let session5_timer_state = get_timer(&ctx).await.state().clone();
     let session5_timer_is_short_break =
         matches!(session5_timer_state, TimerState::ShortBreak { .. });
-    let task_6_current_sessions = get_active_task(&ctx).await.current_sessions;
+    let task_6_current_sessions =
+        get_active_task(&ctx).await.current_sessions();
 
     // (Cleanup is handled automatically by the test framework)
 
@@ -296,7 +302,7 @@ async fn should_skip_from_work_to_break_phase() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await;
@@ -314,7 +320,7 @@ async fn should_skip_from_work_to_break_phase() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -329,7 +335,7 @@ async fn should_skip_from_work_to_break_phase() {
     // Check if task got session credit
     let task_after_skip = ctx
         .task_repo
-        .get_by_id(task.id)
+        .get_by_id(task.id())
         .await
         .expect("Failed to get task")
         .expect("Task not found");
@@ -349,7 +355,8 @@ async fn should_skip_from_work_to_break_phase() {
 
     // Task should get session credit when skipping work phase
     assert_eq!(
-        task_after_skip.current_sessions, 1,
+        task_after_skip.current_sessions(),
+        1,
         "Task should get session credit when skipping work phase"
     );
 }
@@ -381,7 +388,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await;
@@ -390,8 +397,8 @@ async fn pause_and_resume_should_maintain_timer_state() {
     for _ in 0..600 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task.id).await.unwrap().unwrap();
-        let _tick_result = timer.tick(&task_config.config.timer).unwrap();
+            ctx.task_repo.get_by_id(task.id()).await.unwrap().unwrap();
+        let _tick_result = timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
@@ -404,7 +411,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
 
     // Pause the timer
     let pause_result = usecases::timer::pause_timer_phase(
-        task.id,
+        task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -424,15 +431,15 @@ async fn pause_and_resume_should_maintain_timer_state() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         if timer.state().status() == TimerStatus::Running {
             let task_config =
-                ctx.task_repo.get_by_id(task.id).await.unwrap().unwrap();
-            let _tick_result = timer.tick(&task_config.config.timer);
+                ctx.task_repo.get_by_id(task.id()).await.unwrap().unwrap();
+            let _tick_result = timer.tick(&task_config.config().timer);
             ctx.timer_repo.save(&timer).await.unwrap();
         }
     }
 
     // Resume the timer
     let resume_result = usecases::timer::resume_timer_phase(
-        task.id,
+        task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -475,7 +482,8 @@ async fn pause_and_resume_should_maintain_timer_state() {
         "Duration should remain the same after pause/resume"
     );
     assert_eq!(
-        active_task_after_resume, task.id,
+        active_task_after_resume,
+        task.id(),
         "Active task should be maintained after resume"
     );
 }
@@ -520,7 +528,7 @@ async fn task_with_custom_settings_overrides_defaults() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await;
@@ -537,7 +545,7 @@ async fn task_with_custom_settings_overrides_defaults() {
 
     // Complete work phase to trigger break with custom duration
     let complete_work_result = complete_timer_phase(
-        task.id,
+        task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -658,7 +666,7 @@ async fn should_filter_tasks_by_status() {
     // Assert
     // Check queued tasks
     let queued_names: Vec<String> =
-        queued_tasks.iter().map(|t| t.name.clone()).collect();
+        queued_tasks.iter().map(|t| t.name().to_string()).collect();
     assert!(
         queued_names.contains(&"Queued task 1".to_string()),
         "Should find 'Queued task 1'"
@@ -671,7 +679,7 @@ async fn should_filter_tasks_by_status() {
 
     // Check active tasks (might include default task)
     let active_names: Vec<String> =
-        active_tasks.iter().map(|t| t.name.clone()).collect();
+        active_tasks.iter().map(|t| t.name().to_string()).collect();
     assert!(
         active_names.contains(&"Active task".to_string()),
         "Should find 'Active task'"
@@ -682,8 +690,10 @@ async fn should_filter_tasks_by_status() {
     );
 
     // Check completed tasks
-    let completed_names: Vec<String> =
-        completed_tasks.iter().map(|t| t.name.clone()).collect();
+    let completed_names: Vec<String> = completed_tasks
+        .iter()
+        .map(|t| t.name().to_string())
+        .collect();
     assert!(
         completed_names.contains(&"Completed task".to_string()),
         "Should find 'Completed task'"
@@ -732,7 +742,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await
@@ -742,7 +752,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
     for i in 0..3 {
         // Complete work phase
         complete_timer_phase(
-            task.id,
+            task.id(),
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -762,7 +772,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
 
         // Complete short break
         complete_timer_phase(
-            task.id,
+            task.id(),
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -776,7 +786,7 @@ async fn should_trigger_long_break_after_4_work_sessions() {
     // The timer should already be in work phase after completing the 3rd break
     // Complete 4th work phase - should trigger long break
     let complete_4th_result = complete_timer_phase(
-        task.id,
+        task.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -841,7 +851,7 @@ async fn should_switch_active_task_during_timer_session() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task1.id),
+            task_id: Some(task1.id()),
         },
     )
     .await
@@ -851,8 +861,8 @@ async fn should_switch_active_task_during_timer_session() {
     for _ in 0..600 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task1.id).await.unwrap().unwrap();
-        let _tick_result = timer.tick(&task_config.config.timer).unwrap();
+            ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
+        let _tick_result = timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
@@ -864,7 +874,9 @@ async fn should_switch_active_task_during_timer_session() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::task::SwitchActiveTaskCmd { task_id: task2.id },
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task2.id(),
+        },
     )
     .await;
 
@@ -881,9 +893,9 @@ async fn should_switch_active_task_during_timer_session() {
     for _ in 0..900 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task2.id).await.unwrap().unwrap();
+            ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
         let (phase_complete, _events) =
-            timer.tick(&task_config.config.timer).unwrap();
+            timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
         ticks_completed += 1;
 
@@ -891,7 +903,7 @@ async fn should_switch_active_task_during_timer_session() {
             println!("Phase complete after {} ticks", ticks_completed);
             // Complete the phase to move to break
             complete_timer_phase(
-                task2.id,
+                task2.id(),
                 ctx.task_repo.clone(),
                 ctx.timer_repo.clone(),
                 ctx.event_bus.clone(),
@@ -907,7 +919,7 @@ async fn should_switch_active_task_during_timer_session() {
         println!("Warning: Completed all 900 ticks without phase completion");
         // Force complete the phase
         complete_timer_phase(
-            task2.id,
+            task2.id(),
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -921,14 +933,14 @@ async fn should_switch_active_task_during_timer_session() {
     // Get final task states
     let task1_final = ctx
         .task_repo
-        .get_by_id(task1.id)
+        .get_by_id(task1.id())
         .await
         .expect("Failed to get task 1")
         .expect("Task 1 not found");
 
     let task2_final = ctx
         .task_repo
-        .get_by_id(task2.id)
+        .get_by_id(task2.id())
         .await
         .expect("Failed to get task 2")
         .expect("Task 2 not found");
@@ -936,7 +948,8 @@ async fn should_switch_active_task_during_timer_session() {
     // Assert
     assert!(switch_result.is_ok(), "Failed to switch task");
     assert_eq!(
-        active_task_after_switch, task2.id,
+        active_task_after_switch,
+        task2.id(),
         "Active task should be task2 after switch"
     );
     assert_eq!(
@@ -952,11 +965,13 @@ async fn should_switch_active_task_during_timer_session() {
 
     // Only task2 should get session credit
     assert_eq!(
-        task1_final.current_sessions, 0,
+        task1_final.current_sessions(),
+        0,
         "Task1 should not get session credit"
     );
     assert_eq!(
-        task2_final.current_sessions, 1,
+        task2_final.current_sessions(),
+        1,
         "Task2 should get session credit"
     );
 }
@@ -983,7 +998,7 @@ async fn should_emit_tick_events_every_second() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(default_task.id),
+            task_id: Some(default_task.id()),
         },
     )
     .await
@@ -1000,7 +1015,7 @@ async fn should_emit_tick_events_every_second() {
     for _i in 0..5 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
 
-        let (_, events) = timer.tick(&default_task.config.timer).unwrap();
+        let (_, events) = timer.tick(&default_task.config().timer).unwrap();
 
         // Find tick events
         for event in events {
@@ -1114,7 +1129,7 @@ async fn complete_productivity_workflow_integration() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task1.id),
+            task_id: Some(task1.id()),
         },
     )
     .await
@@ -1124,9 +1139,9 @@ async fn complete_productivity_workflow_integration() {
     for _ in 0..120 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task1.id).await.unwrap().unwrap();
+            ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
         let (phase_complete, _) =
-            timer.tick(&task_config.config.timer).unwrap();
+            timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {
@@ -1136,7 +1151,7 @@ async fn complete_productivity_workflow_integration() {
 
     // Complete work phase
     complete_timer_phase(
-        task1.id,
+        task1.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1150,9 +1165,9 @@ async fn complete_productivity_workflow_integration() {
     for _ in 0..60 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task1.id).await.unwrap().unwrap();
+            ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
         let (phase_complete, _) =
-            timer.tick(&task_config.config.timer).unwrap();
+            timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {
@@ -1162,7 +1177,7 @@ async fn complete_productivity_workflow_integration() {
 
     // Complete break
     complete_timer_phase(
-        task1.id,
+        task1.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1176,7 +1191,9 @@ async fn complete_productivity_workflow_integration() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::task::SwitchActiveTaskCmd { task_id: task2.id },
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task2.id(),
+        },
     )
     .await
     .expect("Failed to switch to task 2");
@@ -1185,14 +1202,14 @@ async fn complete_productivity_workflow_integration() {
     for _ in 0..60 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task2.id).await.unwrap().unwrap();
-        let _ = timer.tick(&task_config.config.timer).unwrap();
+            ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
+        let _ = timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
     // Pause timer
     pause_timer_phase(
-        task2.id,
+        task2.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1207,14 +1224,16 @@ async fn complete_productivity_workflow_integration() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        usecases::task::SwitchActiveTaskCmd { task_id: task3.id },
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task3.id(),
+        },
     )
     .await
     .expect("Failed to switch to task 3");
 
     // Resume timer with task3
     resume_timer_phase(
-        task3.id,
+        task3.id(),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1227,9 +1246,9 @@ async fn complete_productivity_workflow_integration() {
     for i in 0..60 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
-            ctx.task_repo.get_by_id(task3.id).await.unwrap().unwrap();
+            ctx.task_repo.get_by_id(task3.id()).await.unwrap().unwrap();
         let (phase_complete, _) =
-            timer.tick(&task_config.config.timer).unwrap();
+            timer.tick(&task_config.config().timer).unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {
@@ -1237,7 +1256,7 @@ async fn complete_productivity_workflow_integration() {
             phase_was_completed = true;
             // Complete the work phase
             complete_timer_phase(
-                task3.id,
+                task3.id(),
                 ctx.task_repo.clone(),
                 ctx.timer_repo.clone(),
                 ctx.event_bus.clone(),
@@ -1252,7 +1271,7 @@ async fn complete_productivity_workflow_integration() {
         println!("Phase was not completed after 60 ticks, forcing completion");
         // Force complete the phase since we've done the required work
         complete_timer_phase(
-            task3.id,
+            task3.id(),
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
             ctx.event_bus.clone(),
@@ -1265,19 +1284,22 @@ async fn complete_productivity_workflow_integration() {
 
     // Mark task3 as completed
     let mut task3_to_update =
-        ctx.task_repo.get_by_id(task3.id).await.unwrap().unwrap();
-    task3_to_update.status = TaskStatus::Completed;
+        ctx.task_repo.get_by_id(task3.id()).await.unwrap().unwrap();
+    task3_to_update.complete();
     ctx.task_repo
         .update(task3_to_update)
         .await
         .expect("Failed to update task 3");
 
     // Get final task states
-    let task1_final = ctx.task_repo.get_by_id(task1.id).await.unwrap().unwrap();
+    let task1_final =
+        ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
 
-    let task2_final = ctx.task_repo.get_by_id(task2.id).await.unwrap().unwrap();
+    let task2_final =
+        ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
 
-    let task3_final = ctx.task_repo.get_by_id(task3.id).await.unwrap().unwrap();
+    let task3_final =
+        ctx.task_repo.get_by_id(task3.id()).await.unwrap().unwrap();
 
     // Get incomplete task queue
     let all_tasks_final = ctx
@@ -1288,32 +1310,36 @@ async fn complete_productivity_workflow_integration() {
 
     let incomplete_queue: Vec<_> = all_tasks_final
         .iter()
-        .filter(|t| !t.status.is_completed())
+        .filter(|t| !t.status().is_completed())
         .cloned()
         .collect();
 
     // Assert
     // Verify task states
     assert_eq!(
-        task1_final.current_sessions, 1,
+        task1_final.current_sessions(),
+        1,
         "Task 1 should have 1 completed session"
     );
     assert_eq!(
-        task2_final.current_sessions, 0,
+        task2_final.current_sessions(),
+        0,
         "Task 2 should have 0 sessions (didn't complete)"
     );
     assert_eq!(
-        task3_final.current_sessions, 1,
-        "Task 3 should have 1 completed session"
+        task3_final.current_sessions(),
+        task3_final.max_sessions(),
+        "Task 3 should be completed (sessions set to max by complete())"
     );
     assert_eq!(
-        task3_final.status,
+        task3_final.status(),
         TaskStatus::Completed,
         "Task 3 should be completed"
     );
 
     // Verify completed task is not in queue
-    let has_task3_in_queue = incomplete_queue.iter().any(|t| t.id == task3.id);
+    let has_task3_in_queue =
+        incomplete_queue.iter().any(|t| t.id() == task3.id());
     assert!(
         !has_task3_in_queue,
         "Completed task 3 should not be in incomplete queue"
@@ -1361,7 +1387,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await
@@ -1377,7 +1403,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -1390,7 +1416,8 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
     assert!(skip1_result.is_ok(), "Failed to skip session 1");
     assert!(is_short_break1, "Session 1: Should be in SHORT break");
     assert_eq!(
-        task1.current_sessions, 1,
+        task1.current_sessions(),
+        1,
         "Session 1: Task should have 1 completed session"
     );
 
@@ -1399,7 +1426,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await
     .expect("Failed to skip break 1");
@@ -1411,7 +1438,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -1424,7 +1451,8 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
     assert!(skip2_result.is_ok(), "Failed to skip session 2");
     assert!(is_short_break2, "Session 2: Should be in SHORT break");
     assert_eq!(
-        task2.current_sessions, 2,
+        task2.current_sessions(),
+        2,
         "Session 2: Task should have 2 completed sessions"
     );
 
@@ -1433,7 +1461,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await
     .expect("Failed to skip break 2");
@@ -1445,7 +1473,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -1458,7 +1486,8 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
     assert!(skip3_result.is_ok(), "Failed to skip session 3");
     assert!(is_short_break3, "Session 3: Should be in SHORT break");
     assert_eq!(
-        task3.current_sessions, 3,
+        task3.current_sessions(),
+        3,
         "Session 3: Task should have 3 completed sessions"
     );
 
@@ -1467,7 +1496,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await
     .expect("Failed to skip break 3");
@@ -1479,7 +1508,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -1495,7 +1524,8 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         "Session 4: Should be in LONG break after 4 work sessions"
     );
     assert_eq!(
-        task4.current_sessions, 4,
+        task4.current_sessions(),
+        4,
         "Session 4: Task should have 4 completed sessions"
     );
 
@@ -1504,7 +1534,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await
     .expect("Failed to skip long break");
@@ -1516,7 +1546,7 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        task.id,
+        task.id(),
     )
     .await;
 
@@ -1532,7 +1562,8 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         "Session 5: Should be in SHORT break (new cycle)"
     );
     assert_eq!(
-        task5.current_sessions, 5,
+        task5.current_sessions(),
+        5,
         "Session 5: Task should have 5 completed sessions"
     );
 }

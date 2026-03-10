@@ -50,7 +50,7 @@ pub fn TimerPage() -> impl IntoView {
                 {move || {
                     let sessions_completed = vm.with_value(|v| v.get_sessions_completed());
                     let max_sessions = vm.with_value(|v| v.get_active_task())
-                        .map(|task| task.max_sessions as usize)
+                        .map(|task| task.max_sessions() as usize)
                         .unwrap_or(4);
                     (0..max_sessions).map(|i| {
                         let class = if i < sessions_completed {

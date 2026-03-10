@@ -667,7 +667,7 @@ async fn should_not_allow_config_update_during_active_timer() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(task.id),
+            task_id: Some(task.id()),
         },
     )
     .await;

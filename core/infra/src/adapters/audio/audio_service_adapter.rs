@@ -1,15 +1,19 @@
 use domain::{AudioService, PlaybackHandle, PlaybackRequest, Result};
 use std::sync::{Arc, Mutex as StdMutex};
-use super::RodioAudioService;
+use super::AudioThread;
 
+/// Adapter that wraps an `AudioThread` behind a `Mutex` and implements `AudioService`.
+///
+/// This allows sharing the `AudioThread` across multiple consumers while
+/// satisfying the `AudioService` trait's `&mut self` requirement.
 pub struct AudioServiceAdapter {
-    inner: Arc<StdMutex<RodioAudioService>>,
+    inner: Arc<StdMutex<AudioThread>>,
 }
 
 impl AudioServiceAdapter {
-    pub fn new(service: Arc<RodioAudioService>) -> Self {
+    pub fn new(service: AudioThread) -> Self {
         Self {
-            inner: Arc::new(StdMutex::new(Arc::try_unwrap(service).unwrap_or_else(|arc| (*arc).clone()))),
+            inner: Arc::new(StdMutex::new(service)),
         }
     }
 }

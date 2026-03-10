@@ -38,12 +38,12 @@ pub async fn get_tasks(
     let mut filtered_tasks = tasks;
 
     if let Some(status) = query.status {
-        filtered_tasks.retain(|task| task.status == status);
+        filtered_tasks.retain(|task| task.status() == status);
     }
 
     if let Some(tags) = query.tags {
         filtered_tasks
-            .retain(|task| tags.iter().any(|tag| task.tags.contains(tag)));
+            .retain(|task| tags.iter().any(|tag| task.tags().contains(tag)));
     }
 
     Ok(filtered_tasks)

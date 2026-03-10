@@ -37,7 +37,7 @@ impl TimerViewModel {
 
         if state == TimerState::Idle {
             seconds = active_task
-                .map(|t| t.config.timer.work_duration.as_secs() as u32)
+                .map(|t| t.config().timer.work_duration.as_secs() as u32)
                 .unwrap_or_default();
             minutes = seconds / 60;
             secs = seconds % 60;
@@ -52,7 +52,7 @@ impl TimerViewModel {
         let Some(task) = active_task else {
             return 0.0;
         };
-        let config = &task.config.timer;
+        let config = &task.config().timer;
         let remaining = state.remaining_seconds();
         let total = match &state {
             TimerState::Working { .. } => {
@@ -81,10 +81,10 @@ impl TimerViewModel {
     pub fn get_session_display(&self) -> String {
         if let Some(task) = self.active_task.get() {
             let sessions_until_long_break =
-                task.config.timer.sessions_until_long_break as u32;
+                task.config().timer.sessions_until_long_break as u32;
             format!(
                 "Session {}/{}",
-                (task.current_sessions % sessions_until_long_break as u8) + 1,
+                (task.current_sessions() % sessions_until_long_break as u8) + 1,
                 sessions_until_long_break
             )
         } else {
@@ -103,8 +103,8 @@ impl TimerViewModel {
 
     pub fn get_sessions_completed(&self) -> usize {
         if let Some(task) = self.active_task.get() {
-            (task.current_sessions
-                % task.config.timer.sessions_until_long_break)
+            (task.current_sessions()
+                % task.config().timer.sessions_until_long_break)
                 as usize
         } else {
             0
@@ -113,7 +113,7 @@ impl TimerViewModel {
 
     pub fn get_task_pomodoros(&self) -> u32 {
         if let Some(task) = self.active_task.get() {
-            task.current_sessions as u32
+            task.current_sessions() as u32
         } else {
             0
         }

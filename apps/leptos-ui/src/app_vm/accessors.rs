@@ -96,12 +96,12 @@ impl AppViewModel {
     pub fn get_active_task_name(&self) -> String {
         self.active_task
             .get()
-            .map(|task| task.name.clone())
+            .map(|task| task.name().to_string())
             .unwrap_or_else(|| "No active task".to_string())
     }
 
     pub fn get_active_entity_id(&self) -> Option<String> {
-        self.active_task.get().map(|task| task.id.to_string())
+        self.active_task.get().map(|task| task.id().to_string())
     }
 
     pub fn is_active_task_completed(&self) -> bool {
