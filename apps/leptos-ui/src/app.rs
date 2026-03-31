@@ -3,7 +3,7 @@ use leptos_router::components::{Route, Router, Routes};
 use leptos_router::path;
 
 use crate::app_vm::AppViewModel;
-use crate::components::Sidebar;
+use crate::components::{ScreenBlockerProvider, Sidebar};
 use crate::pages::{SettingsPage, TaskDirectoryPage, TaskFormPage, TimerPage};
 use crate::utils::ViewModel;
 
@@ -16,9 +16,11 @@ pub fn App() -> impl IntoView {
     provide_context(app_vm);
 
     view! {
-        <Router>
-            <AppLayout />
-        </Router>
+        <ScreenBlockerProvider>
+            <Router>
+                <AppLayout />
+            </Router>
+        </ScreenBlockerProvider>
     }
 }
 

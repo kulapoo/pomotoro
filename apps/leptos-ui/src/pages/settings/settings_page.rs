@@ -1092,6 +1092,36 @@ fn GeneralSettings(
                 .unwrap_or(false)
         })
     };
+    let block_screen_after_work = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.block_screen_after_work)
+                .unwrap_or(false)
+        })
+    };
+    let block_screen_after_work_message = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.block_screen_after_work_message.clone())
+                .unwrap_or_else(|| {
+                    "Work session complete. Time for a break.".to_string()
+                })
+        })
+    };
+    let block_screen_after_break = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.block_screen_after_break)
+                .unwrap_or(false)
+        })
+    };
+    let block_screen_after_break_message = move || {
+        vm.with_value(|v| {
+            v.get_config()
+                .map(|c| c.general.block_screen_after_break_message.clone())
+                .unwrap_or_else(|| "Break over. Back to work.".to_string())
+        })
+    };
 
     view! {
         <div class="">
@@ -1199,6 +1229,88 @@ fn GeneralSettings(
                     <span class="ml-2 text-sm text-slate-700">"Start Minimized"</span>
                 </label>
                 <span class="text-xs text-slate-600 mt-1 block">"Launch application minimized"</span>
+            </div>
+
+            <div class="hidden">
+            <h4 class="text-lg font-medium text-slate-800 mt-8 mb-4">"Screen blocking"</h4>
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked=block_screen_after_work
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.block_screen_after_work = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span class="ml-2 text-sm text-slate-700">"Block screen after work"</span>
+                </label>
+                <span class="text-xs text-slate-600 mt-1 block">"Show full-screen overlay when a work phase completes"</span>
+                <Show when=block_screen_after_work>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">"Message"</label>
+                        <input
+                            type="text"
+                            class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                            placeholder="Work session complete. Time for a break."
+                            value=block_screen_after_work_message
+                            on:input=move |ev| {
+                                let value = event_target_value(&ev);
+                                vm.with_value(|v| {
+                                    if let Some(mut cfg) = v.get_config() {
+                                        cfg.general.block_screen_after_work_message = value;
+                                        v.update_general(cfg.general);
+                                    }
+                                });
+                            }
+                        />
+                    </div>
+                </Show>
+            </div>
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked=block_screen_after_break
+                        on:change=move |ev| {
+                            let checked = event_target_checked(&ev);
+                            vm.with_value(|v| {
+                                if let Some(mut cfg) = v.get_config() {
+                                    cfg.general.block_screen_after_break = checked;
+                                    v.update_general(cfg.general);
+                                }
+                            });
+                        }
+                    />
+                    <span class="ml-2 text-sm text-slate-700">"Block screen after break"</span>
+                </label>
+                <span class="text-xs text-slate-600 mt-1 block">"Show full-screen overlay when a break phase completes"</span>
+                <Show when=block_screen_after_break>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">"Message"</label>
+                        <input
+                            type="text"
+                            class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                            placeholder="Break over. Back to work."
+                            value=block_screen_after_break_message
+                            on:input=move |ev| {
+                                let value = event_target_value(&ev);
+                                vm.with_value(|v| {
+                                    if let Some(mut cfg) = v.get_config() {
+                                        cfg.general.block_screen_after_break_message = value;
+                                        v.update_general(cfg.general);
+                                    }
+                                });
+                            }
+                        />
+                    </div>
+                </Show>
+            </div>
             </div>
         </div>
     }

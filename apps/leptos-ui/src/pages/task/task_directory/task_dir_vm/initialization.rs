@@ -68,14 +68,14 @@ impl TaskDirectoryViewModel {
         let set_tasks = self.set_tasks;
 
         spawn_local(async move {
-            let callback = Closure::new(move |event: JsValue| {
-                let payload = js_sys::Reflect::get(&event, &"payload".into())
-                    .unwrap_or(JsValue::NULL);
+            let callback = Closure::new(move |_event: JsValue| {
+                // let payload = js_sys::Reflect::get(&event, &"payload".into())
+                //     .unwrap_or(JsValue::NULL);
 
-                web_sys::console::log_1(
-                    &format!("TaskUpdated event received: {:?}", payload)
-                        .into(),
-                );
+                // web_sys::console::log_1(
+                //     &format!("TaskUpdated event received: {:?}", payload)
+                //         .into(),
+                // );
 
                 let set_tasks_clone = set_tasks;
                 spawn_local(async move {

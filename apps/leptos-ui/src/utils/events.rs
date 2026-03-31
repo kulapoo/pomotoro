@@ -7,6 +7,15 @@ extern "C" {
     async fn tauri_invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
+    pub async fn listen(
+        event: &str,
+        callback: &Closure<dyn Fn(JsValue)>,
+    ) -> JsValue;
+}
+
 /// Unified invoke function that handles serialization, deserialization, and logging
 ///
 /// # Arguments

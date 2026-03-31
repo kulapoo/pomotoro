@@ -11,3 +11,5 @@ ai_contexts
 /docs/.obsidian
 /docs/**/.obsidian
 .aider*
+
+.claude/settings.local.json

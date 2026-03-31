@@ -1,4 +1,4 @@
-mod events;
+pub mod events;
 mod view_model;
 
 pub use events::invoke;

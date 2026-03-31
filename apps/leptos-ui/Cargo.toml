@@ -25,7 +25,8 @@ web-sys = { version = "0.3.81", features = [
     "Document",
     "Window",
     "Event",
-    "EventTarget"
+    "EventTarget",
+    "KeyboardEvent"
 ]}
 chrono = { workspace = true }
 # UI components - using standard HTML with CSS styling

@@ -64,6 +64,52 @@ impl EventHandler for CountdownExpiredHandler {
         // Get configuration to check auto-start settings
         let config = self.config_repository.get_config().await?;
 
+        // Emit screen blocking event if enabled for this phase
+        let should_block = match countdown_expired.phase {
+            Phase::Work => config.general.block_screen_after_work,
+            Phase::ShortBreak | Phase::LongBreak => {
+                config.general.block_screen_after_break
+            }
+        };
+
+        log::info!(
+            "[ScreenBlocker] phase={:?} block_after_work={} block_after_break={} should_block={}",
+            countdown_expired.phase,
+            config.general.block_screen_after_work,
+            config.general.block_screen_after_break,
+            should_block,
+        );
+
+        if should_block {
+            let message = match countdown_expired.phase {
+                Phase::Work => {
+                    config.general.block_screen_after_work_message.clone()
+                }
+                Phase::ShortBreak | Phase::LongBreak => {
+                    config.general.block_screen_after_break_message.clone()
+                }
+            };
+
+            // self.emitter
+            //     .emit(ui_listeners::screen_blocker::DEACTIVATE)
+            //     .map_err(|e| domain::Error::EventPublishingError {
+            //         message: format!(
+            //             "Failed to emit screen blocker deactivate event: {e}"
+            //         ),
+            //     })?;
+
+            self.emitter
+                .emit(
+                    ui_listeners::screen_blocker::ACTIVATE,
+                    json!({ "message": message }),
+                )
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!(
+                        "Failed to emit timer phase completed event: {e}"
+                    ),
+                })?;
+        }
+
         let should_auto_start = match countdown_expired.phase {
             Phase::Work => {
                 // Work phase expired, check if we should auto-start break
@@ -143,14 +189,20 @@ impl EventHandler for CountdownExpiredHandler {
                 "Auto-start not enabled for transition from {:?} phase",
                 countdown_expired.phase
             );
-            let timer = pause_timer_phase(
+            // Complete the phase first (timer is in LongBreak/ShortBreak/Working
+            // state in the repo — can_transition allows CompletePhase from these).
+            // Pausing first would move the repo to Paused, from which CompletePhase
+            // is not allowed, causing an InvalidStateTransition error.
+            complete_timer_phase(
                 task_id,
                 self.task_repository.clone(),
                 self.timer_repository.clone(),
                 self.event_publisher.clone(),
             )
             .await?;
-            complete_timer_phase(
+            // Now pause the next phase so the UI shows "Paused" and the user
+            // must manually resume to start the new phase.
+            let timer = pause_timer_phase(
                 task_id,
                 self.task_repository.clone(),
                 self.timer_repository.clone(),

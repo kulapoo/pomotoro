@@ -43,11 +43,11 @@ enum AudioResponse {
 ///
 /// `OutputStream` from rodio is `!Send`, so all audio operations must happen
 /// on the thread that created the stream. This struct sends commands to that
-/// thread via channels and receives responses via `tokio::sync::oneshot`.
+/// thread via channels and receives responses via `std::sync::mpsc`.
 pub struct AudioThread {
     sender: std::sync::mpsc::Sender<(
         AudioCommand,
-        tokio::sync::oneshot::Sender<AudioResponse>,
+        std::sync::mpsc::Sender<AudioResponse>,
     )>,
     /// Handle to the dedicated audio thread, joined on drop
     _thread_handle: Option<std::thread::JoinHandle<()>>,
@@ -56,7 +56,7 @@ pub struct AudioThread {
 impl Drop for AudioThread {
     fn drop(&mut self) {
         // Send shutdown command, ignoring errors if thread already exited
-        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let (tx, _rx) = std::sync::mpsc::channel();
         let _ = self.sender.send((AudioCommand::Shutdown, tx));
     }
 }
@@ -66,7 +66,7 @@ impl AudioThread {
     pub fn new() -> std::result::Result<Self, AudioError> {
         let (cmd_tx, cmd_rx) = std::sync::mpsc::channel::<(
             AudioCommand,
-            tokio::sync::oneshot::Sender<AudioResponse>,
+            std::sync::mpsc::Sender<AudioResponse>,
         )>();
 
         // We need to verify audio initialization works before returning.
@@ -116,7 +116,7 @@ impl AudioThread {
         mut service: RodioAudioService,
         rx: std::sync::mpsc::Receiver<(
             AudioCommand,
-            tokio::sync::oneshot::Sender<AudioResponse>,
+            std::sync::mpsc::Sender<AudioResponse>,
         )>,
     ) {
         while let Ok((cmd, reply_tx)) = rx.recv() {
@@ -185,13 +185,13 @@ impl AudioThread {
         &self,
         cmd: AudioCommand,
     ) -> std::result::Result<AudioResponse, AudioError> {
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply_tx, reply_rx) = std::sync::mpsc::channel();
         self.sender.send((cmd, reply_tx)).map_err(|_| {
             AudioError::PlaybackFailed(
                 "Audio thread has terminated".to_string(),
             )
         })?;
-        reply_rx.blocking_recv().map_err(|_| {
+        reply_rx.recv().map_err(|_| {
             AudioError::PlaybackFailed(
                 "Audio thread did not respond".to_string(),
             )
@@ -256,16 +256,14 @@ impl AudioService for AudioThread {
         // get_active_playbacks takes &self, but send_command also takes &self,
         // so we need a separate path. Since AudioThread is Send+Sync by design,
         // we use the same channel approach.
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply_tx, reply_rx) = std::sync::mpsc::channel();
         self.sender
             .send((AudioCommand::GetActivePlaybacks, reply_tx))
             .map_err(|_| domain::Error::AudioError {
                 message: "Audio thread has terminated".to_string(),
             })?;
-        match reply_rx.blocking_recv().map_err(|_| {
-            domain::Error::AudioError {
-                message: "Audio thread did not respond".to_string(),
-            }
+        match reply_rx.recv().map_err(|_| domain::Error::AudioError {
+            message: "Audio thread did not respond".to_string(),
         })? {
             AudioResponse::ActivePlaybacks(playbacks) => Ok(playbacks),
             _ => unreachable!("unexpected response variant"),
@@ -353,7 +351,7 @@ impl AudioThread {
     /// Get a snapshot of the audio library via the channel.
     /// This is used by `AudioServiceWrapper` which needs the full library.
     pub fn get_library_snapshot(&self) -> AudioLibrary {
-        let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+        let (reply_tx, reply_rx) = std::sync::mpsc::channel();
         if self
             .sender
             .send((AudioCommand::GetLibrary, reply_tx))
@@ -361,7 +359,7 @@ impl AudioThread {
         {
             return AudioLibrary::new();
         }
-        match reply_rx.blocking_recv() {
+        match reply_rx.recv() {
             Ok(AudioResponse::Library(lib)) => lib,
             _ => AudioLibrary::new(),
         }

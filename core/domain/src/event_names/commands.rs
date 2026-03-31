@@ -102,3 +102,8 @@ pub mod task_settings {
     pub const RESET_TO_DEFAULTS: &str = "reset_task_settings_to_defaults";
     pub const GET_EFFECTIVE: &str = "get_task_effective_settings";
 }
+
+pub mod screen_blocker {
+    pub const ACTIVATE: &str = "activate_screen_block";
+    pub const DEACTIVATE: &str = "deactivate_screen_block";
+}

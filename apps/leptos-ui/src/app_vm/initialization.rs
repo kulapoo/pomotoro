@@ -8,18 +8,10 @@ use leptos::task::spawn_local;
 use wasm_bindgen::prelude::*;
 
 use crate::components::handle_command_error;
+use crate::utils::events::listen;
 use crate::utils::invoke;
 
 use super::AppViewModel;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"])]
-    async fn listen(
-        event: &str,
-        callback: &Closure<dyn Fn(JsValue)>,
-    ) -> JsValue;
-}
 
 impl AppViewModel {
     pub(super) fn initialize(&self) {

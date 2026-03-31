@@ -9,4 +9,5 @@ pub mod task_cycle_controls;
 pub mod task_settings;
 
 pub use error_toast::{ErrorInfo, ErrorToast, handle_command_error};
+pub use screen_blocker::ScreenBlockerProvider;
 pub use sidebar::Sidebar;
