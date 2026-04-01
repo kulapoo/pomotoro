@@ -4,6 +4,9 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 
 *Stay focused and productive with Pomotoro – charge through distractions like a determined toro.*
 
+> **Learning Project**: This project is intentionally built to learn Clean Architecture, DDD, and AI-assisted development.
+> See [docs/verdict.md](docs/verdict.md) for more context.
+
 ## Features
 
 - 🍅 **Classic Pomodoro technique** - 25min work, 5min break, 15min long break cycles

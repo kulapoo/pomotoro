@@ -1,6 +1,18 @@
   Using Clean Architecture + DDD in an open source project for learning is completely valid and common. Many successful OSS projects
   explicitly state they're "over-engineered" for learning purposes.
 
+  This project also serves as a hands-on environment for learning AI-assisted development. Tools like Claude Code are used throughout
+  the development process — writing code, refactoring, designing architecture, and exploring patterns. This is an intentional part of
+  the learning goals: not just "how do I build clean software?" but "how do I build clean software effectively with AI tools?"
+
+  🤖 Learning AI-Assisted Development
+
+  In addition to Clean Architecture and DDD, this project explores:
+  - Using AI coding assistants (e.g. Claude Code) in a real-world Rust project
+  - How AI tools integrate with a structured, layered codebase
+  - Where AI assistance shines and where human judgment is irreplaceable
+  - Prompt patterns and workflows that pair well with Clean Architecture
+
   📝 How to Communicate This to Contributors
 
   Add this to your README.md or CONTRIBUTING.md:
