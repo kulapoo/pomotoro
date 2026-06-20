@@ -8,7 +8,6 @@ pub async fn skip_phase(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-    app_handle: AppHandle,
 ) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -32,11 +31,6 @@ pub async fn skip_phase(
         .get()
         .await
         .context("infra::commands::timer_cmd::skip_phase - Failed to get updated timer state")
-        .map_err(|e| e.to_string())?;
-
-    // Send tauri event with full timer state (not just phase)
-    app_handle
-        .emit(ui_listeners::timer::PHASE_SKIPPED, updated_timer.state())
         .map_err(|e| e.to_string())?;
 
     Ok(updated_timer)
