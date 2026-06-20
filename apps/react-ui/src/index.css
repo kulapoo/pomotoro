@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* Dark mode via .dark class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Theme tokens mapped to CSS custom properties.
+ * @theme inline tells Tailwind to use these as utility references
+ * rather than emitting new CSS variables.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Light theme (default) */
+@layer base {
+  :root {
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(222.2 47.4% 11.2%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(222.2 47.4% 11.2%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(222.2 47.4% 11.2%);
+    --primary: hsl(222.2 47.4% 11.2%);
+    --primary-foreground: hsl(210 40% 98%);
+    --secondary: hsl(210 40% 96.1%);
+    --secondary-foreground: hsl(222.2 47.4% 11.2%);
+    --muted: hsl(210 40% 96.1%);
+    --muted-foreground: hsl(215.4 16.3% 46.9%);
+    --accent: hsl(210 40% 96.1%);
+    --accent-foreground: hsl(222.2 47.4% 11.2%);
+    --destructive: hsl(0 84% 60%);
+    --destructive-foreground: hsl(210 40% 98%);
+    --border: hsl(214.3 31.8% 91.4%);
+    --input: hsl(214.3 31.8% 91.4%);
+    --ring: hsl(215 20.2% 65.1%);
+    --radius: 0.5rem;
+  }
+
+  /* Dark theme */
+  .dark {
+    --background: hsl(224 71% 4%);
+    --foreground: hsl(213 31% 91%);
+    --card: hsl(224 71% 4%);
+    --card-foreground: hsl(213 31% 91%);
+    --popover: hsl(224 71% 4%);
+    --popover-foreground: hsl(215 20.2% 65.1%);
+    --primary: hsl(210 40% 98%);
+    --primary-foreground: hsl(222.2 47.4% 1.2%);
+    --secondary: hsl(222.2 47.4% 11.2%);
+    --secondary-foreground: hsl(210 40% 98%);
+    --muted: hsl(223 47% 11%);
+    --muted-foreground: hsl(215.4 16.3% 56.9%);
+    --accent: hsl(216 34% 17%);
+    --accent-foreground: hsl(210 40% 98%);
+    --destructive: hsl(0 63% 31%);
+    --destructive-foreground: hsl(210 40% 98%);
+    --border: hsl(216 34% 17%);
+    --input: hsl(216 34% 17%);
+    --ring: hsl(216 34% 17%);
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: var(--border);
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}

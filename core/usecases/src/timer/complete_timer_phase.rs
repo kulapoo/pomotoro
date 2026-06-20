@@ -24,14 +24,27 @@ pub async fn complete_timer_phase(
 
     // Only increment session when completing a Work phase
     let next_phase = if current_phase == Phase::Work {
-        // Determine next phase BEFORE incrementing session
-        // because the logic checks if current_sessions is divisible by sessions_until_long_break
-        let next = Phase::determine_next_break_type(
-            task.current_sessions() + 1, // Pass the future session count
-            task.config().timer.sessions_until_long_break,
-        );
-        task.increment_session()?;
-        next
+        if task.is_completed() {
+            // Task already done — determine break type from current sessions without
+            // incrementing, so the timer can still transition to a break phase.
+            let sessions_until_long =
+                task.config().timer.sessions_until_long_break.max(1);
+            let remainder = task.current_sessions() % sessions_until_long;
+            if remainder == 0 {
+                Phase::LongBreak
+            } else {
+                Phase::ShortBreak
+            }
+        } else {
+            // Determine next phase BEFORE incrementing session
+            // because the logic checks if current_sessions is divisible by sessions_until_long_break
+            let next = Phase::determine_next_break_type(
+                task.current_sessions() + 1, // Pass the future session count
+                task.config().timer.sessions_until_long_break,
+            );
+            task.increment_session()?;
+            next
+        }
     } else {
         // After a break, always go back to Work
         Phase::Work

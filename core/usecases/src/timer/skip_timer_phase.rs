@@ -45,9 +45,9 @@ pub async fn skip_timer_phase(
     // Determine next phase based on session count (same logic as complete_timer_phase)
     let next_phase = match old_phase {
         Phase::Work => {
-            // About to skip work, so increment session first
-            task.increment_session()?;
-            // Determine if it's time for long break
+            if !task.is_completed() {
+                task.increment_session()?;
+            }
             determine_next_break_type(&task)
         }
         Phase::ShortBreak | Phase::LongBreak => Phase::Work,
@@ -80,7 +80,10 @@ pub async fn skip_timer_phase(
 /// Determine whether the next break should be short or long
 /// based on the current session count and configuration.
 fn determine_next_break_type(task: &domain::Task) -> Phase {
-    let sessions_until_long = task.config().timer.sessions_until_long_break;
+    // Guard against zero to avoid division-by-zero panic when persisted
+    // configuration bypasses validation (e.g. legacy SQLite rows).
+    let sessions_until_long =
+        task.config().timer.sessions_until_long_break.max(1);
     let remainder = task.current_sessions() % sessions_until_long;
 
     let phase = if remainder == 0 {

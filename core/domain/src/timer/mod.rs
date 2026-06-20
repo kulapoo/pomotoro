@@ -44,7 +44,11 @@ impl Phase {
         current_sessions: u8,
         sessions_until_long_break: u8,
     ) -> Phase {
-        if current_sessions.is_multiple_of(sessions_until_long_break) {
+        // Guard against zero to avoid `is_multiple_of` panicking on a zero
+        // divisor when configuration validation has been bypassed (e.g. data
+        // loaded from persistence).
+        let divisor = sessions_until_long_break.max(1);
+        if current_sessions.is_multiple_of(divisor) {
             Phase::LongBreak
         } else {
             Phase::ShortBreak

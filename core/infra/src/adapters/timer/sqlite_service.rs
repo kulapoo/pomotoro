@@ -70,17 +70,22 @@ impl TimerTickService {
                 .map_err(|e| e.to_string())?
                 .timer
         };
-        // Cancel any existing timer task
-        {
-            let mut cancel_guard = self.cancel_handle.lock().await;
-            if let Some(handle) = cancel_guard.take() {
-                handle.abort();
-            }
+        // Hold the cancel_handle lock for the entire abort→spawn→store sequence so
+        // that concurrent calls are serialized. Without this, two callers could both
+        // observe an empty handle, spawn separate loops, and orphan one of them.
+        let mut cancel_guard = self.cancel_handle.lock().await;
+
+        // Cancel any existing timer task while still holding the lock
+        if let Some(handle) = cancel_guard.take() {
+            handle.abort();
         }
+
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
 
-        // Move config directly into the spawn — no clone needed
+        // Move config directly into the spawn — no clone needed.
+        // `tokio::spawn` returns immediately, so holding the async mutex guard
+        // across this call is safe and introduces no deadlock risk.
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             // Skip the first tick which completes immediately
@@ -136,7 +141,9 @@ impl TimerTickService {
             }
         });
 
-        *self.cancel_handle.lock().await = Some(handle);
+        // Store the new handle and release the lock.
+        *cancel_guard = Some(handle);
+        drop(cancel_guard);
 
         Ok(())
     }

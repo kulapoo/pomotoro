@@ -34,6 +34,7 @@ impl EventHandler for TimerResetHandler {
                 message: "Failed to reset timer".to_string(),
             })?;
 
+        self.timer_srv.stop_timer_tick_loop().await?;
         self.timer_srv.load_state().await?;
 
         let state_json = self

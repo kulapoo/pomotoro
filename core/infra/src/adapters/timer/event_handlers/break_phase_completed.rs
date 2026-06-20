@@ -97,17 +97,14 @@ impl EventHandler for BreakPhaseCompletedHandler {
                 let active_tasks =
                     self.task_repository.get_active_tasks().await?;
 
-                let next_task = CycleService::select_next_task(
+                let Some(next_task) = CycleService::select_next_task(
                     &active_tasks,
                     Some(&current_task_id),
                     &config.general.task_cycling_behavior,
-                )
-                .ok_or(domain::Error::RepositoryError {
-                    message: format!(
-                        "Break phase completed:: Next Task not found after task: {}",
-                        current_task_id
-                    ),
-                })?;
+                ) else {
+                    // No more active tasks to cycle to; leave timer state as-is
+                    return Ok(());
+                };
 
                 // Emit task active changed event
                 self.emitter

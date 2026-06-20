@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.jpt.pomotoro",
   "build": {
-    "beforeDevCommand": "bash ./trunk-serve.sh",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bash ./trunk-build.sh",
-    "frontendDist": "../../dist"
+    "beforeDevCommand": "",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "",
+    "frontendDist": "../react-ui/dist"
   },
   "app": {
     "withGlobalTauri": true,

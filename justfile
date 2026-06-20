@@ -8,31 +8,64 @@ default:
 # Development & Building
 # ==============================================================================
 
-# Run development server with info-level logging
+# Run development server (starts Vite + Tauri together)
 dev:
-    cd apps/tauri-app && RUST_LOG=info cargo tauri dev
+    #!/usr/bin/env bash
+    set -e
+    ROOT="{{justfile_directory()}}"
+    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
+    VITE_PID=$!
+    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    trap cleanup EXIT INT TERM
+    cd "$ROOT/apps/tauri-app" && RUST_LOG=info cargo tauri dev
 
 # Run development server with debug-level logging
 dev-debug:
-    cd apps/tauri-app && RUST_LOG=debug cargo tauri dev
+    #!/usr/bin/env bash
+    set -e
+    ROOT="{{justfile_directory()}}"
+    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
+    VITE_PID=$!
+    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    trap cleanup EXIT INT TERM
+    cd "$ROOT/apps/tauri-app" && RUST_LOG=debug cargo tauri dev
 
 # Run development server with trace-level logging (very verbose)
 dev-trace:
-    cd apps/tauri-app && RUST_LOG=trace cargo tauri dev
+    #!/usr/bin/env bash
+    set -e
+    ROOT="{{justfile_directory()}}"
+    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
+    VITE_PID=$!
+    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    trap cleanup EXIT INT TERM
+    cd "$ROOT/apps/tauri-app" && RUST_LOG=trace cargo tauri dev
 
-# Build for production
-build: clippy fmt-check
+# Build for production (builds React UI first, then Tauri app)
+build: clippy fmt-check build-react
     cd apps/tauri-app && cargo tauri build
 
-# Build frontend only
+# Build frontend only (Leptos/Trunk — legacy)
 build-frontend:
     trunk build
+
+# Build React UI frontend only
+build-react:
+    cd apps/react-ui && npm run build
+
+# Run React UI dev server only (without Tauri)
+serve-react:
+    cd apps/react-ui && npm run dev
+
+# Install React UI npm dependencies
+install-react:
+    cd apps/react-ui && npm install
 
 # Build just the framework-agnostic core
 build-core:
     cargo build -p infra -p domain -p usecases
 
-# Run frontend dev server only
+# Run Leptos frontend dev server only (legacy)
 serve:
     trunk serve
 

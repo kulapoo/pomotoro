@@ -349,13 +349,9 @@ impl StateTransitions {
             }
             | TimerState::LongBreak {
                 remaining_seconds, ..
-            } => {
-                if *remaining_seconds > 0 {
-                    *remaining_seconds -= 1;
-                    *remaining_seconds == 0
-                } else {
-                    false
-                }
+            } if *remaining_seconds > 0 => {
+                *remaining_seconds -= 1;
+                *remaining_seconds == 0
             }
             _ => false,
         };

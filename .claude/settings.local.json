@@ -66,13 +66,13 @@
       "mcp__ide__getDiagnostics",
       "Bash(RUST_BACKTRACE=1 cargo test:*)",
       "Bash(timeout 10 cargo tauri dev:*)",
-      "Bash(cargo fmt:*)"
+      "Bash(cargo fmt:*)",
+      "Bash(npx tsc *)"
     ],
     "deny": [],
     "ask": [],
     "defaultMode": "plan"
   },
-  "alwaysThinkingEnabled": true,
   "hooks": {
     "PostToolUse": [
       {
@@ -89,5 +89,6 @@
   "statusLine": {
     "type": "command",
     "command": "input=$(cat); cwd=$(echo \"$input\" | jq -r '.workspace.current_dir'); model=$(echo \"$input\" | jq -r '.model.display_name'); user=$(whoami); host=$(hostname -s); dir=$(basename \"$cwd\"); branch=$(cd \"$cwd\" 2>/dev/null && git -c core.fileMode=false rev-parse --abbrev-ref HEAD 2>/dev/null || echo ''); git_info=''; if [ -n \"$branch\" ]; then git_info=$(cd \"$cwd\" 2>/dev/null && printf \" on 🌵 \"; git -c core.fileMode=false diff --quiet 2>/dev/null && printf \"\\033[1;32m✓\\033[0m\" || printf \"\\033[0;31m✗\\033[0m\"; printf \" $branch\"); fi; printf \"🤘-🐧 \\033[1;32m%s\\033[0m @ 💻 \\033[1;36m%s\\033[0m - 🧱 \\033[1;35m%s\\033[0m%s\" \"$user\" \"$host\" \"$dir\" \"$git_info\""
-  }
+  },
+  "alwaysThinkingEnabled": true
 }
