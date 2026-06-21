@@ -45,10 +45,6 @@ dev-trace:
 build: clippy fmt-check build-react
     cd apps/tauri-app && cargo tauri build
 
-# Build frontend only (Leptos/Trunk — legacy)
-build-frontend:
-    trunk build
-
 # Build React UI frontend only
 build-react:
     cd apps/react-ui && npm run build
@@ -64,10 +60,6 @@ install-react:
 # Build just the framework-agnostic core
 build-core:
     cargo build -p infra -p domain -p usecases
-
-# Run Leptos frontend dev server only (legacy)
-serve:
-    trunk serve
 
 # ==============================================================================
 # Testing & Quality

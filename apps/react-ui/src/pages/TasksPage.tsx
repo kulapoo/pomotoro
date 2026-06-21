@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Trash2, CheckCircle2, Circle, Crosshair, RotateCcw, Pencil, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore } from '@/store/taskStore'
+import { useTimerStore } from '@/store/timerStore'
 import { TaskFormModal } from '@/components/TaskFormModal'
 import { TaskStatus } from '@/types'
 import type { Page, Task } from '@/types'
@@ -111,6 +112,17 @@ function TaskRow({
           </button>
         )}
 
+        {/* Reset progress */}
+        {task.current_sessions > 0 && !isCompleted && (
+          <button
+            onClick={onReset}
+            title="Reset progress"
+            className="shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <RotateCcw size={15} />
+          </button>
+        )}
+
         {/* Edit */}
         <button
           onClick={onEdit}
@@ -121,13 +133,15 @@ function TaskRow({
         </button>
 
         {/* Delete */}
-        <button
-          onClick={onDelete}
-          title="Delete"
-          className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
-        >
-          <Trash2 size={15} />
-        </button>
+        {!task.default && (
+          <button
+            onClick={onDelete}
+            title="Delete"
+            className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 size={15} />
+          </button>
+        )}
       </div>
 
       {/* Progress bar */}
@@ -334,9 +348,14 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
                 toast.info('Task deleted')
               }}
               onSetActive={async () => {
-                await setActiveTask(task.id)
-                toast.info('Focusing on "' + task.name + '"')
-                onNavigate('timer')
+                try {
+                  await setActiveTask(task.id)
+                  await useTimerStore.getState().fetchTimer()
+                  toast.info('Focusing on "' + task.name + '"')
+                  onNavigate('timer')
+                } catch {
+                  toast.error('Failed to focus on task')
+                }
               }}
             />
           ))}

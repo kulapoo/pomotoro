@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use domain::{
     BreakPhaseCompleted, ConfigRepository, Event, EventPublisher, Result,
-    TaskActiveChanged, TaskRepository, TimerRepository,
-    event_names::ui_listeners, task::CycleService,
+    TaskRepository, TimerRepository, event_names::ui_listeners,
+    task::CycleService,
 };
 use serde_json::json;
 use std::any::TypeId;
@@ -59,7 +59,6 @@ impl EventHandler for BreakPhaseCompletedHandler {
             .ok_or(domain::Error::EventHandlingError {
                 message: "Failed to complete break phase".to_string(),
             })?;
-
         // Emit break phase completed UI event
         self.emitter
             .emit(
@@ -88,8 +87,11 @@ impl EventHandler for BreakPhaseCompletedHandler {
         let is_running = self.timer_srv.with_timer(|t| t.is_running()).await;
         let config = self.config_repository.get_config().await?;
 
-        // Only proceed if timer is running and task is completed
-        if is_running && task.is_completed() {
+        // Proceed whenever the task is completed. The timer may be Running
+        // (auto_start_work_after_break enabled) or Paused (manual resume
+        // required) at this point; both are valid cycling entry states. The
+        // is_running flag is consulted below to skip a redundant pause.
+        if task.is_completed() {
             let current_task_id = break_phase_completed.task_id;
 
             // Check if auto-cycling is enabled
@@ -106,23 +108,6 @@ impl EventHandler for BreakPhaseCompletedHandler {
                     return Ok(());
                 };
 
-                // Emit task active changed event
-                self.emitter
-                    .emit(
-                        ui_listeners::task::ACTIVE_CHANGED,
-                        json!(TaskActiveChanged::new(
-                            Some(current_task_id),
-                            next_task.id(),
-                            "Break phase: Task Active changed".to_string(),
-                            1
-                        )),
-                    )
-                    .map_err(|e| domain::Error::RepositoryError {
-                        message: format!(
-                            "Failed to emit active changed event: {e}"
-                        ),
-                    })?;
-
                 // Stop the timer tick loop
                 self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
                     domain::Error::EventHandlingError {
@@ -130,13 +115,18 @@ impl EventHandler for BreakPhaseCompletedHandler {
                     }
                 })?;
 
-                pause_timer_phase(
-                    current_task_id,
-                    self.task_repository.clone(),
-                    self.timer_repository.clone(),
-                    self.event_publisher.clone(),
-                )
-                .await?;
+                // Only pause when currently running. When the timer is
+                // already Paused (auto_start_work_after_break disabled),
+                // pausing again is not a valid transition and would error.
+                if is_running {
+                    pause_timer_phase(
+                        current_task_id,
+                        self.task_repository.clone(),
+                        self.timer_repository.clone(),
+                        self.event_publisher.clone(),
+                    )
+                    .await?;
+                }
 
                 switch_active_task(
                     self.task_repository.clone(),
@@ -167,6 +157,20 @@ impl EventHandler for BreakPhaseCompletedHandler {
                     )
                     .await?;
                 }
+
+                self.emitter
+                    .emit(
+                        ui_listeners::task::AUTO_ADVANCED,
+                        json!({
+                            "from_task_id": current_task_id,
+                            "to_task_id": next_task.id(),
+                        }),
+                    )
+                    .map_err(|e| domain::Error::RepositoryError {
+                        message: format!(
+                            "Failed to emit auto-advanced event: {e}"
+                        ),
+                    })?;
             }
         }
 

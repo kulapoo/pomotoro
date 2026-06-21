@@ -12,10 +12,6 @@
   ```bash
   cargo install tauri-cli
   ```
-- **Trunk** for WASM bundling
-  ```bash
-  cargo install trunk
-  ```
 
 ### Recommended Tools
 - **rust-analyzer** for IDE support
@@ -37,8 +33,8 @@ cd pomotoro
 # Rust dependencies
 cargo build
 
-# UI dependencies (if any)
-cd ui && trunk build
+# UI dependencies
+cd apps/react-ui && npm install && npm run build
 ```
 
 ### 3. Run Tests
@@ -60,17 +56,19 @@ cargo tauri dev
 
 # Or run individual components
 cargo run -p infra  # Backend only
-cd ui && trunk serve  # Frontend only
+cd apps/react-ui && npm run dev  # Frontend only
 ```
 
 ## Project Structure Quick Reference
 
 ```
 pomotoro/
-├── domain/        # Business logic (start here to understand the app)
-├── usecases/      # Application features
-├── infra/         # External integrations
-├── ui/            # User interface
+├── core/           # Framework-agnostic core (domain, usecases, infra)
+├── apps/
+│   ├── tauri-app/  # Tauri desktop client
+│   ├── react-ui/   # React + TypeScript frontend
+│   ├── pomotoro-cli/
+│   └── cosmic-de/
 └── docs/          # Documentation
 ```
 

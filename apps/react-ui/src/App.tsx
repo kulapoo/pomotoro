@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ScreenBlocker } from "@/components/ScreenBlocker";
 import { Sidebar } from "@/components/Sidebar";
@@ -62,14 +62,23 @@ export function App() {
     const unlistenTaskList = listen(AppEvents.TaskListUpdated, () =>
       loadTasks(),
     );
-    const unlistenTaskActive = listen(AppEvents.TaskActiveChanged, () =>
-      loadTasks(),
-    );
+    const unlistenTaskActive = listen(AppEvents.TaskActiveChanged, () => {
+      loadTasks();
+      fetchTimer();
+    });
     const unlistenTaskCompleted = listen(AppEvents.TaskCompleted, () =>
       loadTasks(),
     );
     const unlistenTaskProgress = listen(AppEvents.TaskProgressUpdated, () =>
       loadTasks(),
+    );
+    const unlistenTaskAutoAdvanced = listen(
+      AppEvents.TaskAutoAdvanced,
+      () => {
+        fetchTimer();
+        loadTasks();
+        toast.success("Switched to next incomplete task");
+      },
     );
 
     // Live countdown updates — tick events carry the authoritative remaining_seconds
@@ -120,6 +129,7 @@ export function App() {
       unlistenTaskActive.then((fn) => fn());
       unlistenTaskCompleted.then((fn) => fn());
       unlistenTaskProgress.then((fn) => fn());
+      unlistenTaskAutoAdvanced.then((fn) => fn());
       unlistenTimerTick.then((fn) => fn());
       unlistenTimerStatus.then((fn) => fn());
       unlistenPhaseCompleted.then((fn) => fn());

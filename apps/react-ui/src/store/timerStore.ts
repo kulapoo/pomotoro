@@ -16,7 +16,8 @@ interface TimerStore {
   start: () => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
-  reset: () => Promise<void>;
+  resetTimer: () => Promise<void>;
+  resetPhase: () => Promise<void>;
   skip: () => Promise<void>;
   switchTask: (taskId: string) => Promise<void>;
 }
@@ -96,12 +97,26 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     }
   },
 
-  reset: async () => {
+  resetTimer: async () => {
     const taskId = get().timer?.task_id;
     if (!taskId) return;
     try {
-      // Returns (Timer, Task) tuple - we ignore it and re-fetch
+      // Fully stop the timer and return it to Idle. Returns a (Timer, Task)
+      // tuple which we ignore and re-fetch.
       await invoke("reset_timer", { task_id: taskId });
+      await get().fetchTimer();
+    } catch (e) {
+      set({ error: String(e) });
+    }
+  },
+
+  resetPhase: async () => {
+    const taskId = get().timer?.task_id;
+    if (!taskId) return;
+    try {
+      // Reset the current phase's countdown to its full duration; the timer
+      // keeps its running/paused state. Returns the updated Timer.
+      await invoke("reset_timer_phase", { task_id: taskId });
       await get().fetchTimer();
     } catch (e) {
       set({ error: String(e) });

@@ -4,7 +4,6 @@ members = [
     "core/usecases",
     "core/infra",
     "apps/tauri-app",
-    "apps/leptos-ui",
     "apps/pomotoro-cli",
     "apps/cosmic-de",
 ]

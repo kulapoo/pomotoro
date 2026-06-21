@@ -201,45 +201,32 @@ async fn repository_handles_concurrent_access() {
 ### UI Layer Tests
 
 #### Component Tests
-```rust
-// ui/tests/timer_display_tests.rs
-use leptos::*;
-use leptos_test::*;
+```tsx
+// apps/react-ui/src/pages/__tests__/TimerDisplay.test.tsx
+import { render, screen } from "@testing-library/react";
+import { TimerDisplay } from "../TimerPage";
 
-#[test]
-fn timer_display_shows_correct_time() {
+test("timer display shows correct time", () => {
     // Arrange
-    let runtime = create_runtime();
-    let timer_state = create_rw_signal(TimerState {
-        minutes: 25,
-        seconds: 0,
-        is_running: false,
-    });
-    
-    // Act
-    let view = view! {
-        <TimerDisplay state=timer_state />
-    };
-    
+    render(<TimerDisplay minutes={25} seconds={0} isRunning={false} />);
+
     // Assert
-    assert!(view.to_string().contains("25:00"));
-}
+    expect(screen.getByText("25:00")).toBeInTheDocument();
+});
 
-#[wasm_bindgen_test]
-async fn start_button_triggers_command() {
+test("start button triggers command", async () => {
     // Arrange
-    let doc = document();
-    mount_to_body(|| view! { <TimerControls /> });
-    
+    const invoke = vi.fn().mockResolvedValue({ status: "Running" });
+    render(<TimerControls invoke={invoke} />);
+
     // Act
-    let button = doc.query_selector(".start-button").unwrap();
+    const button = screen.getByRole("button", { name: /start/i });
     button.click();
-    
-    // Assert (with timeout for async)
-    sleep(Duration::from_millis(100)).await;
-    let state = doc.query_selector(".timer-state").unwrap();
-    assert_eq!(state.text_content(), Some("Running".into()));
-}
+
+    // Assert (await async flush)
+    await screen.findByText("Running");
+    expect(invoke).toHaveBeenCalledWith("start_timer");
+});
 ```
 
 ## End-to-End Tests

@@ -144,6 +144,7 @@ pub fn run() {
             pause_timer,
             resume_timer,
             reset_timer,
+            reset_timer_phase,
             skip_phase,
             update_timer_secs,
             switch_active_task,

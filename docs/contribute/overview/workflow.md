@@ -95,7 +95,7 @@ graph LR
 ### UI Changes
 1. **Design Component**: Sketch UI/UX
 2. **Create View Model**: State management
-3. **Build Component**: Leptos component
+3. **Build Component**: React component
 4. **Test Interactions**: Component tests
 
 ## Testing Philosophy

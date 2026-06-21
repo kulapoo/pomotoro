@@ -1,11 +1,11 @@
 # Project Overview
 
-This project is a Pomodoro timer application called Pomotoro. It is built with a Rust backend using the Tauri framework and a reactive web frontend using the Leptos framework. The project follows a hexagonal architecture, with the codebase organized into four main crates: `domain`, `usecases`, `infra`, and `ui`.
+This project is a Pomodoro timer application called Pomotoro. It is built with a Rust backend using the Tauri framework and a reactive web frontend using React and TypeScript. The project follows a hexagonal architecture, with the codebase organized into four main crates: `domain`, `usecases`, `infra`, and `tauri-app`.
 
 - **`domain`**: Contains the core business logic and data structures of the application.
 - **`usecases`**: Implements the application's use cases, orchestrating the interaction between the `domain` and `infra` layers.
 - **`infra`**: Provides the infrastructure for the application, including the Tauri setup, database access, and other external services.
-- **`ui`**: Contains the Leptos-based user interface components and pages.
+- **`tauri-app`**: The Tauri desktop client (command handlers, plugins, UI emission). The React/TypeScript frontend lives in `apps/react-ui/`.
 
 ## Building and Running
 

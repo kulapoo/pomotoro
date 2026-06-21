@@ -109,25 +109,25 @@ cd infra
 diesel migration generate migration_name
 ```
 
-## Frontend Commands (Trunk)
+## Frontend Commands (React / Vite)
 
 ### Development
 ```bash
-cd infra
-trunk serve --config Trunk.toml
-trunk serve --port 8080        # Custom port
+cd apps/react-ui
+npm install        # First time only
+npm run dev        # Vite dev server
 ```
 
 ### Building
 ```bash
-cd infra
-trunk build --config Trunk.toml
-trunk build --release          # Optimized build
+cd apps/react-ui
+npm run build      # Outputs to apps/react-ui/dist
 ```
 
-### Watching
+### Or via just
 ```bash
-trunk watch                    # Auto rebuild on changes
+just serve-react   # Dev server only
+just build-react   # Production build
 ```
 
 ## Testing Patterns
@@ -268,8 +268,7 @@ cd infra && cargo run
 
 ### UI Only
 ```bash
-cargo build -p ui
-cd infra && trunk build
+cd apps/react-ui && npm run build
 ```
 
 ## Common Flags

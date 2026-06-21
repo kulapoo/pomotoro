@@ -69,7 +69,8 @@ export function TimerPage() {
     start,
     pause,
     resume,
-    reset,
+    resetPhase,
+    resetTimer,
     skip,
     fetchTimer,
   } = useTimerStore();
@@ -121,6 +122,8 @@ export function TimerPage() {
   const running = isTimerRunning(timer);
   const paused = isTimerPaused(timer);
   const isTaskCompleted = contextTask?.status === TaskStatus.Completed;
+  const isBreakPhase = phase === Phase.ShortBreak || phase === Phase.LongBreak;
+  const isLastBreak = isTaskCompleted && isBreakPhase;
   const canStart = !!timer.task_id && !isTaskCompleted;
 
   // Progress ring — fraction of current phase remaining
@@ -141,7 +144,7 @@ export function TimerPage() {
   };
 
   const handleSkip = async () => {
-    if (isBusy || idle) return;
+    if (isBusy || idle || isLastBreak) return;
     setIsBusy(true);
     try {
       await skip();
@@ -157,17 +160,33 @@ export function TimerPage() {
     if (isBusy || idle) return;
     setIsBusy(true);
     try {
-      await reset();
+      await resetPhase();
     } catch (e) {
       console.error(e);
-      toast.error("Failed to reset timer");
+      toast.error("Failed to reset phase");
     } finally {
       setIsBusy(false);
     }
   };
 
   const handleCompleteTask = async () => {
-    if (!contextTask || isTaskCompleted || isBusy) return;
+    if (!contextTask || isBusy) return;
+
+    if (isLastBreak) {
+      setIsBusy(true);
+      try {
+        await resetTimer();
+        toast.success("Task completed!");
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to complete task");
+      } finally {
+        setIsBusy(false);
+      }
+      return;
+    }
+
+    if (isTaskCompleted) return;
     setIsBusy(true);
     try {
       await completeActiveTask();
@@ -300,7 +319,7 @@ export function TimerPage() {
           onClick={handleReset}
           disabled={idle || isBusy}
           className="p-3 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Reset timer"
+          title="Restart phase"
         >
           <RotateCcw size={20} />
         </button>
@@ -315,9 +334,11 @@ export function TimerPage() {
 
         <button
           onClick={handleSkip}
-          disabled={idle || isBusy}
+          disabled={idle || isBusy || isLastBreak}
           className="p-3 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Skip phase"
+          title={
+            isLastBreak ? "Skip unavailable — task is complete" : "Skip phase"
+          }
         >
           <SkipForward size={20} />
         </button>
@@ -330,16 +351,22 @@ export function TimerPage() {
         </span>
       )}
 
-      {/* State label */}
-      <span className="text-xs text-muted-foreground capitalize">
-        {isTaskCompleted
-          ? "Task completed"
-          : running
-            ? "Running"
-            : paused
-              ? "Paused"
-              : "Ready"}
-      </span>
+      {/* State label / last-break hint */}
+      {isLastBreak ? (
+        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          All sessions complete — this is your final break
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground capitalize">
+          {isTaskCompleted
+            ? "Task completed"
+            : running
+              ? "Running"
+              : paused
+                ? "Paused"
+                : "Ready"}
+        </span>
+      )}
 
       {/* Task action buttons */}
       {contextTask && (
@@ -356,12 +383,21 @@ export function TimerPage() {
           {!contextTask.default && (
             <button
               onClick={handleCompleteTask}
-              disabled={isTaskCompleted || isBusy || !activeTask}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Mark task as complete"
+              disabled={
+                isBusy || (!isLastBreak && (isTaskCompleted || !activeTask))
+              }
+              className={[
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                isLastBreak
+                  ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-accent"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-accent",
+              ].join(" ")}
+              title={
+                isLastBreak ? "End this break and finish" : "Mark task as complete"
+              }
             >
               <CheckCircle size={12} />
-              Complete Task
+              {isLastBreak ? "Finish Now" : "Complete Task"}
             </button>
           )}
         </div>

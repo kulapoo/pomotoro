@@ -197,6 +197,59 @@ async fn timer_should_reset_to_initial_state() {
 }
 
 #[tokio::test]
+async fn timer_should_stay_running_after_phase_reset() {
+    let ctx =
+        setup_ctx_with_timer("timer_should_stay_running_after_phase_reset")
+            .await;
+
+    // Let the work phase tick down a little so the reset is observable.
+    tokio::time::sleep(tokio::time::Duration::from_millis(2100)).await;
+    let timer_before = ctx.timer_tick_service.get_current_timer().await;
+    assert!(
+        timer_before.remaining_seconds(None) < 1500,
+        "timer should have ticked below the full work duration before reset"
+    );
+
+    let task = utils::task::get_active_task(&ctx).await;
+
+    // Reset the current phase (emits Reset, whose handler stops the tick loop).
+    reset_timer_phase(
+        task.id(),
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+    )
+    .await
+    .expect("Failed to reset timer phase");
+
+    // The Reset event handler runs asynchronously and aborts any active tick
+    // loop. Let it drain before restarting the loop, otherwise it would abort
+    // the loop we are about to start.
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    // Restart the tick loop so the running phase keeps counting down. This
+    // mirrors the countdown_expired handler pattern.
+    ctx.timer_tick_service
+        .start_timer_tick_loop(Some(task.config().timer.clone()), None)
+        .await
+        .expect("Failed to restart tick loop");
+
+    // The phase duration is restored to the full work duration and still running.
+    let timer_after_reset = ctx.timer_tick_service.get_current_timer().await;
+    assert_eq!(timer_after_reset.remaining_seconds(None), 1500);
+    assert_eq!(timer_after_reset.state().is_running(), true);
+
+    // The loop must keep running: after a wait, remaining must drop again.
+    tokio::time::sleep(tokio::time::Duration::from_millis(2100)).await;
+    let timer_after_wait = ctx.timer_tick_service.get_current_timer().await;
+    assert_eq!(timer_after_wait.state().is_running(), true);
+    assert!(
+        timer_after_wait.remaining_seconds(None) < 1500,
+        "timer should keep ticking down after phase reset"
+    );
+}
+
+#[tokio::test]
 async fn timer_should_start_with_specific_task() {
     let ctx =
         setup_ctx_with_timer("should_start_timer_with_specific_task").await;

@@ -189,7 +189,6 @@
 ### Infrastructure Config
 - `infra/Cargo.toml` - Dependencies
 - `infra/tauri.conf.json` - Tauri config
-- `infra/Trunk.toml` - Frontend build
 - `infra/diesel.toml` - Database config
 
 ### UI Config

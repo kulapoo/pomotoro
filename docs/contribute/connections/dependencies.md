@@ -86,20 +86,18 @@ reqwest = { version = "0.11", optional = true }
 ```
 
 ### UI Layer
-**Depends on Use Cases (via commands)**
+**Depends on Use Cases (via Tauri commands)**
 
-```toml
-# ui/Cargo.toml
-[dependencies]
-# Web framework
-leptos = { version = "0.5" }
-leptos_router = { version = "0.5" }
+```json
+// apps/react-ui/package.json
+"dependencies": {
+  "react": "^18",
+  "react-dom": "^18",
+  "@tauri-apps/api": "^2",
+  "zustand": "^4"
+}
 
-# Tauri integration
-tauri-sys = { version = "0.2" }
-serde = { version = "1.0" }
-
-# NO direct domain dependencies
+# NO direct domain dependencies — talks to the backend via Tauri commands
 ```
 
 ## Dependency Injection

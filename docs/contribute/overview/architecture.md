@@ -87,9 +87,9 @@ graph LR
   - Audio service adapters
   - Tauri command handlers
 
-### 4. UI Layer (`ui/`)
+### 4. UI Layer (`apps/react-ui/`)
 **User Interface**
-- Leptos components
+- React + TypeScript components
 - View models
 - State management
 - User interaction handling

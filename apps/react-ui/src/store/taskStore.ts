@@ -88,6 +88,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       await get().loadTasks()
     } catch (e) {
       set({ error: String(e) })
+      throw e
     }
   },
 

@@ -199,6 +199,7 @@ export const AppEvents = {
   TaskActiveChanged: 'task:active_changed',
   TaskCompleted: 'task:task_completed',
   TaskProgressUpdated: 'task:progress_updated',
+  TaskAutoAdvanced: 'task:auto_advanced',
   TimerTick: 'timer:tick',
   TimerStatusChanged: 'timer:status_changed',
   TimerPhaseCompleted: 'timer:phase_completed',

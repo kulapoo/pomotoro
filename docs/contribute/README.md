@@ -14,7 +14,6 @@ Each layer has its own responsibilities and patterns:
 - [Domain Layer](./layers/domain/) - Core business logic and entities
 - [Use Cases Layer](./layers/usecases/) - Application business rules
 - [Infrastructure Layer](./layers/infra/) - External adapters and services
-- [UI Layer](./layers/ui/) - Presentation and user interface
 
 ### 3. [Connections & Flow](./connections/)
 - [Data Flow](./connections/data-flow.md) - How data moves through layers
@@ -32,7 +31,7 @@ Each layer has its own responsibilities and patterns:
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        UI[UI/Leptos Components]
+        UI[UI/React Components]
     end
     
     subgraph "Application Layer"

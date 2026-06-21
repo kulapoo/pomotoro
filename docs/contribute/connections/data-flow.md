@@ -39,26 +39,17 @@ sequenceDiagram
 ### 1. UI to Command
 User interaction triggers command invocation:
 
-```rust
-// UI Layer (Leptos Component)
-#[component]
-pub fn TimerControls() -> impl IntoView {
-    let start_timer = move |_| {
-        spawn_local(async move {
-            let result = invoke("start_timer", StartTimerArgs {
-                task_id: None,
-            }).await;
-            
-            match result {
-                Ok(state) => update_timer_state(state),
-                Err(e) => show_error(e),
-            }
-        });
+```tsx
+// UI Layer (React Component) — apps/react-ui/src/pages/TimerPage.tsx
+import { invoke } from "@tauri-apps/api/core";
+
+export function TimerControls() {
+    const startTimer = async () => {
+        const result = await invoke("start_timer", { taskId: null });
+        // update timer state from `result`
     };
-    
-    view! {
-        <button on:click=start_timer>"Start"</button>
-    }
+
+    return <button onClick={startTimer}>Start</button>;
 }
 ```
 

@@ -266,7 +266,7 @@ SqliteTimerRepository::save_state(&self, state: TimerState) -> Result<()>
 SqliteTimerRepository::load_state(&self) -> Result<Option<TimerState>>
 ```
 
-## UI APIs (Leptos)
+## UI APIs (React)
 
 ### Timer View Model
 ```rust

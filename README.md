@@ -1,6 +1,6 @@
 # Pomotoro 🍅🐂
 
-A powerful Pomodoro timer application with the strength of a bull! Built with Tauri and Leptos, combining the speed of Rust with a fast, reactive web frontend.
+A powerful Pomodoro timer application with the strength of a bull! Built with Tauri and React, combining the speed of Rust with a fast, reactive web frontend.
 
 *Stay focused and productive with Pomotoro – charge through distractions like a determined toro.*
 
@@ -21,9 +21,9 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 
 ## Technology Stack
 
-- **Frontend**: [Leptos](https://leptos.dev/) - Fast, reactive Rust web framework compiled to WebAssembly
+- **Frontend**: [React](https://react.dev/) + TypeScript, bundled with [Vite](https://vite.dev/)
 - **Backend**: [Tauri](https://tauri.app/) - Secure, lightweight desktop app framework
-- **Language**: Rust - Memory safe, blazing fast native performance
+- **Language**: Rust (core/backend) + TypeScript (frontend)
 - **Database**: SQLite with Diesel ORM for session persistence
 - **Architecture**: Clean Architecture with Domain-Driven Design, decoupled infrastructure layer
 
@@ -33,21 +33,16 @@ A powerful Pomodoro timer application with the strength of a bull! Built with Ta
 
 #### 1. Rust Toolchain
 - Install [Rust](https://rustup.rs/) (latest stable)
-- Add WebAssembly target:
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  ```
-  *This target is REQUIRED for compiling the Leptos frontend to WebAssembly*
 
-#### 2. Build Tools
+#### 2. Node.js
+- Install [Node.js](https://nodejs.org/) (LTS) for building the React frontend
+
+#### 3. Build Tools
 Install the following CLI tools that orchestrate the build process:
 
 ```bash
 # Task runner - REQUIRED for all development commands
 cargo install just
-
-# WASM application bundler (builds the Leptos frontend)
-cargo install trunk
 
 # Desktop application packager (creates native app with embedded web UI)
 cargo install tauri-cli
@@ -65,13 +60,13 @@ pomotoro/
 │   └── infra/       # Core infrastructure (framework-agnostic)
 │                    # - Repositories, Event Bus, Audio, Timer Tick Service
 │                    # - Zero Tauri dependencies - reusable across clients
-└── apps/
-    ├── tauri-app/   # Tauri desktop client (Tauri-specific)
-    │                # - Command handlers, Tauri plugins, UI emission
-    │                # - Thin wrapper around infra core
-    ├── leptos-ui/   # Leptos frontend (WebAssembly)
-    ├── pomotoro-cli/    # CLI client (coming soon)
-    └── cosmic-de/       # Cosmic DE applet (coming soon)
+    └── apps/
+        ├── tauri-app/   # Tauri desktop client (Tauri-specific)
+        │                # - Command handlers, Tauri plugins, UI emission
+        │                # - Thin wrapper around infra core
+        ├── react-ui/    # React + TypeScript frontend (Vite)
+        ├── pomotoro-cli/    # CLI client (coming soon)
+        └── cosmic-de/       # Cosmic DE applet (coming soon)
 ```
 
 **Key Design**: The `core/infra/` crate is completely framework-agnostic and can be reused by any Rust client (Tauri, Cosmic applet, CLI, etc.) without bringing in Tauri dependencies.
@@ -183,9 +178,9 @@ cd pomotoro
 # Check all required tools are installed
 rustc --version
 cargo --version
-trunk --version
 cargo tauri --version
-rustup target list --installed | grep wasm32
+node --version
+npm --version
 ```
 
 3. **Run in development mode:**
@@ -203,23 +198,22 @@ The app will open automatically with hot-reload enabled for both frontend and ba
 
 ## Understanding the Build Stack
 
-### Why Both Trunk AND Tauri CLI?
+### Why Both Vite AND Tauri CLI?
 
 This project uses a **two-stage build process** that requires separate tools:
 
-1. **Trunk** - WASM Bundler
-   - Compiles Rust code in `ui/` crate to WebAssembly
-   - Bundles WASM with JavaScript glue code
-   - Serves the web application during development
-   - Similar to webpack in JavaScript projects
+1. **Vite** - Frontend Bundler
+   - Compiles the React/TypeScript frontend in `apps/react-ui/`
+   - Serves the web application with hot-module reloading during development
+   - Produces the static assets consumed by Tauri
 
 2. **Tauri CLI** - Desktop Packager
-   - Embeds the WASM web app into a native window
+   - Embeds the frontend into a native window
    - Provides system API access (notifications, file system, etc.)
    - Creates platform-specific installers
    - Similar to Electron packager but much lighter
 
-**Analogy**: Think of it like building a hybrid car - you need one tool to build the electric motor (Trunk → WASM) and another to assemble the complete vehicle (Tauri → Desktop App).
+**Analogy**: Think of it like building a hybrid car - you need one tool to build the electric motor (Vite → Web UI) and another to assemble the complete vehicle (Tauri → Desktop App).
 
 ## Project Structure
 
@@ -248,20 +242,21 @@ pomotoro/
 │   │   │   └── commands/ # Tauri command handlers
 │   │   ├── tauri.conf.json
 │   │   └── Cargo.toml
-│   ├── leptos-ui/     # Leptos WASM frontend
-│   │   ├── src/
-│   │   │   ├── pages/   # Application pages/routes
-│   │   │   ├── components/ # Reusable UI components
-│   │   │   └── main.rs  # Frontend entry point
-│   │   ├── index.html   # HTML template
-│   │   └── Cargo.toml
-│   ├── pomotoro-cli/  # CLI client (stub)
-│   └── cosmic-de/     # Cosmic DE applet (stub)
+    │   ├── react-ui/     # React + TypeScript frontend
+    │   │   ├── src/
+    │   │   │   ├── pages/      # Application pages/routes
+    │   │   │   ├── components/ # Reusable UI components
+    │   │   │   ├── store/      # State management
+    │   │   │   └── main.tsx    # Frontend entry point
+    │   │   ├── index.html   # HTML template
+    │   │   ├── vite.config.ts
+    │   │   └── package.json
+    │   ├── pomotoro-cli/  # CLI client (stub)
+    │   └── cosmic-de/     # Cosmic DE applet (stub)
 ├── assets/            # Sounds and icons
 ├── scripts/           # Utility scripts
 │   └── install-deps.sh # System dependency installer
-├── Trunk.toml         # Frontend build configuration
-└── justfile           # Task runner - all development commands
+├── justfile           # Task runner - all development commands
 ```
 
 ## Development Commands
@@ -289,12 +284,12 @@ pomotoro/
 | `just clean` | Clean build artifacts |
 | `just install-deps` | Install system dependencies (Linux only) |
 
-### Using Cargo/Trunk Directly (if needed)
+### Using Cargo/npm Directly (if needed)
 | Command | Description |
 |---------|-------------|
 | `cd apps/tauri-app && cargo tauri dev` | Start development server |
 | `cd apps/tauri-app && cargo tauri build` | Build for production |
-| `trunk serve` | Frontend dev server only |
+| `cd apps/react-ui && npm run dev` | Frontend dev server only |
 | `cargo test --workspace` | Run tests |
 | `cargo fmt --all` | Format code |
 | `cargo clippy --workspace` | Run linter |
@@ -328,28 +323,14 @@ The built application will be available in:
 
 ### Common Issues and Solutions
 
-#### 1. "can't find crate for `core`" or `std`
-**Problem**: Missing WebAssembly compilation target
-**Solution**:
-```bash
-rustup target add wasm32-unknown-unknown
-```
-
-#### 2. "trunk: command not found"
-**Problem**: Trunk not installed
-**Solution**:
-```bash
-cargo install trunk
-```
-
-#### 3. "error: no such subcommand: `tauri`"
+#### 1. "error: no such subcommand: `tauri`"
 **Problem**: Tauri CLI not installed
 **Solution**:
 ```bash
 cargo install tauri-cli
 ```
 
-#### 4. "pkg-config exited with status code 1" - Missing system libraries
+#### 2. "pkg-config exited with status code 1" - Missing system libraries
 **Problem**: Missing GTK3, Pango, GDK, ALSA, or other system development libraries
 **Solution**:
 
@@ -387,24 +368,22 @@ cargo clean
 - `library 'gdk-3.0' required by crate 'gdk-sys' was not found` → Install `libgtk-3-dev`
 - `library 'libsoup-3.0' was not found` → Install `libsoup-3.0-dev`
 
-#### 5. Build fails on Linux with webkit2gtk errors
+#### 3. Build fails on Linux with webkit2gtk errors
 **Problem**: Missing WebKit development libraries
 **Solution**:
 ```bash
 sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev
 ```
 
-#### 6. "Failed to load module" errors in development
+#### 4. "Failed to load module" errors in development
 **Problem**: Frontend not building correctly
 **Solution**:
 ```bash
-# Clean and rebuild
-cargo clean
-rm -rf dist
-trunk build
+# Clean and rebuild the frontend
+cd apps/react-ui && rm -rf dist node_modules && npm install && npm run build
 ```
 
-#### 7. "unable to find library -lsqlite3" during diesel_cli installation
+#### 5. "unable to find library -lsqlite3" during diesel_cli installation
 **Problem**: SQLite development libraries not installed
 **Solution**:
 ```bash
@@ -465,5 +444,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - 🍅 Inspired by the [Pomodoro Technique](https://francescocirillo.com/pages/pomodoro-technique) by Francesco Cirillo
-- 🦀 Built with the amazing [Tauri](https://tauri.app/) and [Leptos](https://leptos.dev/) frameworks
+- 🦀 Built with the amazing [Tauri](https://tauri.app/) and [React](https://react.dev/) frameworks
 - 🐂 Powered by the strength and speed of Rust
