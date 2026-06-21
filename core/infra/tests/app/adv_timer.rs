@@ -483,7 +483,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
     );
     assert_eq!(
         active_task_after_resume,
-        task.id(),
+        Some(task.id()),
         "Active task should be maintained after resume"
     );
 }
@@ -949,7 +949,7 @@ async fn should_switch_active_task_during_timer_session() {
     assert!(switch_result.is_ok(), "Failed to switch task");
     assert_eq!(
         active_task_after_switch,
-        task2.id(),
+        Some(task2.id()),
         "Active task should be task2 after switch"
     );
     assert_eq!(
@@ -984,13 +984,15 @@ async fn should_emit_tick_events_every_second() {
     // AAA
 
     // Arrange
-    // Get default task first
+    // Get any task (the starter task created by setup)
     let default_task = ctx
         .task_repo
-        .get_default_task()
+        .get_all()
         .await
-        .expect("Failed to get default task")
-        .expect("No default task found");
+        .expect("Failed to load tasks")
+        .into_iter()
+        .next()
+        .expect("At least one task should exist");
 
     // Start timer with default task
     start_timer_phase(

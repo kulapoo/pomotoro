@@ -39,8 +39,8 @@ mod tests {
     }
 
     #[test]
-    fn test_default_task_creation() {
-        let task = TaskBuilder::default_task().build().unwrap();
+    fn test_starter_task_creation() {
+        let task = TaskBuilder::starter_task().build().unwrap();
 
         assert_eq!(task.name, "Focus Session");
         assert_eq!(task.max_sessions, 4);
@@ -89,7 +89,7 @@ mod tests {
         // Test that existing constructors still work
         let task1 =
             Task::new_with_defaults("Test Task".to_string(), 3).unwrap();
-        let task2 = Task::new_default().unwrap();
+        let task2 = TaskBuilder::starter_task().build().unwrap();
 
         assert_eq!(task1.name, "Test Task");
         assert_eq!(task1.max_sessions, 3);
@@ -99,10 +99,9 @@ mod tests {
     }
 
     #[test]
-    fn test_default_task_has_default_flag() {
-        let task = TaskBuilder::default_task().build().unwrap();
+    fn test_starter_task_has_expected_fields() {
+        let task = TaskBuilder::starter_task().build().unwrap();
 
-        assert!(task.is_default());
         assert_eq!(task.name, "Focus Session");
         assert_eq!(
             task.description,
@@ -110,65 +109,5 @@ mod tests {
         );
         assert_eq!(task.tags, vec!["focus"]);
         assert_eq!(task.status, TaskStatus::Active);
-    }
-
-    #[test]
-    fn test_regular_task_is_not_default() {
-        let task =
-            TaskBuilder::with_name_and_sessions("Regular Task".to_string(), 3)
-                .build()
-                .unwrap();
-
-        assert!(!task.is_default());
-        assert_eq!(task.name, "Regular Task");
-    }
-
-    #[test]
-    fn test_set_task_as_default() {
-        let mut task =
-            TaskBuilder::with_name_and_sessions("Test Task".to_string(), 3)
-                .build()
-                .unwrap();
-
-        assert!(!task.is_default());
-
-        task.set_as_default();
-        assert!(task.is_default());
-    }
-
-    #[test]
-    fn test_unset_task_as_default() {
-        let mut task = TaskBuilder::default_task().build().unwrap();
-
-        assert!(task.is_default());
-
-        task.unset_as_default();
-        assert!(!task.is_default());
-    }
-
-    #[test]
-    fn test_builder_with_default_flag() {
-        let task = TaskBuilder::with_name_and_sessions(
-            "Custom Default".to_string(),
-            2,
-        )
-        .default(true)
-        .build()
-        .unwrap();
-
-        assert!(task.is_default());
-        assert_eq!(task.name, "Custom Default");
-        assert_eq!(task.max_sessions, 2);
-    }
-
-    #[test]
-    fn test_builder_explicitly_set_non_default() {
-        let task = TaskBuilder::default_task()
-            .default(false) // Override the default_task() setting
-            .build()
-            .unwrap();
-
-        assert!(!task.is_default());
-        assert_eq!(task.name, "Focus Session");
     }
 }

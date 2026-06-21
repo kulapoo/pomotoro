@@ -21,9 +21,6 @@ pub enum Error {
     #[error("Invalid task lifecycle: {message}")]
     InvalidLifecycle { message: String },
 
-    #[error("Default task not found")]
-    DefaultTaskNotFound,
-
     #[error("Invalid task name: cannot be empty")]
     EmptyTaskName,
 
@@ -221,8 +218,8 @@ mod tests {
         assert!(success.is_ok());
         assert_eq!(success.unwrap(), 42);
 
-        let failure: Result<i32> = Err(Error::DefaultTaskNotFound);
+        let failure: Result<i32> = Err(Error::TaskAlreadyCompleted);
         assert!(failure.is_err());
-        assert_eq!(failure.unwrap_err().to_string(), "Default task not found");
+        assert_eq!(failure.unwrap_err().to_string(), "Task already completed");
     }
 }

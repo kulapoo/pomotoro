@@ -26,20 +26,28 @@ impl TaskFixtures {
             .collect()
     }
 
-    /// Create a default task (the one marked as default in the system)
-    pub fn default_task() -> Task {
-        DomainTaskBuilder::default_task()
+    /// Create the first-boot starter task (same as bootstrap creates).
+    ///
+    /// This is just a regular task — no special privileges. Provided
+    /// here so tests can mimic the post-bootstrap state.
+    pub fn starter_task() -> Task {
+        DomainTaskBuilder::starter_task()
             .build()
-            .expect("Failed to create default task")
+            .expect("Failed to create starter task")
     }
 
-    /// Create a task with default settings
-    pub fn with_defaults(name: impl Into<String>, sessions: u8) -> Task {
-        DomainTaskBuilder::default_task()
+    /// Create a task with starter-task defaults overridden by the
+    /// given name and session count. Equivalent to taking the starter
+    /// task and renaming/re-sizing it.
+    pub fn with_starter_defaults(
+        name: impl Into<String>,
+        sessions: u8,
+    ) -> Task {
+        DomainTaskBuilder::starter_task()
             .max_sessions(sessions)
             .name(name.into())
             .build()
-            .expect("Failed to create task with defaults")
+            .expect("Failed to create task with starter defaults")
     }
 }
 
@@ -56,9 +64,10 @@ impl TaskBuilder {
         }
     }
 
-    pub fn default() -> Self {
+    /// Start from the first-boot starter task configuration.
+    pub fn starter() -> Self {
         Self {
-            builder: DomainTaskBuilder::default_task(),
+            builder: DomainTaskBuilder::starter_task(),
         }
     }
 
@@ -94,11 +103,6 @@ impl TaskBuilder {
 
     pub fn tags(mut self, tags: Vec<String>) -> Self {
         self.builder = self.builder.tags(tags);
-        self
-    }
-
-    pub fn as_default(mut self) -> Self {
-        self.builder = self.builder.default(true);
         self
     }
 

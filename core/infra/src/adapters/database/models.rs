@@ -17,7 +17,6 @@ pub struct TaskDb {
     pub status: String,
     pub tags: Option<String>, // JSON array as string
     pub config: String, // JSON object with timer configuration and other settings
-    pub is_default: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -47,7 +46,6 @@ impl From<Task> for TaskDb {
             .to_string(),
             tags,
             config,
-            is_default: task.is_default(),
             created_at: task.created_at().to_rfc3339(),
             updated_at: task.updated_at().to_rfc3339(),
         }
@@ -100,7 +98,6 @@ impl TryFrom<TaskDb> for Task {
             .current_sessions(db.current_sessions as u8)
             .status(status)
             .tags(tags)
-            .default(db.is_default)
             .created_at(created_at)
             .config(config);
 
@@ -168,9 +165,14 @@ impl From<Timer> for TimerDb {
             }
         };
 
+        // The timer row's primary key is the stable singleton ID; it is
+        // NOT derived from the active task. The active task (which may
+        // now be None) lives in `active_task_id`.
+        let active_task_id = timer.task_id().map(|id| id.to_string());
+
         Self {
-            id: timer.task_id().to_string(),
-            active_task_id: Some(timer.task_id().to_string()),
+            id: domain::TIMER_ROW_ID.as_str().to_string(),
+            active_task_id,
             state,
             paused_from,
             remaining_seconds: timer.state().remaining_seconds() as i32,
@@ -184,20 +186,20 @@ impl TryFrom<TimerDb> for Timer {
     type Error = domain::Error;
 
     fn try_from(db: TimerDb) -> Result<Self, Self::Error> {
-        // Parse the task_id from active_task_id field, or use DEFAULT_TASK_ID if not present
+        // Parse the optional active task ID. None / empty → no task.
         let task_id = if let Some(task_id_str) = db.active_task_id {
             if task_id_str.is_empty() {
-                *domain::DEFAULT_TASK_ID
+                None
             } else {
                 let task_uuid = Uuid::parse_str(&task_id_str).map_err(|e| {
                     domain::Error::SerializationError {
                         message: format!("Invalid task ID: {}", e),
                     }
                 })?;
-                TaskId::from_uuid(task_uuid)
+                Some(TaskId::from_uuid(task_uuid))
             }
         } else {
-            *domain::DEFAULT_TASK_ID
+            None
         };
 
         // Deserialize the timer state from simple string
@@ -243,6 +245,19 @@ impl TryFrom<TimerDb> for Timer {
             }
         };
 
-        Ok(Timer::with_state(task_id, state))
+        match task_id {
+            Some(id) => Ok(Timer::with_state(id, state)),
+            None => {
+                // No active task: return an idle timer with no task.
+                // We preserve the deserialized state in case the timer
+                // was mid-run when the active task got cleared, but
+                // since `Timer::idle()` always returns Idle state and
+                // there's no public constructor for (None, state), we
+                // simply return idle — any in-flight state without a
+                // task is meaningless anyway.
+                let _ = state; // suppress unused warning
+                Ok(Timer::idle())
+            }
+        }
     }
 }

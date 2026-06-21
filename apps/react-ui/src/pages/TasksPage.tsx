@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Trash2, CheckCircle2, Circle, Crosshair, RotateCcw, Pencil, Search } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Circle, Crosshair, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore } from '@/store/taskStore'
 import { useTimerStore } from '@/store/timerStore'
@@ -133,15 +133,13 @@ function TaskRow({
         </button>
 
         {/* Delete */}
-        {!task.default && (
-          <button
-            onClick={onDelete}
-            title="Delete"
-            className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 size={15} />
-          </button>
-        )}
+        <button
+          onClick={onDelete}
+          title="Delete"
+          className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+        >
+          <Trash2 size={15} />
+        </button>
       </div>
 
       {/* Progress bar */}
@@ -315,9 +313,22 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
       )}
 
       {!isLoading && tasks.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-12">
-          No tasks yet — add one above.
-        </p>
+        <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+          <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mb-4">
+            <ListTodo size={26} className="text-muted-foreground" />
+          </div>
+          <h3 className="text-base font-semibold mb-1">No tasks yet</h3>
+          <p className="text-sm text-muted-foreground mb-5 max-w-xs">
+            Create your first task to start focusing. You can edit or delete it any time.
+          </p>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-95 transition-all"
+          >
+            <Plus size={16} />
+            Create task
+          </button>
+        </div>
       )}
 
       {!isLoading && tasks.length > 0 && filtered.length === 0 && (

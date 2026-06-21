@@ -22,7 +22,6 @@ diesel::table! {
         status -> Text,
         tags -> Nullable<Text>,
         config -> Text,
-        is_default -> Bool,
         created_at -> Text,
         updated_at -> Text,
     }

@@ -655,10 +655,12 @@ async fn should_not_allow_config_update_during_active_timer() {
     // Start a timer session first
     let task = ctx
         .task_repo
-        .get_default_task()
+        .get_all()
         .await
-        .expect("Failed to get default task")
-        .expect("Default task should exist");
+        .expect("Failed to load tasks")
+        .into_iter()
+        .next()
+        .expect("At least one task should exist");
 
     // Create a timer session
     use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};

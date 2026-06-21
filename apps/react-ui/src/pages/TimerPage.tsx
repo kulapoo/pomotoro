@@ -6,6 +6,7 @@ import {
   SkipForward,
   CheckCircle,
   RefreshCw,
+  ListTodo,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimerStore } from "@/store/timerStore";
@@ -19,7 +20,7 @@ import {
   isTimerPaused,
   isTimerIdle,
 } from "@/types";
-import type { TimerConfiguration } from "@/types";
+import type { Page, TimerConfiguration } from "@/types";
 
 const RING_R = 90;
 const CIRC = 2 * Math.PI * RING_R;
@@ -62,7 +63,7 @@ const PHASE_ARC_COLOR: Record<Phase, string> = {
   [Phase.LongBreak]: "#3b82f6", // blue-500
 };
 
-export function TimerPage() {
+export function TimerPage({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const {
     timer,
     error: timerError,
@@ -220,12 +221,11 @@ export function TimerPage() {
   let sessionDots: number[] | null = null;
   let dotFilled = 0;
   if (contextTask) {
-    const hasFixedSessions =
-      !contextTask.default && (contextTask.max_sessions ?? 0) > 0;
-    const dotTotal = Math.max(
-      0,
-      hasFixedSessions ? contextTask.max_sessions : cycleLen,
-    );
+    // All tasks (including the starter) use fixed-session dots based on
+    // their max_sessions. The old cycle-based (wrapping) display was a
+    // special case for the deleted "default task" concept.
+    const hasFixedSessions = (contextTask.max_sessions ?? 0) > 0;
+    const dotTotal = Math.max(0, hasFixedSessions ? contextTask.max_sessions : cycleLen);
     dotFilled = hasFixedSessions
       ? Math.min(contextTask.current_sessions, contextTask.max_sessions)
       : contextTask.current_sessions % cycleLen;
@@ -299,7 +299,7 @@ export function TimerPage() {
       )}
 
       {/* Active task pill */}
-      {contextTask && !contextTask.default && (
+      {contextTask && (
         <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-card border border-border shadow-sm max-w-xs truncate">
           {running && (
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0" />
@@ -326,8 +326,9 @@ export function TimerPage() {
 
         <button
           onClick={handlePlayPause}
-          disabled={!canStart && !running && !paused}
+          disabled={!contextTask || (!canStart && !running && !paused)}
           className="flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          title={!contextTask ? "Select a task to start" : undefined}
         >
           {running ? <Pause size={26} /> : <Play size={26} className="ml-1" />}
         </button>
@@ -344,11 +345,23 @@ export function TimerPage() {
         </button>
       </div>
 
-      {/* No-task hint */}
+      {/* No-task empty state: prompt the user to pick a task */}
       {!contextTask && !running && !paused && (
-        <span className="text-xs text-muted-foreground">
-          Select a task to start
-        </span>
+        <div className="flex flex-col items-center gap-3 mt-2">
+          <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center">
+            <ListTodo size={22} className="text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground text-center max-w-xs">
+            No task selected. Pick one to start focusing.
+          </p>
+          <button
+            onClick={() => onNavigate("tasks")}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl bg-primary text-primary-foreground hover:opacity-90 active:scale-95 transition-all"
+          >
+            <ListTodo size={15} />
+            Choose a task
+          </button>
+        </div>
       )}
 
       {/* State label / last-break hint */}
@@ -380,26 +393,24 @@ export function TimerPage() {
             <RefreshCw size={12} />
             Reset Task
           </button>
-          {!contextTask.default && (
-            <button
-              onClick={handleCompleteTask}
-              disabled={
-                isBusy || (!isLastBreak && (isTaskCompleted || !activeTask))
-              }
-              className={[
-                "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
-                isLastBreak
-                  ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-accent"
-                  : "border-border text-muted-foreground hover:text-foreground hover:bg-accent",
-              ].join(" ")}
-              title={
-                isLastBreak ? "End this break and finish" : "Mark task as complete"
-              }
-            >
-              <CheckCircle size={12} />
-              {isLastBreak ? "Finish Now" : "Complete Task"}
-            </button>
-          )}
+          <button
+            onClick={handleCompleteTask}
+            disabled={
+              isBusy || (!isLastBreak && (isTaskCompleted || !activeTask))
+            }
+            className={[
+              "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+              isLastBreak
+                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-accent"
+                : "border-border text-muted-foreground hover:text-foreground hover:bg-accent",
+            ].join(" ")}
+            title={
+              isLastBreak ? "End this break and finish" : "Mark task as complete"
+            }
+          >
+            <CheckCircle size={12} />
+            {isLastBreak ? "Finish Now" : "Complete Task"}
+          </button>
         </div>
       )}
     </div>

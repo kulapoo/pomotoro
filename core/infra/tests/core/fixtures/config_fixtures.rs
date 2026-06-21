@@ -31,13 +31,6 @@ impl ConfigFixtures {
             auto_start_work_after_break: false,
             minimize_to_tray: false,
             start_minimized: false,
-            enable_screen_blocking: false,
-            block_screen_after_work: false,
-            block_screen_after_work_message:
-                "Work session complete. Time for a break.".to_string(),
-            block_screen_after_break: false,
-            block_screen_after_break_message: "Break over. Back to work."
-                .to_string(),
             persistence_interval_seconds: 10,
         }
     }

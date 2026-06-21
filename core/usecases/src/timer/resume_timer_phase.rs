@@ -17,7 +17,7 @@ pub async fn resume_timer_phase(
     let mut timer = timer_repo.get().await?;
 
     // Verify the timer is for the expected task
-    if timer.task_id() != task_id {
+    if timer.task_id() != Some(task_id) {
         return Err(domain::Error::InvalidStateTransition {
             from: "different_task".to_string(),
             to: "resume".to_string(),

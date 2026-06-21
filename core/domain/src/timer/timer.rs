@@ -8,15 +8,19 @@ use crate::{Event, TaskId, TimerConfiguration};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-/// The single default task ID used throughout the application
-pub static DEFAULT_TASK_ID: Lazy<TaskId> = Lazy::new(|| {
+/// The singleton timer row's stable primary key.
+///
+/// There is only ever one timer in the app; this UUID is its persistent
+/// row identifier. It has nothing to do with any "default" task — the
+/// name is historically unfortunate.
+pub static TIMER_ROW_ID: Lazy<TaskId> = Lazy::new(|| {
     TaskId::from_string("00000000-0000-0000-0000-000000000001")
-        .expect("Failed to create default task ID")
+        .expect("Failed to create timer row ID")
 });
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Timer {
-    task_id: TaskId,
+    task_id: Option<TaskId>,
     state: TimerState,
 }
 
@@ -32,22 +36,46 @@ impl std::fmt::Debug for Timer {
 impl Timer {
     pub fn new(task_id: TaskId) -> Self {
         Self {
-            task_id,
+            task_id: Some(task_id),
             state: TimerState::new(),
         }
     }
 
-    /// Create the default timer instance
-    pub fn default_timer() -> Self {
-        Self::new(*DEFAULT_TASK_ID)
+    /// Create a timer instance with no active task.
+    ///
+    /// Operations that require a task (start, tick, etc.) will return
+    /// [`Error::NoActiveEntity`] until a task is attached via
+    /// [`Timer::set_task_id`].
+    pub fn idle() -> Self {
+        Self {
+            task_id: None,
+            state: TimerState::new(),
+        }
     }
 
     pub fn with_state(task_id: TaskId, state: TimerState) -> Self {
-        Self { task_id, state }
+        Self {
+            task_id: Some(task_id),
+            state,
+        }
     }
 
-    pub fn task_id(&self) -> TaskId {
+    pub fn task_id(&self) -> Option<TaskId> {
         self.task_id
+    }
+
+    /// Attach a task to the timer.
+    pub fn set_task_id(&mut self, task_id: TaskId) {
+        self.task_id = Some(task_id);
+    }
+
+    /// Detach the task from the timer and reset state to Idle.
+    ///
+    /// Used when the active task is deleted. The timer cannot run again
+    /// until a new task is attached.
+    pub fn clear_task_id(&mut self) {
+        self.task_id = None;
+        self.state = TimerState::Idle;
     }
 
     pub fn state(&self) -> &TimerState {
@@ -61,10 +89,18 @@ impl Timer {
         }
     }
 
+    /// Returns the task_id required for state-machine transitions, or
+    /// an error if no task is attached.
+    fn require_task_id(&self) -> Result<TaskId> {
+        self.task_id.ok_or(Error::NoActiveEntity)
+    }
+
     pub fn start(
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         if !StateTransitions::can_transition(&self.state, TransitionType::Start)
         {
             return Err(Error::InvalidStateTransition {
@@ -75,7 +111,7 @@ impl Timer {
 
         let result = StateTransitions::start(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
         )?;
 
@@ -88,6 +124,8 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         if !StateTransitions::can_transition(&self.state, TransitionType::Pause)
         {
             return Err(Error::InvalidStateTransition {
@@ -98,7 +136,7 @@ impl Timer {
 
         let result = StateTransitions::pause(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -109,6 +147,8 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         if !StateTransitions::can_transition(
             &self.state,
             TransitionType::Resume,
@@ -121,7 +161,7 @@ impl Timer {
 
         let result = StateTransitions::resume(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
         )?;
 
@@ -133,9 +173,20 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        // Reset is allowed even with no task attached — it's a safe
+        // "go back to Idle" operation that may emit a Reset event with
+        // whichever task is currently attached (or no-op if none).
+        let task_id = match self.task_id {
+            Some(id) => id,
+            None => {
+                self.state = TimerState::Idle;
+                return Ok(vec![]);
+            }
+        };
+
         let result = StateTransitions::reset(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -146,9 +197,11 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         let result = StateTransitions::reset_phase(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
         )?;
         self.state = result.new_state;
@@ -160,6 +213,8 @@ impl Timer {
         configuration: &TimerConfiguration,
         next_phase: Phase,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         if !StateTransitions::can_transition(&self.state, TransitionType::Skip)
         {
             return Err(Error::InvalidStateTransition {
@@ -170,7 +225,7 @@ impl Timer {
 
         let result = StateTransitions::skip_phase(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
             next_phase,
         )?;
@@ -182,18 +237,17 @@ impl Timer {
         &mut self,
         configuration: &TimerConfiguration,
     ) -> Result<(bool, Vec<Box<dyn Event>>)> {
-        let (new_state, phase_complete) = StateTransitions::tick(
-            self.state.clone(),
-            self.task_id,
-            configuration,
-        )?;
+        let task_id = self.require_task_id()?;
+
+        let (new_state, phase_complete) =
+            StateTransitions::tick(self.state.clone(), task_id, configuration)?;
         self.state = new_state.clone();
 
         let mut events: Vec<Box<dyn Event>> = vec![];
 
         let phase = self.get_current_phase();
         let tick_event = Tick::new(
-            self.task_id,
+            task_id,
             phase,
             self.state.remaining_seconds(),
             1,
@@ -206,19 +260,35 @@ impl Timer {
     }
 
     pub fn can_start(&self) -> bool {
-        StateTransitions::can_transition(&self.state, TransitionType::Start)
+        self.task_id.is_some()
+            && StateTransitions::can_transition(
+                &self.state,
+                TransitionType::Start,
+            )
     }
 
     pub fn can_pause(&self) -> bool {
-        StateTransitions::can_transition(&self.state, TransitionType::Pause)
+        self.task_id.is_some()
+            && StateTransitions::can_transition(
+                &self.state,
+                TransitionType::Pause,
+            )
     }
 
     pub fn can_resume(&self) -> bool {
-        StateTransitions::can_transition(&self.state, TransitionType::Resume)
+        self.task_id.is_some()
+            && StateTransitions::can_transition(
+                &self.state,
+                TransitionType::Resume,
+            )
     }
 
     pub fn can_skip(&self) -> bool {
-        StateTransitions::can_transition(&self.state, TransitionType::Skip)
+        self.task_id.is_some()
+            && StateTransitions::can_transition(
+                &self.state,
+                TransitionType::Skip,
+            )
     }
 
     pub fn remaining_seconds(
@@ -285,6 +355,8 @@ impl Timer {
         next_phase: Phase,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         if !StateTransitions::can_transition(
             &self.state,
             TransitionType::CompletePhase,
@@ -297,7 +369,7 @@ impl Timer {
 
         let result = StateTransitions::complete_phase(
             self.state.clone(),
-            self.task_id,
+            task_id,
             configuration,
             next_phase,
         )?;
@@ -310,6 +382,8 @@ impl Timer {
         phase: Phase,
         configuration: &TimerConfiguration,
     ) -> Result<Vec<Box<dyn Event>>> {
+        let task_id = self.require_task_id()?;
+
         let duration = configuration.get_phase_duration_seconds(phase);
         self.state = match phase {
             Phase::Work => TimerState::Working {
@@ -324,7 +398,7 @@ impl Timer {
         };
 
         let events: Vec<Box<dyn Event>> =
-            vec![Box::new(Started::new(self.task_id, phase, duration, 1))];
+            vec![Box::new(Started::new(task_id, phase, duration, 1))];
 
         Ok(events)
     }
@@ -355,6 +429,35 @@ mod tests {
         assert!(timer.is_idle());
         assert!(!timer.is_running());
         assert!(!timer.is_paused());
+        assert!(timer.task_id().is_some());
+    }
+
+    #[test]
+    fn test_idle_timer_has_no_task() {
+        let timer = Timer::idle();
+        assert!(timer.task_id().is_none());
+        assert!(timer.is_idle());
+    }
+
+    #[test]
+    fn test_start_without_task_errors() {
+        let mut timer = Timer::idle();
+        let config = create_test_config();
+        let result = timer.start(&config);
+        assert!(result.is_err());
+        // NoActiveEntity maps to a timer::Error which is converted by the caller.
+    }
+
+    #[test]
+    fn test_clear_task_id_resets_to_idle() {
+        let mut timer = create_test_timer();
+        let config = create_test_config();
+        timer.start(&config).unwrap();
+        assert!(timer.is_running());
+
+        timer.clear_task_id();
+        assert!(timer.task_id().is_none());
+        assert!(timer.is_idle());
     }
 
     #[test]
@@ -452,6 +555,6 @@ mod tests {
         let task_id = TaskId::new();
         let timer = Timer::new(task_id);
 
-        assert_eq!(timer.task_id(), task_id);
+        assert_eq!(timer.task_id(), Some(task_id));
     }
 }

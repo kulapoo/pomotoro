@@ -58,24 +58,26 @@ pub mod task {
     pub async fn get_active_task(ctx: &AppContext) -> Task {
         let timer = timer::get_timer(ctx).await;
 
-        let active_task_id = timer.task_id();
+        let active_task_id = match timer.task_id() {
+            Some(id) => id,
+            None => {
+                // No task attached — fall back to any task in the repo.
+                return ctx
+                    .task_repo
+                    .get_all()
+                    .await
+                    .expect("Failed to load tasks")
+                    .into_iter()
+                    .next()
+                    .expect("No tasks in repo");
+            }
+        };
 
-        let task = if let Some(task) = ctx
-            .task_repo
+        ctx.task_repo
             .get_by_id(active_task_id)
             .await
             .expect("Failed to get active task")
-        {
-            task
-        } else {
-            ctx.task_repo
-                .get_default_task()
-                .await
-                .unwrap()
-                .expect("Failed to get default task")
-        };
-
-        task
+            .expect("Active task not found in repo")
     }
 }
 

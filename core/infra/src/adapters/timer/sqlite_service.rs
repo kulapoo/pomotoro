@@ -27,7 +27,7 @@ impl TimerTickService {
         timer_repository: Arc<dyn TimerRepository + Send + Sync>,
         config_repository: Arc<dyn ConfigRepository + Send + Sync>,
     ) -> Self {
-        let timer = Timer::default_timer();
+        let timer = Timer::idle();
 
         Self {
             timer: Arc::new(Mutex::new(timer)),
@@ -118,19 +118,27 @@ impl TimerTickService {
 
                 // If phase completed naturally (countdown reached 0), handle completion
                 if phase_completed {
-                    // Get the current phase and task_id before breaking
-                    let (current_phase, task_id) = {
+                    // Get the current phase and task_id before breaking.
+                    // If the timer has no active task (shouldn't happen
+                    // mid-tick, but be defensive), skip the
+                    // CountdownExpired event.
+                    let maybe_event = {
                         let timer = timer_clone.lock().await;
-                        (timer.get_current_phase(), timer.task_id())
+                        timer
+                            .task_id()
+                            .map(|tid| (timer.get_current_phase(), tid))
                     };
 
-                    // Publish the generic CountdownExpired event
-                    use domain::timer::events::CountdownExpired;
+                    if let Some((current_phase, task_id)) = maybe_event {
+                        // Publish the generic CountdownExpired event
+                        use domain::timer::events::CountdownExpired;
 
-                    let expiration_event =
-                        CountdownExpired::new(current_phase, task_id);
+                        let expiration_event =
+                            CountdownExpired::new(current_phase, task_id);
 
-                    event_publisher_clone.publish(Box::new(expiration_event));
+                        event_publisher_clone
+                            .publish(Box::new(expiration_event));
+                    }
 
                     break;
                 }

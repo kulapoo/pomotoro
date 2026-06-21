@@ -16,7 +16,6 @@ pub struct UpdateTaskCmd {
     pub short_break_duration: Option<Duration>,
     pub long_break_duration: Option<Duration>,
     pub sessions_until_long_break: Option<u8>,
-    pub enable_screen_blocking: Option<bool>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -82,10 +81,6 @@ pub async fn update_task(
             .timer
             .with_sessions_until_long_break(sessions_until_long_break)?;
         task.config_mut().timer = new_timer;
-    }
-    if let Some(enable_screen_blocking) = cmd.enable_screen_blocking {
-        task.config_mut().general.enable_screen_blocking =
-            enable_screen_blocking;
     }
 
     if let Some(audio_config) = cmd.audio_config {

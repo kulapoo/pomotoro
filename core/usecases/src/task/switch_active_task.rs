@@ -35,9 +35,9 @@ pub async fn switch_active_task(
     let timer = timer_repo.get().await?;
 
     // Handle previous active task status transition
-    let previous_task_id = Some(timer.task_id());
-    if let Some(prev_task_id) = previous_task_id {
-        if prev_task_id != cmd.task_id {
+    let previous_task_id = timer.task_id();
+    if Some(cmd.task_id) != previous_task_id {
+        if let Some(prev_task_id) = previous_task_id {
             if let Some(mut prev_task) =
                 task_repo.get_by_id(prev_task_id).await?
             {

@@ -5,7 +5,7 @@
   - cycle all pomodoro tasks - max sessions per task default to 1.
 
 - tasks
-  - "default" pomodoro task - cant be deleted, default task has max sessions defaulted to 4.
+  - a starter "Focus Session" task is auto-created on first boot; it is a regular task that the user can edit or delete.
   - simple crud
   - each task can have its own pomodoro session
   - configurable pomodoro

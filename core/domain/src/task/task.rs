@@ -17,7 +17,6 @@ pub struct Task {
     pub(crate) updated_at: DateTime<Utc>,
     pub(crate) completed_at: Option<DateTime<Utc>>,
     pub(crate) status: Status,
-    pub(crate) default: bool,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -28,7 +27,6 @@ pub struct TaskPatch {
     pub tags: Option<Vec<String>>,
     pub config: Option<Config>,
     pub status: Option<Status>,
-    pub default: Option<bool>,
     pub current_sessions: Option<u8>,
     pub updated_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -132,12 +130,6 @@ impl Task {
 
     // ---- Constructors ----
 
-    pub fn new_default() -> Result<Self> {
-        use super::builder::Builder;
-
-        Builder::default_task().build()
-    }
-
     pub fn new(name: String, max_sessions: u8) -> Result<Self> {
         use super::builder::Builder;
 
@@ -214,23 +206,6 @@ impl Task {
         Ok(())
     }
 
-    pub fn is_default(&self) -> bool {
-        self.default
-    }
-
-    pub fn set_as_default(&mut self) {
-        self.default = true;
-    }
-
-    pub fn unset_as_default(&mut self) {
-        self.default = false;
-    }
-
-    pub fn with_default(mut self, default: bool) -> Self {
-        self.default = default;
-        self
-    }
-
     pub fn get_config(&self) -> &Config {
         &self.config
     }
@@ -257,9 +232,6 @@ impl Task {
         }
         if let Some(tags) = update.tags {
             self.tags = tags;
-        }
-        if let Some(default) = update.default {
-            self.default = default;
         }
         if let Some(updated_at) = update.updated_at {
             self.updated_at = updated_at;
@@ -297,7 +269,6 @@ mod tests {
             .created_at(Utc::now())
             .completed_at(Utc::now())
             .status(Status::Active)
-            .default(false)
             .build()
             .unwrap()
     }
@@ -309,7 +280,6 @@ mod tests {
         assert_eq!(task.max_sessions(), 5);
         assert_eq!(task.current_sessions(), 0);
         assert_eq!(task.status(), Status::Active);
-        assert!(!task.is_default());
     }
 
     #[test]
@@ -414,22 +384,6 @@ mod tests {
 
         task.status = Status::Completed;
         assert!(task.queue().is_err());
-    }
-
-    #[test]
-    fn test_default_management() {
-        let mut task = create_test_task();
-
-        assert!(!task.is_default());
-
-        task.set_as_default();
-        assert!(task.is_default());
-
-        task.unset_as_default();
-        assert!(!task.is_default());
-
-        let task2 = task.clone().with_default(true);
-        assert!(task2.is_default());
     }
 
     #[test]

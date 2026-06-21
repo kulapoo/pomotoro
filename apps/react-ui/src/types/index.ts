@@ -126,11 +126,6 @@ export interface GeneralConfig {
   auto_start_work_after_break: boolean
   minimize_to_tray: boolean
   start_minimized: boolean
-  enable_screen_blocking: boolean
-  block_screen_after_work: boolean
-  block_screen_after_work_message: string
-  block_screen_after_break: boolean
-  block_screen_after_break_message: string
   persistence_interval_seconds: number
 }
 
@@ -163,7 +158,6 @@ export interface Task {
   updated_at: string
   completed_at: string | null
   status: TaskStatus
-  default: boolean
 }
 
 // --- Create/Update request shapes ---
@@ -207,5 +201,4 @@ export const AppEvents = {
   TimerReset: 'timer:timer_reset',
   TimerPaused: 'timer:timer_paused',
   TimerResumed: 'timer:timer_resumed',
-  ScreenBlockerActivate: 'screen_blocker:activate',
 } as const

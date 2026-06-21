@@ -223,6 +223,7 @@ async fn task_should_delete_task() {
 
     let result = delete_task(
         ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         DeleteTaskCmd {
             id: created_task.id(),

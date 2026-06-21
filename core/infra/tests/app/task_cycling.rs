@@ -152,7 +152,7 @@ async fn auto_advance_cycles_when_task_completes_with_auto_start() {
         timer.is_running(),
         "Timer should be running on the new task after auto-start"
     );
-    assert_eq!(timer.task_id(), task2.id());
+    assert_eq!(timer.task_id(), Some(task2.id()));
 
     // Notification event should have been emitted
     assert!(
@@ -330,7 +330,7 @@ async fn auto_advance_noop_when_no_incomplete_tasks() {
     let timer = get_timer(&ctx).await;
     assert_eq!(
         timer.task_id(),
-        task1.id(),
+        Some(task1.id()),
         "Timer should remain on task1 when there are no other tasks to cycle to"
     );
 

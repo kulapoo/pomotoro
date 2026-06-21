@@ -13,7 +13,7 @@ use domain::{
 /// Builder for customizing app context creation
 pub struct AppContextBuilder {
     name: Option<String>,
-    with_default_task: bool,
+    with_starter_task: bool,
     with_default_config: bool,
     with_task_fixtures: bool,
     with_timer_started: bool,
@@ -26,7 +26,7 @@ impl AppContextBuilder {
     pub fn new() -> Self {
         Self {
             name: None,
-            with_default_task: false,
+            with_starter_task: false,
             with_default_config: false,
             with_task_fixtures: false,
             with_timer_started: false,
@@ -42,9 +42,10 @@ impl AppContextBuilder {
         self
     }
 
-    /// Add a default task to the context
-    pub fn with_default_task(mut self) -> Self {
-        self.with_default_task = true;
+    /// Add the first-boot starter task to the context (a regular task
+    /// that bootstrap would have created on first run).
+    pub fn with_starter_task(mut self) -> Self {
+        self.with_starter_task = true;
         self
     }
 
@@ -56,7 +57,7 @@ impl AppContextBuilder {
 
     /// Add test task fixtures
     pub fn with_standard_fixtures(mut self) -> Self {
-        self.with_default_task = true;
+        self.with_starter_task = true;
         self.with_default_config = true;
         self.task_count = Some(5);
         self
@@ -108,9 +109,9 @@ impl AppContextBuilder {
         // Ensure the single timer exists (it should be auto-created by the repository)
         let _ = ctx.timer_repo.get().await?;
 
-        // Add default task if requested
-        if self.with_default_task {
-            let task = TaskFixtures::with_defaults(
+        // Add starter task if requested
+        if self.with_starter_task {
+            let task = TaskFixtures::with_starter_defaults(
                 "Default Task",
                 config.timer.sessions_until_long_break,
             );
@@ -127,18 +128,21 @@ impl AppContextBuilder {
             }
         }
 
-        // Add default config if requested
-
-        // Switch to the default task
-
         if self.with_timer_started {
+            // Pick any task in the repo to bind the timer to. Tests
+            // using this option are expected to have added at least
+            // one task (via with_starter_task or with_task_fixtures).
             let task = ctx
                 .task_repo
-                .get_default_task()
+                .get_all()
                 .await?
-                .ok_or(domain::Error::DefaultTaskNotFound)?;
+                .into_iter()
+                .next()
+                .ok_or_else(|| domain::Error::TaskNotFound {
+                    id: "<no task in repo>".to_string(),
+                })?;
 
-            // Create a new timer for this task (not the DEFAULT_TASK_ID timer)
+            // Create a new timer bound to this task
             let mut timer = domain::Timer::new(task.id());
             let events = timer.start(&task.config().timer).map_err(|e| {
                 domain::Error::RepositoryError {
@@ -190,15 +194,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn builds_context_with_default_task() {
+    async fn builds_context_with_starter_task() {
         let ctx = AppContextBuilder::new()
-            .with_default_task()
+            .with_starter_task()
             .build()
             .await
             .unwrap();
 
-        let default_task = ctx.task_repo.get_default_task().await.unwrap();
-        assert!(default_task.is_some());
+        let tasks = ctx.task_repo.get_all().await.unwrap();
+        assert_eq!(tasks.len(), 1);
     }
 
     #[tokio::test]
@@ -229,14 +233,14 @@ mod tests {
     async fn builds_context_with_everything() {
         let ctx = AppContextBuilder::new()
             .with_name("full_test")
-            .with_default_task()
+            .with_starter_task()
             .with_task_fixtures(2)
             .with_default_config()
             .build()
             .await
             .unwrap();
 
-        // Should have 3 tasks total (1 default + 2 fixtures)
+        // Should have 3 tasks total (1 starter + 2 fixtures)
         let tasks = ctx.task_repo.get_all().await.unwrap();
         assert_eq!(tasks.len(), 3);
 

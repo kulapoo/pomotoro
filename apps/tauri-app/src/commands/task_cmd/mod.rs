@@ -5,7 +5,8 @@
 
 // Common imports and types used across multiple task commands
 pub use domain::{
-    AudioConfig, ConfigRepository, EventPublisher, Task, TaskId, TaskRepository,
+    AudioConfig, ConfigRepository, EventPublisher, Task, TaskId,
+    TaskRepository, TimerRepository,
 };
 pub use infra::adapters::events::mem_event_bus::EventPublisherArc;
 pub use serde::{Deserialize, Serialize};

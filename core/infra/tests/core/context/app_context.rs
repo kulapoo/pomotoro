@@ -109,9 +109,9 @@ mod tests {
     async fn repositories_work() {
         let ctx = AppContext::new().await.unwrap();
 
-        // Timer is automatically created/retrieved with default task ID
+        // Timer is auto-created with no task attached (idle).
         let timer = ctx.timer_repo.get().await.unwrap();
-        assert_eq!(timer.task_id(), domain::DEFAULT_TASK_ID.clone());
+        assert_eq!(timer.task_id(), None);
 
         // Create a task
         let task = TaskFixtures::simple("Test Task");

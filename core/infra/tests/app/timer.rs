@@ -39,11 +39,14 @@ async fn timer_should_start_from_idle_state() {
 
     let task = ctx
         .task_repo
-        .get_default_task()
+        .get_all()
         .await
-        .expect("Task should be created");
+        .expect("Tasks should be created")
+        .into_iter()
+        .next()
+        .expect("At least one task should exist");
 
-    let task_id = task.expect("Task should be created").id();
+    let task_id = task.id();
 
     let timer_srv = ctx.timer_tick_service.clone();
 
@@ -95,9 +98,7 @@ async fn timer_should_not_start_when_already_running() {
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
-        StartTimerPhaseCmd {
-            task_id: Some(task_id),
-        },
+        StartTimerPhaseCmd { task_id },
     )
     .await;
 
@@ -116,7 +117,9 @@ async fn timer_should_prevent_task_switch_while_timer_is_running() {
     .await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.task_id();
+    let task_id = timer
+        .task_id()
+        .expect("timer should have an active task after setup");
 
     let result = switch_task(
         ctx.task_repo.clone(),
@@ -136,7 +139,9 @@ async fn timer_should_pause_when_running() {
 
     let timer = get_timer(&ctx).await;
 
-    let task_id = timer.task_id();
+    let task_id = timer
+        .task_id()
+        .expect("timer should have an active task after setup");
 
     // Act
     let result = pause_timer_phase(
@@ -155,7 +160,7 @@ async fn timer_should_pause_when_running() {
     assert_eq!(result.is_ok(), true);
 
     assert_eq!(timer.is_running(), true);
-    assert_eq!(timer.task_id(), task_id);
+    assert_eq!(timer.task_id(), Some(task_id));
 
     assert_eq!(timer_after_pause.is_paused(), true);
 
@@ -172,7 +177,9 @@ async fn timer_should_reset_to_initial_state() {
     let ctx = setup_ctx_with_timer("timer_should_reset_to_initial_state").await;
 
     let timer = get_timer(&ctx).await;
-    let task_id = timer.task_id();
+    let task_id = timer
+        .task_id()
+        .expect("timer should have an active task after setup");
 
     let result = reset_timer_phase(
         task_id,
@@ -186,7 +193,7 @@ async fn timer_should_reset_to_initial_state() {
 
     assert_eq!(result.is_ok(), true);
     assert_eq!(timer_after_reset.remaining_seconds(None), 1500);
-    assert_eq!(timer_after_reset.task_id(), task_id);
+    assert_eq!(timer_after_reset.task_id(), Some(task_id));
 
     assert_utils::assert_event_was_emitted(
         &ctx.ui_simulator,
@@ -402,10 +409,13 @@ async fn timer_should_publish_events_on_all_state_changes() {
     .await;
 
     let timer = get_timer(&ctx).await;
+    let timer_task_id = timer.task_id();
 
     // Pause the timer
     let _ = pause_timer_phase(
-        timer.task_id(),
+        timer_task_id.unwrap_or_else(|| {
+            panic!("timer should have an active task after setup")
+        }),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -419,7 +429,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(timer.task_id()),
+            task_id: timer_task_id,
         },
     )
     .await;
@@ -427,7 +437,9 @@ async fn timer_should_publish_events_on_all_state_changes() {
 
     // Reset the timer
     let _ = reset_timer_phase(
-        timer.task_id(),
+        timer_task_id.unwrap_or_else(|| {
+            panic!("timer should have an active task after setup")
+        }),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -441,7 +453,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
         StartTimerPhaseCmd {
-            task_id: Some(timer.task_id()),
+            task_id: timer_task_id,
         },
     )
     .await;
@@ -464,7 +476,14 @@ async fn timer_should_publish_events_on_all_state_changes() {
 #[tokio::test]
 async fn task_queue_should_return_next_incomplete_task() {
     let ctx =
-        setup_ctx_with_timer("timer_should_start_with_default_task").await;
+        setup_ctx_with_timer("timer_should_start_with_starter_task").await;
+
+    // The active task (bound to the running timer) is the first
+    // incomplete task in the repo.
+    let timer = get_timer(&ctx).await;
+    let active_id = timer
+        .task_id()
+        .expect("timer should have an active task after setup");
 
     // Get all tasks and filter for incomplete ones
     let all_tasks = ctx
@@ -480,13 +499,5 @@ async fn task_queue_should_return_next_incomplete_task() {
         .collect();
 
     assert_eq!(task_queue.len(), 1);
-    assert_eq!(
-        task_queue[0].id(),
-        ctx.task_repo
-            .get_default_task()
-            .await
-            .unwrap()
-            .expect("Task should be set")
-            .id()
-    );
+    assert_eq!(task_queue[0].id(), active_id);
 }

@@ -57,7 +57,7 @@ pub async fn switch_task(
     validate_task_switch(&task, &timer)?;
 
     // Handle previous active task status transition
-    let previous_task_id = Some(timer.task_id());
+    let previous_task_id = timer.task_id();
     if let Some(prev_task_id) = previous_task_id {
         if prev_task_id != cmd.task_id {
             if let Some(mut prev_task) =

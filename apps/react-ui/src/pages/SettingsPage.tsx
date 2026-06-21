@@ -523,57 +523,6 @@ function GeneralTab({ config, patch }: { config: Config; patch: (c: Config) => v
           />
         </Row>
       </Section>
-
-      <Section title="Screen Blocking">
-        <Row label="Block screen after work" hint="Show fullscreen overlay when work phase ends">
-          <Toggle
-            checked={general.block_screen_after_work}
-            onChange={(v) =>
-              patch({ ...config, general: { ...general, block_screen_after_work: v } })
-            }
-          />
-        </Row>
-        {general.block_screen_after_work && (
-          <Row label="Work block message">
-            <input
-              type="text"
-              value={general.block_screen_after_work_message}
-              onChange={(e) =>
-                patch({
-                  ...config,
-                  general: { ...general, block_screen_after_work_message: e.target.value },
-                })
-              }
-              placeholder="Work session complete. Time for a break."
-              className="w-64 px-3 py-1.5 text-sm rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </Row>
-        )}
-        <Row label="Block screen after break" hint="Show fullscreen overlay when break phase ends">
-          <Toggle
-            checked={general.block_screen_after_break}
-            onChange={(v) =>
-              patch({ ...config, general: { ...general, block_screen_after_break: v } })
-            }
-          />
-        </Row>
-        {general.block_screen_after_break && (
-          <Row label="Break block message">
-            <input
-              type="text"
-              value={general.block_screen_after_break_message}
-              onChange={(e) =>
-                patch({
-                  ...config,
-                  general: { ...general, block_screen_after_break_message: e.target.value },
-                })
-              }
-              placeholder="Break over. Back to work."
-              className="w-64 px-3 py-1.5 text-sm rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </Row>
-        )}
-      </Section>
     </div>
   )
 }

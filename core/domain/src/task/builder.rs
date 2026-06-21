@@ -18,7 +18,6 @@ pub struct Builder {
     created_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     status: Option<Status>,
-    default: Option<bool>,
 }
 
 impl Default for Builder {
@@ -41,7 +40,6 @@ impl Builder {
             created_at: None,
             completed_at: None,
             status: None,
-            default: None,
         }
     }
 
@@ -50,8 +48,12 @@ impl Builder {
         Self::new().name(name).max_sessions(max_sessions)
     }
 
-    /// Create a builder for a default task
-    pub fn default_task() -> Self {
+    /// Create a builder for the first-run starter task.
+    ///
+    /// This is the seed task auto-created on first boot so the user has
+    /// something to focus on out of the box. It is a regular task —
+    /// deletable, editable, with no special privileges.
+    pub fn starter_task() -> Self {
         Self::new()
             .name("Focus Session".to_string())
             .description("Default pomodoro task for focused work".to_string())
@@ -59,7 +61,6 @@ impl Builder {
             .status(Status::Active)
             .current_sessions(0)
             .max_sessions(4)
-            .default(true)
     }
 
     /// Set the task ID
@@ -140,12 +141,6 @@ impl Builder {
         self
     }
 
-    /// Set the default flag
-    pub fn default(mut self, default: bool) -> Self {
-        self.default = Some(default);
-        self
-    }
-
     /// Mark the task as completed
     pub fn completed(self) -> Self {
         self.status(Status::Completed).completed_at(Utc::now())
@@ -203,7 +198,6 @@ impl Builder {
             created_at: self.created_at.unwrap_or_else(Utc::now),
             completed_at,
             status,
-            default: self.default.unwrap_or(false),
             updated_at: Utc::now(),
         })
     }

@@ -4,7 +4,7 @@ use crate::schema::timers;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use domain::timer::{Error, Result};
-use domain::{DEFAULT_TASK_ID, Timer, TimerRepository};
+use domain::{TIMER_ROW_ID, Timer, TimerRepository};
 use std::sync::Arc;
 
 pub struct SqliteTimerRepository {
@@ -23,7 +23,7 @@ impl TimerRepository for SqliteTimerRepository {
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
         })?;
-        let timer_id = DEFAULT_TASK_ID.as_str();
+        let timer_id = TIMER_ROW_ID.as_str();
 
         let timer_db = timers::table
             .filter(timers::id.eq(&timer_id))
@@ -43,10 +43,11 @@ impl TimerRepository for SqliteTimerRepository {
                 })
             }
             None => {
-                // NOTE: Lazily create default timer on first access
-                // This ensures backwards compatibility and simplifies initialization
-                println!("Timer doesn't exist, creating the default one");
-                let timer = Timer::default_timer();
+                // Lazily create the singleton timer row on first access.
+                // New timer has no active task; bootstrap will bind one
+                // on first boot, or the user picks one from the UI.
+                println!("Timer doesn't exist, creating an idle one");
+                let timer = Timer::idle();
                 self.save(&timer).await?;
                 Ok(timer)
             }
@@ -55,9 +56,9 @@ impl TimerRepository for SqliteTimerRepository {
 
     async fn save(&self, timer: &Timer) -> Result<()> {
         let mut timer_db = TimerDb::from(timer.clone());
-        // Ensure consistent row identity: always use DEFAULT_TASK_ID as the
+        // Ensure consistent row identity: always use TIMER_ROW_ID as the
         // primary key so that `get()` can find the row by the same key.
-        timer_db.id = DEFAULT_TASK_ID.as_str().to_string();
+        timer_db.id = TIMER_ROW_ID.as_str().to_string();
 
         let mut conn = self.pool.get().map_err(|e| {
             Error::InvalidOperation(format!("Failed to get connection: {}", e))
@@ -65,7 +66,6 @@ impl TimerRepository for SqliteTimerRepository {
 
         // Single UPSERT: SQLite's INSERT OR REPLACE inserts if the row
         // doesn't exist or replaces it when the primary key conflicts.
-        // This replaces the previous two-statement update-then-insert pattern.
         diesel::replace_into(timers::table)
             .values(&timer_db)
             .execute(&mut conn)

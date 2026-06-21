@@ -12,7 +12,6 @@ pub struct CreateTaskRequest {
     pub short_break_duration: Option<u64>,
     pub long_break_duration: Option<u64>,
     pub sessions_until_long_break: Option<u8>,
-    pub enable_screen_blocking: Option<bool>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -33,7 +32,6 @@ pub async fn create_task(
         || request.short_break_duration.is_some()
         || request.long_break_duration.is_some()
         || request.sessions_until_long_break.is_some()
-        || request.enable_screen_blocking.is_some()
         || request.audio_config.is_some()
     {
         // Get the default config from the repository
@@ -74,10 +72,6 @@ pub async fn create_task(
                 .map_err(|e| {
                     format!("Invalid sessions until long break: {}", e)
                 })?;
-        }
-        if let Some(enable_screen_blocking) = request.enable_screen_blocking {
-            default_config.general.enable_screen_blocking =
-                enable_screen_blocking;
         }
         if let Some(audio_config) = request.audio_config {
             default_config.audio = audio_config;

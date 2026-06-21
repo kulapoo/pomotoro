@@ -148,7 +148,7 @@ cat src/task/builder.rs
 **Practice:**
 ```rust
 // Try building different task types
-TaskBuilder::default_task().build()?
+TaskBuilder::starter_task().build()?
 TaskBuilder::with_name_and_sessions("Focus Work".to_string(), 2).build()?
 ```
 

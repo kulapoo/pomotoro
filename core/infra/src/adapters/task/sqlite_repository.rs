@@ -111,23 +111,6 @@ impl TaskRepository for SqliteTaskRepository {
             message: format!("Failed to get connection: {}", e),
         })?;
 
-        // Check if task is default
-        let task_db = tasks::table
-            .filter(tasks::id.eq(id.to_string()))
-            .first::<TaskDb>(&mut conn)
-            .optional()
-            .map_err(|e| Error::RepositoryError {
-                message: format!("Failed to check task: {}", e),
-            })?;
-
-        if let Some(task) = task_db {
-            if task.is_default {
-                return Ok(false); // Don't delete default task
-            }
-        } else {
-            return Ok(false); // Task doesn't exist
-        }
-
         let deleted =
             diesel::delete(tasks::table.filter(tasks::id.eq(id.to_string())))
                 .execute(&mut conn)
@@ -178,25 +161,6 @@ impl TaskRepository for SqliteTaskRepository {
             })?;
 
         tasks_db.into_iter().map(Task::try_from).collect()
-    }
-
-    async fn get_default_task(&self) -> Result<Option<Task>> {
-        let mut conn = self.pool.get().map_err(|e| Error::RepositoryError {
-            message: format!("Failed to get connection: {}", e),
-        })?;
-
-        let task_db = tasks::table
-            .filter(tasks::is_default.eq(true))
-            .first::<TaskDb>(&mut conn)
-            .optional()
-            .map_err(|e| Error::RepositoryError {
-                message: format!("Failed to get default task: {}", e),
-            })?;
-
-        match task_db {
-            Some(db) => Ok(Some(Task::try_from(db)?)),
-            None => Ok(None),
-        }
     }
 
     async fn search(&self, options: SearchOptions) -> Result<Vec<Task>> {
