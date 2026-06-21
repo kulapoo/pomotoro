@@ -8,6 +8,9 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "log:default",
+    "fs:default",
+    "shell:default",
     "notification:default",
     "notification:allow-is-permission-granted",
     "notification:allow-request-permission",

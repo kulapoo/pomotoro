@@ -281,87 +281,142 @@ pub async fn delete_task_note(
 
 ### Step 5: UI Implementation
 
-#### Note Component
-```rust
-// ui/src/components/note.rs
-#[component]
-pub fn NoteItem(
-    note: NoteDto,
-    on_edit: Callback<String>,
-    on_delete: Callback<()>,
-) -> impl IntoView {
-    let (editing, set_editing) = create_signal(false);
-    let (content, set_content) = create_signal(note.content.clone());
-    
-    view! {
-        <div class="note-item">
-            {move || if editing.get() {
-                view! {
-                    <textarea
-                        value=content
-                        on:input=move |e| set_content.set(event_target_value(&e))
-                    />
-                    <button on:click=move |_| {
-                        on_edit.call(content.get());
-                        set_editing.set(false);
-                    }>
-                        "Save"
-                    </button>
-                }
-            } else {
-                view! {
-                    <p>{&note.content}</p>
-                    <span class="timestamp">{&note.created_at}</span>
-                    <button on:click=move |_| set_editing.set(true)>
-                        "Edit"
-                    </button>
-                    <button on:click=move |_| on_delete.call(())>
-                        "Delete"
-                    </button>
-                }
-            }}
-        </div>
-    }
+The React UI lives in `apps/react-ui/src/` and is organized **feature-sliced**:
+each feature owns its `types.ts`, `model/` (Zustand store), `components/`, and
+`pages/`. Cross-feature imports go through `@/lib/` (typed Tauri bridge, logger,
+duration helpers) — never feature-to-feature deep imports except for `types.ts`.
+
+#### 1. Register the command + event names
+
+Add the new command/event to the single source of truth in
+`apps/react-ui/src/lib/tauri.ts`:
+
+```ts
+export const commands = {
+  // ...
+  getTaskNotes: 'get_task_notes',
+  addNoteToTask: 'add_note_to_task',
+} as const
+
+interface CommandMap {
+  // ...
+  get_task_notes: { args: { task_id: string }; ret: NoteDto[] }
+  add_note_to_task: { args: { task_id: string; content: string }; ret: NoteDto }
 }
 ```
 
-#### Notes List
-```rust
-// ui/src/components/notes_list.rs
-#[component]
-pub fn NotesList(task_id: String) -> impl IntoView {
-    let notes = create_resource(
-        move || task_id.clone(),
-        |id| async move {
-            invoke("get_task_notes", GetTaskNotesArgs { task_id: id }).await
-        }
-    );
-    
-    let add_note = move |content: String| {
-        spawn_local(async move {
-            let _ = invoke("add_note_to_task", AddNoteArgs {
-                task_id: task_id.clone(),
-                content,
-            }).await;
-            notes.refetch();
-        });
-    };
-    
-    view! {
-        <div class="notes-list">
-            <h3>"Notes"</h3>
-            <NoteInput on_submit=add_note />
-            <Suspense fallback=move || view! { <p>"Loading notes..."</p> }>
-                {move || notes.get().map(|notes| {
-                    notes.into_iter().map(|note| {
-                        view! { <NoteItem note=note /> }
-                    }).collect_view()
-                })}
-            </Suspense>
-        </div>
+These strings MUST match the `#[tauri::command]` names and `emit()` event names
+in the Rust backend. Drift is a compile error.
+
+#### 2. Create the feature store
+
+```ts
+// apps/react-ui/src/features/tasks/model/useNoteStore.ts
+import { create } from 'zustand'
+import { invokeCmd } from '@/lib/tauri'
+import { BackendError } from '@/lib/errors'
+import { logger } from '@/lib/logger'
+import type { NoteDto } from '@/features/tasks/types'
+
+interface NoteStore {
+  notes: NoteDto[]
+  error: BackendError | null
+  loadNotes: (taskId: string) => Promise<boolean>
+  addNote: (taskId: string, content: string) => Promise<boolean>
+  clearError: () => void
+}
+
+export const useNoteStore = create<NoteStore>((set) => ({
+  notes: [],
+  error: null,
+  loadNotes: async (taskId) => {
+    try {
+      const notes = await invokeCmd('get_task_notes', { task_id: taskId })
+      set({ notes, error: null })
+      return true
+    } catch (e) {
+      logger.error('loadNotes failed', e)
+      set({ error: e as BackendError })
+      return false
     }
+  },
+  addNote: async (taskId, content) => {
+    try {
+      const note = await invokeCmd('add_note_to_task', { task_id: taskId, content })
+      set((s) => ({ notes: [...s.notes, note], error: null }))
+      return true
+    } catch (e) {
+      logger.error('addNote failed', e)
+      set({ error: e as BackendError })
+      return false
+    }
+  },
+  clearError: () => set({ error: null }),
+}))
+```
+
+Actions return `Promise<boolean>` and store a `BackendError` on failure — they
+never throw. The app-wide `<ErrorWatcher>` toasts errors automatically, so
+components only toast on **success**.
+
+#### 3. Create the component
+
+```tsx
+// apps/react-ui/src/features/tasks/components/NotesList.tsx
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { useNoteStore } from '@/features/tasks/model/useNoteStore'
+import type { NoteDto } from '@/features/tasks/types'
+
+export function NotesList({ taskId }: { taskId: string }) {
+  const notes = useNoteStore((s) => s.notes)
+  const loadNotes = useNoteStore((s) => s.loadNotes)
+  const addNote = useNoteStore((s) => s.addNote)
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    void loadNotes(taskId)
+  }, [taskId, loadNotes])
+
+  const handleSubmit = async () => {
+    if (!draft.trim()) return
+    const ok = await addNote(taskId, draft.trim())
+    if (ok) {
+      setDraft('')
+      toast.success('Note added')
+    }
+  }
+
+  return (
+    <div>
+      <h3>Notes</h3>
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+      />
+      <ul>
+        {notes.map((n) => (
+          <li key={n.id}>
+            <p>{n.content}</p>
+            <span>{n.created_at}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 ```
+
+#### Key conventions
+
+- **Never** call `invoke()` directly — use `invokeCmd()` from `@/lib/tauri`.
+- **Never** use bare `console.*` — use `logger` from `@/lib/logger` (forwards to
+  the Rust log file).
+- **Never** `toast.error()` in a component for store failures — `<ErrorWatcher>`
+  handles it. Only `toast.success()` / `toast.info()` for user-facing success.
+- Shared UI primitives (Row, Section, Toggle, NumberInput, SelectInput) live in
+  `@/components/ui/`.
 
 ### Step 6: End-to-End Testing
 

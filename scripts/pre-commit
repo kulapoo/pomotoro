@@ -4,3 +4,5 @@ echo "Running clippy..."
 cargo clippy --workspace -- -D warnings
 echo "Checking formatting..."
 cargo fmt --all -- --check
+echo "Linting React UI..."
+( cd apps/react-ui && npm run lint --silent && npm run typecheck --silent )

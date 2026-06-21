@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { logger } from '@/lib/logger'
 
 interface Props {
   children: ReactNode
@@ -17,7 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary]', error, info.componentStack)
+    logger.error('[ErrorBoundary]', error, info.componentStack ?? '')
   }
 
   render() {
@@ -25,13 +26,13 @@ export class ErrorBoundary extends Component<Props, State> {
     if (error) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="text-sm font-medium text-destructive">{error.message}</p>
+          <p className="text-destructive text-sm font-medium">{error.message}</p>
           <button
             onClick={() => {
               this.setState({ error: null })
               window.location.reload()
             }}
-            className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-colors"
+            className="border-border hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
           >
             Reload
           </button>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Timer, ListChecks, Settings } from 'lucide-react'
-import type { Page } from '@/types'
+import type { Page } from '@/app/types'
 
 interface SidebarProps {
   currentPage: Page
@@ -19,12 +19,12 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   return (
     <aside
       className={[
-        'flex flex-col items-center gap-2 py-6 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-r border-border shrink-0 transition-[width] duration-150',
+        'border-border flex shrink-0 flex-col items-center gap-2 border-r bg-white/60 py-6 backdrop-blur-sm transition-[width] duration-150 dark:bg-gray-900/60',
         collapsed ? 'w-12' : 'w-16 md:w-20',
       ].join(' ')}
     >
       {/* Logo mark */}
-      <div className="mb-2 w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm select-none">
+      <div className="bg-primary text-primary-foreground mb-2 flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold select-none">
         P
       </div>
 
@@ -32,12 +32,12 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       <button
         onClick={() => setCollapsed((c) => !c)}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="mb-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className="text-muted-foreground hover:text-foreground hover:bg-accent mb-4 rounded-lg p-1.5 transition-colors"
       >
         {collapsed ? '→' : '←'}
       </button>
 
-      <nav className="flex flex-col items-center gap-1 flex-1 w-full px-2">
+      <nav className="flex w-full flex-1 flex-col items-center gap-1 px-2">
         {NAV_ITEMS.map(({ id, Icon, label }) => {
           const active = currentPage === id
           return (
@@ -46,7 +46,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               onClick={() => onNavigate(id)}
               title={label}
               className={[
-                'flex flex-col items-center gap-1 py-2.5 w-full rounded-xl transition-colors duration-150',
+                'flex w-full flex-col items-center gap-1 rounded-xl py-2.5 transition-colors duration-150',
                 active
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -55,7 +55,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
               <span
                 className={
-                  collapsed ? 'hidden' : 'hidden md:block text-[10px] font-medium'
+                  collapsed ? 'hidden' : 'hidden text-[10px] font-medium md:block'
                 }
               >
                 {label}

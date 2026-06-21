@@ -81,8 +81,8 @@ test-domain:
 test-usecases:
     cargo test -p usecases
 
-# Run all checks (test, check, fmt, clippy)
-ci: test check fmt clippy
+# Run all checks (test, check, fmt, clippy, react checks)
+ci: test check fmt clippy check-react
     @echo "✅ All checks passed!"
 
 # Check code without building
@@ -100,6 +100,10 @@ fmt-check:
 # Run clippy linter
 clippy:
     cargo clippy --workspace -- -D warnings
+
+# Lint + typecheck the React UI (no build artifacts produced)
+check-react:
+    cd apps/react-ui && npm run lint && npm run typecheck
 
 # ==============================================================================
 # Setup & Installation

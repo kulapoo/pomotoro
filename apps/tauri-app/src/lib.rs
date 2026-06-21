@@ -31,11 +31,14 @@ pub fn run() {
                 ])
                 .level(log::LevelFilter::Info)
                 .filter(|metadata| {
-                    // Only include logs from our crates
+                    // Include logs from our own crates plus JS-forwarded messages
+                    // routed through tauri-plugin-log from the React UI.
                     metadata.target().starts_with("infra::")
                         || metadata.target().starts_with("domain::")
                         || metadata.target().starts_with("usecases::")
                         || metadata.target().starts_with("tauri_app::")
+                        || metadata.target().starts_with("tauri_plugin_log::")
+                        || metadata.target().starts_with("app:webview")
                 })
                 .build(),
         )
