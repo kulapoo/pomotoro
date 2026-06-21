@@ -30,7 +30,3 @@ pub mod app {
     pub const APP_STARTED: &str = "app:started";
     pub const APP_EXITED: &str = "app:exited";
 }
-
-pub mod screen_blocker {
-    pub const ACTIVATE: &str = "screen_blocker:activate";
-}

@@ -64,52 +64,6 @@ impl EventHandler for CountdownExpiredHandler {
         // Get configuration to check auto-start settings
         let config = self.config_repository.get_config().await?;
 
-        // Emit screen blocking event if enabled for this phase
-        let should_block = match countdown_expired.phase {
-            Phase::Work => config.general.block_screen_after_work,
-            Phase::ShortBreak | Phase::LongBreak => {
-                config.general.block_screen_after_break
-            }
-        };
-
-        log::info!(
-            "[ScreenBlocker] phase={:?} block_after_work={} block_after_break={} should_block={}",
-            countdown_expired.phase,
-            config.general.block_screen_after_work,
-            config.general.block_screen_after_break,
-            should_block,
-        );
-
-        if should_block {
-            let message = match countdown_expired.phase {
-                Phase::Work => {
-                    config.general.block_screen_after_work_message.clone()
-                }
-                Phase::ShortBreak | Phase::LongBreak => {
-                    config.general.block_screen_after_break_message.clone()
-                }
-            };
-
-            // self.emitter
-            //     .emit(ui_listeners::screen_blocker::DEACTIVATE)
-            //     .map_err(|e| domain::Error::EventPublishingError {
-            //         message: format!(
-            //             "Failed to emit screen blocker deactivate event: {e}"
-            //         ),
-            //     })?;
-
-            self.emitter
-                .emit(
-                    ui_listeners::screen_blocker::ACTIVATE,
-                    json!({ "message": message }),
-                )
-                .map_err(|e| domain::Error::EventPublishingError {
-                    message: format!(
-                        "Failed to emit timer phase completed event: {e}"
-                    ),
-                })?;
-        }
-
         let should_auto_start = match countdown_expired.phase {
             Phase::Work => {
                 // Work phase expired, check if we should auto-start break

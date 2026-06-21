@@ -12,7 +12,6 @@ pub struct UpdateTaskRequest {
     pub short_break_duration: Option<u64>,
     pub long_break_duration: Option<u64>,
     pub sessions_until_long_break: Option<u8>,
-    pub enable_screen_blocking: Option<bool>,
     pub audio_config: Option<AudioConfig>,
 }
 
@@ -39,7 +38,6 @@ pub async fn update_task(
             .long_break_duration
             .map(Duration::from_secs),
         sessions_until_long_break: request.sessions_until_long_break,
-        enable_screen_blocking: request.enable_screen_blocking,
         audio_config: request.audio_config,
     };
 

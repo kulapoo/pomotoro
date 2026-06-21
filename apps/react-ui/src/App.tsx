@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 import { Toaster, toast } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ScreenBlocker } from "@/components/ScreenBlocker";
 import { Sidebar } from "@/components/Sidebar";
 import { TimerPage } from "@/pages/TimerPage";
 import { TasksPage } from "@/pages/TasksPage";
@@ -17,8 +15,6 @@ import type { Page } from "@/types";
 export function App() {
   const [page, setPage] = useState<Page>("timer");
   const [ready, setReady] = useState(false);
-  const [isBlocking, setIsBlocking] = useState(false);
-  const [blockingMessage, setBlockingMessage] = useState("");
 
   const fetchTimer = useTimerStore((s) => s.fetchTimer);
   const applyTick = useTimerStore((s) => s.applyTick);
@@ -40,11 +36,6 @@ export function App() {
         return "top-right" as const;
     }
   }, [notifConfig?.notification_position]);
-
-  const handleDismissBlocker = useCallback(() => {
-    setIsBlocking(false);
-    invoke("deactivate_screen_block").catch(() => {});
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,16 +103,6 @@ export function App() {
       fetchTimer(),
     );
 
-    const unlistenScreenBlocker = listen(
-      AppEvents.ScreenBlockerActivate,
-      (event) => {
-        const payload = event.payload as { message: string };
-        setBlockingMessage(payload.message);
-        setIsBlocking(true);
-        invoke("activate_screen_block").catch(() => {});
-      },
-    );
-
     return () => {
       cancelled = true;
       unlistenPromise.then((fn) => fn());
@@ -137,7 +118,6 @@ export function App() {
       unlistenTimerReset.then((fn) => fn());
       unlistenTimerPaused.then((fn) => fn());
       unlistenTimerResumed.then((fn) => fn());
-      unlistenScreenBlocker.then((fn) => fn());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -198,12 +178,6 @@ export function App() {
           )}
         </main>
       </div>
-      {isBlocking && (
-        <ScreenBlocker
-          message={blockingMessage}
-          onDismiss={handleDismissBlocker}
-        />
-      )}
     </>
   );
 }
