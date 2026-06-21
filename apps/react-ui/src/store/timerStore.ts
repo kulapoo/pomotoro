@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { TimerState, Phase } from "@/types";
 import type { Timer, TimerStateName } from "@/types";
-import { useTaskStore } from "@/store/taskStore";
 
 interface TimerStore {
   timer: Timer | null;
