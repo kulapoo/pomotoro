@@ -44,7 +44,7 @@ interface CommandMap {
   reset_timer: { args: { task_id: string }; ret: void }
   reset_timer_phase: { args: { task_id: string }; ret: void }
   skip_phase: { args: { task_id: string }; ret: void }
-  switch_active_task: { args: { task_id: string }; ret: void }
+  switch_active_task: { args: { task_id: string; old_task_id: string | null }; ret: void }
   get_all_tasks: { args: void; ret: Task[] }
   create_task: { args: { request: CreateTaskRequest }; ret: void }
   update_task: { args: { request: UpdateTaskRequest }; ret: void }

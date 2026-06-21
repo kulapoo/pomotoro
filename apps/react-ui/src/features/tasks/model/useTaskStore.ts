@@ -97,7 +97,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   setActiveTask: async (id) => {
     try {
-      await invokeCmd('switch_active_task', { task_id: id })
+      const oldTask = get().getActiveTask()
+      await invokeCmd('switch_active_task', {
+        task_id: id,
+        old_task_id: oldTask?.id ?? null,
+      })
       return true
     } catch (e) {
       logger.error('setActiveTask failed', e)

@@ -17,14 +17,14 @@ export function useEventBus(): void {
 
   useEffect(() => {
     const reload = (): void => {
-      void fetchTimer()
-      void loadTasks()
+      // void fetchTimer()
+      // void loadTasks()
     }
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
       onEvent(events.appInitialized, reload),
       onEvent(events.taskListUpdated, () => void loadTasks()),
-      onEvent(events.taskActiveChanged, reload),
+      onEvent(events.taskActiveChanged, () => void fetchTimer()),
       onEvent(events.taskCompleted, () => void loadTasks()),
       onEvent(events.taskProgressUpdated, () => void loadTasks()),
       onEvent(events.taskAutoAdvanced, () => {

@@ -7,6 +7,7 @@ use usecases::task::{
 #[tauri::command(rename_all = "snake_case")]
 pub async fn switch_active_task(
     task_id: String,
+    old_task_id: Option<String>,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
@@ -16,8 +17,14 @@ pub async fn switch_active_task(
     let task_id_parsed = TaskId::from_string(&task_id)
         .map_err(|_| format!("Invalid task ID: {}", task_id))?;
 
+    let old_task_id_parsed = old_task_id
+        .map(|id| TaskId::from_string(&id))
+        .transpose()
+        .map_err(|_| "Invalid old task ID".to_string())?;
+
     let cmd = SwitchActiveTaskCmd {
         task_id: task_id_parsed,
+        old_task_id: old_task_id_parsed,
     };
 
     switch_active_task_usecase(

@@ -134,6 +134,7 @@ impl EventHandler for BreakPhaseCompletedHandler {
                     self.event_publisher.clone(),
                     SwitchActiveTaskCmd {
                         task_id: next_task.id(),
+                        old_task_id: Some(current_task_id),
                     },
                 )
                 .await?;

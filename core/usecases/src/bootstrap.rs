@@ -67,6 +67,7 @@ pub async fn bootstrap(
             event_publisher.clone(),
             SwitchActiveTaskCmd {
                 task_id: starter_task.id(),
+                old_task_id: None,
             },
         )
         .await

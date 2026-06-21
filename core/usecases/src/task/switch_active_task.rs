@@ -1,12 +1,13 @@
 use domain::{
     Error, EventPublisher, Result, TaskActiveChanged, TaskId, TaskRepository,
-    TaskStatus, TaskUpdated, TimerRepository,
+    TaskUpdated, TimerRepository,
 };
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SwitchActiveTaskCmd {
     pub task_id: TaskId,
+    pub old_task_id: Option<TaskId>,
 }
 
 /// Switch the active task without timer validation (for UI/bootstrap scenarios)
@@ -31,29 +32,12 @@ pub async fn switch_active_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
+    // if let Some(old_task_id) = cmd.old_task_id {
+
+    // }
+
     // Get the single timer instance
     let timer = timer_repo.get().await?;
-
-    // Handle previous active task status transition
-    let previous_task_id = timer.task_id();
-    if Some(cmd.task_id) != previous_task_id {
-        if let Some(prev_task_id) = previous_task_id {
-            if let Some(mut prev_task) =
-                task_repo.get_by_id(prev_task_id).await?
-            {
-                if prev_task.status() != TaskStatus::Completed {
-                    prev_task.queue()?;
-                    let prev_id = prev_task.id();
-                    task_repo.update(prev_task).await?;
-
-                    // Publish TaskUpdated event for previous task
-                    event_publisher.publish(Box::new(TaskUpdated::new(
-                        prev_id, None, None, None, None, 1,
-                    )));
-                }
-            }
-        }
-    }
 
     // Set new task status to Active
     task.activate()?;
@@ -74,7 +58,7 @@ pub async fn switch_active_task(
 
     // Publish TaskActiveChanged event
     let switch_event = TaskActiveChanged::new(
-        previous_task_id,
+        cmd.old_task_id,
         cmd.task_id,
         format!("Switched to task: {}", task_name),
         1,

@@ -876,6 +876,7 @@ async fn should_switch_active_task_during_timer_session() {
         ctx.event_bus.clone(),
         usecases::task::SwitchActiveTaskCmd {
             task_id: task2.id(),
+            old_task_id: Some(task1.id()),
         },
     )
     .await;
@@ -1195,6 +1196,7 @@ async fn complete_productivity_workflow_integration() {
         ctx.event_bus.clone(),
         usecases::task::SwitchActiveTaskCmd {
             task_id: task2.id(),
+            old_task_id: Some(task1.id()),
         },
     )
     .await
@@ -1228,6 +1230,7 @@ async fn complete_productivity_workflow_integration() {
         ctx.event_bus.clone(),
         usecases::task::SwitchActiveTaskCmd {
             task_id: task3.id(),
+            old_task_id: Some(task2.id()),
         },
     )
     .await
