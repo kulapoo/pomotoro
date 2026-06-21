@@ -32,12 +32,18 @@ pub async fn switch_active_task(
         return Err(Error::TaskAlreadyCompleted);
     }
 
-    // if let Some(old_task_id) = cmd.old_task_id {
-
-    // }
-
     // Get the single timer instance
     let timer = timer_repo.get().await?;
+
+    let old_task_id = cmd
+        .old_task_id
+        .unwrap_or_else(|| timer.task_id().unwrap_or_default());
+
+    let old_task = task_repo.get_by_id(old_task_id).await?;
+    if let Some(mut old_task) = old_task {
+        old_task.queue()?;
+        task_repo.update(old_task).await?;
+    }
 
     // Set new task status to Active
     task.activate()?;

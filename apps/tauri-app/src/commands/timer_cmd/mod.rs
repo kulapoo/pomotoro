@@ -8,8 +8,8 @@ pub use anyhow::Context;
 pub use domain::{
     Task, TaskRepository, Timer, TimerStatus, event_names::ui_listeners,
 };
-pub use infra::adapters::TimerRepositoryArc;
 pub use infra::adapters::events::mem_event_bus::EventPublisherArc;
+pub use infra::adapters::{TimerRepositoryArc, TimerTickService};
 pub use log::{debug, info};
 pub use std::sync::Arc;
 pub use tauri::{AppHandle, Emitter, State};

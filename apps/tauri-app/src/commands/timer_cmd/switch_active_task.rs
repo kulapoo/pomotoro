@@ -4,6 +4,8 @@ use usecases::task::{
     SwitchActiveTaskCmd, switch_active_task as switch_active_task_usecase,
 };
 
+use infra::adapters::TimerTickService;
+
 #[tauri::command(rename_all = "snake_case")]
 pub async fn switch_active_task(
     task_id: String,
@@ -11,6 +13,7 @@ pub async fn switch_active_task(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
+    timer_tick_service_arc: State<'_, Arc<TimerTickService>>,
 ) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
 
@@ -21,6 +24,16 @@ pub async fn switch_active_task(
         .map(|id| TaskId::from_string(&id))
         .transpose()
         .map_err(|_| "Invalid old task ID".to_string())?;
+
+    timer_tick_service_arc
+        .stop_timer_tick_loop()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::switch_active_task - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
 
     let cmd = SwitchActiveTaskCmd {
         task_id: task_id_parsed,
