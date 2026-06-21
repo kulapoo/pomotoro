@@ -4,19 +4,22 @@ use crate::adapters::{
 };
 use async_trait::async_trait;
 use domain::{
-    ConfigRepository, EventPublisher, Phase, TimerRepository,
-    event_names::ui_listeners, timer::events::CountdownExpired,
+    ConfigRepository, Event, EventPublisher, Phase, Result, TaskRepository,
+    TimerRepository, event_names::ui_listeners,
+    timer::events::CountdownExpired,
 };
-use domain::{Error, TaskRepository};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
-use usecases::timer::{
-    complete_timer_phase, pause_timer_phase, reset_timer_phase,
-};
+use usecases::timer::{ProgressPhaseCmd, progress_phase};
 
-/// Event handler that triggers phase completion when countdown naturally expires
-/// and handles auto-start of next phase based on configuration
+/// Event handler that triggers phase progression when countdown naturally
+/// expires.
+///
+/// Delegates all domain orchestration (phase completion, auto-start, task
+/// cycling) to the `progress_phase` usecase. This handler only performs
+/// infrastructure concerns: starting/stopping the tick loop and emitting
+/// UI events based on the outcome.
 pub struct CountdownExpiredHandler {
     emitter: Arc<dyn Emitter>,
     timer_srv: Arc<TimerTickService>,
@@ -52,127 +55,148 @@ impl EventHandler for CountdownExpiredHandler {
         TypeId::of::<CountdownExpired>()
     }
 
-    async fn handle(&self, event: Box<dyn domain::Event>) -> Result<(), Error> {
+    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
         let countdown_expired = event
             .as_any()
             .downcast_ref::<CountdownExpired>()
-            .ok_or_else(|| Error::RepositoryError {
+            .ok_or_else(|| domain::Error::RepositoryError {
                 message: "Failed to downcast to CountdownExpired event"
                     .to_string(),
             })?;
 
-        // Get configuration to check auto-start settings
-        let config = self.config_repository.get_config().await?;
+        let outcome = progress_phase(
+            self.task_repository.clone(),
+            self.timer_repository.clone(),
+            self.config_repository.clone(),
+            self.event_publisher.clone(),
+            ProgressPhaseCmd {
+                task_id: countdown_expired.task_id,
+                from_phase: countdown_expired.phase,
+            },
+        )
+        .await?;
 
-        let should_auto_start = match countdown_expired.phase {
-            Phase::Work => {
-                // Work phase expired, check if we should auto-start break
-                config.general.auto_start_breaks
-            }
-            Phase::ShortBreak | Phase::LongBreak => {
-                config.general.auto_start_work_after_break
-            }
-        };
-        let task_id = countdown_expired.task_id;
-        if should_auto_start {
-            let (task, _timer, next_phase) = complete_timer_phase(
-                task_id,
-                self.task_repository.clone(),
-                self.timer_repository.clone(),
-                self.event_publisher.clone(),
-            )
-            .await?;
+        match outcome {
+            usecases::timer::PhaseOutcome::Started {
+                task,
+                next_phase,
+                cycled_to,
+                ..
+            } => {
+                self.timer_srv.load_state().await?;
 
-            // Load the state after complete_timer_phase saves to repository
-            self.timer_srv.load_state().await?;
+                if !(task.is_completed() && next_phase == Phase::Work) {
+                    let timer_config = task.config().timer.clone();
+                    self.timer_srv
+                        .start_timer_tick_loop(Some(timer_config), None)
+                        .await
+                        .map_err(|e| domain::Error::RepositoryError {
+                            message: format!(
+                                "Failed to auto-start timer: {}",
+                                e
+                            ),
+                        })?;
+                }
 
-            // Reset the timer phase using the usecase (business operation)
-            reset_timer_phase(
-                task.id(),
-                self.task_repository.clone(),
-                self.timer_repository.clone(),
-                self.event_publisher.clone(),
-            )
-            .await?;
-
-            let timer_config = task.config().timer.clone();
-
-            if !(task.is_completed() && next_phase == Phase::Work) {
-                // Start the timer tick loop (infrastructure concern)
-                self.timer_srv
-                    .start_timer_tick_loop(Some(timer_config), None)
-                    .await
-                    .map_err(|e| domain::Error::RepositoryError {
-                        message: format!("Failed to auto-start timer: {}", e),
-                    })?;
-
-                // Get the current timer state AFTER all operations complete (avoids cloning entire Timer)
                 let state_json =
                     self.timer_srv.with_timer(|t| json!(t.state())).await;
 
                 self.emitter
-                    .emit(
-                        domain::event_names::ui_listeners::timer::PHASE_COMPLETED,
-                        state_json,
-                    )
+                    .emit(ui_listeners::timer::PHASE_COMPLETED, state_json)
                     .map_err(|e| domain::Error::EventPublishingError {
                         message: format!(
                             "Failed to emit timer phase completed event: {e}"
                         ),
                     })?;
+
+                if let Some(to_task_id) = cycled_to {
+                    self.emitter
+                        .emit(
+                            ui_listeners::task::AUTO_ADVANCED,
+                            json!({
+                                "from_task_id": countdown_expired.task_id,
+                                "to_task_id": to_task_id,
+                            }),
+                        )
+                        .map_err(|e| domain::Error::EventPublishingError {
+                            message: format!(
+                                "Failed to emit auto-advanced event: {e}"
+                            ),
+                        })?;
+                }
+
+                self.emitter
+                    .emit(ui_listeners::task::PROGRESS_UPDATED, json!(task))
+                    .map_err(|e| domain::Error::EventPublishingError {
+                        message: format!(
+                            "Failed to emit task progress updated event: {e}"
+                        ),
+                    })?;
             }
 
-            self.emitter
-                .emit(
-                    domain::event_names::ui_listeners::task::PROGRESS_UPDATED,
-                    json!(task),
-                )
-                .map_err(|e| domain::Error::EventPublishingError {
-                    message: format!(
-                        "Failed to emit task progress updated event: {e}"
-                    ),
+            usecases::timer::PhaseOutcome::Paused {
+                task,
+                timer,
+                cycled_to,
+                ..
+            } => {
+                self.timer_srv.load_state().await?;
+
+                self.emitter
+                    .emit(
+                        ui_listeners::timer::STATUS_CHANGED,
+                        json!(timer.state()),
+                    )
+                    .map_err(|e| domain::Error::RepositoryError {
+                        message: format!(
+                            "Failed to emit timer status changed event: {e}"
+                        ),
+                    })?;
+
+                if let Some(to_task_id) = cycled_to {
+                    self.emitter
+                        .emit(
+                            ui_listeners::task::AUTO_ADVANCED,
+                            json!({
+                                "from_task_id": countdown_expired.task_id,
+                                "to_task_id": to_task_id,
+                            }),
+                        )
+                        .map_err(|e| domain::Error::EventPublishingError {
+                            message: format!(
+                                "Failed to emit auto-advanced event: {e}"
+                            ),
+                        })?;
+                }
+
+                self.emitter
+                    .emit(ui_listeners::task::PROGRESS_UPDATED, json!(task))
+                    .map_err(|e| domain::Error::EventPublishingError {
+                        message: format!(
+                            "Failed to emit task progress updated event: {e}"
+                        ),
+                    })?;
+            }
+
+            usecases::timer::PhaseOutcome::Stopped { .. } => {
+                self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
+                    domain::Error::RepositoryError {
+                        message: format!("Failed to stop timer tick loop: {e}"),
+                    }
                 })?;
 
-            // log::info!(
-            //     "Timer auto-started in phase {:?} with {} seconds remaining",
-            //     timer.state().phase(),
-            //     timer.state().remaining_seconds()
-            // );
-        } else {
-            log::debug!(
-                "Auto-start not enabled for transition from {:?} phase",
-                countdown_expired.phase
-            );
-            // Complete the phase first (timer is in LongBreak/ShortBreak/Working
-            // state in the repo — can_transition allows CompletePhase from these).
-            // Pausing first would move the repo to Paused, from which CompletePhase
-            // is not allowed, causing an InvalidStateTransition error.
-            complete_timer_phase(
-                task_id,
-                self.task_repository.clone(),
-                self.timer_repository.clone(),
-                self.event_publisher.clone(),
-            )
-            .await?;
-            // Now pause the next phase so the UI shows "Paused" and the user
-            // must manually resume to start the new phase.
-            let timer = pause_timer_phase(
-                task_id,
-                self.task_repository.clone(),
-                self.timer_repository.clone(),
-                self.event_publisher.clone(),
-            )
-            .await?;
+                self.timer_srv.load_state().await?;
+                let state_json =
+                    self.timer_srv.with_timer(|t| json!(t.state())).await;
 
-            self.timer_srv.load_state().await?;
-
-            self.emitter
-                .emit(ui_listeners::timer::STATUS_CHANGED, json!(timer.state()))
-                .map_err(|e| domain::Error::RepositoryError {
-                    message: format!(
-                        "Failed to emit timer status changed event: {e}"
-                    ),
-                })?;
+                self.emitter
+                    .emit(ui_listeners::timer::STATUS_CHANGED, state_json)
+                    .map_err(|e| domain::Error::EventPublishingError {
+                        message: format!(
+                            "Failed to emit timer status changed event: {e}"
+                        ),
+                    })?;
+            }
         }
 
         Ok(())

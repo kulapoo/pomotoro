@@ -17,8 +17,8 @@ export function useEventBus(): void {
 
   useEffect(() => {
     const reload = (): void => {
-      // void fetchTimer()
-      // void loadTasks()
+      void fetchTimer()
+      void loadTasks()
     }
 
     const unlisteners: Array<Promise<UnlistenFn>> = [

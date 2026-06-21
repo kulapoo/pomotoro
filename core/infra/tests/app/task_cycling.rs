@@ -5,7 +5,8 @@ use domain::{
     TimerConfiguration,
 };
 use usecases::timer::{
-    StartTimerPhaseCmd, complete_timer_phase, start_timer_phase,
+    PhaseOutcome, ProgressPhaseCmd, StartTimerPhaseCmd, progress_phase,
+    start_timer_phase,
 };
 
 use crate::{
@@ -41,12 +42,28 @@ async fn apply_config(ctx: &crate::AppContext, config: &Config) {
     ctx.config_repo.save_config(config).await.unwrap();
 }
 
-/// Drive a task from start through one work session and its following break,
-/// ending with the `BreakPhaseCompleted` event that triggers auto-cycling.
+fn make_test_config() -> Config {
+    Config {
+        timer: TimerConfiguration::new(
+            Duration::from_secs(25 * 60),
+            Duration::from_secs(5 * 60),
+            Duration::from_secs(15 * 60),
+            4,
+        )
+        .expect("Failed to create timer configuration"),
+        ..Config::default()
+    }
+}
+
+/// Drive a task from start through one work session and its following break.
+///
+/// Uses `progress_phase` (the same usecase invoked by `CountdownExpiredHandler`
+/// in production) so that cycling logic runs inline. Returns the `PhaseOutcome`
+/// from the break-phase progression so callers can assert on it.
 async fn complete_one_full_session(
     ctx: &crate::AppContext,
     task_id: domain::TaskId,
-) {
+) -> PhaseOutcome {
     start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -60,30 +77,42 @@ async fn complete_one_full_session(
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-    // Work -> break (increments session count; may complete the task)
-    complete_timer_phase(
-        task_id,
+    // Work phase expired → progress to break
+    let from_phase = get_timer(ctx).await.get_current_phase();
+    progress_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
+        ProgressPhaseCmd {
+            task_id,
+            from_phase,
+        },
     )
     .await
-    .expect("Failed to complete work phase");
+    .expect("Failed to progress from work phase");
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-    // Break -> work (publishes BreakPhaseCompleted; auto-cycle fires here)
-    complete_timer_phase(
-        task_id,
+    // Break phase expired → progress to work (cycling happens here)
+    let from_phase = get_timer(ctx).await.get_current_phase();
+    let outcome = progress_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
+        ctx.config_repo.clone(),
         ctx.event_bus.clone(),
+        ProgressPhaseCmd {
+            task_id,
+            from_phase,
+        },
     )
     .await
-    .expect("Failed to complete break phase");
+    .expect("Failed to progress from break phase");
 
-    // Let async BreakPhaseCompletedHandler settle
+    // Let async event handlers settle
     tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+
+    outcome
 }
 
 #[tokio::test]
@@ -93,23 +122,13 @@ async fn auto_advance_cycles_when_task_completes_with_auto_start() {
     )
     .await;
 
-    // Arrange: AutoAdvance + auto-start both enabled
     apply_config(
         &ctx,
         &cycling_config(TaskCyclingBehavior::AutoAdvance, true, true),
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
     let task1 = TaskBuilder::new()
         .name("Task 1")
@@ -127,40 +146,30 @@ async fn auto_advance_cycles_when_task_completes_with_auto_start() {
         .build();
     ctx.task_repo.create(task2.clone()).await.unwrap();
 
-    // Act: complete task1's single session + its break
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    // Assert: active task switched to task2
+    // Assert: outcome shows cycling to task2 with auto-start
+    match outcome {
+        PhaseOutcome::Started {
+            cycled_to: Some(to_id),
+            ..
+        } => assert_eq!(to_id, task2.id()),
+        other => panic!("Expected Started with cycled_to, got {other:?}"),
+    }
+
+    // Active task switched to task2
     let active = get_active_task(&ctx).await;
-    assert_eq!(
-        active.id(),
-        task2.id(),
-        "AutoAdvance should switch to task2 after task1 completes"
-    );
+    assert_eq!(active.id(), task2.id());
 
     // task1 should be completed
     let task1_final =
         ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
-    assert!(
-        task1_final.is_completed(),
-        "Task1 should be completed after its single session"
-    );
+    assert!(task1_final.is_completed());
 
-    // Timer should be running on task2 (auto_start_work_after_break = true)
+    // Timer should be running on task2
     let timer = get_timer(&ctx).await;
-    assert!(
-        timer.is_running(),
-        "Timer should be running on the new task after auto-start"
-    );
+    assert!(timer.is_running());
     assert_eq!(timer.task_id(), Some(task2.id()));
-
-    // Notification event should have been emitted
-    assert!(
-        ctx.ui_simulator
-            .app_handle()
-            .was_event_emitted("task:auto_advanced"),
-        "Should emit task:auto_advanced event after cycling"
-    );
 }
 
 #[tokio::test]
@@ -169,25 +178,13 @@ async fn auto_advance_cycles_even_when_auto_start_disabled() {
         setup_minimal_ctx("auto_advance_cycles_even_when_auto_start_disabled")
             .await;
 
-    // Arrange: AutoAdvance enabled, but auto-start AFTER BREAK disabled.
-    // Previously this combination silently skipped cycling because the
-    // timer entered Paused state and the guard required is_running.
     apply_config(
         &ctx,
         &cycling_config(TaskCyclingBehavior::AutoAdvance, true, false),
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
     let task1 = TaskBuilder::new()
         .name("Task 1")
@@ -205,22 +202,22 @@ async fn auto_advance_cycles_even_when_auto_start_disabled() {
         .build();
     ctx.task_repo.create(task2.clone()).await.unwrap();
 
-    // Act
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    // Assert: cycling STILL happened despite auto_start_work_after_break=false
+    // Assert: cycling still happened (Paused outcome, cycled to task2)
+    match outcome {
+        PhaseOutcome::Paused {
+            cycled_to: Some(to_id),
+            ..
+        } => assert_eq!(to_id, task2.id()),
+        other => panic!("Expected Paused with cycled_to, got {other:?}"),
+    }
+
     let active = get_active_task(&ctx).await;
     assert_eq!(
         active.id(),
         task2.id(),
         "AutoAdvance must cycle to task2 even when auto_start_work_after_break is disabled"
-    );
-
-    assert!(
-        ctx.ui_simulator
-            .app_handle()
-            .was_event_emitted("task:auto_advanced"),
-        "Should emit task:auto_advanced event even without auto-start"
     );
 }
 
@@ -236,16 +233,7 @@ async fn auto_advance_skips_completed_tasks_round_robin() {
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
     let task1 = TaskBuilder::new()
         .name("Task 1")
@@ -273,23 +261,22 @@ async fn auto_advance_skips_completed_tasks_round_robin() {
         .build();
     ctx.task_repo.create(task3.clone()).await.unwrap();
 
-    // Act
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    // Assert: cycled straight to task3, skipping the completed task2
+    match outcome {
+        PhaseOutcome::Started {
+            cycled_to: Some(to_id),
+            ..
+        } => assert_eq!(
+            to_id,
+            task3.id(),
+            "Should skip completed task2 and land on task3"
+        ),
+        other => panic!("Expected Started with cycled_to, got {other:?}"),
+    }
+
     let active = get_active_task(&ctx).await;
-    assert_eq!(
-        active.id(),
-        task3.id(),
-        "AutoAdvance should skip completed task2 and land on task3"
-    );
-
-    assert!(
-        ctx.ui_simulator
-            .app_handle()
-            .was_event_emitted("task:auto_advanced"),
-        "Should emit task:auto_advanced event after round-robin cycling"
-    );
+    assert_eq!(active.id(), task3.id());
 }
 
 #[tokio::test]
@@ -303,18 +290,8 @@ async fn auto_advance_noop_when_no_incomplete_tasks() {
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
-    // Only one task exists; completing it leaves nothing to cycle to.
     let task1 = TaskBuilder::new()
         .name("Only Task")
         .max_sessions(1)
@@ -323,22 +300,16 @@ async fn auto_advance_noop_when_no_incomplete_tasks() {
         .build();
     ctx.task_repo.create(task1.clone()).await.unwrap();
 
-    // Act: should not panic or error
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    // Assert: active task stays on task1 (nothing to cycle to)
+    // Should be Stopped — no more tasks to cycle to
+    assert!(matches!(outcome, PhaseOutcome::Stopped { .. }));
+
     let timer = get_timer(&ctx).await;
     assert_eq!(
         timer.task_id(),
         Some(task1.id()),
         "Timer should remain on task1 when there are no other tasks to cycle to"
-    );
-
-    assert!(
-        !ctx.ui_simulator
-            .app_handle()
-            .was_event_emitted("task:auto_advanced"),
-        "Should NOT emit task:auto_advanced when there is nothing to cycle to"
     );
 }
 
@@ -352,16 +323,7 @@ async fn manual_mode_does_not_auto_advance() {
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
     let task1 = TaskBuilder::new()
         .name("Task 1")
@@ -379,29 +341,32 @@ async fn manual_mode_does_not_auto_advance() {
         .build();
     ctx.task_repo.create(task2.clone()).await.unwrap();
 
-    // Act
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    // Assert: in Manual mode the active task is NOT switched
+    // In Manual mode, no cycling — outcome should not have cycled_to
+    match &outcome {
+        PhaseOutcome::Started {
+            cycled_to: None, ..
+        }
+        | PhaseOutcome::Paused {
+            cycled_to: None, ..
+        } => {}
+        other => panic!("Expected no cycling in Manual mode, got {other:?}"),
+    }
+
     let active = get_active_task(&ctx).await;
     assert_eq!(
         active.id(),
         task1.id(),
         "Manual mode must not auto-advance even when another task is available"
     );
-
-    assert!(
-        !ctx.ui_simulator
-            .app_handle()
-            .was_event_emitted("task:auto_advanced"),
-        "Should NOT emit task:auto_advanced in Manual mode"
-    );
 }
 
 #[tokio::test]
-async fn auto_advanced_event_carries_correct_payload() {
+async fn cycled_to_payload_identifies_from_and_to_tasks() {
     let ctx =
-        setup_minimal_ctx("auto_advanced_event_carries_correct_payload").await;
+        setup_minimal_ctx("cycled_to_payload_identifies_from_and_to_tasks")
+            .await;
 
     apply_config(
         &ctx,
@@ -409,16 +374,7 @@ async fn auto_advanced_event_carries_correct_payload() {
     )
     .await;
 
-    let test_config = Config {
-        timer: TimerConfiguration::new(
-            Duration::from_secs(25 * 60),
-            Duration::from_secs(5 * 60),
-            Duration::from_secs(15 * 60),
-            4,
-        )
-        .expect("Failed to create timer configuration"),
-        ..Config::default()
-    };
+    let test_config = make_test_config();
 
     let task1 = TaskBuilder::new()
         .name("Task 1")
@@ -436,23 +392,21 @@ async fn auto_advanced_event_carries_correct_payload() {
         .build();
     ctx.task_repo.create(task2.clone()).await.unwrap();
 
-    complete_one_full_session(&ctx, task1.id()).await;
+    let outcome = complete_one_full_session(&ctx, task1.id()).await;
 
-    let events = ctx
-        .ui_simulator
-        .app_handle()
-        .events_of_type("task:auto_advanced");
-    assert_eq!(events.len(), 1, "Exactly one auto_advanced event expected");
-
-    let payload = &events[0].payload;
-    assert_eq!(
-        payload["from_task_id"],
-        serde_json::json!(task1.id()),
-        "Payload from_task_id should match the completed task"
-    );
-    assert_eq!(
-        payload["to_task_id"],
-        serde_json::json!(task2.id()),
-        "Payload to_task_id should match the next task"
-    );
+    // The outcome's cycled_to identifies the next task.
+    // The from_task_id is the original task_id passed to progress_phase.
+    match outcome {
+        PhaseOutcome::Started {
+            cycled_to: Some(to_id),
+            ..
+        } => {
+            assert_eq!(
+                to_id,
+                task2.id(),
+                "cycled_to should match the next task"
+            );
+        }
+        other => panic!("Expected Started with cycled_to, got {other:?}"),
+    }
 }

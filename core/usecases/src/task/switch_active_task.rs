@@ -41,8 +41,10 @@ pub async fn switch_active_task(
 
     let old_task = task_repo.get_by_id(old_task_id).await?;
     if let Some(mut old_task) = old_task {
-        old_task.queue()?;
-        task_repo.update(old_task).await?;
+        if !old_task.is_completed() {
+            old_task.queue()?;
+            task_repo.update(old_task).await?;
+        }
     }
 
     // Set new task status to Active

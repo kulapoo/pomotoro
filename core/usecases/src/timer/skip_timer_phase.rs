@@ -31,7 +31,6 @@ pub async fn skip_timer_phase(
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
     task_id: TaskId,
 ) -> Result<(Phase, Phase)> {
-    // Get the task for its configuration
     let mut task = task_repo.get_by_id(task_id).await?.ok_or(
         domain::Error::TaskNotFound {
             id: task_id.as_str(),
@@ -42,13 +41,13 @@ pub async fn skip_timer_phase(
 
     let old_phase = timer.get_current_phase();
 
-    // Determine next phase based on session count (same logic as complete_timer_phase)
     let next_phase = match old_phase {
         Phase::Work => {
+            let next = task.next_break_phase();
             if !task.is_completed() {
                 task.increment_session()?;
             }
-            determine_next_break_type(&task)
+            next
         }
         Phase::ShortBreak | Phase::LongBreak => Phase::Work,
     };
@@ -61,11 +60,9 @@ pub async fn skip_timer_phase(
         task.is_completed()
     );
 
-    // Skip to the determined phase
     let events = timer.skip_phase(&task.config().timer, next_phase)?;
 
     task_repo.update(task).await?;
-
     timer_repo.save(&timer).await?;
 
     let new_phase = timer.get_current_phase();
@@ -75,30 +72,4 @@ pub async fn skip_timer_phase(
     }
 
     Ok((old_phase, new_phase))
-}
-
-/// Determine whether the next break should be short or long
-/// based on the current session count and configuration.
-fn determine_next_break_type(task: &domain::Task) -> Phase {
-    // Guard against zero to avoid division-by-zero panic when persisted
-    // configuration bypasses validation (e.g. legacy SQLite rows).
-    let sessions_until_long =
-        task.config().timer.sessions_until_long_break.max(1);
-    let remainder = task.current_sessions() % sessions_until_long;
-
-    let phase = if remainder == 0 {
-        Phase::LongBreak
-    } else {
-        Phase::ShortBreak
-    };
-
-    log::info!(
-        "Determining break type: current_sessions={}, sessions_until_long={}, remainder={}, next_phase={:?}",
-        task.current_sessions(),
-        sessions_until_long,
-        remainder,
-        phase
-    );
-
-    phase
 }

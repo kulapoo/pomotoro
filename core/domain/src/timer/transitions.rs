@@ -10,6 +10,7 @@ use super::events::{
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result};
 use crate::{Event, TaskId, TimerConfiguration};
+use std::any::TypeId;
 
 /// Result of a state transition containing new state and generated events.
 #[derive(Debug)]
@@ -294,10 +295,11 @@ impl StateTransitions {
                     next_phase,
                 )?;
 
+                let work_id = TypeId::of::<WorkPhaseCompleted>();
+                let break_id = TypeId::of::<BreakPhaseCompleted>();
                 result.events.retain(|event| {
-                    let event_type = event.event_type();
-                    event_type != "WorkPhaseCompleted"
-                        && event_type != "BreakPhaseCompleted"
+                    let id = event.as_any().type_id();
+                    id != work_id && id != break_id
                 });
 
                 // Get the duration for the new phase

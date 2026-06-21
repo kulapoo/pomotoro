@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use domain::TaskCompleted;
 use domain::{
-    Event, Result, TaskRepository, WorkPhaseCompleted,
+    Event, Result, TaskCompleted, TaskRepository, WorkPhaseCompleted,
     event_names::ui_listeners,
 };
 use serde_json::json;
@@ -11,6 +10,12 @@ use std::sync::Arc;
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
 
+/// Emits the `WORK_PHASE_COMPLETED` UI event when a work phase completes.
+///
+/// Also emits `task:task_completed` when the task has actually transitioned
+/// to completed (checked via `task.is_completed()` rather than the old
+/// `remaining_sessions <= 1` heuristic which could false-fire at task
+/// creation when `max_sessions == 1`).
 pub struct WorkPhaseCompletedHandler {
     emitter: Arc<dyn Emitter>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
@@ -42,7 +47,6 @@ impl EventHandler for WorkPhaseCompletedHandler {
                 message: "Failed to complete work phase".to_string(),
             })?;
 
-        // Emit work phase completed UI event
         self.emitter
             .emit(
                 ui_listeners::timer::WORK_PHASE_COMPLETED,
@@ -65,7 +69,7 @@ impl EventHandler for WorkPhaseCompletedHandler {
                 ),
             })?;
 
-        if task.get_remaining_sessions() <= 1 {
+        if task.is_completed() {
             let task_completed = TaskCompleted::new(
                 work_phase_completed.task_id,
                 task.max_sessions(),

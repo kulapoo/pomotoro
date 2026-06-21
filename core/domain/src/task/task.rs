@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{id::Id, status::Status};
-use crate::{Config, Error, Result};
+use crate::{Config, Error, Result, timer::Phase};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -158,6 +158,26 @@ impl Task {
         }
 
         Ok(())
+    }
+
+    /// Determines the next break phase based on the current session count.
+    ///
+    /// Peeks at `current_sessions + 1` for incomplete tasks (the post-increment
+    /// count). For already-completed tasks, uses the current count directly
+    /// without incrementing.
+    pub fn next_break_phase(&self) -> Phase {
+        let sessions_until_long =
+            self.config().timer.sessions_until_long_break.max(1);
+        let count = if self.is_completed() {
+            self.current_sessions()
+        } else {
+            self.current_sessions() + 1
+        };
+        if count.is_multiple_of(sessions_until_long) {
+            Phase::LongBreak
+        } else {
+            Phase::ShortBreak
+        }
     }
 
     pub fn reset_sessions(&mut self) {
