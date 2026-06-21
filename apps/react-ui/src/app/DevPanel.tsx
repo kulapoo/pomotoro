@@ -18,7 +18,7 @@ export function DevPanel() {
   const settingsError = useSettingsStore((s) => s.error)
 
   return (
-    <div className="fixed right-2 bottom-2 z-[100] font-mono text-xs print:hidden">
+    <div className="fixed right-2 bottom-2 z-100 font-mono text-xs print:hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="bg-card border-border text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 shadow-md transition-colors"

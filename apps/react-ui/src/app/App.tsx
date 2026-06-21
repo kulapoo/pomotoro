@@ -41,7 +41,7 @@ export function App() {
     <Bootstrap>
       <ErrorWatcher />
       {import.meta.env.DEV && <DevPanel />}
-      <div className="text-foreground flex h-screen w-full overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 font-sans transition-colors duration-300 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
+      <div className="text-foreground flex h-screen w-full overflow-hidden bg-linear-to-br from-indigo-50 via-white to-purple-50 font-sans transition-colors duration-300 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
         <Toaster position={toasterPosition} richColors />
         <Sidebar currentPage={page} onNavigate={setPage} />
         <main className="flex-1 overflow-y-auto p-6 md:p-10">

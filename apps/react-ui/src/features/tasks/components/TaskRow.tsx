@@ -1,4 +1,4 @@
-import { Trash2, CheckCircle2, Circle, Crosshair, RotateCcw, Pencil } from 'lucide-react'
+import { Trash2, CheckSquare, Square, Crosshair, RotateCcw, Pencil } from 'lucide-react'
 import { TaskStatus } from '@/features/tasks/types'
 import type { Task } from '@/features/tasks/types'
 
@@ -44,9 +44,9 @@ export function TaskRow({
           title={isCompleted ? 'Reopen' : 'Complete'}
         >
           {isCompleted ? (
-            <CheckCircle2 size={20} className="text-indigo-500" />
+            <CheckSquare size={20} className="text-indigo-500" />
           ) : (
-            <Circle size={20} />
+            <Square size={20} />
           )}
         </button>
 

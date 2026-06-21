@@ -56,6 +56,7 @@ impl EventHandler for TimerTickHandler {
         if save_interval > 0
             && elapsed_seconds % save_interval == 0
             && elapsed_seconds > 0
+            && timer_tick.remaining_seconds > 0
         {
             let timer_srv = self.timer_srv.clone();
             let timer_debug =
