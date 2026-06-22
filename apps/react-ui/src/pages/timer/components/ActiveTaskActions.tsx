@@ -1,26 +1,64 @@
+import { useState } from 'react'
 import { CheckCircle, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useTimerStore } from '@/pages/timer/useTimer'
+import { useTimerSession } from '@/pages/timer/useTimerSession'
 
-interface ActiveTaskActionsProps {
-  onResetTask: () => void
-  onCompleteTask: () => void
-  isBusy: boolean
-  isLastBreak: boolean
-  isTaskCompleted: boolean
-  hasActiveTask: boolean
-}
+export function ActiveTaskActions() {
+  const completeActiveTask = useTaskStore((s) => s.completeActiveTask)
+  const resetActiveTask = useTaskStore((s) => s.resetActiveTask)
+  const resetTimer = useTimerStore((s) => s.resetTimer)
+  const fetchTimer = useTimerStore((s) => s.fetchTimer)
+  const { activeTask, isLastBreak, isTaskCompleted } = useTimerSession()
+  const [isBusy, setIsBusy] = useState(false)
 
-export function ActiveTaskActions({
-  onResetTask,
-  onCompleteTask,
-  isBusy,
-  isLastBreak,
-  isTaskCompleted,
-  hasActiveTask,
-}: ActiveTaskActionsProps) {
+  if (!activeTask) return null
+
+  const handleCompleteTask = async () => {
+    if (isBusy) return
+
+    if (isLastBreak) {
+      setIsBusy(true)
+      try {
+        const ok = await resetTimer()
+        if (ok) toast.success('Task completed!')
+      } finally {
+        setIsBusy(false)
+      }
+      return
+    }
+
+    if (isTaskCompleted) return
+    setIsBusy(true)
+    try {
+      const ok = await completeActiveTask(activeTask.id)
+      if (ok) {
+        toast.success('Task completed!')
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const handleResetTask = async () => {
+    if (isBusy) return
+    setIsBusy(true)
+    try {
+      const ok = await resetActiveTask(activeTask.id)
+      if (ok) {
+        await fetchTimer()
+        toast.info('Task progress reset')
+      }
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
   return (
     <div className="mt-1 flex items-center gap-3">
       <button
-        onClick={onResetTask}
+        onClick={handleResetTask}
         disabled={isBusy}
         className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
         title="Reset task progress"
@@ -29,8 +67,8 @@ export function ActiveTaskActions({
         Reset Task
       </button>
       <button
-        onClick={onCompleteTask}
-        disabled={isBusy || (!isLastBreak && (isTaskCompleted || !hasActiveTask))}
+        onClick={handleCompleteTask}
+        disabled={isBusy || (!isLastBreak && isTaskCompleted)}
         className={[
           'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40',
           isLastBreak

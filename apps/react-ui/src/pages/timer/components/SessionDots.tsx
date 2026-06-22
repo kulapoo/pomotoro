@@ -1,9 +1,24 @@
-interface SessionDotsProps {
-  dotTotal: number
-  dotFilled: number
-}
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { DEFAULT_DURATIONS } from '@/lib/duration'
 
-export function SessionDots({ dotTotal, dotFilled }: SessionDotsProps) {
+export function SessionDots() {
+  const activeTask = useTaskStore((s) => s.activeTask)
+
+  const cycleLen =
+    activeTask?.config?.timer?.sessions_until_long_break ??
+    DEFAULT_DURATIONS.sessionsUntilLongBreak
+  const hasFixedSessions = (activeTask?.max_sessions ?? 0) > 0
+  const dotTotal = activeTask
+    ? Math.max(0, hasFixedSessions ? activeTask.max_sessions : cycleLen)
+    : 0
+  const dotFilled = activeTask
+    ? hasFixedSessions
+      ? Math.min(activeTask.current_sessions, activeTask.max_sessions)
+      : activeTask.current_sessions % cycleLen
+    : 0
+
+  if (!activeTask || dotTotal === 0) return null
+
   const dots = Array.from({ length: dotTotal }, (_, i) => i)
 
   return (

@@ -54,9 +54,11 @@ export interface UpdateTaskRequest {
 
 interface TaskStore {
   tasks: Task[]
+  activeTask: Task | null
   isLoading: boolean
   error: BackendError | null
   loadTasks: () => Promise<boolean>
+  loadActiveTask: () => Promise<boolean>
   createTask: (req: CreateTaskRequest) => Promise<boolean>
   updateTask: (req: UpdateTaskRequest) => Promise<boolean>
   deleteTask: (id: string) => Promise<boolean>
@@ -70,6 +72,7 @@ interface TaskStore {
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
+  activeTask: null,
   isLoading: false,
   error: null,
 
@@ -81,6 +84,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       return true
     } catch (e) {
       logger.error('loadTasks failed', e)
+      set({ error: e as BackendError, isLoading: false })
+      return false
+    }
+  },
+
+  loadActiveTask: async () => {
+    set({ isLoading: true })
+    try {
+      const activeTask = await invokeCmd('get_active_task')
+      set({ activeTask, isLoading: false, error: null })
+      return true
+    } catch (e) {
+      logger.error('loadActiveTask failed', e)
       set({ error: e as BackendError, isLoading: false })
       return false
     }
@@ -166,8 +182,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }))
-
-
 
 export function useTasksEventBus(): void {
   const loadTasks = useTaskStore((s) => s.loadTasks)

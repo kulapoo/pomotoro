@@ -4,6 +4,7 @@ import { onEvent, events } from '@/lib/tauri'
 import { createBatchedLoader } from '@/lib/async'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { useTaskStore } from '@/pages/tasks/useTasks'
 
 /**
  * Global, always-on backend event subscriptions.
@@ -25,6 +26,7 @@ import type { UnlistenFn } from '@tauri-apps/api/event'
 export function useEventBus(): void {
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const applyTick = useTimerStore((s) => s.applyTick)
+  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
 
   useEffect(() => {
     const reloadTimer = createBatchedLoader(() => fetchTimer())
@@ -39,9 +41,13 @@ export function useEventBus(): void {
       onEvent(events.timerPaused, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),
       // Active task changed — timer context follows it.
-      onEvent(events.taskActiveChanged, reloadTimer),
+      onEvent(events.taskActiveChanged, () => {
+        reloadTimer()
+        loadActiveTask()
+      }),
       onEvent(events.taskAutoAdvanced, () => {
         reloadTimer()
+        loadActiveTask()
         toast.success('Switched to next incomplete task')
       }),
     ]
@@ -49,5 +55,5 @@ export function useEventBus(): void {
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn())
     }
-  }, [fetchTimer, applyTick])
+  }, [fetchTimer, applyTick, loadActiveTask])
 }
