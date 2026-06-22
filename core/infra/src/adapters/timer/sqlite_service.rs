@@ -100,14 +100,19 @@ impl TimerTickService {
                     if !timer.is_running() {
                         (false, false, Vec::new())
                     } else {
-                        match timer.tick(&config) {
-                            Ok((phase_complete, events)) => {
-                                (!phase_complete, phase_complete, events)
-                            }
-                            Err(e) => {
-                                eprintln!("Timer tick error: {e}");
-                                (false, false, Vec::new())
-                            }
+                        match timer.as_active_mut() {
+                            Some(active) => match active.tick(&config) {
+                                Ok((phase_complete, events)) => {
+                                    (!phase_complete, phase_complete, events)
+                                }
+                                Err(e) => {
+                                    eprintln!("Timer tick error: {e}");
+                                    (false, false, Vec::new())
+                                }
+                            },
+                            // A running timer always has a task bound; if
+                            // not, stop the loop defensively.
+                            None => (false, false, Vec::new()),
                         }
                     }
                 };
@@ -234,7 +239,10 @@ impl TimerTickService {
             let mut timer = self.timer.lock().await;
             // Call reset on the timer - this returns events but we ignore them
             // since the requirement is no event publishing
-            let _ = timer.reset_phase(&timer_config)?;
+            let _ = timer
+                .as_active_mut()
+                .ok_or(Error::NoActiveTask)?
+                .reset_phase(&timer_config)?;
         }
 
         // Save the reset state to the repository

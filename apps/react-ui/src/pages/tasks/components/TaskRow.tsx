@@ -52,14 +52,22 @@ export function TaskRow({
 
         {/* Title + meta */}
         <div className="min-w-0 flex-1">
-          <span
-            className={[
-              'block truncate text-sm font-medium',
-              isCompleted ? 'text-muted-foreground line-through' : '',
-            ].join(' ')}
-          >
-            {task.name}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {isActive && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase text-white">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                Active
+              </span>
+            )}
+            <span
+              className={[
+                'block truncate text-sm font-medium',
+                isCompleted ? 'text-muted-foreground line-through' : '',
+              ].join(' ')}
+            >
+              {task.name}
+            </span>
+          </div>
           {task.description && (
             <p className="text-muted-foreground mt-0.5 truncate text-xs">
               {task.description}

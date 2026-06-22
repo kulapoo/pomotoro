@@ -79,7 +79,10 @@ pub async fn start_timer_phase(
 
     // Create a new timer with the correct task_id
     let mut timer = domain::Timer::new(task_id_for_event);
-    let events = timer.start(&timer_config)?;
+    let events = timer
+        .as_active_mut()
+        .ok_or(domain::Error::NoActiveTask)?
+        .start(&timer_config)?;
 
     timer_repo.save(&timer).await?;
 

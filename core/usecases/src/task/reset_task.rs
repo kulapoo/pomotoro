@@ -4,8 +4,6 @@ use domain::{
 };
 use std::sync::Arc;
 
-use crate::timer::reset_timer_phase;
-
 /// Resets a completed task back to Queued status with optional session reset
 pub async fn reset_task(
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
@@ -18,14 +16,6 @@ pub async fn reset_task(
             id: task_id.to_string(),
         }
     })?;
-
-    reset_timer_phase(
-        task_id,
-        task_repo.clone(),
-        timer_repo.clone(),
-        event_publisher.clone(),
-    )
-    .await?;
 
     task.reset();
 

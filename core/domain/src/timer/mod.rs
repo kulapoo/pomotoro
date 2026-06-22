@@ -11,7 +11,7 @@ pub mod transitions;
 pub use error::{Error, Result};
 pub use repository::TimerRepository;
 pub use state_machine::TimerState;
-pub use timer::{TIMER_ROW_ID, Timer};
+pub use timer::{ActiveTimer, TIMER_ROW_ID, Timer};
 pub use transitions::{StateTransitions, TransitionResult, TransitionType};
 
 // Timer-specific value objects

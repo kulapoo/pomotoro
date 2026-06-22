@@ -398,7 +398,11 @@ async fn pause_and_resume_should_maintain_timer_state() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task.id()).await.unwrap().unwrap();
-        let _tick_result = timer.tick(&task_config.config().timer).unwrap();
+        let _tick_result = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
@@ -432,7 +436,10 @@ async fn pause_and_resume_should_maintain_timer_state() {
         if timer.state().status() == TimerStatus::Running {
             let task_config =
                 ctx.task_repo.get_by_id(task.id()).await.unwrap().unwrap();
-            let _tick_result = timer.tick(&task_config.config().timer);
+            let _tick_result = timer
+                .as_active_mut()
+                .unwrap()
+                .tick(&task_config.config().timer);
             ctx.timer_repo.save(&timer).await.unwrap();
         }
     }
@@ -862,7 +869,11 @@ async fn should_switch_active_task_during_timer_session() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
-        let _tick_result = timer.tick(&task_config.config().timer).unwrap();
+        let _tick_result = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
@@ -895,8 +906,11 @@ async fn should_switch_active_task_during_timer_session() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
-        let (phase_complete, _events) =
-            timer.tick(&task_config.config().timer).unwrap();
+        let (phase_complete, _events) = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
         ticks_completed += 1;
 
@@ -1018,7 +1032,11 @@ async fn should_emit_tick_events_every_second() {
     for _i in 0..5 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
 
-        let (_, events) = timer.tick(&default_task.config().timer).unwrap();
+        let (_, events) = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&default_task.config().timer)
+            .unwrap();
 
         // Find tick events
         for event in events {
@@ -1143,8 +1161,11 @@ async fn complete_productivity_workflow_integration() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
-        let (phase_complete, _) =
-            timer.tick(&task_config.config().timer).unwrap();
+        let (phase_complete, _) = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {
@@ -1169,8 +1190,11 @@ async fn complete_productivity_workflow_integration() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task1.id()).await.unwrap().unwrap();
-        let (phase_complete, _) =
-            timer.tick(&task_config.config().timer).unwrap();
+        let (phase_complete, _) = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {
@@ -1207,7 +1231,11 @@ async fn complete_productivity_workflow_integration() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
-        let _ = timer.tick(&task_config.config().timer).unwrap();
+        let _ = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
     }
 
@@ -1252,8 +1280,11 @@ async fn complete_productivity_workflow_integration() {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task3.id()).await.unwrap().unwrap();
-        let (phase_complete, _) =
-            timer.tick(&task_config.config().timer).unwrap();
+        let (phase_complete, _) = timer
+            .as_active_mut()
+            .unwrap()
+            .tick(&task_config.config().timer)
+            .unwrap();
         ctx.timer_repo.save(&timer).await.unwrap();
 
         if phase_complete {

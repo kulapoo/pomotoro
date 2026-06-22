@@ -28,7 +28,6 @@ pub async fn reset_task(
         task_id_parsed,
     )
     .await
-    .with_context(|| format!("Failed to reset task: {}", task_id))
     .map_err(|e| {
         log::error!("Failed to reset task {}: {}", task_id, e);
         e.to_string()

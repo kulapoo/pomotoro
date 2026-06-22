@@ -229,7 +229,6 @@ The timer automatically:
 
 The module uses a custom `Error` enum:
 - `InvalidStateTransition`: Attempted invalid state change
-- `NoActiveEntity`: Started without setting task
 - `InvalidDuration`: Configuration validation failed
 - `InvalidSessionCount`: Invalid session configuration
 

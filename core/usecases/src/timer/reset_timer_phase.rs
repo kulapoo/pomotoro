@@ -35,7 +35,10 @@ pub async fn reset_timer_phase(
     let mut timer = timer_repo.get().await?;
 
     // Reset the timer with task's configuration
-    let events = timer.reset_phase(&task.config().timer)?;
+    let events = timer
+        .as_active_mut()
+        .ok_or(domain::Error::NoActiveTask)?
+        .reset_phase(&task.config().timer)?;
     timer_repo.save(&timer).await?;
 
     // Publish events

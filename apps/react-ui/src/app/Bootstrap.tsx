@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { onEvent, events } from '@/lib/tauri'
+import { createBatchedLoader } from '@/lib/async'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import { useSettingsStore } from '@/pages/settings/useSettings'
@@ -20,24 +21,28 @@ export function Bootstrap({ children }: BootstrapProps) {
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const loadTasks = useTaskStore((s) => s.loadTasks)
   const loadConfig = useSettingsStore((s) => s.loadConfig)
+  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
 
-  const init = useCallback(async () => {
-    setPhase('loading')
-    const [timerOk, tasksOk, configOk] = await Promise.all([
-      fetchTimer(),
-      loadTasks(),
-      loadConfig(),
-    ])
-    setPhase(timerOk && tasksOk && configOk ? 'ready' : 'failed')
-  }, [fetchTimer, loadTasks, loadConfig])
+  const init = useRef(
+    createBatchedLoader(async () => {
+      setPhase('loading')
+      const [timerOk, tasksOk, configOk, activeTaskOk] = await Promise.all([
+        fetchTimer(),
+        loadTasks(),
+        loadConfig(),
+        loadActiveTask(),
+      ])
+      setPhase(timerOk && tasksOk && configOk && activeTaskOk ? 'ready' : 'failed')
+    }),
+  ).current
 
   useEffect(() => {
-    void init()
+    init()
   }, [init])
 
   // Re-run whenever the backend signals (re)initialization.
   useEffect(() => {
-    const p = onEvent(events.appInitialized, () => void init())
+    const p = onEvent(events.appInitialized, () => init())
     return () => {
       void p.then((fn) => fn())
     }
@@ -57,7 +62,7 @@ export function Bootstrap({ children }: BootstrapProps) {
             Some data failed to load. Check your logs and retry.
           </span>
           <button
-            onClick={() => void init()}
+            onClick={() => init()}
             className="border-border hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
           >
             Retry

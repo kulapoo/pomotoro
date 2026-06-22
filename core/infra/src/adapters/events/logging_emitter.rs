@@ -21,7 +21,7 @@ impl LoggingEmitter {
 impl Emitter for LoggingEmitter {
     fn emit(&self, event: &str, payload: Value) -> anyhow::Result<()> {
         #[cfg(debug_assertions)]
-        log::info!(
+        log::debug!(
             target: "infra::events::emitter",
             "emitting client event: {} | payload: {}",
             event,

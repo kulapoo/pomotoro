@@ -1,5 +1,5 @@
 import { Phase } from '@/pages/timer/useTimer'
-import { useTimerCountdown } from '@/pages/timer/useTimerSession'
+import { useTimerCountdown } from '@/pages/timer/useTimerCountdown'
 import { formatClock } from '@/lib/duration'
 
 const RING_R = 90

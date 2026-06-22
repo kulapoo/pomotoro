@@ -31,7 +31,10 @@ pub async fn complete_timer_phase(
         Phase::Work
     };
 
-    let events = timer.complete_phase(next_phase, &task.config().timer)?;
+    let events = timer
+        .as_active_mut()
+        .ok_or(Error::NoActiveTask)?
+        .complete_phase(next_phase, &task.config().timer)?;
 
     task_repo.update(task.clone()).await?;
     timer_repo.save(&timer).await?;

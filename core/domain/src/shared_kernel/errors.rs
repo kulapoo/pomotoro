@@ -34,6 +34,9 @@ pub enum Error {
     #[error("Timer state transition not allowed: {from} -> {to}")]
     InvalidStateTransition { from: String, to: String },
 
+    #[error("Timer has no active task")]
+    NoActiveTask,
+
     // Tag domain errors
     #[error("Invalid tag format: {tag}")]
     InvalidTagFormat { tag: String },
@@ -85,9 +88,6 @@ impl From<crate::timer::Error> for Error {
             crate::timer::Error::InvalidStateTransition { from, to } => {
                 Error::InvalidStateTransition { from, to }
             }
-            crate::timer::Error::NoActiveEntity => Error::ConfigurationError {
-                message: "Timer requires an active entity to start".to_string(),
-            },
             crate::timer::Error::InvalidConfiguration(msg) => {
                 Error::ConfigurationError { message: msg }
             }

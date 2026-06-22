@@ -384,7 +384,10 @@ async fn timer_state_should_persist_across_restarts() {
 
     ctx.timer_tick_service
         .update_timer(|timer| {
-            timer.set_remaining_seconds(60 * 10);
+            timer
+                .as_active_mut()
+                .ok_or(domain::Error::NoActiveTask)?
+                .set_remaining_seconds(60 * 10);
             Ok(())
         })
         .await

@@ -64,7 +64,7 @@ interface TaskStore {
   deleteTask: (id: string) => Promise<boolean>
   completeTask: (id: string) => Promise<boolean>
   resetTask: (id: string) => Promise<boolean>
-  setActiveTask: (id: string) => Promise<boolean>
+  setActiveTask: (id: string, oldTaskId?: string | null) => Promise<boolean>
   completeActiveTask: (id: string) => Promise<boolean>
   resetActiveTask: (id: string) => Promise<boolean>
   clearError: () => void
@@ -157,9 +157,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  setActiveTask: async (id) => {
+  setActiveTask: async (id, oldTaskId: string | null = null) => {
     try {
-      const oldTask = await invokeCmd('get_active_task')
+      const oldTask = oldTaskId ? { id: oldTaskId } : await invokeCmd('get_active_task')
       await invokeCmd('switch_active_task', {
         task_id: id,
         old_task_id: oldTask?.id ?? null,
@@ -196,7 +196,6 @@ export function useTasksEventBus(): void {
       onEvent(events.taskCompleted, reloadTasks),
       onEvent(events.taskProgressUpdated, reloadTasks),
       onEvent(events.taskAutoAdvanced, reloadTasks),
-      onEvent(events.appInitialized, reloadTasks),
     ]
 
     return () => {

@@ -32,7 +32,10 @@ pub async fn resume_timer_phase(
     )?;
 
     // Execute domain logic: resume the timer
-    let events = timer.resume(&task.config().timer)?;
+    let events = timer
+        .as_active_mut()
+        .ok_or(domain::Error::NoActiveTask)?
+        .resume(&task.config().timer)?;
 
     // Save the timer state
     timer_repo.save(&timer).await?;

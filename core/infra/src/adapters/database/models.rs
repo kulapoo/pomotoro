@@ -247,17 +247,10 @@ impl TryFrom<TimerDb> for Timer {
 
         match task_id {
             Some(id) => Ok(Timer::with_state(id, state)),
-            None => {
-                // No active task: return an idle timer with no task.
-                // We preserve the deserialized state in case the timer
-                // was mid-run when the active task got cleared, but
-                // since `Timer::idle()` always returns Idle state and
-                // there's no public constructor for (None, state), we
-                // simply return idle — any in-flight state without a
-                // task is meaningless anyway.
-                let _ = state; // suppress unused warning
-                Ok(Timer::idle())
-            }
+            // No active task: the only valid task-less shape is `Idle`.
+            // Any in-flight state without a task is meaningless by the
+            // timer's type invariant, so it is discarded.
+            None => Ok(Timer::idle()),
         }
     }
 }

@@ -144,10 +144,13 @@ impl AppContextBuilder {
 
             // Create a new timer bound to this task
             let mut timer = domain::Timer::new(task.id());
-            let events = timer.start(&task.config().timer).map_err(|e| {
-                domain::Error::RepositoryError {
-                    message: e.to_string(),
-                }
+            let events = {
+                let active =
+                    timer.as_active_mut().ok_or(domain::Error::NoActiveTask)?;
+                active.start(&task.config().timer)
+            }
+            .map_err(|e| domain::Error::RepositoryError {
+                message: e.to_string(),
             })?;
 
             // Save the timer

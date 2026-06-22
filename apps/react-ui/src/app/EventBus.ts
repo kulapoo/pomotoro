@@ -30,24 +30,24 @@ export function useEventBus(): void {
 
   useEffect(() => {
     const reloadTimer = createBatchedLoader(() => fetchTimer())
+    const reloadActiveTask = createBatchedLoader(() => loadActiveTask())
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, (payload) => applyTick(payload)),
       // Authoritative re-fetch after any timer transition.
-      onEvent(events.timerStatusChanged, reloadTimer),
-      onEvent(events.timerPhaseSkipped, reloadTimer),
+      onEvent(events.timerPhaseCompleted, reloadActiveTask),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),
       // Active task changed — timer context follows it.
       onEvent(events.taskActiveChanged, () => {
         reloadTimer()
-        loadActiveTask()
+        reloadActiveTask()
       }),
       onEvent(events.taskAutoAdvanced, () => {
         reloadTimer()
-        loadActiveTask()
+        reloadActiveTask()
         toast.success('Switched to next incomplete task')
       }),
     ]

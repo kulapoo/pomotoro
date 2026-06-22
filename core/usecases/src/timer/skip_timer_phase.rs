@@ -60,7 +60,10 @@ pub async fn skip_timer_phase(
         task.is_completed()
     );
 
-    let events = timer.skip_phase(&task.config().timer, next_phase)?;
+    let events = timer
+        .as_active_mut()
+        .ok_or(domain::Error::NoActiveTask)?
+        .skip_phase(&task.config().timer, next_phase)?;
 
     task_repo.update(task).await?;
     timer_repo.save(&timer).await?;
