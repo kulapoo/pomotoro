@@ -2,9 +2,9 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { BackendError } from '@/lib/errors'
-import type { Timer, Phase } from '@/features/timer/types'
-import type { Config } from '@/features/settings/types'
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@/features/tasks/types'
+import type { Timer, Phase } from '@/pages/timer/useTimer'
+import type { Config } from '@/pages/settings/useSettings'
+import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@/pages/tasks/useTasks'
 
 /**
  * Single source of truth for Tauri command names.
@@ -13,6 +13,9 @@ import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@/features/task
  */
 export const commands = {
   getTimerState: 'get_timer_state',
+  getTask: 'get_task',
+  getActiveTask: 'get_active_task',
+
   startTimer: 'start_timer',
   pauseTimer: 'pause_timer',
   resumeTimer: 'resume_timer',
@@ -45,6 +48,9 @@ interface CommandMap {
   reset_timer_phase: { args: { task_id: string }; ret: void }
   skip_phase: { args: { task_id: string }; ret: void }
   switch_active_task: { args: { task_id: string; old_task_id: string | null }; ret: void }
+  get_task: { args: { id: string }; ret: Task }
+  get_active_task: { args: void; ret: Task | null }
+
   get_all_tasks: { args: void; ret: Task[] }
   create_task: { args: { request: CreateTaskRequest }; ret: void }
   update_task: { args: { request: UpdateTaskRequest }; ret: void }

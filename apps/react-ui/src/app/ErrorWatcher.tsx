@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { toastError } from '@/lib/toast'
-import { useTimerStore } from '@/features/timer/model/useTimerStore'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
+import { useTimerStore } from '@/pages/timer/useTimer'
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useSettingsStore } from '@/pages/settings/useSettings'
 
 /**
  * Render-less component that watches every store's `error` field and surfaces

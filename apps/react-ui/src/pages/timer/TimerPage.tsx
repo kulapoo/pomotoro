@@ -1,19 +1,18 @@
 import { useState } from 'react'
 import { CheckCircle, RefreshCw, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
-import { useTimerStore } from '@/features/timer/model/useTimerStore'
-import { TimerRing, CIRC } from '@/features/timer/components/TimerRing'
-import { TimerControls } from '@/features/timer/components/TimerControls'
-import { useTaskStore, useActiveTask } from '@/features/tasks/model/useTaskStore'
 import {
+  useTimerStore,
   Phase,
   getRemainingSeconds,
   getEffectivePhase,
   isTimerRunning,
   isTimerPaused,
   isTimerIdle,
-} from '@/features/timer/types'
-import { TaskStatus } from '@/features/tasks/types'
+} from '@/pages/timer/useTimer'
+import { TimerRing, CIRC } from '@/pages/timer/components/TimerRing'
+import { TimerControls } from '@/pages/timer/components/TimerControls'
+import { useTaskStore, useActiveTask, TaskStatus } from '@/pages/tasks/useTasks'
 import type { Page } from '@/app/types'
 import { formatClock, phaseDuration, DEFAULT_DURATIONS } from '@/lib/duration'
 
@@ -78,7 +77,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
   const rawRemaining = getRemainingSeconds(timer)
   const idle = isTimerIdle(timer)
 
-  // Resolve the task whose config drives durations (active task or timer fallback).
   const contextTask = activeTask ?? tasks.find((t) => t.id === timer.task_id) ?? null
   const timerCfg = contextTask?.config?.timer ?? null
 
@@ -140,7 +138,7 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
     if (isTaskCompleted) return
     setIsBusy(true)
     try {
-      const ok = await completeActiveTask()
+      const ok = await completeActiveTask(contextTask.id)
       if (ok) {
         toast.success('Task completed!')
       }
@@ -150,10 +148,10 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
   }
 
   const handleResetTask = async () => {
-    if (!activeTask || isBusy) return
+    if (!contextTask || isBusy) return
     setIsBusy(true)
     try {
-      const ok = await resetActiveTask()
+      const ok = await resetActiveTask(contextTask.id)
       if (ok) {
         await fetchTimer()
         toast.info('Task progress reset')
@@ -180,7 +178,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-5 py-10">
-      {/* Phase label */}
       <span
         className={`text-xs font-bold tracking-[0.2em] uppercase ${PHASE_COLOR[phase]}`}
       >
@@ -193,7 +190,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         arcOffset={arcOffset}
       />
 
-      {/* Session progress dots */}
       {sessionDots && (
         <div className="flex items-center gap-2">
           {sessionDots.map((i) => (
@@ -208,7 +204,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         </div>
       )}
 
-      {/* Active task pill */}
       {contextTask && (
         <div className="bg-card border-border flex max-w-xs items-center gap-2.5 truncate rounded-full border px-4 py-2 shadow-sm">
           {running && (
@@ -234,7 +229,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         onSkip={handleSkip}
       />
 
-      {/* No-task empty state */}
       {!contextTask && !running && !paused && (
         <div className="mt-2 flex flex-col items-center gap-3">
           <div className="bg-muted/60 flex h-12 w-12 items-center justify-center rounded-2xl">
@@ -253,7 +247,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         </div>
       )}
 
-      {/* State label / last-break hint */}
       {isLastBreak ? (
         <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
           All sessions complete — this is your final break
@@ -270,12 +263,11 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         </span>
       )}
 
-      {/* Task action buttons */}
       {contextTask && (
         <div className="mt-1 flex items-center gap-3">
           <button
             onClick={handleResetTask}
-            disabled={isBusy || !activeTask}
+            disabled={isBusy}
             className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             title="Reset task progress"
           >

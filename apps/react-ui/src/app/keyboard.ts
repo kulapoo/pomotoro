@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { TaskStatus } from '@/features/tasks/types'
+import { useTaskStore, TaskStatus } from '@/pages/tasks/useTasks'
 
 /**
  * Global keyboard shortcut: Ctrl/Meta+Tab cycles incomplete tasks.

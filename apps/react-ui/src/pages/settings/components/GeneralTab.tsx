@@ -2,7 +2,7 @@ import { Row } from '@/components/ui/Row'
 import { Section } from '@/components/ui/Section'
 import { Toggle } from '@/components/ui/Toggle'
 import { SelectInput } from '@/components/ui/SelectInput'
-import type { Config, Theme, TaskCyclingBehavior } from '@/features/settings/types'
+import type { Config, Theme, TaskCyclingBehavior } from '@/pages/settings/useSettings'
 
 interface GeneralTabProps {
   config: Config

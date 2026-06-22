@@ -1,9 +1,56 @@
+import { useEffect } from 'react'
 import { create } from 'zustand'
-import { invokeCmd } from '@/lib/tauri'
+import { invokeCmd, onEvent, events } from '@/lib/tauri'
 import { BackendError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
-import { TaskStatus } from '@/features/tasks/types'
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@/features/tasks/types'
+import { createBatchedLoader } from '@/lib/async'
+import type { Config } from '@/pages/settings/useSettings'
+import type { UnlistenFn } from '@tauri-apps/api/event'
+
+export const TaskStatus = {
+  Active: 'Active',
+  Queued: 'Queued',
+  Completed: 'Completed',
+  Paused: 'Paused',
+} as const
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus]
+
+export interface Task {
+  id: string
+  name: string
+  description: string | null
+  max_sessions: number
+  current_sessions: number
+  tags: string[]
+  config: Config
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+  status: TaskStatus
+}
+
+export interface CreateTaskRequest {
+  name: string
+  description?: string
+  max_sessions: number
+  tags: string[]
+  work_duration?: number
+  short_break_duration?: number
+  long_break_duration?: number
+  sessions_until_long_break?: number
+}
+
+export interface UpdateTaskRequest {
+  id: string
+  name?: string
+  description?: string
+  max_sessions?: number
+  tags?: string[]
+  work_duration?: number
+  short_break_duration?: number
+  long_break_duration?: number
+  sessions_until_long_break?: number
+}
 
 interface TaskStore {
   tasks: Task[]
@@ -16,9 +63,9 @@ interface TaskStore {
   completeTask: (id: string) => Promise<boolean>
   resetTask: (id: string) => Promise<boolean>
   setActiveTask: (id: string) => Promise<boolean>
-  completeActiveTask: () => Promise<boolean>
-  resetActiveTask: () => Promise<boolean>
-  getActiveTask: () => Task | undefined
+  completeActiveTask: (id: string) => Promise<boolean>
+  resetActiveTask: (id: string) => Promise<boolean>
+  getActiveTask: () => Promise<Task | null>
   clearError: () => void
 }
 
@@ -97,7 +144,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   setActiveTask: async (id) => {
     try {
-      const oldTask = get().getActiveTask()
+      const oldTask = await get().getActiveTask()
       await invokeCmd('switch_active_task', {
         task_id: id,
         old_task_id: oldTask?.id ?? null,
@@ -110,27 +157,48 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  completeActiveTask: async () => {
-    const active = get().getActiveTask()
-    if (!active) return false
-    return get().completeTask(active.id)
+  completeActiveTask: async (id) => {
+    return get().completeTask(id)
   },
 
-  resetActiveTask: async () => {
-    const active = get().getActiveTask()
-    if (!active) return false
-    return get().resetTask(active.id)
+  resetActiveTask: async (id) => {
+    return get().resetTask(id)
   },
 
-  getActiveTask: () => get().tasks.find((t) => t.status === TaskStatus.Active),
+  getActiveTask: async () => {
+    try {
+      return await invokeCmd('get_active_task')
+    } catch (e) {
+      logger.error('getActiveTask failed', e)
+      set({ error: e as BackendError })
+      return null
+    }
+  },
 
   clearError: () => set({ error: null }),
 }))
 
-/**
- * Reactive selector for the currently active task.
- * Subscribe with `const active = useActiveTask()` so the component re-renders
- * when `tasks` changes — unlike the imperative `getActiveTask()` action.
- */
 export const useActiveTask = (): Task | undefined =>
   useTaskStore((s) => s.tasks.find((t) => t.status === TaskStatus.Active))
+
+export function useTasksEventBus(): void {
+  const loadTasks = useTaskStore((s) => s.loadTasks)
+
+  useEffect(() => {
+    const reloadTasks = createBatchedLoader(() => loadTasks())
+
+    reloadTasks()
+
+    const unlisteners: Array<Promise<UnlistenFn>> = [
+      onEvent(events.taskListUpdated, reloadTasks),
+      onEvent(events.taskCompleted, reloadTasks),
+      onEvent(events.taskProgressUpdated, reloadTasks),
+      onEvent(events.taskAutoAdvanced, reloadTasks),
+      onEvent(events.appInitialized, reloadTasks),
+    ]
+
+    return () => {
+      for (const p of unlisteners) void p.then((fn) => fn())
+    }
+  }, [loadTasks])
+}

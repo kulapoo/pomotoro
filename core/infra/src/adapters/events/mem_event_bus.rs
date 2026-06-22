@@ -5,8 +5,9 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use tokio::sync::Semaphore;
-use tracing::{debug, error, warn};
 
 use crate::adapters::events::EventSubscriber;
 
@@ -101,7 +102,10 @@ impl InMemoryEventBus {
 impl EventPublisher for InMemoryEventBus {
     fn publish(&self, event: Box<dyn Event>) {
         if tokio::runtime::Handle::try_current().is_err() {
-            warn!("No tokio runtime available for publishing events");
+            log::warn!(
+                target: "infra::events::bus",
+                "No tokio runtime available for publishing events"
+            );
             return;
         }
 
@@ -129,23 +133,30 @@ impl EventSubscriber for InMemoryEventBus {
         let handler_id = self.next_handler_id.fetch_add(1, Ordering::SeqCst);
         let handler_arc = Arc::new(handler);
 
-        debug!(
+        log::debug!(
+            target: "infra::events::bus",
             "Subscribing handler '{}' with ID {} for event type",
             handler_name, handler_id
         );
 
         let semaphore = Arc::clone(&self.concurrency_limiter);
+        let handler_name_for_closure = handler_name.clone();
 
         let handler_fn = Arc::new(move |event: &dyn Event| {
             let event_box = event.clone_box();
+            let event_type_name = event.event_type();
             let handler_clone = Arc::clone(&handler_arc);
             let semaphore_clone = Arc::clone(&semaphore);
+            let handler_name = handler_name_for_closure.clone();
 
             let handle = match tokio::runtime::Handle::try_current() {
                 Ok(handle) => handle,
                 Err(_) => {
-                    println!("No tokio runtime available for event handler");
-                    warn!("No tokio runtime available for event handler");
+                    log::warn!(
+                        target: "infra::events::bus",
+                        "No tokio runtime available for event handler '{}'",
+                        handler_name
+                    );
                     return;
                 }
             };
@@ -155,15 +166,63 @@ impl EventSubscriber for InMemoryEventBus {
                 let _permit = match semaphore_clone.acquire().await {
                     Ok(permit) => permit,
                     Err(_) => {
-                        error!("Failed to acquire semaphore permit for event handler");
-                        println!("Failed to acquire semaphore permit for event handler");
+                        log::error!(
+                            target: "infra::events::bus",
+                            "Failed to acquire semaphore permit for event handler '{}'",
+                            handler_name
+                        );
                         return;
                     }
                 };
 
-                if let Err(e) = handler_clone.handle(event_box).await {
-                    error!("Event handler error: {}", e);
-                    println!("Event handler error: {}", e);
+                #[cfg(debug_assertions)]
+                log::debug!(
+                    target: "infra::events::handler",
+                    "handler '{}' dispatched for event '{}'",
+                    handler_name,
+                    event_type_name
+                );
+
+                #[cfg(debug_assertions)]
+                let start = Instant::now();
+
+                let result = handler_clone.handle(event_box).await;
+
+                #[cfg(debug_assertions)]
+                {
+                    let elapsed = start.elapsed();
+                    match &result {
+                        Ok(()) => {
+                            log::debug!(
+                                target: "infra::events::handler",
+                                "handler '{}' completed for event '{}' in {:?}",
+                                handler_name,
+                                event_type_name,
+                                elapsed
+                            );
+                        }
+                        Err(e) => {
+                            log::error!(
+                                target: "infra::events::handler",
+                                "handler '{}' failed for event '{}' in {:?}: {}",
+                                handler_name,
+                                event_type_name,
+                                elapsed,
+                                e
+                            );
+                        }
+                    }
+                }
+
+                #[cfg(not(debug_assertions))]
+                if let Err(e) = &result {
+                    log::error!(
+                        target: "infra::events::handler",
+                        "handler '{}' failed for event '{}': {}",
+                        handler_name,
+                        event_type_name,
+                        e
+                    );
                 }
                 // Permit is automatically released when dropped
             });
@@ -193,7 +252,11 @@ impl EventSubscriber for InMemoryEventBus {
             handlers.remove(&event_type).map(|v| v.len()).unwrap_or(0);
 
         if removed_count > 0 {
-            debug!("Cleared {} handlers for event type", removed_count);
+            log::debug!(
+                target: "infra::events::bus",
+                "Cleared {} handlers for event type",
+                removed_count
+            );
         }
 
         Ok(())
@@ -212,7 +275,8 @@ impl EventSubscriber for InMemoryEventBus {
             let removed_count = initial_len - event_handlers.len();
 
             if removed_count > 0 {
-                debug!(
+                log::debug!(
+                    target: "infra::events::bus",
                     "Unsubscribed {} handler(s) named '{}' from event type",
                     removed_count, handler_name
                 );

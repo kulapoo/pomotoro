@@ -1,21 +1,22 @@
 import { useState, useMemo } from 'react'
 import { Plus, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { StatBadge } from '@/features/tasks/components/StatBadge'
-import { TaskRow } from '@/features/tasks/components/TaskRow'
-import { TaskFormModal } from '@/features/tasks/components/TaskFormModal'
-import { TaskStatus } from '@/features/tasks/types'
-import type { TaskStatus as TaskStatusType, Task } from '@/features/tasks/types'
+import { useTaskStore, useTasksEventBus, TaskStatus } from '@/pages/tasks/useTasks'
+import { StatBadge } from '@/pages/tasks/components/StatBadge'
+import { TaskRow } from '@/pages/tasks/components/TaskRow'
+import { TaskFormModal } from '@/pages/tasks/components/TaskFormModal'
+import type { Task } from '@/pages/tasks/useTasks'
 import type { Page } from '@/app/types'
 
-type StatusFilter = 'all' | TaskStatusType
+type StatusFilter = 'all' | TaskStatus
 
 interface TasksPageProps {
   onNavigate: (page: Page) => void
 }
 
 export function TasksPage({ onNavigate }: TasksPageProps) {
+  useTasksEventBus()
+
   const tasks = useTaskStore((s) => s.tasks)
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
@@ -87,13 +88,11 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      {/* Modal */}
       {showModal && <TaskFormModal task={editTask} onClose={() => setShowModal(false)} />}
 
       <div className="mb-5 flex items-start justify-between">
         <h1 className="text-2xl font-bold">Tasks</h1>
 
-        {/* Stats */}
         <div className="flex gap-2">
           <StatBadge
             label="Total"
@@ -113,7 +112,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </div>
       </div>
 
-      {/* Quick-add form */}
       <div className="mb-4 flex gap-2">
         <input
           type="text"
@@ -150,7 +148,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </button>
       </div>
 
-      {/* Search + filter */}
       <div className="mb-6 flex gap-2">
         <div className="relative flex-1">
           <Search
@@ -178,7 +175,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </select>
       </div>
 
-      {/* Error with retry (previously missing) */}
       {error && !isLoading && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
           <span className="text-destructive text-sm">{error.message}</span>
@@ -220,7 +216,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </p>
       )}
 
-      {/* Active / queued tasks */}
       {incomplete.length > 0 && (
         <ul className="mb-6 flex flex-col gap-2">
           {incomplete.map((task) => (
@@ -248,7 +243,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </ul>
       )}
 
-      {/* Completed section */}
       {completed.length > 0 && (
         <details className="group">
           <summary className="text-muted-foreground mb-3 flex cursor-pointer list-none items-center gap-1 text-xs font-semibold tracking-wider uppercase select-none">

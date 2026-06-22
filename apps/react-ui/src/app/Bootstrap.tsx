@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { onEvent, events } from '@/lib/tauri'
-import { useTimerStore } from '@/features/timer/model/useTimerStore'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
+import { useTimerStore } from '@/pages/timer/useTimer'
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useSettingsStore } from '@/pages/settings/useSettings'
 
 interface BootstrapProps {
   children: ReactNode

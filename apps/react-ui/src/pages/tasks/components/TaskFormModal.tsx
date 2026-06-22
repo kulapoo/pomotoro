@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { toSeconds } from '@/lib/duration'
-import { DEFAULT_DURATIONS } from '@/lib/duration'
-import type { Task } from '@/features/tasks/types'
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { toSeconds, DEFAULT_DURATIONS } from '@/lib/duration'
+import type { Task } from '@/pages/tasks/useTasks'
 import type { DurationUnit } from '@/lib/duration'
 
 interface TaskFormModalProps {

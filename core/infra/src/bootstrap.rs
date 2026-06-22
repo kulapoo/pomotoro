@@ -10,7 +10,7 @@ use crate::adapters::{
     config::register_config_handlers,
     establish_connection,
     events::{
-        EventSubscriber, app_emitter::Emitter,
+        EventSubscriber, LoggingEmitter, app_emitter::Emitter,
         app_started_handler::AppStartedHandler,
         mem_event_bus::EventPublisherArc,
     },
@@ -87,6 +87,9 @@ pub async fn bootstrap(
     emitter: Arc<dyn Emitter>,
     notification_service: Arc<dyn NotificationServiceTrait>,
 ) -> Result<AppRegistry> {
+    // Wrap the emitter so every client-bound event is logged.
+    let emitter: Arc<dyn Emitter> = Arc::new(LoggingEmitter::new(emitter));
+
     // Get default storage path for database
     let storage_path = dirs::data_dir()
         .context("Failed to get user data directory")?

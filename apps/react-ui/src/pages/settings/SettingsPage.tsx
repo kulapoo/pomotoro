@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
-import { TimerTab } from '@/features/settings/components/TimerTab'
-import { NotificationsTab } from '@/features/settings/components/NotificationsTab'
-import { AudioTab } from '@/features/settings/components/AudioTab'
-import { GeneralTab } from '@/features/settings/components/GeneralTab'
-import { StorageTab } from '@/features/settings/components/StorageTab'
-import type { Config } from '@/features/settings/types'
+import { useSettingsStore } from '@/pages/settings/useSettings'
+import { TimerTab } from '@/pages/settings/components/TimerTab'
+import { NotificationsTab } from '@/pages/settings/components/NotificationsTab'
+import { AudioTab } from '@/pages/settings/components/AudioTab'
+import { GeneralTab } from '@/pages/settings/components/GeneralTab'
+import { StorageTab } from '@/pages/settings/components/StorageTab'
+import type { Config } from '@/pages/settings/useSettings'
 
 type Tab = 'timer' | 'notifications' | 'audio' | 'general' | 'storage'
 
@@ -67,7 +67,6 @@ export function SettingsPage() {
         </button>
       </div>
 
-      {/* Tab bar */}
       <div className="mb-6 flex gap-1 overflow-x-auto pb-1">
         {TABS.map((tab) => (
           <button
@@ -85,7 +84,6 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {/* Tab content */}
       {activeTab === 'timer' && <TimerTab config={config} patch={patch} />}
       {activeTab === 'notifications' && (
         <NotificationsTab config={config} patch={patch} />

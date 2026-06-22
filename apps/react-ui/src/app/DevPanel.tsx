@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Bug } from 'lucide-react'
-import { useTimerStore } from '@/features/timer/model/useTimerStore'
-import { useTaskStore } from '@/features/tasks/model/useTaskStore'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
+import { useTimerStore } from '@/pages/timer/useTimer'
+import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useSettingsStore } from '@/pages/settings/useSettings'
 
 /**
  * Dev-only debug overlay showing live store snapshots.

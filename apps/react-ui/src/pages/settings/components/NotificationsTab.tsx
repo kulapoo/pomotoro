@@ -3,7 +3,7 @@ import { Section } from '@/components/ui/Section'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Toggle } from '@/components/ui/Toggle'
 import { SelectInput } from '@/components/ui/SelectInput'
-import type { Config, NotificationPosition } from '@/features/settings/types'
+import type { Config, NotificationPosition } from '@/pages/settings/useSettings'
 
 interface NotificationsTabProps {
   config: Config

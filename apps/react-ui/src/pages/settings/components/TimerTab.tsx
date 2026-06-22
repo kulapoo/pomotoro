@@ -4,7 +4,7 @@ import { Section } from '@/components/ui/Section'
 import { NumberInput } from '@/components/ui/NumberInput'
 import { Toggle } from '@/components/ui/Toggle'
 import { toSeconds, fromSeconds } from '@/lib/duration'
-import type { Config } from '@/features/settings/types'
+import type { Config } from '@/pages/settings/useSettings'
 
 interface TimerTabProps {
   config: Config

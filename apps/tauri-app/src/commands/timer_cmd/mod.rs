@@ -6,7 +6,7 @@
 // Common imports and types used across multiple timer commands
 pub use anyhow::Context;
 pub use domain::{
-    Task, TaskRepository, Timer, TimerStatus, event_names::ui_listeners,
+    TaskRepository, Timer, TimerStatus, event_names::ui_listeners,
 };
 pub use infra::adapters::events::mem_event_bus::EventPublisherArc;
 pub use infra::adapters::{TimerRepositoryArc, TimerTickService};

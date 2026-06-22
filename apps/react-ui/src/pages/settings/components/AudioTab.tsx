@@ -2,8 +2,8 @@ import { Row } from '@/components/ui/Row'
 import { Section } from '@/components/ui/Section'
 import { Toggle } from '@/components/ui/Toggle'
 import { SelectInput } from '@/components/ui/SelectInput'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
-import type { Config } from '@/features/settings/types'
+import { useSettingsStore } from '@/pages/settings/useSettings'
+import type { Config } from '@/pages/settings/useSettings'
 
 interface AudioTabProps {
   config: Config

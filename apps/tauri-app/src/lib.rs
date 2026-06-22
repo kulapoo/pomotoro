@@ -155,6 +155,7 @@ pub fn run() {
             create_task,
             get_task,
             get_all_tasks,
+            get_active_task,
             get_active_tasks,
             update_task,
             delete_task,

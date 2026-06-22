@@ -1,5 +1,5 @@
-import { Phase } from '@/features/timer/types'
-import type { TimerConfiguration } from '@/features/timer/types'
+import { Phase } from '@/pages/timer/useTimer'
+import type { TimerConfiguration } from '@/pages/timer/useTimer'
 
 /**
  * Default pomodoro durations in seconds. Single source of truth — replaces

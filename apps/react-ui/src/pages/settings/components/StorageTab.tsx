@@ -1,6 +1,6 @@
 import { Section } from '@/components/ui/Section'
 import { toast } from 'sonner'
-import { useSettingsStore } from '@/features/settings/model/useSettingsStore'
+import { useSettingsStore } from '@/pages/settings/useSettings'
 
 export function StorageTab() {
   const openDataDirectory = useSettingsStore((s) => s.openDataDirectory)

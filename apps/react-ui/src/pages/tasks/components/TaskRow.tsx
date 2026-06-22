@@ -1,6 +1,6 @@
 import { Trash2, CheckSquare, Square, Crosshair, RotateCcw, Pencil } from 'lucide-react'
-import { TaskStatus } from '@/features/tasks/types'
-import type { Task } from '@/features/tasks/types'
+import { TaskStatus } from '@/pages/tasks/useTasks'
+import type { Task } from '@/pages/tasks/useTasks'
 
 interface TaskRowProps {
   task: Task

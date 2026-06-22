@@ -1,19 +1,32 @@
 use super::*;
+use std::time::Duration;
+
 use domain::TaskId;
+use infra::adapters::TimerTickService;
 use usecases::timer::reset_timer_to_idle;
 
+/// Fully stop the timer and return it to the Idle state, regardless of the
+/// current phase. Unlike `reset_timer_phase` (which only restarts the current
+/// phase's countdown), this stops the timer entirely.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn reset_timer(
     task_id: String,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
-) -> Result<(Timer, Task), String> {
+    timer_tick_service: State<'_, Arc<TimerTickService>>,
+) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
+    let timer_tick_service_arc = timer_tick_service.inner().clone();
 
     let task_id_parsed = TaskId::from_string(&task_id)
         .map_err(|_| format!("Invalid task ID: {}", task_id))?;
 
+    // Reset the timer to idle (business operation). This publishes a Reset
+    // event whose handler stops the tick loop and reloads state. The event
+    // bus is fire-and-forget (handlers run on spawned tasks), so drain that
+    // handler before proceeding — otherwise the tick loop keeps running on
+    // stale in-memory state and races with the handler's stop/load.
     reset_timer_to_idle(
         task_id_parsed,
         task_repo.inner().clone(),
@@ -24,20 +37,29 @@ pub async fn reset_timer(
     .context("infra::commands::timer_cmd::reset_timer - Failed to reset timer to idle state")
     .map_err(|e| e.to_string())?;
 
+    // Drain the async Reset handler (stop_timer_tick_loop + load_state).
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // Belt-and-suspenders: ensure the tick loop is stopped even if the
+    // handler hasn't drained yet. stop_timer_tick_loop is idempotent.
+    timer_tick_service_arc
+        .stop_timer_tick_loop()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::reset_timer - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
+
     let timer = timer_repo_arc
         .get()
         .await
         .context(
-            "infra::commands::timer_cmd - Failed to get updated timer state",
+            "infra::commands::timer_cmd::reset_timer - Failed to get updated timer state",
         )
         .map_err(|e| e.to_string())?;
 
-    let task = task_repo
-        .get_by_id(task_id_parsed)
-        .await
-        .context("infra::commands::timer_cmd::reset_timer - Failed to get task")
-        .map_err(|e| e.to_string())?
-        .ok_or("infra::commands::timer_cmd::reset_timer - Task not found")?;
-
-    Ok((timer, task))
+    info!("Timer reset to idle for task {}", task_id);
+    Ok(timer)
 }
