@@ -55,6 +55,14 @@ export interface AudioConfig {
   background_sound?: string | null
 }
 
+export interface PlaybackHandle {
+  id: string
+  asset_id: string
+  is_playing: boolean
+  is_looped: boolean
+  volume: number
+}
+
 export interface Config {
   timer: TimerConfiguration
   audio: AudioConfig
@@ -70,7 +78,7 @@ interface SettingsStore {
   loadConfig: () => Promise<boolean>
   saveConfig: (config: Config) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
-  testAudioPreview: (soundType: string) => Promise<boolean>
+  testAudioPreview: (assetId: string, volume: number) => Promise<boolean>
   openDataDirectory: () => Promise<boolean>
   clearAllData: () => Promise<boolean>
   applyTheme: (theme: Theme) => void
@@ -120,9 +128,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
-  testAudioPreview: async (soundType) => {
+  testAudioPreview: async (assetId, volume) => {
     try {
-      await invokeCmd('test_audio_preview', { sound_type: soundType })
+      await invokeCmd('test_audio_preview', { asset_id: assetId, volume })
       return true
     } catch (e) {
       logger.error('testAudioPreview failed', e)

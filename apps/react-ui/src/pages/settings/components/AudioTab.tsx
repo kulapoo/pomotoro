@@ -29,8 +29,14 @@ export function AudioTab({ config, patch }: AudioTabProps) {
   const { audio } = config
   const testAudioPreview = useSettingsStore((s) => s.testAudioPreview)
 
-  const testAudio = async (type: string) => {
-    await testAudioPreview(type)
+  const testAudio = async (category: 'work' | 'break' | 'background') => {
+    const assetId =
+      category === 'break'
+        ? (audio.break_notification_sound ?? '')
+        : category === 'background'
+          ? (audio.background_sound ?? '')
+          : (audio.work_notification_sound ?? '')
+    await testAudioPreview(assetId, audio.volume)
   }
 
   return (

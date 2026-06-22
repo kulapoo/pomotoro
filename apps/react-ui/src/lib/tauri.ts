@@ -2,9 +2,22 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { BackendError } from '@/lib/errors'
-import type { Timer, Phase } from '@/pages/timer/useTimer'
-import type { Config } from '@/pages/settings/useSettings'
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@/pages/tasks/useTasks'
+import type {
+  Timer,
+  TickPayload,
+  TimerStateData,
+  TimerStatusChangedPayload,
+  PhaseSkippedPayload,
+} from '@/pages/timer/useTimer'
+import type { Config, PlaybackHandle } from '@/pages/settings/useSettings'
+import type {
+  Task,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  TaskActiveChangedPayload,
+  TaskCompletedPayload,
+  TaskAutoAdvancedPayload,
+} from '@/pages/tasks/useTasks'
 
 /**
  * Single source of truth for Tauri command names.
@@ -41,26 +54,26 @@ export type CommandName = (typeof commands)[keyof typeof commands]
 
 interface CommandMap {
   get_timer_state: { args: void; ret: Timer }
-  start_timer: { args: { task_id: string }; ret: void }
-  pause_timer: { args: { task_id: string }; ret: void }
-  resume_timer: { args: { task_id: string }; ret: void }
-  reset_timer: { args: { task_id: string }; ret: void }
-  reset_timer_phase: { args: { task_id: string }; ret: void }
-  skip_phase: { args: { task_id: string }; ret: void }
-  switch_active_task: { args: { task_id: string; old_task_id: string | null }; ret: void }
+  start_timer: { args: { task_id: string }; ret: Timer }
+  pause_timer: { args: { task_id: string }; ret: Timer }
+  resume_timer: { args: { task_id: string }; ret: Timer }
+  reset_timer: { args: { task_id: string }; ret: Timer }
+  reset_timer_phase: { args: { task_id: string }; ret: Timer }
+  skip_phase: { args: { task_id: string }; ret: Timer }
+  switch_active_task: { args: { task_id: string; old_task_id: string | null }; ret: Timer }
   get_task: { args: { id: string }; ret: Task }
   get_active_task: { args: void; ret: Task | null }
 
   get_all_tasks: { args: void; ret: Task[] }
-  create_task: { args: { request: CreateTaskRequest }; ret: void }
-  update_task: { args: { request: UpdateTaskRequest }; ret: void }
+  create_task: { args: { request: CreateTaskRequest }; ret: Task }
+  update_task: { args: { request: UpdateTaskRequest }; ret: Task }
   delete_task: { args: { id: string }; ret: void }
-  complete_task: { args: { task_id: string }; ret: void }
-  reset_task: { args: { task_id: string }; ret: void }
+  complete_task: { args: { task_id: string }; ret: Task }
+  reset_task: { args: { task_id: string }; ret: [Timer, Task] }
   get_global_config: { args: void; ret: Config }
   save_global_config: { args: { config: Config }; ret: void }
-  reset_config_to_defaults: { args: void; ret: void }
-  test_audio_preview: { args: { sound_type: string }; ret: void }
+  reset_config_to_defaults: { args: void; ret: Config }
+  test_audio_preview: { args: { asset_id: string; volume: number }; ret: PlaybackHandle }
   open_data_directory: { args: void; ret: void }
   clear_all_data: { args: void; ret: void }
 }
@@ -104,18 +117,18 @@ export type EventName = (typeof events)[keyof typeof events]
 
 interface EventPayloadMap {
   'app:initialized': undefined
-  'task:list_updated': undefined
-  'task:active_changed': undefined
-  'task:task_completed': undefined
-  'task:progress_updated': undefined
-  'task:auto_advanced': undefined
-  'timer:tick': { task_id: string; phase: Phase; remaining_seconds: number }
-  'timer:status_changed': undefined
-  'timer:phase_completed': undefined
-  'timer:phase_skipped': undefined
-  'timer:timer_reset': undefined
-  'timer:timer_paused': undefined
-  'timer:timer_resumed': undefined
+  'task:list_updated': unknown
+  'task:active_changed': TaskActiveChangedPayload | null
+  'task:task_completed': TaskCompletedPayload
+  'task:progress_updated': Task
+  'task:auto_advanced': TaskAutoAdvancedPayload
+  'timer:tick': TickPayload
+  'timer:status_changed': TimerStatusChangedPayload
+  'timer:phase_completed': TimerStateData
+  'timer:phase_skipped': PhaseSkippedPayload
+  'timer:timer_reset': TimerStateData
+  'timer:timer_paused': TimerStateData
+  'timer:timer_resumed': TimerStateData
 }
 
 /**

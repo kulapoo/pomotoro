@@ -21,14 +21,17 @@ export type Phase = (typeof Phase)[keyof typeof Phase]
 
 export interface TimerStateData {
   state: TimerStateName
-  data?: {
-    remaining_seconds: number
-    paused_from?: TimerStateData
-  }
+  remaining_seconds?: number
+  paused_from?: TimerStateData
+}
+
+export interface ActiveTimer {
+  task_id: string
+  state: TimerStateData
 }
 
 export interface Timer {
-  task_id: string
+  task_id: string | null
   state: TimerStateData
 }
 
@@ -41,7 +44,7 @@ export interface TimerConfiguration {
 
 export function getRemainingSeconds(timer: Timer): number {
   if (timer.state.state === TimerState.Idle) return 0
-  return timer.state.data?.remaining_seconds ?? 0
+  return timer.state.remaining_seconds ?? 0
 }
 
 export function getEffectivePhase(timer: Timer): Phase {
@@ -53,7 +56,7 @@ export function getEffectivePhase(timer: Timer): Phase {
     case TimerState.LongBreak:
       return Phase.LongBreak
     case TimerState.Paused: {
-      const from = timer.state.data?.paused_from
+      const from = timer.state.paused_from
       if (from?.state === TimerState.ShortBreak) return Phase.ShortBreak
       if (from?.state === TimerState.LongBreak) return Phase.LongBreak
       return Phase.Work
@@ -82,6 +85,26 @@ export interface TickPayload {
   task_id: string
   phase: Phase
   remaining_seconds: number
+  version: number
+  occurred_at: string
+  config: TimerConfiguration
+}
+
+export interface TimerStatusChangedPayload {
+  task_id: string
+  old_status: string
+  new_status: string
+  phase: Phase
+  version: number
+  occurred_at: string
+}
+
+export interface PhaseSkippedPayload {
+  task_id: string
+  skipped_phase: Phase
+  next_phase: Phase
+  version: number
+  occurred_at: string
 }
 
 type TaskCommand =
@@ -141,10 +164,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
         ...timer,
         state: {
           ...timer.state,
-          data: {
-            ...timer.state.data,
-            remaining_seconds: payload.remaining_seconds,
-          },
+          remaining_seconds: payload.remaining_seconds,
         },
       },
     })

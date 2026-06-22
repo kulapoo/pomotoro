@@ -9,8 +9,22 @@ use serde::{Deserialize, Serialize};
 ///
 /// Each state variant contains the data relevant to that state.
 /// The state machine ensures type-safe transitions and makes invalid states unrepresentable.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-#[serde(tag = "state", content = "data")]
+///
+/// # Serialization
+///
+/// `TimerState` serializes as an internally-tagged enum keyed on `"state"`:
+///
+/// ```json
+/// { "state": "Idle" }
+/// { "state": "Working", "remaining_seconds": 1500 }
+/// { "state": "Paused", "paused_from": { "state": "ShortBreak", ... }, "remaining_seconds": 750 }
+/// ```
+///
+/// Deserialization additionally accepts the legacy externally-tagged shape
+/// `{"state": "...", "data": { ... }}`, so previously-serialized data still
+/// loads. New output is always the flat form above.
+#[derive(Debug, Clone, Serialize, PartialEq, Default)]
+#[serde(tag = "state")]
 pub enum TimerState {
     /// Timer is stopped and ready to start.
     #[default]
@@ -30,6 +44,115 @@ pub enum TimerState {
         paused_from: Box<TimerState>,
         remaining_seconds: u32,
     },
+}
+
+/// Accepts both the current flat (internally-tagged) wire form and the
+/// legacy `{ "state", "data" }` form. Flat is preferred; legacy is the
+/// fallback so older serialized data still deserializes cleanly.
+impl<'de> Deserialize<'de> for TimerState {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Canonical flat representation: variant fields merged with the tag.
+        #[derive(Deserialize)]
+        #[serde(tag = "state")]
+        enum FlatRepr {
+            Idle,
+            Working {
+                remaining_seconds: u32,
+            },
+            ShortBreak {
+                remaining_seconds: u32,
+            },
+            LongBreak {
+                remaining_seconds: u32,
+            },
+            Paused {
+                paused_from: Box<TimerState>,
+                remaining_seconds: u32,
+            },
+        }
+
+        // Legacy representation: variant data nested under a "data" key.
+        #[derive(Deserialize)]
+        #[serde(tag = "state", content = "data")]
+        enum LegacyRepr {
+            Idle,
+            Working {
+                remaining_seconds: u32,
+            },
+            ShortBreak {
+                remaining_seconds: u32,
+            },
+            LongBreak {
+                remaining_seconds: u32,
+            },
+            Paused {
+                paused_from: Box<TimerState>,
+                remaining_seconds: u32,
+            },
+        }
+
+        fn from_flat(r: FlatRepr) -> TimerState {
+            match r {
+                FlatRepr::Idle => TimerState::Idle,
+                FlatRepr::Working { remaining_seconds } => {
+                    TimerState::Working { remaining_seconds }
+                }
+                FlatRepr::ShortBreak { remaining_seconds } => {
+                    TimerState::ShortBreak { remaining_seconds }
+                }
+                FlatRepr::LongBreak { remaining_seconds } => {
+                    TimerState::LongBreak { remaining_seconds }
+                }
+                FlatRepr::Paused {
+                    paused_from,
+                    remaining_seconds,
+                } => TimerState::Paused {
+                    paused_from,
+                    remaining_seconds,
+                },
+            }
+        }
+
+        fn from_legacy(r: LegacyRepr) -> TimerState {
+            match r {
+                LegacyRepr::Idle => TimerState::Idle,
+                LegacyRepr::Working { remaining_seconds } => {
+                    TimerState::Working { remaining_seconds }
+                }
+                LegacyRepr::ShortBreak { remaining_seconds } => {
+                    TimerState::ShortBreak { remaining_seconds }
+                }
+                LegacyRepr::LongBreak { remaining_seconds } => {
+                    TimerState::LongBreak { remaining_seconds }
+                }
+                LegacyRepr::Paused {
+                    paused_from,
+                    remaining_seconds,
+                } => TimerState::Paused {
+                    paused_from,
+                    remaining_seconds,
+                },
+            }
+        }
+
+        let value = serde_json::Value::deserialize(deserializer)?;
+
+        match serde_json::from_value::<FlatRepr>(value.clone()) {
+            Ok(flat) => Ok(from_flat(flat)),
+            Err(flat_err) => {
+                match serde_json::from_value::<LegacyRepr>(value) {
+                    Ok(legacy) => Ok(from_legacy(legacy)),
+                    Err(legacy_err) => Err(serde::de::Error::custom(format!(
+                        "TimerState: failed to parse as flat or legacy form \
+                     (flat: {flat_err}; legacy: {legacy_err})"
+                    ))),
+                }
+            }
+        }
+    }
 }
 
 impl TimerState {
@@ -256,5 +379,87 @@ mod tests {
             }
             _ => panic!("Expected Idle state"),
         }
+    }
+
+    #[test]
+    fn should_serialize_as_flat_internally_tagged() {
+        // No "data" wrapper; variant fields sit beside the "state" tag.
+        let working = TimerState::Working {
+            remaining_seconds: 1500,
+        };
+        let json = serde_json::to_value(&working).unwrap();
+        assert_eq!(json["state"], "Working");
+        assert_eq!(json["remaining_seconds"], 1500);
+        assert!(
+            json.get("data").is_none(),
+            "flat form must not contain a \"data\" key"
+        );
+
+        let idle_json = serde_json::to_value(&TimerState::Idle).unwrap();
+        assert_eq!(idle_json["state"], "Idle");
+
+        let paused = TimerState::Paused {
+            paused_from: Box::new(TimerState::ShortBreak {
+                remaining_seconds: 300,
+            }),
+            remaining_seconds: 120,
+        };
+        let paused_json = serde_json::to_value(&paused).unwrap();
+        assert_eq!(paused_json["state"], "Paused");
+        assert_eq!(paused_json["remaining_seconds"], 120);
+        assert_eq!(paused_json["paused_from"]["state"], "ShortBreak");
+        assert_eq!(paused_json["paused_from"]["remaining_seconds"], 300);
+    }
+
+    #[test]
+    fn should_round_trip_flat_form() {
+        let original = TimerState::Paused {
+            paused_from: Box::new(TimerState::Working {
+                remaining_seconds: 600,
+            }),
+            remaining_seconds: 542,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let restored: TimerState = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, restored);
+    }
+
+    #[test]
+    fn should_deserialize_legacy_data_wrapped_form() {
+        // Old externally-tagged shape with variant data under "data".
+        let json = r#"{"state":"Working","data":{"remaining_seconds":42}}"#;
+        let state: TimerState = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            state,
+            TimerState::Working {
+                remaining_seconds: 42
+            }
+        );
+
+        let paused_json = r#"{"state":"Paused","data":{"paused_from":{"state":"LongBreak","data":{"remaining_seconds":60}},"remaining_seconds":30}}"#;
+        let paused: TimerState = serde_json::from_str(paused_json).unwrap();
+        assert_eq!(
+            paused,
+            TimerState::Paused {
+                paused_from: Box::new(TimerState::LongBreak {
+                    remaining_seconds: 60
+                }),
+                remaining_seconds: 30,
+            }
+        );
+    }
+
+    #[test]
+    fn should_prefer_flat_form_when_ambiguous() {
+        // Flat "data" field would be ignored by the flat parser; ensure the
+        // flat path wins and reads the root-level remaining_seconds.
+        let json = r#"{"state":"Working","remaining_seconds":7}"#;
+        let state: TimerState = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            state,
+            TimerState::Working {
+                remaining_seconds: 7
+            }
+        );
     }
 }

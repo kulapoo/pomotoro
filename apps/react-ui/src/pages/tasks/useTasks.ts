@@ -52,6 +52,27 @@ export interface UpdateTaskRequest {
   sessions_until_long_break?: number
 }
 
+export interface TaskActiveChangedPayload {
+  old_task_id: string | null
+  new_task_id: string
+  workflow_result: string
+  version: number
+  occurred_at: string
+}
+
+export interface TaskCompletedPayload {
+  task_id: string
+  total_sessions: number
+  completed_at: string
+  version: number
+  occurred_at: string
+}
+
+export interface TaskAutoAdvancedPayload {
+  from_task_id: string
+  to_task_id: string
+}
+
 interface TaskStore {
   tasks: Task[]
   activeTask: Task | null
