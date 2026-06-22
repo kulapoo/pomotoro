@@ -65,7 +65,6 @@ interface TaskStore {
   setActiveTask: (id: string) => Promise<boolean>
   completeActiveTask: (id: string) => Promise<boolean>
   resetActiveTask: (id: string) => Promise<boolean>
-  getActiveTask: () => Promise<Task | null>
   clearError: () => void
 }
 
@@ -144,7 +143,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   setActiveTask: async (id) => {
     try {
-      const oldTask = await get().getActiveTask()
+      const oldTask = await invokeCmd('get_active_task')
       await invokeCmd('switch_active_task', {
         task_id: id,
         old_task_id: oldTask?.id ?? null,
@@ -165,21 +164,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return get().resetTask(id)
   },
 
-  getActiveTask: async () => {
-    try {
-      return await invokeCmd('get_active_task')
-    } catch (e) {
-      logger.error('getActiveTask failed', e)
-      set({ error: e as BackendError })
-      return null
-    }
-  },
-
   clearError: () => set({ error: null }),
 }))
 
-export const useActiveTask = (): Task | undefined =>
-  useTaskStore((s) => s.tasks.find((t) => t.status === TaskStatus.Active))
+
 
 export function useTasksEventBus(): void {
   const loadTasks = useTaskStore((s) => s.loadTasks)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle, RefreshCw, ListTodo } from 'lucide-react'
+import { ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useTimerStore,
@@ -12,7 +12,11 @@ import {
 } from '@/pages/timer/useTimer'
 import { TimerRing, CIRC } from '@/pages/timer/components/TimerRing'
 import { TimerControls } from '@/pages/timer/components/TimerControls'
-import { useTaskStore, useActiveTask, TaskStatus } from '@/pages/tasks/useTasks'
+import { SessionDots } from '@/pages/timer/components/SessionDots'
+import { ActiveTaskBadge } from '@/pages/timer/components/ActiveTaskBadge'
+import { ActiveTaskActions } from '@/pages/timer/components/ActiveTaskActions'
+import { useTaskStore, TaskStatus } from '@/pages/tasks/useTasks'
+import { useActiveTask } from '@/pages/tasks/useActiveTask'
 import type { Page } from '@/app/types'
 import { formatClock, phaseDuration, DEFAULT_DURATIONS } from '@/lib/duration'
 
@@ -48,7 +52,6 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
   const resetPhase = useTimerStore((s) => s.resetPhase)
   const resetTimer = useTimerStore((s) => s.resetTimer)
   const skip = useTimerStore((s) => s.skip)
-  const tasks = useTaskStore((s) => s.tasks)
   const completeActiveTask = useTaskStore((s) => s.completeActiveTask)
   const resetActiveTask = useTaskStore((s) => s.resetActiveTask)
   const activeTask = useActiveTask()
@@ -77,7 +80,7 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
   const rawRemaining = getRemainingSeconds(timer)
   const idle = isTimerIdle(timer)
 
-  const contextTask = activeTask ?? tasks.find((t) => t.id === timer.task_id) ?? null
+  const contextTask = activeTask
   const timerCfg = contextTask?.config?.timer ?? null
 
   const idleDuration = timerCfg?.work_duration ?? DEFAULT_DURATIONS.work
@@ -165,16 +168,15 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
     contextTask?.config?.timer?.sessions_until_long_break ??
     DEFAULT_DURATIONS.sessionsUntilLongBreak
 
-  let sessionDots: number[] | null = null
-  let dotFilled = 0
-  if (contextTask) {
-    const hasFixedSessions = (contextTask.max_sessions ?? 0) > 0
-    const dotTotal = Math.max(0, hasFixedSessions ? contextTask.max_sessions : cycleLen)
-    dotFilled = hasFixedSessions
+  const hasFixedSessions = (contextTask?.max_sessions ?? 0) > 0
+  const dotTotal = contextTask
+    ? Math.max(0, hasFixedSessions ? contextTask.max_sessions : cycleLen)
+    : 0
+  const dotFilled = contextTask
+    ? hasFixedSessions
       ? Math.min(contextTask.current_sessions, contextTask.max_sessions)
       : contextTask.current_sessions % cycleLen
-    sessionDots = Array.from({ length: dotTotal }, (_, i) => i)
-  }
+    : 0
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-5 py-10">
@@ -190,30 +192,12 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         arcOffset={arcOffset}
       />
 
-      {sessionDots && (
-        <div className="flex items-center gap-2">
-          {sessionDots.map((i) => (
-            <div
-              key={i}
-              className={[
-                'h-2.5 w-2.5 rounded-full transition-all duration-300',
-                i < dotFilled ? 'bg-indigo-500' : 'bg-muted-foreground/25',
-              ].join(' ')}
-            />
-          ))}
-        </div>
+      {contextTask && dotTotal > 0 && (
+        <SessionDots dotTotal={dotTotal} dotFilled={dotFilled} />
       )}
 
       {contextTask && (
-        <div className="bg-card border-border flex max-w-xs items-center gap-2.5 truncate rounded-full border px-4 py-2 shadow-sm">
-          {running && (
-            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-indigo-500" />
-          )}
-          <span className="truncate text-sm font-medium">{contextTask.name}</span>
-          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-            {contextTask.current_sessions}/{contextTask.max_sessions}
-          </span>
-        </div>
+        <ActiveTaskBadge task={contextTask} running={running} />
       )}
 
       <TimerControls
@@ -264,31 +248,14 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
       )}
 
       {contextTask && (
-        <div className="mt-1 flex items-center gap-3">
-          <button
-            onClick={handleResetTask}
-            disabled={isBusy}
-            className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-            title="Reset task progress"
-          >
-            <RefreshCw size={12} />
-            Reset Task
-          </button>
-          <button
-            onClick={handleCompleteTask}
-            disabled={isBusy || (!isLastBreak && (isTaskCompleted || !activeTask))}
-            className={[
-              'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-              isLastBreak
-                ? 'hover:bg-accent border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-border text-muted-foreground hover:text-foreground hover:bg-accent',
-            ].join(' ')}
-            title={isLastBreak ? 'End this break and finish' : 'Mark task as complete'}
-          >
-            <CheckCircle size={12} />
-            {isLastBreak ? 'Finish Now' : 'Complete Task'}
-          </button>
-        </div>
+        <ActiveTaskActions
+          onResetTask={handleResetTask}
+          onCompleteTask={handleCompleteTask}
+          isBusy={isBusy}
+          isLastBreak={isLastBreak}
+          isTaskCompleted={isTaskCompleted}
+          hasActiveTask={!!activeTask}
+        />
       )}
     </div>
   )
