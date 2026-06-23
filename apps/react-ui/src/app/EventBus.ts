@@ -38,7 +38,9 @@ export function useEventBus(): void {
         applyTick(payload)
       }),
       // Authoritative re-fetch after any timer transition.
-      onEvent(events.timerPhaseCompleted, reloadActiveTask),
+      onEvent(events.timerPhaseCompleted, () => {
+        reloadActiveTask()
+      }),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),

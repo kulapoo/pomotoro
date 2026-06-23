@@ -9,8 +9,16 @@ export function TimerControls() {
   const resume = useTimerStore((s) => s.resume)
   const resetPhase = useTimerStore((s) => s.resetPhase)
   const skip = useTimerStore((s) => s.skip)
-  const { activeTask, idle, running, paused, isLastBreak, canPlayPause } =
-    useTimerSession()
+  const {
+    activeTask,
+    idle,
+    running,
+    paused,
+    isLastBreak,
+    canPlayPause,
+    allPhasesCompleted,
+    isTaskCompleted,
+  } = useTimerSession()
   const [isBusy, setIsBusy] = useState(false)
 
   const handlePlayPause = async () => {
@@ -20,7 +28,7 @@ export function TimerControls() {
   }
 
   const handleSkip = async () => {
-    if (isBusy || idle || isLastBreak) return
+    if (isBusy || idle) return
     setIsBusy(true)
     try {
       await skip()
@@ -43,7 +51,7 @@ export function TimerControls() {
     <div className="mt-2 flex items-center gap-5">
       <button
         onClick={handleReset}
-        disabled={idle || isBusy}
+        disabled={idle || isBusy || allPhasesCompleted}
         className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
         title="Restart phase"
       >
@@ -61,7 +69,7 @@ export function TimerControls() {
 
       <button
         onClick={handleSkip}
-        disabled={idle || isBusy || isLastBreak}
+        disabled={idle || isBusy || isLastBreak || isTaskCompleted}
         className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
         title={isLastBreak ? 'Skip unavailable — task is complete' : 'Skip phase'}
       >

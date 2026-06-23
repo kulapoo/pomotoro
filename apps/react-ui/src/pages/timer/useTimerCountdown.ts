@@ -15,6 +15,7 @@ import { phaseDuration, DEFAULT_DURATIONS } from '@/lib/duration'
  */
 export function useTimerCountdown() {
   const timerCfg = useTaskStore((s) => s.activeTask?.config?.timer ?? null)
+
   return useTimerStore(
     useShallow((s) => {
       const t = s.timer

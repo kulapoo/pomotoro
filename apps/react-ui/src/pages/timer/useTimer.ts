@@ -147,27 +147,14 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
 
   applyTick: (payload) => {
     const timer = get().timer
+
     if (!timer) return
-    const state = timer.state.state
-    if (state === TimerState.Idle || state === TimerState.Paused) return
 
-    if (payload.task_id !== timer.task_id) return
-    const phaseByState: Partial<Record<TimerStateName, Phase>> = {
-      [TimerState.Working]: Phase.Work,
-      [TimerState.ShortBreak]: Phase.ShortBreak,
-      [TimerState.LongBreak]: Phase.LongBreak,
+    if (timer.state) {
+      timer.state.remaining_seconds = payload.remaining_seconds
     }
-    if (phaseByState[state] !== payload.phase) return
 
-    set({
-      timer: {
-        ...timer,
-        state: {
-          ...timer.state,
-          remaining_seconds: payload.remaining_seconds,
-        },
-      },
-    })
+    set({ timer })
   },
 
   start: async () => runWithTask(set, get, 'start_timer'),
@@ -188,7 +175,8 @@ async function runWithTask(
   const taskId = get().timer?.task_id
   if (!taskId) return false
   try {
-    await invokeCmd(command, { task_id: taskId })
+    const timer = await invokeCmd(command, { task_id: taskId })
+    set({ timer, error: null })
     return true
   } catch (e) {
     logger.error(`${command} failed`, e)

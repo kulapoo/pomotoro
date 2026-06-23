@@ -29,7 +29,11 @@ export function useTimerSession() {
   const isBreakPhase = phase === Phase.ShortBreak || phase === Phase.LongBreak
   const isLastBreak = !!isTaskCompleted && isBreakPhase
   const canStart = hasTaskId && !isTaskCompleted
-  const canPlayPause = !!activeTask && (canStart || running || paused)
+  const allPhasesCompleted =
+    isTaskCompleted && activeTask.current_sessions === activeTask.max_sessions && !running
+
+  const canPlayPause =
+    !!activeTask && !allPhasesCompleted && (canStart || running || paused)
 
   return {
     activeTask,
@@ -42,7 +46,6 @@ export function useTimerSession() {
     isLastBreak,
     canStart,
     canPlayPause,
+    allPhasesCompleted,
   }
 }
-
-

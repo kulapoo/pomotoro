@@ -179,6 +179,7 @@ impl EventHandler for CountdownExpiredHandler {
             }
 
             usecases::timer::PhaseOutcome::Stopped { .. } => {
+                log::info!("TAENA KA");
                 self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
                     domain::Error::RepositoryError {
                         message: format!("Failed to stop timer tick loop: {e}"),

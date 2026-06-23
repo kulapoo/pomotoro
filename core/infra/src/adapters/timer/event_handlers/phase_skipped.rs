@@ -39,7 +39,16 @@ impl EventHandler for PhaseSkippedHandler {
         self.timer_srv.load_state().await?;
         let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;
         self.emitter
-            .emit(domain::event_names::timer::PHASE_SKIPPED, state_json)
+            .emit(
+                domain::event_names::timer::PHASE_SKIPPED,
+                state_json.clone(),
+            )
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!("Failed to emit phase skipped event: {e}"),
+            })?;
+
+        self.emitter
+            .emit(domain::event_names::timer::PHASE_COMPLETED, state_json)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit phase skipped event: {e}"),
             })?;
