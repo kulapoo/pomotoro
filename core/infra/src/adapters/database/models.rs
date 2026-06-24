@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(
     Queryable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
 )]
-#[diesel(table_name = crate::schema::tasks)]
+#[diesel(table_name = crate::schema::tasks, treat_none_as_null = true)]
 pub struct TaskDb {
     pub id: String,
     pub name: String,

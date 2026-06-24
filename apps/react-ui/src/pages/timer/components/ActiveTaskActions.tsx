@@ -11,8 +11,7 @@ export function ActiveTaskActions() {
   const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
   const resetTimer = useTimerStore((s) => s.resetTimer)
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
-  const { activeTask, isLastBreak, isTaskCompleted, allPhasesCompleted } =
-    useTimerSession()
+  const { activeTask, isLastBreak, isTaskCompleted } = useTimerSession()
   const [isBusy, setIsBusy] = useState(false)
 
   if (!activeTask) return null
@@ -72,7 +71,7 @@ export function ActiveTaskActions() {
       </button>
       <button
         onClick={handleCompleteTask}
-        disabled={isBusy || allPhasesCompleted}
+        disabled={isBusy || !!isTaskCompleted}
         className={[
           'flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40',
           isLastBreak

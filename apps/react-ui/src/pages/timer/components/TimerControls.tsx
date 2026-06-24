@@ -16,7 +16,6 @@ export function TimerControls() {
     paused,
     isLastBreak,
     canPlayPause,
-    allPhasesCompleted,
     isTaskCompleted,
   } = useTimerSession()
   const [isBusy, setIsBusy] = useState(false)
@@ -51,7 +50,7 @@ export function TimerControls() {
     <div className="mt-2 flex items-center gap-5">
       <button
         onClick={handleReset}
-        disabled={idle || isBusy || allPhasesCompleted}
+        disabled={idle || isBusy || !isTaskCompleted}
         className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
         title="Restart phase"
       >
@@ -69,7 +68,7 @@ export function TimerControls() {
 
       <button
         onClick={handleSkip}
-        disabled={idle || isBusy || isLastBreak || isTaskCompleted}
+        disabled={idle || isBusy || isLastBreak || !!isTaskCompleted}
         className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
         title={isLastBreak ? 'Skip unavailable — task is complete' : 'Skip phase'}
       >

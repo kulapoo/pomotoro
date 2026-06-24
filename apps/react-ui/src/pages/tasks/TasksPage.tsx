@@ -88,6 +88,39 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     }
   }
 
+  const handleResetTask = async (task: Task) => {
+    const ok = await resetTask(task.id)
+    if (ok) {
+      toast.info('Task reopened')
+      await Promise.all([
+        useTaskStore.getState().loadActiveTask(),
+        useTimerStore.getState().fetchTimer(),
+      ])
+    }
+  }
+
+  const handleCompleteTask = async (task: Task) => {
+    const ok = await completeTask(task.id)
+    if (ok) {
+      toast.info('Task completed')
+      await Promise.all([
+        useTaskStore.getState().loadActiveTask(),
+        useTimerStore.getState().fetchTimer(),
+      ])
+    }
+  }
+
+  const handleDeleteTask = async (task: Task) => {
+    const ok = await deleteTask(task.id)
+    if (ok) {
+      toast.info('Task deleted')
+      await Promise.all([
+        useTaskStore.getState().loadActiveTask(),
+        useTimerStore.getState().fetchTimer(),
+      ])
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl">
       {showModal && <TaskFormModal task={editTask} onClose={() => setShowModal(false)} />}
@@ -225,22 +258,12 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
               key={task.id}
               task={task}
               onEdit={() => openEdit(task)}
-              onComplete={async () => {
-                const ok = await completeTask(task.id)
-                if (ok) {
-                  toast.success('Task completed!')
-                  void useTimerStore.getState().fetchTimer()
-                }
-              }}
-              onReset={async () => {
-                const ok = await resetTask(task.id)
-                if (ok) toast.info('Task reopened')
-              }}
+              onComplete={() => handleCompleteTask(task)}
+              onReset={() => handleResetTask(task)}
               onDelete={async () => {
                 if (!window.confirm('Delete "' + task.name + '"? This cannot be undone.'))
                   return
-                const ok = await deleteTask(task.id)
-                if (ok) toast.info('Task deleted')
+                await handleDeleteTask(task)
               }}
               onSetActive={() => handleSetActive(task)}
               timerRunning={timerRunning}
@@ -262,18 +285,14 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
                 key={task.id}
                 task={task}
                 onEdit={() => openEdit(task)}
-                onComplete={() => void completeTask(task.id)}
-                onReset={async () => {
-                  const ok = await resetTask(task.id)
-                  if (ok) toast.info('Task reopened')
-                }}
+                onComplete={() => handleCompleteTask(task)}
+                onReset={() => handleResetTask(task)}
                 onDelete={async () => {
                   if (
                     !window.confirm('Delete "' + task.name + '"? This cannot be undone.')
                   )
                     return
-                  const ok = await deleteTask(task.id)
-                  if (ok) toast.info('Task deleted')
+                  await handleDeleteTask(task)
                 }}
                 onSetActive={() => void setActiveTask(task.id)}
                 timerRunning={timerRunning}

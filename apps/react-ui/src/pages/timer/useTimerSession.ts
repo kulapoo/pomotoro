@@ -25,14 +25,17 @@ export function useTimerSession() {
   const activeTask = useTaskStore((s) => s.activeTask)
 
   const timerCfg = activeTask?.config?.timer ?? null
-  const isTaskCompleted = activeTask?.status === TaskStatus.Completed
+  const isTaskCompleted =
+    activeTask?.status === TaskStatus.Completed && !!activeTask?.completed_at
   const isBreakPhase = phase === Phase.ShortBreak || phase === Phase.LongBreak
-  const isLastBreak = !!isTaskCompleted && isBreakPhase
+  const isLastBreak =
+    !activeTask?.completed_at &&
+    activeTask?.status === TaskStatus.Completed &&
+    isBreakPhase
   const canStart = hasTaskId && !isTaskCompleted
-  const allPhasesCompleted =
-    isTaskCompleted && activeTask.current_sessions === activeTask.max_sessions && !running
 
-  const canPlayPause = !!activeTask && (canStart || running || paused)
+  const canPlayPause =
+    !!activeTask && !activeTask?.completed_at && (canStart || running || paused)
 
   return {
     activeTask,
@@ -45,6 +48,5 @@ export function useTimerSession() {
     isLastBreak,
     canStart,
     canPlayPause,
-    allPhasesCompleted,
   }
 }
