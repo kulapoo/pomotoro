@@ -227,7 +227,10 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
               onEdit={() => openEdit(task)}
               onComplete={async () => {
                 const ok = await completeTask(task.id)
-                if (ok) toast.success('Task completed!')
+                if (ok) {
+                  toast.success('Task completed!')
+                  void useTimerStore.getState().fetchTimer()
+                }
               }}
               onReset={async () => {
                 const ok = await resetTask(task.id)

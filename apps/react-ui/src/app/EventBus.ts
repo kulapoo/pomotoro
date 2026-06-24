@@ -35,11 +35,11 @@ export function useEventBus(): void {
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, (payload) => {
-        console.log(payload)
         applyTick(payload)
       }),
       // Authoritative re-fetch after any timer transition.
       onEvent(events.timerPhaseCompleted, () => {
+        reloadTimer()
         reloadActiveTask()
       }),
       onEvent(events.timerReset, reloadTimer),

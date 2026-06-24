@@ -32,8 +32,7 @@ export function useTimerSession() {
   const allPhasesCompleted =
     isTaskCompleted && activeTask.current_sessions === activeTask.max_sessions && !running
 
-  const canPlayPause =
-    !!activeTask && !allPhasesCompleted && (canStart || running || paused)
+  const canPlayPause = !!activeTask && (canStart || running || paused)
 
   return {
     activeTask,
