@@ -48,14 +48,14 @@ impl EventHandler for TaskCompletedHandler {
                 message: format!("Failed to emit task completed event: {e}"),
             })?;
 
-        // self.emitter
-        //     .emit(
-        //         domain::event_names::task::TASK_COMPLETED,
-        //         json!(task_completed),
-        //     )
-        //     .map_err(|e| domain::Error::EventPublishingError {
-        //         message: format!("Failed to emit task completed event: {e}"),
-        //     })?;
+        self.emitter
+            .emit(
+                domain::event_names::task::TASK_COMPLETED,
+                json!(task_completed),
+            )
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!("Failed to emit task completed event: {e}"),
+            })?;
 
         Ok(())
     }
