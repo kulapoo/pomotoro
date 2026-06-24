@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore, useTasksEventBus, TaskStatus } from '@/pages/tasks/useTasks'
+import { useTimerStore, isTimerRunning } from '@/pages/timer/useTimer'
 import { StatBadge } from '@/pages/tasks/components/StatBadge'
 import { TaskRow } from '@/pages/tasks/components/TaskRow'
 import { TaskFormModal } from '@/pages/tasks/components/TaskFormModal'
@@ -25,6 +26,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const resetTask = useTaskStore((s) => s.resetTask)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
+  const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
 
   const [title, setTitle] = useState('')
   const [sessions, setSessions] = useState(4)
@@ -238,6 +240,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
                 if (ok) toast.info('Task deleted')
               }}
               onSetActive={() => handleSetActive(task)}
+              timerRunning={timerRunning}
+              onNavigateToTimer={() => onNavigate('timer')}
             />
           ))}
         </ul>
@@ -269,6 +273,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
                   if (ok) toast.info('Task deleted')
                 }}
                 onSetActive={() => void setActiveTask(task.id)}
+                timerRunning={timerRunning}
+                onNavigateToTimer={() => onNavigate('timer')}
               />
             ))}
           </ul>

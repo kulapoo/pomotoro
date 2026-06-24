@@ -9,6 +9,8 @@ interface TaskRowProps {
   onDelete: () => void
   onSetActive: () => void
   onEdit: () => void
+  timerRunning: boolean
+  onNavigateToTimer: () => void
 }
 
 export function TaskRow({
@@ -18,6 +20,8 @@ export function TaskRow({
   onDelete,
   onSetActive,
   onEdit,
+  timerRunning,
+  onNavigateToTimer,
 }: TaskRowProps) {
   const isCompleted = task.status === TaskStatus.Completed
   const isActive = task.status === TaskStatus.Active
@@ -95,8 +99,8 @@ export function TaskRow({
         {/* Focus */}
         {!isCompleted && (
           <button
-            onClick={onSetActive}
-            title="Focus on this task"
+            onClick={timerRunning ? onNavigateToTimer : onSetActive}
+            title={timerRunning ? 'Go to running timer' : 'Focus on this task'}
             className={[
               'shrink-0 rounded p-1 transition-colors',
               isActive
@@ -122,8 +126,14 @@ export function TaskRow({
         {/* Edit */}
         <button
           onClick={onEdit}
-          title="Edit task"
-          className="text-muted-foreground hover:text-foreground shrink-0 p-1 transition-colors"
+          disabled={timerRunning}
+          title={timerRunning ? 'Stop the timer to edit' : 'Edit task'}
+          className={[
+            'shrink-0 p-1 transition-colors',
+            timerRunning
+              ? 'text-muted-foreground/40 cursor-not-allowed'
+              : 'text-muted-foreground hover:text-foreground',
+          ].join(' ')}
         >
           <Pencil size={15} />
         </button>
@@ -131,8 +141,14 @@ export function TaskRow({
         {/* Delete */}
         <button
           onClick={onDelete}
-          title="Delete"
-          className="text-muted-foreground hover:text-destructive shrink-0 p-1 transition-colors"
+          disabled={timerRunning}
+          title={timerRunning ? 'Stop the timer to delete' : 'Delete'}
+          className={[
+            'shrink-0 p-1 transition-colors',
+            timerRunning
+              ? 'text-muted-foreground/40 cursor-not-allowed'
+              : 'text-muted-foreground hover:text-destructive',
+          ].join(' ')}
         >
           <Trash2 size={15} />
         </button>
