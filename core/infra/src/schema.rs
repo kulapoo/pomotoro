@@ -24,6 +24,7 @@ diesel::table! {
         config -> Text,
         created_at -> Text,
         updated_at -> Text,
+        completed_at -> Nullable<Text>,
     }
 }
 

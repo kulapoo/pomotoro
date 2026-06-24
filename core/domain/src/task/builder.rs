@@ -177,12 +177,13 @@ impl Builder {
             }
         });
 
-        // Set completion time if completed
-        let completed_at = if status == Status::Completed {
-            self.completed_at.or_else(|| Some(Utc::now()))
-        } else {
-            None
-        };
+        // `completed_at` is set explicitly by callers (force-complete via
+        // `Task::complete()`, or trailing-break finalization via
+        // `Task::finish_break()`). It is NOT auto-derived from status — a
+        // task may be in `Status::Completed` (sessions exhausted) while its
+        // trailing break has not yet been taken, in which case
+        // `completed_at` must remain `None`.
+        let completed_at = self.completed_at;
 
         // Provide default config if none provided
         let config = self.config.unwrap_or_default();

@@ -1605,3 +1605,91 @@ async fn should_give_long_break_after_skipping_4_work_sessions() {
         "Session 5: Task should have 5 completed sessions"
     );
 }
+
+// Test 32: `completed_at` must not be stamped when the last work session ends,
+// only after the trailing break is taken (or skipped).
+#[tokio::test]
+async fn completed_at_flips_only_after_trailing_break() {
+    let ctx = setup_ctx("completed_at_flips_only_after_trailing_break").await;
+
+    // Arrange: a task that completes after exactly one work session.
+    let task = TaskBuilder::new()
+        .name("Single session task")
+        .max_sessions(1)
+        .status(TaskStatus::Active)
+        .config(Config::default())
+        .build();
+
+    ctx.task_repo
+        .create(task.clone())
+        .await
+        .expect("Failed to create task");
+
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task.id()),
+        },
+    )
+    .await
+    .expect("Failed to start work phase");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    // Act 1: skip the single work phase -> should land in a break.
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id(),
+    )
+    .await
+    .expect("Failed to skip work phase");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let after_work = get_active_task(&ctx).await;
+    let after_work_state = get_timer(&ctx).await.state().clone();
+
+    // Assert 1: status flips to Completed (sessions exhausted)...
+    assert_eq!(
+        after_work.status(),
+        TaskStatus::Completed,
+        "Status should flip to Completed at session exhaustion"
+    );
+    // ...but completed_at must still be None (trailing break not yet taken).
+    assert!(
+        after_work.completed_at().is_none(),
+        "completed_at must NOT be stamped before the trailing break is taken"
+    );
+    // ...and we must actually be inside a break phase now.
+    assert!(
+        matches!(
+            after_work_state,
+            TimerState::ShortBreak { .. } | TimerState::LongBreak { .. }
+        ),
+        "Should be in a break after the last work session"
+    );
+
+    // Act 2: skip the trailing break -> should finalize the task.
+    usecases::timer::skip_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task.id(),
+    )
+    .await
+    .expect("Failed to skip trailing break");
+
+    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+    let after_break = get_active_task(&ctx).await;
+
+    // Assert 2: now completed_at is stamped.
+    assert!(
+        after_break.completed_at().is_some(),
+        "completed_at must be stamped once the trailing break is taken"
+    );
+}

@@ -1,5 +1,6 @@
 use domain::{
-    EventPublisher, Phase, Result, TaskId, TaskRepository, TimerRepository,
+    EventPublisher, Phase, Result, TaskCompleted, TaskId, TaskRepository,
+    TimerRepository,
 };
 use std::sync::Arc;
 
@@ -49,7 +50,16 @@ pub async fn skip_timer_phase(
             }
             next
         }
-        Phase::ShortBreak | Phase::LongBreak => Phase::Work,
+        Phase::ShortBreak | Phase::LongBreak => {
+            // Skipping the trailing break after the last work session still
+            // counts as the break being taken: finalize and emit TaskCompleted.
+            if task.finish_break() {
+                let event =
+                    TaskCompleted::new(task.id(), task.max_sessions(), 1);
+                event_publisher.publish(Box::new(event));
+            }
+            Phase::Work
+        }
     };
 
     log::info!(

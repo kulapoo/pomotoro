@@ -86,10 +86,31 @@ impl Task {
     // ---- Domain mutation methods ----
 
     /// Force-complete the task by setting sessions to max and status to Completed.
+    ///
+    /// Manual force-complete also finalizes the task (stamps `completed_at`)
+    /// immediately, bypassing the trailing-break requirement, since the user
+    /// explicitly abandoned the cycle.
     pub fn complete(&mut self) {
         self.current_sessions = self.max_sessions;
         self.status = Status::Completed;
         self.completed_at = Some(Utc::now());
+    }
+
+    /// Finalize a session-complete task by stamping `completed_at` once the
+    /// trailing break after the last work session has been taken (or skipped).
+    ///
+    /// Idempotent: returns `true` only on the first call for a task whose
+    /// work sessions are exhausted and that has not been finalized yet.
+    /// Returns `false` if the task is not yet session-complete, or has
+    /// already been finalized.
+    pub fn finish_break(&mut self) -> bool {
+        if self.completed_at.is_none()
+            && self.current_sessions >= self.max_sessions
+        {
+            self.completed_at = Some(Utc::now());
+            return true;
+        }
+        false
     }
 
     /// Update the task name. Returns error if name is empty.
@@ -118,7 +139,6 @@ impl Task {
         self.max_sessions = max_sessions;
         if self.current_sessions >= max_sessions {
             self.status = Status::Completed;
-            self.completed_at = Some(Utc::now());
         }
         Ok(())
     }
@@ -154,7 +174,6 @@ impl Task {
         self.current_sessions += 1;
         if self.current_sessions >= self.max_sessions {
             self.status = Status::Completed;
-            self.completed_at = Some(Utc::now());
         }
 
         Ok(())
@@ -287,7 +306,6 @@ mod tests {
             .tags(vec!["test".to_string(), "sample".to_string()])
             .config(Config::default())
             .created_at(Utc::now())
-            .completed_at(Utc::now())
             .status(Status::Active)
             .build()
             .unwrap()
@@ -323,9 +341,46 @@ mod tests {
         assert!(task.increment_session().is_ok());
         assert_eq!(task.current_sessions(), 5);
         assert_eq!(task.status(), Status::Completed);
-        assert!(task.completed_at().is_some());
+        // Sessions-exhaustion does NOT stamp completed_at — the trailing
+        // break must still be taken (or force-complete used).
+        assert!(task.completed_at().is_none());
 
         assert!(task.increment_session().is_err());
+    }
+
+    #[test]
+    fn test_finish_break() {
+        let mut task = create_test_task();
+
+        // Not yet session-complete: finish_break is a no-op.
+        assert!(!task.finish_break());
+        assert!(task.completed_at().is_none());
+
+        // Bring to session-complete via increment_session.
+        task.current_sessions = 4;
+        assert!(task.increment_session().is_ok());
+        assert_eq!(task.status(), Status::Completed);
+        assert!(task.completed_at().is_none());
+
+        // First finish_break stamps the timestamp and returns true.
+        assert!(task.finish_break());
+        assert!(task.completed_at().is_some());
+
+        // Subsequent calls are idempotent.
+        assert!(!task.finish_break());
+    }
+
+    #[test]
+    fn test_complete_finalizes_immediately() {
+        let mut task = create_test_task();
+        task.current_sessions = 2;
+
+        task.complete();
+
+        assert_eq!(task.current_sessions, task.max_sessions);
+        assert_eq!(task.status(), Status::Completed);
+        // Manual force-complete bypasses the trailing-break requirement.
+        assert!(task.completed_at().is_some());
     }
 
     #[test]

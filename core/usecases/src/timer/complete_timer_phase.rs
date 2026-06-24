@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use domain::{
-    Error, EventPublisher, Phase, Result, Task, TaskId, TaskRepository, Timer,
-    TimerRepository,
+    Error, EventPublisher, Phase, Result, Task, TaskCompleted, TaskId,
+    TaskRepository, Timer, TimerRepository,
 };
 
 pub async fn complete_timer_phase(
@@ -21,14 +21,24 @@ pub async fn complete_timer_phase(
 
     let current_phase = timer.get_current_phase();
 
-    let next_phase = if current_phase == Phase::Work {
-        let next = task.next_break_phase();
-        if !task.is_completed() {
-            task.increment_session()?;
+    let next_phase = match current_phase {
+        Phase::Work => {
+            let next = task.next_break_phase();
+            if !task.is_completed() {
+                task.increment_session()?;
+            }
+            next
         }
-        next
-    } else {
-        Phase::Work
+        Phase::ShortBreak | Phase::LongBreak => {
+            // The trailing break after the last work session has been taken:
+            // finalize the task (stamp completed_at) and emit TaskCompleted.
+            if task.finish_break() {
+                let event =
+                    TaskCompleted::new(task.id(), task.max_sessions(), 1);
+                event_publisher.publish(Box::new(event));
+            }
+            Phase::Work
+        }
     };
 
     let events = timer

@@ -20,11 +20,8 @@ pub fn register_task_handlers(
     timer_srv: Arc<TimerTickService>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
-    event_bus.subscribe(Box::new(TaskCompletedHandler::new(
-        emitter.clone(),
-        task_repository.clone(),
-        timer_srv.clone(),
-    )))?;
+    event_bus
+        .subscribe(Box::new(TaskCompletedHandler::new(emitter.clone())))?;
     event_bus.subscribe(Box::new(TaskUpdatedHandler::new(
         emitter.clone(),
         task_repository,

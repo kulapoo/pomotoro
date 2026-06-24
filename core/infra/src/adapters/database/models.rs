@@ -19,6 +19,7 @@ pub struct TaskDb {
     pub config: String, // JSON object with timer configuration and other settings
     pub created_at: String,
     pub updated_at: String,
+    pub completed_at: Option<String>,
 }
 
 impl From<Task> for TaskDb {
@@ -48,6 +49,7 @@ impl From<Task> for TaskDb {
             config,
             created_at: task.created_at().to_rfc3339(),
             updated_at: task.updated_at().to_rfc3339(),
+            completed_at: task.completed_at().map(|dt| dt.to_rfc3339()),
         }
     }
 }
@@ -88,6 +90,19 @@ impl TryFrom<TaskDb> for Task {
                 message: format!("Invalid updated_at timestamp: {}", e),
             })?;
 
+        // `completed_at` is persisted (nullable). Only finalized tasks
+        // (trailing break taken, or force-completed) carry a value.
+        let completed_at = db
+            .completed_at
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map(DateTime::parse_from_rfc3339)
+            .transpose()
+            .map(|dt| dt.map(|dt| dt.with_timezone(&Utc)))
+            .map_err(|e| domain::Error::SerializationError {
+                message: format!("Invalid completed_at timestamp: {}", e),
+            })?;
+
         let config: domain::Config = serde_json::from_str(&db.config)
             .unwrap_or_else(|_| domain::Config::default());
 
@@ -103,6 +118,10 @@ impl TryFrom<TaskDb> for Task {
 
         if let Some(description) = db.description {
             builder = builder.description(description);
+        }
+
+        if let Some(completed_at) = completed_at {
+            builder = builder.completed_at(completed_at);
         }
 
         let mut task = builder.build()?;
