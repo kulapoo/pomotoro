@@ -21,6 +21,7 @@ use std::sync::Arc;
 /// - EventPublisher: For domain event publishing
 pub async fn pause_timer_phase(
     task_id: TaskId,
+    remaining_seconds: u32,
     task_repo: Arc<dyn TaskRepository + Send + Sync>,
     timer_repo: Arc<dyn TimerRepository + Send + Sync>,
     event_publisher: Arc<dyn EventPublisher + Send + Sync>,
@@ -41,13 +42,12 @@ pub async fn pause_timer_phase(
         domain::Error::TaskNotFound {
             id: task_id.to_string(),
         },
-    )?;
+    )?; // Execute domain logic: pause the timer
+    let active = timer.as_active_mut().ok_or(domain::Error::NoActiveTask)?;
 
-    // Execute domain logic: pause the timer
-    let events = timer
-        .as_active_mut()
-        .ok_or(domain::Error::NoActiveTask)?
-        .pause(&task.config().timer)?;
+    active.set_remaining_seconds(remaining_seconds);
+
+    let events = active.pause(&task.config().timer)?;
     // Save the timer state
     timer_repo.save(&timer).await?;
 

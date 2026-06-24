@@ -161,8 +161,10 @@ pub async fn progress_phase(
             cycled_to: None,
         })
     } else {
+        let remaining = timer.remaining_seconds(Some(&task.config().timer));
         let timer = pause_timer_phase(
             cmd.task_id,
+            remaining,
             task_repo.clone(),
             timer_repo.clone(),
             event_publisher.clone(),

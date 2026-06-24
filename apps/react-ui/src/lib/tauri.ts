@@ -55,7 +55,7 @@ export type CommandName = (typeof commands)[keyof typeof commands]
 interface CommandMap {
   get_timer_state: { args: void; ret: Timer }
   start_timer: { args: { task_id: string }; ret: Timer }
-  pause_timer: { args: { task_id: string }; ret: Timer }
+  pause_timer: { args: { task_id: string; remaining_seconds: number }; ret: Timer }
   resume_timer: { args: { task_id: string }; ret: Timer }
   reset_timer: { args: { task_id: string }; ret: Timer }
   reset_timer_phase: { args: { task_id: string }; ret: Timer }

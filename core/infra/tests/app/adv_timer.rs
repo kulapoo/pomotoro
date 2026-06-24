@@ -416,6 +416,7 @@ async fn pause_and_resume_should_maintain_timer_state() {
     // Pause the timer
     let pause_result = usecases::timer::pause_timer_phase(
         task.id(),
+        remaining_before_pause,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -1242,6 +1243,7 @@ async fn complete_productivity_workflow_integration() {
     // Pause timer
     pause_timer_phase(
         task2.id(),
+        25 * 60,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),

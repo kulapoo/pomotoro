@@ -146,6 +146,7 @@ async fn timer_should_pause_when_running() {
     // Act
     let result = pause_timer_phase(
         task_id,
+        timer.remaining_seconds(None),
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -351,6 +352,7 @@ async fn timer_should_decrement_timer_counter() {
 
     let pause_timer_result = pause_timer_phase(
         old_task.id(),
+        25 * 60,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
@@ -419,6 +421,7 @@ async fn timer_should_publish_events_on_all_state_changes() {
         timer_task_id.unwrap_or_else(|| {
             panic!("timer should have an active task after setup")
         }),
+        25 * 60,
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),

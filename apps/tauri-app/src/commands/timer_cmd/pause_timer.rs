@@ -5,6 +5,7 @@ use usecases::timer::pause_timer_phase;
 #[tauri::command(rename_all = "snake_case")]
 pub async fn pause_timer(
     task_id: String,
+    remaining_seconds: u32,
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
@@ -18,6 +19,7 @@ pub async fn pause_timer(
 
     pause_timer_phase(
         task_id_parsed,
+        remaining_seconds,
         task_repo.inner().clone(),
         timer_repo.inner().clone(),
         event_publisher.inner().clone(),

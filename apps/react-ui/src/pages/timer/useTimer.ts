@@ -158,7 +158,23 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
   },
 
   start: async () => runWithTask(set, get, 'start_timer'),
-  pause: async () => runWithTask(set, get, 'pause_timer'),
+  pause: async () => {
+    const timer = get().timer
+    const taskId = timer?.task_id
+    if (!taskId || !timer) return false
+    try {
+      const updated = await invokeCmd('pause_timer', {
+        task_id: taskId,
+        remaining_seconds: getRemainingSeconds(timer),
+      })
+      set({ timer: updated, error: null })
+      return true
+    } catch (e) {
+      logger.error('pause_timer failed', e)
+      set({ error: e as BackendError })
+      return false
+    }
+  },
   resume: async () => runWithTask(set, get, 'resume_timer'),
   resetTimer: async () => runWithTask(set, get, 'reset_timer'),
   resetPhase: async () => runWithTask(set, get, 'reset_timer_phase'),
