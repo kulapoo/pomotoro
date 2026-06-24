@@ -9,7 +9,8 @@ export function ActiveTaskActions() {
   const completeActiveTask = useTaskStore((s) => s.completeActiveTask)
   const resetActiveTask = useTaskStore((s) => s.resetActiveTask)
   const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
-  const resetTimer = useTimerStore((s) => s.resetTimer)
+  const loadTasks = useTaskStore((s) => s.loadTasks)
+  // const resetTimer = useTimerStore((s) => s.resetTimer)
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const { activeTask, isLastBreak, isTaskCompleted } = useTimerSession()
   const [isBusy, setIsBusy] = useState(false)
@@ -19,17 +20,6 @@ export function ActiveTaskActions() {
   const handleCompleteTask = async () => {
     if (isBusy) return
 
-    if (isLastBreak) {
-      setIsBusy(true)
-      try {
-        const ok = await resetTimer()
-        if (ok) toast.success('Task completed!')
-      } finally {
-        setIsBusy(false)
-      }
-      return
-    }
-
     if (isTaskCompleted) return
     setIsBusy(true)
     try {
@@ -37,6 +27,7 @@ export function ActiveTaskActions() {
       if (ok) {
         await loadActiveTask()
         await fetchTimer()
+        await loadTasks()
         toast.success('Task completed!')
       }
     } finally {

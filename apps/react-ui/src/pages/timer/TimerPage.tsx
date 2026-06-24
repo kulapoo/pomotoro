@@ -1,4 +1,5 @@
 import { useTimerStore } from '@/pages/timer/useTimer'
+import { useAllDone } from '@/pages/timer/useAllDone'
 import { TimerRing } from '@/pages/timer/components/TimerRing'
 import { TimerControls } from '@/pages/timer/components/TimerControls'
 import { SessionDots } from '@/pages/timer/components/SessionDots'
@@ -7,7 +8,12 @@ import { ActiveTaskActions } from '@/pages/timer/components/ActiveTaskActions'
 import { TimerPhaseLabel } from '@/pages/timer/components/TimerPhaseLabel'
 import { TimerStatus } from '@/pages/timer/components/TimerStatus'
 import { EmptyTaskPrompt } from '@/pages/timer/components/EmptyTaskPrompt'
+import { AllDonePrompt } from '@/pages/timer/components/AllDonePrompt'
 import type { Page } from '@/app/types'
+import { useEffect } from 'react'
+import { events, onEvent } from '@/lib/tauri'
+import { useTaskStore } from '../tasks/useTasks'
+import { createBatchedLoader } from '@/lib/async'
 
 interface TimerPageProps {
   onNavigate: (page: Page) => void
@@ -17,6 +23,16 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
   const timer = useTimerStore((s) => s.timer)
   const timerError = useTimerStore((s) => s.error)
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
+  const isAllDone = useAllDone()
+  const loadTasks = useTaskStore((s) => s.loadTasks)
+
+  useEffect(() => {
+    const reloadTasks = createBatchedLoader(() => loadTasks())
+    const unlisten = onEvent(events.taskCompleted, reloadTasks)
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [loadTasks])
 
   if (!timer) {
     return (
@@ -36,6 +52,10 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
         )}
       </div>
     )
+  }
+
+  if (isAllDone) {
+    return <AllDonePrompt onNavigate={onNavigate} />
   }
 
   return (
