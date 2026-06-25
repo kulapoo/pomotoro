@@ -14,6 +14,8 @@ pub struct GeneralConfig {
     pub auto_start_work_after_break: bool,
     pub minimize_to_tray: bool,
     pub start_minimized: bool,
+    #[serde(default = "default_show_countdown_in_tray")]
+    pub show_countdown_in_tray: bool,
     #[serde(default = "default_persistence_interval_seconds")]
     pub persistence_interval_seconds: u32,
     #[serde(default)]
@@ -28,6 +30,10 @@ pub struct GeneralConfig {
 
 fn default_persistence_interval_seconds() -> u32 {
     10 // Save every 10 seconds by default
+}
+
+fn default_show_countdown_in_tray() -> bool {
+    true
 }
 
 fn default_block_screen_after_work_message() -> String {
@@ -46,6 +52,7 @@ impl Default for GeneralConfig {
             auto_start_work_after_break: true,
             minimize_to_tray: true,
             start_minimized: false,
+            show_countdown_in_tray: default_show_countdown_in_tray(),
             persistence_interval_seconds: default_persistence_interval_seconds(
             ),
             block_screen_after_work: false,

@@ -31,6 +31,7 @@ impl ConfigFixtures {
             auto_start_work_after_break: false,
             minimize_to_tray: false,
             start_minimized: false,
+            show_countdown_in_tray: true,
             persistence_interval_seconds: 10,
             block_screen_after_work: false,
             block_screen_after_work_message:

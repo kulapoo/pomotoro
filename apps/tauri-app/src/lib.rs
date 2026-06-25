@@ -1,5 +1,6 @@
 pub mod adapters;
 pub mod commands;
+pub mod tray;
 
 use commands::*;
 use std::sync::Arc;
@@ -109,6 +110,18 @@ pub fn run() {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.emit("app:initialized", ());
                     }
+
+                    // Build the system tray (depends on managed repositories).
+                    if let Err(e) = tray::build_tray(app.handle()) {
+                        log::error!("Failed to build system tray: {}", e);
+                    }
+
+                    // Honor `start_minimized`: hide the window on launch.
+                    if tray::current_general(app.handle()).start_minimized {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
                 }
                 Err(err) => {
                     let error_msg = format!("Failed to bootstrap app: {}", err);
@@ -139,6 +152,17 @@ pub fn run() {
             }
 
             Ok(())
+        })
+        .on_window_event(move |window, event| {
+            // Close-to-tray: when minimize_to_tray is enabled, intercept the
+            // close request and hide the window instead of exiting.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if tray::current_general(window.app_handle()).minimize_to_tray {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    let _ = tray::refresh(window.app_handle(), None);
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // Timer commands

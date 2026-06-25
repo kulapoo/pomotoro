@@ -13,6 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "pomotoro",
         "width": 1500,
         "height": 1200,

@@ -129,6 +129,17 @@ export function GeneralTab({ config, patch }: GeneralTabProps) {
             }
           />
         </Row>
+        <Row label="Show countdown in tray" hint="Display remaining time in tray tooltip">
+          <Toggle
+            checked={general.show_countdown_in_tray}
+            onChange={(v) =>
+              patch({
+                ...config,
+                general: { ...general, show_countdown_in_tray: v },
+              })
+            }
+          />
+        </Row>
       </Section>
 
       <Section title="Screen Blocking">
