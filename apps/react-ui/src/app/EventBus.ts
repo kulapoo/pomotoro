@@ -22,7 +22,7 @@ import { useScreenBlockerStore } from '@/app/useScreenBlocker'
  *    `useTasksEventBus`.
  *  - `timer:status_changed` covers start/resume/reset/expiry transitions
  *    regardless of trigger source (it is what the tray-emitted transitions
- *    surface as; `timer:timer_start` / `timer:timer_resumed` are dead).
+ *    surface as; `timer:timer_started` / `timer:timer_resumed` are dead).
  *
  * All re-fetches are coalesced through {@link createBatchedLoader} so a burst
  * of related events collapses into one fetch and overlapping fetches cannot
@@ -47,24 +47,13 @@ export function useEventBus(): void {
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, applyTick),
-      // Authoritative re-fetch after any timer transition.
       onEvent(events.timerPhaseCompleted, reload),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
+      onEvent(events.timerStarted, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),
-      // Start / resume / reset / expiry transitions surfaced from any source
-      // (tray menu, background use cases). `timer:timer_start` /
-      // `timer:timer_resumed` are never emitted by the backend; this is the
-      // canonical transition signal.
-      onEvent(events.timerStatusChanged, () => window.setTimeout(reloadTimer, 1000)),
-      // Active task changed — timer context follows it.
       onEvent(events.taskActiveChanged, reload),
-      // Task reset/updated/deleted/status change from any source (e.g. tray
-      // "Reset Task"). Reload the active task so the Timer page reflects it.
-      onEvent(events.taskListUpdated, () => window.setTimeout(reloadActiveTask, 1000)),
-      // Task completed from any source (e.g. tray "Complete Task" without
-      // auto-advance). Reload active task + timer so the page reconciles.
-      onEvent(events.taskCompleted, reload),
+
       onEvent(events.taskAutoAdvanced, () => {
         reload()
         toast.success('Switched to next incomplete task')

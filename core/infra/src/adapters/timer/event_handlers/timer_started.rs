@@ -58,8 +58,14 @@ impl EventHandler for TimerStartedHandler {
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::STATUS_CHANGED,
-                state_json,
+                state_json.clone(),
             )
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!("Failed to emit timer started event: {e}"),
+            })?;
+
+        self.emitter
+            .emit(domain::event_names::ui_listeners::timer::START, state_json)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}"),
             })?;

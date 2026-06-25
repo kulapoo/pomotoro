@@ -62,7 +62,10 @@ interface CommandMap {
   reset_timer: { args: { task_id: string }; ret: Timer }
   reset_timer_phase: { args: { task_id: string }; ret: Timer }
   skip_phase: { args: { task_id: string }; ret: Timer }
-  switch_active_task: { args: { task_id: string; old_task_id: string | null }; ret: Timer }
+  switch_active_task: {
+    args: { task_id: string; old_task_id: string | null }
+    ret: Timer
+  }
   get_task: { args: { id: string }; ret: Task }
   get_active_task: { args: void; ret: Task | null }
 
@@ -114,6 +117,7 @@ export const events = {
   timerPhaseSkipped: 'timer:phase_skipped',
   timerReset: 'timer:timer_reset',
   timerPaused: 'timer:timer_paused',
+  timerStarted: 'timer:timer_started',
   timerResumed: 'timer:timer_resumed',
   screenBlockerActivate: 'screen_blocker:activate',
 } as const
@@ -132,6 +136,7 @@ interface EventPayloadMap {
   'timer:phase_completed': TimerStateData
   'timer:phase_skipped': PhaseSkippedPayload
   'timer:timer_reset': TimerStateData
+  'timer:timer_started': TimerStateData
   'timer:timer_paused': TimerStateData
   'timer:timer_resumed': TimerStateData
   'screen_blocker:activate': { message: string }

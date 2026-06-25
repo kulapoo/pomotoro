@@ -7,7 +7,7 @@ pub mod timer {
     pub const RESET: &str = "timer:timer_reset";
     pub const PAUSE: &str = "timer:timer_paused";
     pub const RESUME: &str = "timer:timer_resumed";
-    pub const START: &str = "timer:timer_start";
+    pub const START: &str = "timer:timer_started";
     pub const WORK_PHASE_COMPLETED: &str = "timer:work_phase_completed";
     pub const BREAK_PHASE_COMPLETED: &str = "timer:break_phase_completed";
 }
