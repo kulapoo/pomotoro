@@ -21,11 +21,6 @@ export type NotificationPosition =
 
 export interface AppearanceConfig {
   theme: Theme
-  show_seconds_in_display: boolean
-  always_on_top: boolean
-  compact_mode: boolean
-  show_task_list_sidebar: boolean
-  animate_progress: boolean
 }
 
 export interface NotificationConfig {

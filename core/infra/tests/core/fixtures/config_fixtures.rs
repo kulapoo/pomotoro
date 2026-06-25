@@ -58,11 +58,6 @@ impl ConfigFixtures {
     pub fn minimal_appearance() -> AppearanceConfig {
         AppearanceConfig {
             theme: Theme::Light,
-            show_seconds_in_display: true,
-            always_on_top: false,
-            compact_mode: false,
-            show_task_list_sidebar: true,
-            animate_progress: true,
         }
     }
 

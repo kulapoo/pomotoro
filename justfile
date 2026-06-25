@@ -13,9 +13,14 @@ dev:
     #!/usr/bin/env bash
     set -e
     ROOT="{{justfile_directory()}}"
-    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
-    VITE_PID=$!
-    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    # Start Vite in its own process group so we can reliably tear it down.
+    # `npm run dev` spawns `sh -> vite` as children; killing just npm leaves
+    # vite orphaned and still bound to port 5173 (strictPort), which makes the
+    # next `just dev` fail with "port already in use" — e.g. after quitting the
+    # app from the tray (app.exit terminates Tauri but not the npm child tree).
+    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
+    VITE_PGID=$!
+    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
     trap cleanup EXIT INT TERM
     cd "$ROOT/apps/tauri-app" && RUST_LOG=info cargo tauri dev
 
@@ -24,9 +29,9 @@ dev-debug:
     #!/usr/bin/env bash
     set -e
     ROOT="{{justfile_directory()}}"
-    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
-    VITE_PID=$!
-    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
+    VITE_PGID=$!
+    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
     trap cleanup EXIT INT TERM
     cd "$ROOT/apps/tauri-app" && RUST_LOG=debug cargo tauri dev
 
@@ -35,9 +40,9 @@ dev-trace:
     #!/usr/bin/env bash
     set -e
     ROOT="{{justfile_directory()}}"
-    cd "$ROOT/apps/react-ui" && npm install --silent 2>/dev/null && npm run dev &
-    VITE_PID=$!
-    cleanup() { kill "$VITE_PID" 2>/dev/null || true; }
+    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
+    VITE_PGID=$!
+    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
     trap cleanup EXIT INT TERM
     cd "$ROOT/apps/tauri-app" && RUST_LOG=trace cargo tauri dev
 

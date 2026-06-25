@@ -21,7 +21,10 @@ export function TimerTab({ config, patch }: TimerTabProps) {
 
   return (
     <div className="space-y-8">
-      <Section title="Timer">
+      <Section
+        title="Timer"
+        description="These values become the defaults when creating any Task."
+      >
         <Row label="Use seconds instead of minutes">
           <Toggle
             checked={unit === 'seconds'}

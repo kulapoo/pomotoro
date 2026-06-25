@@ -3,6 +3,8 @@ import { Plus, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore, useTasksEventBus, TaskStatus } from '@/pages/tasks/useTasks'
 import { useTimerStore, isTimerRunning } from '@/pages/timer/useTimer'
+import { useSettingsStore } from '@/pages/settings/useSettings'
+import { DEFAULT_DURATIONS } from '@/lib/duration'
 import { StatBadge } from '@/pages/tasks/components/StatBadge'
 import { TaskRow } from '@/pages/tasks/components/TaskRow'
 import { TaskFormModal } from '@/pages/tasks/components/TaskFormModal'
@@ -30,8 +32,12 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
   const pauseTimer = useTimerStore((s) => s.pause)
 
+  const defaultSessions =
+    useSettingsStore((s) => s.config?.timer.sessions_until_long_break) ??
+    DEFAULT_DURATIONS.sessionsUntilLongBreak
+
   const [title, setTitle] = useState('')
-  const [sessions, setSessions] = useState(4)
+  const [sessions, setSessions] = useState(defaultSessions)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [editTask, setEditTask] = useState<Task | undefined>(undefined)
@@ -43,7 +49,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     const ok = await createTask({ name, max_sessions: sessions, tags: [] })
     if (ok) {
       setTitle('')
-      setSessions(4)
+      setSessions(defaultSessions)
       toast.success('Task added')
     }
   }

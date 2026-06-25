@@ -24,6 +24,7 @@ export function TaskRow({
 }: TaskRowProps) {
   const isCompleted = task.status === TaskStatus.Completed
   const isActive = task.status === TaskStatus.Active
+  const isRunning = isActive && timerRunning
   const progressPct =
     task.max_sessions > 0
       ? Math.round((task.current_sessions / task.max_sessions) * 100)
@@ -125,11 +126,11 @@ export function TaskRow({
         {/* Edit */}
         <button
           onClick={onEdit}
-          disabled={timerRunning}
-          title={timerRunning ? 'Stop the timer to edit' : 'Edit task'}
+          disabled={isRunning}
+          title={isRunning ? 'Stop the timer to edit' : 'Edit task'}
           className={[
             'shrink-0 p-1 transition-colors',
-            timerRunning
+            isRunning
               ? 'text-muted-foreground/40 cursor-not-allowed'
               : 'text-muted-foreground hover:text-foreground',
           ].join(' ')}
@@ -140,11 +141,11 @@ export function TaskRow({
         {/* Delete */}
         <button
           onClick={onDelete}
-          disabled={timerRunning}
-          title={timerRunning ? 'Stop the timer to delete' : 'Delete'}
+          disabled={isRunning}
+          title={isRunning ? 'Stop the timer to delete' : 'Delete'}
           className={[
             'shrink-0 p-1 transition-colors',
-            timerRunning
+            isRunning
               ? 'text-muted-foreground/40 cursor-not-allowed'
               : 'text-muted-foreground hover:text-destructive',
           ].join(' ')}

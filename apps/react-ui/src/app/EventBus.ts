@@ -38,8 +38,10 @@ export function useEventBus(): void {
       onEvent(events.timerTick, applyTick),
       // Authoritative re-fetch after any timer transition.
       onEvent(events.timerPhaseCompleted, () => {
-        reloadTimer()
-        reloadActiveTask()
+        window.setTimeout(() => {
+          reloadTimer()
+          reloadActiveTask()
+        }, 200)
       }),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
@@ -52,8 +54,10 @@ export function useEventBus(): void {
         }, 500)
       }),
       onEvent(events.taskAutoAdvanced, () => {
-        reloadTimer()
-        reloadActiveTask()
+        window.setTimeout(() => {
+          reloadTimer()
+          reloadActiveTask()
+        }, 500)
         toast.success('Switched to next incomplete task')
       }),
       // Screen blocker: show the focus-enforcement overlay when a work/break

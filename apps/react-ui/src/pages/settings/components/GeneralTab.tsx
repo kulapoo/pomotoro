@@ -75,41 +75,6 @@ export function GeneralTab({ config, patch }: GeneralTabProps) {
             }
           />
         </Row>
-        <Row label="Show seconds in timer">
-          <Toggle
-            checked={appearance.show_seconds_in_display}
-            onChange={(v) =>
-              patch({
-                ...config,
-                appearance: { ...appearance, show_seconds_in_display: v },
-              })
-            }
-          />
-        </Row>
-        <Row label="Always on top">
-          <Toggle
-            checked={appearance.always_on_top}
-            onChange={(v) =>
-              patch({ ...config, appearance: { ...appearance, always_on_top: v } })
-            }
-          />
-        </Row>
-        <Row label="Compact mode">
-          <Toggle
-            checked={appearance.compact_mode}
-            onChange={(v) =>
-              patch({ ...config, appearance: { ...appearance, compact_mode: v } })
-            }
-          />
-        </Row>
-        <Row label="Animate progress">
-          <Toggle
-            checked={appearance.animate_progress}
-            onChange={(v) =>
-              patch({ ...config, appearance: { ...appearance, animate_progress: v } })
-            }
-          />
-        </Row>
       </Section>
 
       <Section title="Window">

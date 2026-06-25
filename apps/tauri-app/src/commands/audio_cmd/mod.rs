@@ -7,9 +7,10 @@
 pub use anyhow::Context;
 pub use domain::{AudioAsset, AudioLibrary, PlaybackHandle, PlaybackRequest};
 pub use infra::adapters::audio::AudioServiceWrapper;
+pub use std::sync::Arc;
 pub use tauri::State;
 
-pub type AudioServiceState<'a> = State<'a, AudioServiceWrapper>;
+pub type AudioServiceState<'a> = State<'a, Arc<AudioServiceWrapper>>;
 
 // Declare submodules
 mod add_custom_audio_asset;

@@ -5,17 +5,15 @@ import { TimerTab } from '@/pages/settings/components/TimerTab'
 import { NotificationsTab } from '@/pages/settings/components/NotificationsTab'
 import { AudioTab } from '@/pages/settings/components/AudioTab'
 import { GeneralTab } from '@/pages/settings/components/GeneralTab'
-import { StorageTab } from '@/pages/settings/components/StorageTab'
 import type { Config } from '@/pages/settings/useSettings'
 
-type Tab = 'timer' | 'notifications' | 'audio' | 'general' | 'storage'
+type Tab = 'general' | 'timer' | 'notifications' | 'audio'
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'general', label: 'General' },
   { id: 'timer', label: 'Timer' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'audio', label: 'Audio' },
-  { id: 'general', label: 'General' },
-  { id: 'storage', label: 'Storage' },
 ]
 
 export function SettingsPage() {
@@ -23,7 +21,7 @@ export function SettingsPage() {
   const error = useSettingsStore((s) => s.error)
   const saveConfig = useSettingsStore((s) => s.saveConfig)
   const resetToDefaults = useSettingsStore((s) => s.resetToDefaults)
-  const [activeTab, setActiveTab] = useState<Tab>('timer')
+  const [activeTab, setActiveTab] = useState<Tab>('general')
 
   if (!config) {
     return (
@@ -84,13 +82,12 @@ export function SettingsPage() {
         ))}
       </div>
 
+      {activeTab === 'general' && <GeneralTab config={config} patch={patch} />}
       {activeTab === 'timer' && <TimerTab config={config} patch={patch} />}
       {activeTab === 'notifications' && (
         <NotificationsTab config={config} patch={patch} />
       )}
       {activeTab === 'audio' && <AudioTab config={config} patch={patch} />}
-      {activeTab === 'general' && <GeneralTab config={config} patch={patch} />}
-      {activeTab === 'storage' && <StorageTab />}
     </div>
   )
 }

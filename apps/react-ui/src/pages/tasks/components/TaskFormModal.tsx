@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
-import { toSeconds, DEFAULT_DURATIONS } from '@/lib/duration'
+import { useSettingsStore } from '@/pages/settings/useSettings'
+import { toSeconds, fromSeconds, DEFAULT_DURATIONS } from '@/lib/duration'
 import type { Task } from '@/pages/tasks/useTasks'
 import type { DurationUnit } from '@/lib/duration'
 
@@ -19,19 +20,29 @@ export function TaskFormModal({ task, onClose }: TaskFormModalProps) {
   const updateTask = useTaskStore((s) => s.updateTask)
   const isEdit = !!task
 
+  const globalTimer = useSettingsStore((s) => s.config?.timer)
+
   const [name, setName] = useState(task?.name ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
   const [maxSessions, setMaxSessions] = useState<number>(
-    task?.max_sessions ?? DEFAULT_DURATIONS.sessionsUntilLongBreak,
+    task?.max_sessions ??
+      globalTimer?.sessions_until_long_break ??
+      DEFAULT_DURATIONS.sessionsUntilLongBreak,
   )
   const [tagsInput, setTagsInput] = useState(task?.tags.join(', ') ?? '')
   const [useCustomTimer, setUseCustomTimer] = useState(false)
   const [unit, setUnit] = useState<DurationUnit>('minutes')
-  const [workDuration, setWorkDuration] = useState(25)
-  const [shortBreak, setShortBreak] = useState(5)
-  const [longBreak, setLongBreak] = useState(15)
+  const [workDuration, setWorkDuration] = useState(() =>
+    fromSeconds(globalTimer?.work_duration ?? DEFAULT_DURATIONS.work, 'minutes'),
+  )
+  const [shortBreak, setShortBreak] = useState(() =>
+    fromSeconds(globalTimer?.short_break_duration ?? DEFAULT_DURATIONS.shortBreak, 'minutes'),
+  )
+  const [longBreak, setLongBreak] = useState(() =>
+    fromSeconds(globalTimer?.long_break_duration ?? DEFAULT_DURATIONS.longBreak, 'minutes'),
+  )
   const [sessionsUntilLongBreak, setSessionsUntilLongBreak] = useState<number>(
-    DEFAULT_DURATIONS.sessionsUntilLongBreak,
+    globalTimer?.sessions_until_long_break ?? DEFAULT_DURATIONS.sessionsUntilLongBreak,
   )
   const [validationError, setValidationError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)

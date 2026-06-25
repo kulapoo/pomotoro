@@ -12,17 +12,23 @@ interface AudioTabProps {
 
 const SOUND_OPTIONS = [
   { value: '', label: 'None' },
-  { value: 'bell.wav', label: 'Bell' },
-  { value: 'chime.wav', label: 'Chime' },
-  { value: 'gong.wav', label: 'Gong' },
+  { value: 'bell', label: 'Bell' },
+  { value: 'chime', label: 'Chime' },
+  { value: 'ding', label: 'Ding' },
+  { value: 'gentle-bell', label: 'Gentle Bell' },
+  { value: 'wooden-block', label: 'Wooden Block' },
 ] as const
 
 const BG_SOUND_OPTIONS = [
   { value: '', label: 'None' },
-  { value: 'rain.wav', label: 'Rain' },
-  { value: 'forest.wav', label: 'Forest' },
-  { value: 'ocean.wav', label: 'Ocean' },
-  { value: 'whitenoise.wav', label: 'White Noise' },
+  { value: 'rain', label: 'Rain' },
+  { value: 'forest', label: 'Forest Ambience' },
+  { value: 'ocean', label: 'Ocean Waves' },
+  { value: 'white-noise', label: 'White Noise' },
+  { value: 'brown-noise', label: 'Brown Noise' },
+  { value: 'cafe', label: 'Café Ambience' },
+  { value: 'fireplace', label: 'Fireplace Crackling' },
+  { value: 'thunderstorm', label: 'Thunderstorm' },
 ] as const
 
 export function AudioTab({ config, patch }: AudioTabProps) {
@@ -93,7 +99,10 @@ export function AudioTab({ config, patch }: AudioTabProps) {
                 })
               }
             />
-            <TestButton onClick={() => testAudio('work')} />
+            <TestButton
+              onClick={() => testAudio('work')}
+              disabled={!audio.work_notification_sound}
+            />
           </div>
         </Row>
 
@@ -109,7 +118,10 @@ export function AudioTab({ config, patch }: AudioTabProps) {
                 })
               }
             />
-            <TestButton onClick={() => testAudio('break')} />
+            <TestButton
+              onClick={() => testAudio('break')}
+              disabled={!audio.break_notification_sound}
+            />
           </div>
         </Row>
 
@@ -125,7 +137,10 @@ export function AudioTab({ config, patch }: AudioTabProps) {
                 })
               }
             />
-            <TestButton onClick={() => testAudio('background')} />
+            <TestButton
+              onClick={() => testAudio('background')}
+              disabled={!audio.background_sound}
+            />
           </div>
         </Row>
       </Section>
@@ -133,11 +148,18 @@ export function AudioTab({ config, patch }: AudioTabProps) {
   )
 }
 
-function TestButton({ onClick }: { onClick: () => void }) {
+function TestButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void
+  disabled?: boolean
+}) {
   return (
     <button
       onClick={onClick}
-      className="border-border text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
+      disabled={disabled}
+      className="border-border text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
     >
       Test
     </button>
