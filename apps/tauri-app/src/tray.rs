@@ -28,7 +28,7 @@ use usecases::timer::{
 };
 
 /// Stable id for our tray icon so it can be retrieved later.
-pub const TRAY_ID: &str = "pomotoro-main-tray";
+pub const TRAY_ID: &str = "pomotoro-tray";
 
 /// Whether the current platform needs countdown text baked into icon pixels.
 /// Linux tray backends ignore `set_title`, so the only reliable way to show

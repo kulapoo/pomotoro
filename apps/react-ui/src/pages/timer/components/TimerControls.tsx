@@ -50,7 +50,7 @@ export function TimerControls() {
     <div className="mt-2 flex items-center gap-5">
       <button
         onClick={handleReset}
-        disabled={idle || isBusy || !isTaskCompleted}
+        disabled={idle || isBusy || isTaskCompleted}
         className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full p-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
         title="Restart phase"
       >

@@ -19,6 +19,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   useTasksEventBus()
 
   const tasks = useTaskStore((s) => s.tasks)
+  const activeTask = useTaskStore((s) => s.activeTask)
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const createTask = useTaskStore((s) => s.createTask)
@@ -27,6 +28,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
   const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
+  const pauseTimer = useTimerStore((s) => s.pause)
 
   const [title, setTitle] = useState('')
   const [sessions, setSessions] = useState(4)
@@ -80,10 +82,25 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     setShowModal(true)
   }
 
+  const refreshTimer = async () => {
+    await Promise.all([
+      useTaskStore.getState().loadActiveTask(),
+      useTimerStore.getState().fetchTimer(),
+    ])
+  }
+
   const handleSetActive = async (task: Task) => {
+    if (activeTask?.id === task.id) {
+      onNavigate('timer')
+      return
+    }
     const ok = await setActiveTask(task.id)
     if (ok) {
       toast.info('Focusing on "' + task.name + '"')
+      refreshTimer()
+      if (timerRunning) {
+        window.setTimeout(pauseTimer, 200)
+      }
       onNavigate('timer')
     }
   }
@@ -92,10 +109,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     const ok = await resetTask(task.id)
     if (ok) {
       toast.info('Task reopened')
-      await Promise.all([
-        useTaskStore.getState().loadActiveTask(),
-        useTimerStore.getState().fetchTimer(),
-      ])
+      window.setTimeout(refreshTimer, 50)
     }
   }
 
@@ -103,10 +117,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     const ok = await completeTask(task.id)
     if (ok) {
       toast.info('Task completed')
-      await Promise.all([
-        useTaskStore.getState().loadActiveTask(),
-        useTimerStore.getState().fetchTimer(),
-      ])
+      window.setTimeout(refreshTimer, 50)
     }
   }
 
@@ -114,10 +125,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     const ok = await deleteTask(task.id)
     if (ok) {
       toast.info('Task deleted')
-      await Promise.all([
-        useTaskStore.getState().loadActiveTask(),
-        useTimerStore.getState().fetchTimer(),
-      ])
+      window.setTimeout(refreshTimer, 50)
     }
   }
 

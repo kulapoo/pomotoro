@@ -21,7 +21,6 @@ export function TaskRow({
   onSetActive,
   onEdit,
   timerRunning,
-  onNavigateToTimer,
 }: TaskRowProps) {
   const isCompleted = task.status === TaskStatus.Completed
   const isActive = task.status === TaskStatus.Active
@@ -99,7 +98,7 @@ export function TaskRow({
         {/* Focus */}
         {!isCompleted && (
           <button
-            onClick={timerRunning ? onNavigateToTimer : onSetActive}
+            onClick={onSetActive}
             title={timerRunning ? 'Go to running timer' : 'Focus on this task'}
             className={[
               'shrink-0 rounded p-1 transition-colors',
