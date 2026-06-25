@@ -901,9 +901,10 @@ async fn should_switch_active_task_during_timer_session() {
     let remaining_after_switch = state_after_switch.remaining_seconds();
     let status_after_switch = state_after_switch.status();
 
-    // Complete the remaining session (15 minutes = 900 ticks)
+    // Switching tasks resets the new task's timer to its full work duration
+    // (25 minutes = 1500 ticks).
     let mut ticks_completed = 0;
-    for _ in 0..900 {
+    for _ in 0..1500 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
         let task_config =
             ctx.task_repo.get_by_id(task2.id()).await.unwrap().unwrap();
@@ -931,8 +932,8 @@ async fn should_switch_active_task_during_timer_session() {
     }
 
     // Ensure we actually completed the phase
-    if ticks_completed == 900 {
-        println!("Warning: Completed all 900 ticks without phase completion");
+    if ticks_completed == 1500 {
+        println!("Warning: Completed all 1500 ticks without phase completion");
         // Force complete the phase
         complete_timer_phase(
             task2.id(),
@@ -970,8 +971,8 @@ async fn should_switch_active_task_during_timer_session() {
     );
     assert_eq!(
         remaining_after_switch,
-        15 * 60,
-        "Timer should continue with remaining time"
+        25 * 60,
+        "Timer should reset to the new task's full work duration"
     );
     assert_eq!(
         status_after_switch,

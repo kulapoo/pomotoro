@@ -19,7 +19,7 @@ domain = { path = "../../core/domain" }
 usecases = { path = "../../core/usecases" }
 
 # Tauri dependencies
-tauri = { version = "2.7.0", features = ["tray-icon"] }
+tauri = { version = "2.7.0", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2.0"
 tauri-plugin-notification = "2.0"
 tauri-plugin-fs = "2.4.1"

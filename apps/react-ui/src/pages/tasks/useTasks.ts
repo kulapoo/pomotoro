@@ -206,11 +206,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
 export function useTasksEventBus(): void {
   const loadTasks = useTaskStore((s) => s.loadTasks)
+  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
 
   useEffect(() => {
     const reloadTasks = createBatchedLoader(() => loadTasks())
 
     reloadTasks()
+    loadActiveTask()
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
       onEvent(events.taskListUpdated, reloadTasks),
@@ -222,5 +224,5 @@ export function useTasksEventBus(): void {
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn())
     }
-  }, [loadTasks])
+  }, [loadTasks, loadActiveTask])
 }

@@ -89,6 +89,14 @@ export function TaskRow({
               ))}
             </div>
           )}
+          {task.max_sessions > 1 && (
+            <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
+              <div
+                className="h-full rounded-full bg-toro transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Session count */}
@@ -153,16 +161,6 @@ export function TaskRow({
           <Trash2 size={15} />
         </button>
       </div>
-
-      {/* Progress bar */}
-      {task.max_sessions > 1 && (
-        <div className="bg-muted ml-8 h-1.5 w-full overflow-hidden rounded-full">
-          <div
-            className="h-full rounded-full bg-toro transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-      )}
     </li>
   )
 }

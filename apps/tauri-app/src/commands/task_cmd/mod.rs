@@ -15,6 +15,7 @@ pub use std::time::Duration;
 pub use tauri::State;
 
 // Declare submodules
+mod complete_flow;
 mod complete_task;
 mod create_task;
 mod delete_task;
@@ -31,6 +32,7 @@ mod search_tasks_fuzzy;
 mod update_task;
 
 // Re-export all command functions and their types
+pub use complete_flow::complete_task_flow;
 pub use complete_task::complete_task;
 pub use create_task::{CreateTaskRequest, create_task};
 pub use delete_task::delete_task;

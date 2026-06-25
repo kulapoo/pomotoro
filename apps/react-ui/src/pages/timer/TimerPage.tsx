@@ -28,7 +28,9 @@ export function TimerPage({ onNavigate }: TimerPageProps) {
 
   useEffect(() => {
     const reloadTasks = createBatchedLoader(() => loadTasks())
-    const unlisten = onEvent(events.taskCompleted, () => window.setTimeout(reloadTasks))
+    const unlisten = onEvent(events.taskCompleted, () =>
+      window.setTimeout(reloadTasks, 1000),
+    )
     return () => {
       unlisten.then((fn) => fn())
     }

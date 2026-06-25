@@ -52,6 +52,8 @@ pub async fn switch_active_task(
     let task_name = task.name().to_string();
     let task_id = task.id();
 
+    // The new task starts a fresh work phase at its full work duration — the
+    // previous task's in-progress countdown does not carry over.
     let new_timer_remaining =
         task.config().timer.work_duration.as_secs() as u32;
 
@@ -62,9 +64,9 @@ pub async fn switch_active_task(
         task_id, None, None, None, None, 1,
     )));
 
-    // Create a new timer for the new task, preserving the state from the old timer
-    // This allows seamless task switching during active sessions
-
+    // Create a new timer for the new task. The phase/status carry over from the
+    // previous task's timer, but the remaining countdown is reset to the new
+    // task's full work duration.
     let new_timer = domain::Timer::with_state(
         cmd.task_id,
         timer

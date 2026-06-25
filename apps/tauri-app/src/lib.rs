@@ -121,6 +121,9 @@ pub fn run() {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.hide();
                         }
+                        // The tray was already painted (visible) above; re-sync
+                        // the Show/Hide label now that the window is hidden.
+                        let _ = tray::refresh(app.handle(), None);
                     }
                 }
                 Err(err) => {
