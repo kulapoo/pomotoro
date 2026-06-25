@@ -41,7 +41,7 @@ export function ScreenBlocker() {
         ref={dismissBtnRef}
         type="button"
         onClick={() => void dismiss()}
-        className="rounded-lg bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-600 focus:ring-ring focus:ring-2 focus:outline-none"
+        className="bg-primary text-primary-foreground rounded-lg px-6 py-2.5 text-sm font-semibold transition-all hover:opacity-90 active:scale-95 focus:ring-ring focus:ring-2 focus:outline-none"
       >
         Dismiss
       </button>

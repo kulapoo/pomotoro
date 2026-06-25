@@ -51,7 +51,7 @@ export function Bootstrap({ children }: BootstrapProps) {
   if (phase === 'ready') return <>{children}</>
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-linear-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950">
+    <div className="flex h-screen w-full flex-col items-center justify-center gap-3 bg-linear-to-br from-rose-50 via-white to-rose-100 dark:from-gray-950 dark:via-gray-900 dark:to-rose-950">
       {phase === 'loading' ? (
         <span className="text-muted-foreground animate-pulse text-sm">
           Starting Pomotoro…

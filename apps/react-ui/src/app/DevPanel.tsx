@@ -6,9 +6,17 @@ import { useSettingsStore } from '@/pages/settings/useSettings'
 
 /**
  * Dev-only debug overlay showing live store snapshots.
- * Renders only when `import.meta.env.DEV` is true (stripped from prod builds).
+ * Self-guards on `import.meta.env.DEV` so it can never render in production,
+ * regardless of where it is mounted. Vite replaces this flag at build time:
+ * in prod the wrapper returns null immediately, leaving `DevPanelInner`
+ * unreferenced so the bundler tree-shakes all of its hooks, stores, and markup.
  */
 export function DevPanel() {
+  if (!import.meta.env.DEV) return null
+  return <DevPanelInner />
+}
+
+function DevPanelInner() {
   const [open, setOpen] = useState(false)
   const timer = useTimerStore((s) => s.timer)
   const timerError = useTimerStore((s) => s.error)

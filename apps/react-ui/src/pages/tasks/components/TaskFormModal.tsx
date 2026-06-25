@@ -221,7 +221,7 @@ export function TaskFormModal({ task, onClose }: TaskFormModalProps) {
               checked={useCustomTimer}
               onChange={(e) => setUseCustomTimer(e.target.checked)}
               disabled={isSubmitting}
-              className="h-4 w-4 rounded accent-indigo-500"
+              className="h-4 w-4 rounded accent-toro"
             />
             <span className="text-sm font-medium">
               Custom timer settings for this task
@@ -237,7 +237,7 @@ export function TaskFormModal({ task, onClose }: TaskFormModalProps) {
                   checked={unit === 'seconds'}
                   onChange={(e) => setUnit(e.target.checked ? 'seconds' : 'minutes')}
                   disabled={isSubmitting}
-                  className="h-4 w-4 rounded accent-indigo-500"
+                  className="h-4 w-4 rounded accent-toro"
                 />
                 <span className="text-sm">Use seconds instead of minutes</span>
               </label>

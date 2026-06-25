@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Timer, ListChecks, Settings } from 'lucide-react'
+import { ToroIcon } from '@/components/ui/ToroIcon'
 import type { Page } from '@/app/types'
 
 interface SidebarProps {
@@ -24,8 +25,8 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       ].join(' ')}
     >
       {/* Logo mark */}
-      <div className="bg-primary text-primary-foreground mb-2 flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold select-none">
-        P
+      <div className="bg-primary text-primary-foreground mb-2 flex h-9 w-9 items-center justify-center rounded-xl">
+        <ToroIcon size={22} />
       </div>
 
       {/* Collapse toggle */}

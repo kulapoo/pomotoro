@@ -68,7 +68,7 @@ export function AudioTab({ config, patch }: AudioTabProps) {
                   audio: { ...audio, volume: Number(e.target.value) / 100 },
                 })
               }
-              className="w-32 accent-indigo-500"
+              className="w-32 accent-toro"
             />
             <span className="text-muted-foreground w-10 text-right text-sm tabular-nums">
               {Math.round(audio.volume * 100)}%

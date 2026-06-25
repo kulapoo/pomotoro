@@ -1,12 +1,13 @@
 import { Phase } from '@/pages/timer/useTimer'
 import { useTimerCountdown } from '@/pages/timer/useTimerCountdown'
 import { formatClock } from '@/lib/duration'
+import { ToroIcon } from '@/components/ui/ToroIcon'
 
 const RING_R = 90
 const CIRC = 2 * Math.PI * RING_R
 
 const PHASE_ARC_COLOR: Record<Phase, string> = {
-  [Phase.Work]: '#6366f1',
+  [Phase.Work]: 'var(--toro)',
   [Phase.ShortBreak]: '#10b981',
   [Phase.LongBreak]: '#3b82f6',
 }
@@ -48,9 +49,12 @@ export function TimerRing() {
           }}
         />
       </svg>
-      <span className="absolute font-mono text-7xl font-bold tracking-tight tabular-nums select-none">
-        {formatClock(remaining)}
-      </span>
+      <div className="absolute flex flex-col items-center gap-1.5">
+        <ToroIcon size={26} style={{ color: PHASE_ARC_COLOR[phase] }} />
+        <span className="font-mono text-7xl font-bold tracking-tight tabular-nums select-none">
+          {formatClock(remaining)}
+        </span>
+      </div>
     </div>
   )
 }

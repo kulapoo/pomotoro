@@ -8,7 +8,7 @@ const PHASE_LABEL: Record<Phase, string> = {
 }
 
 const PHASE_COLOR: Record<Phase, string> = {
-  [Phase.Work]: 'text-indigo-500 dark:text-indigo-400',
+  [Phase.Work]: 'text-toro',
   [Phase.ShortBreak]: 'text-emerald-500 dark:text-emerald-400',
   [Phase.LongBreak]: 'text-blue-500 dark:text-blue-400',
 }

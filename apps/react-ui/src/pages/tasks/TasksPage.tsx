@@ -151,7 +151,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
           <StatBadge
             label="Active"
             value={activeCount}
-            color="border-indigo-400/40 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400"
+            color="border-toro/40 bg-toro/10 text-toro"
           />
           <StatBadge
             label="Done"

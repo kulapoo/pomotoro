@@ -28,7 +28,7 @@ export function SessionDots() {
           key={i}
           className={[
             'h-2.5 w-2.5 rounded-full transition-all duration-300',
-            i < dotFilled ? 'bg-indigo-500' : 'bg-muted-foreground/25',
+            i < dotFilled ? 'bg-toro' : 'bg-muted-foreground/25',
           ].join(' ')}
         />
       ))}

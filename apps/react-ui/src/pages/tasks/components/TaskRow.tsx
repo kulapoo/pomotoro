@@ -35,7 +35,7 @@ export function TaskRow({
       className={[
         'flex flex-col gap-2 rounded-xl border px-4 py-3.5 transition-colors',
         isActive
-          ? 'border-indigo-400/60 bg-indigo-50/60 dark:bg-indigo-950/20'
+          ? 'border-toro/40 bg-toro/10'
           : 'border-border bg-card',
         isCompleted ? 'opacity-55' : '',
       ].join(' ')}
@@ -48,7 +48,7 @@ export function TaskRow({
           title={isCompleted ? 'Reopen' : 'Complete'}
         >
           {isCompleted ? (
-            <CheckSquare size={20} className="text-indigo-500" />
+            <CheckSquare size={20} className="text-toro" />
           ) : (
             <Square size={20} />
           )}
@@ -58,7 +58,7 @@ export function TaskRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             {isActive && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-primary-foreground uppercase">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                 Active
               </span>
@@ -104,7 +104,7 @@ export function TaskRow({
             className={[
               'shrink-0 rounded p-1 transition-colors',
               isActive
-                ? 'text-indigo-500'
+                ? 'text-toro'
                 : 'text-muted-foreground hover:text-foreground',
             ].join(' ')}
           >
@@ -158,7 +158,7 @@ export function TaskRow({
       {task.max_sessions > 1 && (
         <div className="bg-muted ml-8 h-1.5 w-full overflow-hidden rounded-full">
           <div
-            className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+            className="h-full rounded-full bg-toro transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
         </div>
