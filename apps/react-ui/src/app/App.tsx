@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ScreenBlocker } from '@/components/ScreenBlocker'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Bootstrap } from '@/app/Bootstrap'
 import { ErrorWatcher } from '@/app/ErrorWatcher'
@@ -62,6 +63,7 @@ export function App() {
           )}
         </main>
       </div>
+      <ScreenBlocker />
     </Bootstrap>
   )
 }

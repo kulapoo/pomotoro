@@ -16,10 +16,26 @@ pub struct GeneralConfig {
     pub start_minimized: bool,
     #[serde(default = "default_persistence_interval_seconds")]
     pub persistence_interval_seconds: u32,
+    #[serde(default)]
+    pub block_screen_after_work: bool,
+    #[serde(default = "default_block_screen_after_work_message")]
+    pub block_screen_after_work_message: String,
+    #[serde(default)]
+    pub block_screen_after_break: bool,
+    #[serde(default = "default_block_screen_after_break_message")]
+    pub block_screen_after_break_message: String,
 }
 
 fn default_persistence_interval_seconds() -> u32 {
     10 // Save every 10 seconds by default
+}
+
+fn default_block_screen_after_work_message() -> String {
+    "Work session complete. Time for a break.".to_string()
+}
+
+fn default_block_screen_after_break_message() -> String {
+    "Break over. Back to work.".to_string()
 }
 
 impl Default for GeneralConfig {
@@ -32,6 +48,12 @@ impl Default for GeneralConfig {
             start_minimized: false,
             persistence_interval_seconds: default_persistence_interval_seconds(
             ),
+            block_screen_after_work: false,
+            block_screen_after_work_message:
+                default_block_screen_after_work_message(),
+            block_screen_after_break: false,
+            block_screen_after_break_message:
+                default_block_screen_after_break_message(),
         }
     }
 }

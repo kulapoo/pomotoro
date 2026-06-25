@@ -130,6 +130,73 @@ export function GeneralTab({ config, patch }: GeneralTabProps) {
           />
         </Row>
       </Section>
+
+      <Section title="Screen Blocking">
+        <Row
+          label="Block screen after work"
+          hint="Show a blocking overlay when a work session expires"
+        >
+          <Toggle
+            checked={general.block_screen_after_work}
+            onChange={(v) =>
+              patch({
+                ...config,
+                general: { ...general, block_screen_after_work: v },
+              })
+            }
+          />
+        </Row>
+        {general.block_screen_after_work && (
+          <Row label="Work message" hint="Shown on the overlay after work">
+            <input
+              type="text"
+              value={general.block_screen_after_work_message}
+              onChange={(e) =>
+                patch({
+                  ...config,
+                  general: {
+                    ...general,
+                    block_screen_after_work_message: e.target.value,
+                  },
+                })
+              }
+              className="border-input bg-background text-foreground focus:ring-ring w-64 rounded-lg border px-3 py-1.5 text-sm focus:ring-2 focus:outline-none"
+            />
+          </Row>
+        )}
+        <Row
+          label="Block screen after break"
+          hint="Show a blocking overlay when a break expires"
+        >
+          <Toggle
+            checked={general.block_screen_after_break}
+            onChange={(v) =>
+              patch({
+                ...config,
+                general: { ...general, block_screen_after_break: v },
+              })
+            }
+          />
+        </Row>
+        {general.block_screen_after_break && (
+          <Row label="Break message" hint="Shown on the overlay after break">
+            <input
+              type="text"
+              value={general.block_screen_after_break_message}
+              onChange={(e) =>
+                patch({
+                  ...config,
+                  general: {
+                    ...general,
+                    block_screen_after_break_message: e.target.value,
+                  },
+                })
+              }
+              className="border-input bg-background text-foreground focus:ring-ring w-64 rounded-lg border px-3 py-1.5 text-sm focus:ring-2 focus:outline-none"
+            />
+          </Row>
+        )}
+      </Section>
     </div>
   )
 }

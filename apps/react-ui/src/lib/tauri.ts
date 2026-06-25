@@ -48,6 +48,8 @@ export const commands = {
   testAudioPreview: 'test_audio_preview',
   openDataDirectory: 'open_data_directory',
   clearAllData: 'clear_all_data',
+  activateScreenBlock: 'activate_screen_block',
+  deactivateScreenBlock: 'deactivate_screen_block',
 } as const
 
 export type CommandName = (typeof commands)[keyof typeof commands]
@@ -76,6 +78,8 @@ interface CommandMap {
   test_audio_preview: { args: { asset_id: string; volume: number }; ret: PlaybackHandle }
   open_data_directory: { args: void; ret: void }
   clear_all_data: { args: void; ret: void }
+  activate_screen_block: { args: void; ret: void }
+  deactivate_screen_block: { args: void; ret: void }
 }
 
 /**
@@ -111,6 +115,7 @@ export const events = {
   timerReset: 'timer:timer_reset',
   timerPaused: 'timer:timer_paused',
   timerResumed: 'timer:timer_resumed',
+  screenBlockerActivate: 'screen_blocker:activate',
 } as const
 
 export type EventName = (typeof events)[keyof typeof events]
@@ -129,6 +134,7 @@ interface EventPayloadMap {
   'timer:timer_reset': TimerStateData
   'timer:timer_paused': TimerStateData
   'timer:timer_resumed': TimerStateData
+  'screen_blocker:activate': { message: string }
 }
 
 /**

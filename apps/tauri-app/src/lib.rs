@@ -204,7 +204,10 @@ pub fn run() {
             import_settings,
             // Notification commands
             test_notification,
-            request_notification_permission
+            request_notification_permission,
+            // Screen blocker commands
+            activate_screen_block,
+            deactivate_screen_block
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -44,6 +44,10 @@ export interface GeneralConfig {
   minimize_to_tray: boolean
   start_minimized: boolean
   persistence_interval_seconds: number
+  block_screen_after_work: boolean
+  block_screen_after_work_message: string
+  block_screen_after_break: boolean
+  block_screen_after_break_message: string
 }
 
 export interface AudioConfig {

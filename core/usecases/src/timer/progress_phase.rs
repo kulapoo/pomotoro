@@ -29,6 +29,9 @@ pub enum PhaseOutcome {
         timer: Timer,
         next_phase: Phase,
         cycled_to: Option<TaskId>,
+        /// Message to display in the screen blocker overlay, if blocking is
+        /// enabled for the phase that just expired.
+        block_message: Option<String>,
     },
     /// Next phase was reached but paused (manual resume required).
     Paused {
@@ -36,6 +39,9 @@ pub enum PhaseOutcome {
         timer: Timer,
         next_phase: Phase,
         cycled_to: Option<TaskId>,
+        /// Message to display in the screen blocker overlay, if blocking is
+        /// enabled for the phase that just expired.
+        block_message: Option<String>,
     },
     /// Task completed and no more active tasks to cycle to.
     Stopped { task: Task, timer: Timer },
@@ -79,6 +85,20 @@ pub async fn progress_phase(
         Phase::ShortBreak | Phase::LongBreak => {
             config.general.auto_start_work_after_break
         }
+    };
+
+    // Decide whether the screen blocker overlay should fire for the phase
+    // that just expired, and which message to show.
+    let block_message = match cmd.from_phase {
+        Phase::Work if config.general.block_screen_after_work => {
+            Some(config.general.block_screen_after_work_message.clone())
+        }
+        Phase::ShortBreak | Phase::LongBreak
+            if config.general.block_screen_after_break =>
+        {
+            Some(config.general.block_screen_after_break_message.clone())
+        }
+        _ => None,
     };
 
     let should_cycle = task.is_completed()
@@ -142,6 +162,7 @@ pub async fn progress_phase(
                 timer: new_timer,
                 next_phase: Phase::Work,
                 cycled_to: Some(next_task_id),
+                block_message,
             })
         } else {
             Ok(PhaseOutcome::Paused {
@@ -149,6 +170,7 @@ pub async fn progress_phase(
                 timer: new_timer,
                 next_phase: Phase::Work,
                 cycled_to: Some(next_task_id),
+                block_message,
             })
         };
     }
@@ -159,6 +181,7 @@ pub async fn progress_phase(
             timer,
             next_phase,
             cycled_to: None,
+            block_message,
         })
     } else {
         let remaining = timer.remaining_seconds(Some(&task.config().timer));
@@ -176,6 +199,7 @@ pub async fn progress_phase(
             timer,
             next_phase,
             cycled_to: None,
+            block_message,
         })
     }
 }

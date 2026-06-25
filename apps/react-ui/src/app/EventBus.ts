@@ -5,6 +5,7 @@ import { createBatchedLoader } from '@/lib/async'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useScreenBlockerStore } from '@/app/useScreenBlocker'
 
 /**
  * Global, always-on backend event subscriptions.
@@ -54,6 +55,11 @@ export function useEventBus(): void {
         reloadTimer()
         reloadActiveTask()
         toast.success('Switched to next incomplete task')
+      }),
+      // Screen blocker: show the focus-enforcement overlay when a work/break
+      // phase expires and blocking is enabled for that phase.
+      onEvent(events.screenBlockerActivate, (payload) => {
+        useScreenBlockerStore.getState().activate(payload.message)
       }),
     ]
 

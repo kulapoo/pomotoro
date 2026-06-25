@@ -81,6 +81,7 @@ impl EventHandler for CountdownExpiredHandler {
                 task,
                 next_phase,
                 cycled_to,
+                block_message,
                 ..
             } => {
                 self.timer_srv.load_state().await?;
@@ -132,12 +133,26 @@ impl EventHandler for CountdownExpiredHandler {
                             "Failed to emit task progress updated event: {e}"
                         ),
                     })?;
+
+                if let Some(message) = block_message {
+                    self.emitter
+                        .emit(
+                            ui_listeners::screen_blocker::ACTIVATE,
+                            json!({ "message": message }),
+                        )
+                        .map_err(|e| domain::Error::EventPublishingError {
+                            message: format!(
+                                "Failed to emit screen_blocker activate event: {e}"
+                            ),
+                        })?;
+                }
             }
 
             usecases::timer::PhaseOutcome::Paused {
                 task,
                 timer,
                 cycled_to,
+                block_message,
                 ..
             } => {
                 self.timer_srv.load_state().await?;
@@ -176,6 +191,19 @@ impl EventHandler for CountdownExpiredHandler {
                             "Failed to emit task progress updated event: {e}"
                         ),
                     })?;
+
+                if let Some(message) = block_message {
+                    self.emitter
+                        .emit(
+                            ui_listeners::screen_blocker::ACTIVATE,
+                            json!({ "message": message }),
+                        )
+                        .map_err(|e| domain::Error::EventPublishingError {
+                            message: format!(
+                                "Failed to emit screen_blocker activate event: {e}"
+                            ),
+                        })?;
+                }
             }
 
             usecases::timer::PhaseOutcome::Stopped { .. } => {

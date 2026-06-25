@@ -26,6 +26,7 @@
 pub mod audio_cmd;
 pub mod config_cmd;
 pub mod notification_cmd;
+pub mod screen_blocker_cmd;
 pub mod storage_cmd;
 pub mod task_cmd;
 pub mod task_settings_cmd;
@@ -34,6 +35,7 @@ pub mod timer_cmd;
 pub use audio_cmd::*;
 pub use config_cmd::*;
 pub use notification_cmd::*;
+pub use screen_blocker_cmd::*;
 pub use storage_cmd::*;
 pub use task_cmd::*;
 pub use task_settings_cmd::*;
