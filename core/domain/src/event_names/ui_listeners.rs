@@ -18,6 +18,7 @@ pub mod task {
     pub const PROGRESS_UPDATED: &str = "task:progress_updated";
     pub const TASK_COMPLETED: &str = "task:task_completed";
     pub const AUTO_ADVANCED: &str = "task:auto_advanced";
+    pub const ACTIVE_TASK_CLEARED: &str = "task:active_task_cleared";
 }
 
 pub mod config {

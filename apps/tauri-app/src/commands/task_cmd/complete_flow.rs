@@ -16,7 +16,8 @@ use usecases::task::{
     SwitchActiveTaskCmd, complete_task as complete_task_uc, switch_active_task,
 };
 use usecases::timer::{
-    StartTimerPhaseCmd, reset_timer_to_idle, start_timer_phase,
+    StartTimerPhaseCmd, clear_active_task, reset_timer_to_idle,
+    start_timer_phase,
 };
 
 /// Mark a task as completed (force-completing all sessions), stop and reset its
@@ -126,6 +127,31 @@ pub async fn complete_task_flow(
             Err(e) => {
                 log::warn!(
                     "Auto-advance after completing {} failed; staying on completed task: {e}",
+                    task_id
+                );
+            }
+        }
+    }
+
+    // If no new task became active (Manual mode, AutoAdvance with no eligible
+    // successor, or the switch failed above), detach the completed task from
+    // the timer so the UI can prompt for a new selection. A completed task
+    // cannot run a timer — this mirrors the delete-task path, which clears the
+    // bound task via the same domain primitive (`Timer::clear_task_id`).
+    if active_task_id == task_id {
+        match clear_active_task(timer_repo.clone())
+            .await
+            .context("Failed to clear active task after completing")
+        {
+            Ok(()) => {
+                let _ = app_handle.emit(
+                    domain::event_names::task::ACTIVE_TASK_CLEARED,
+                    json!({ "from_task_id": task_id.to_string() }),
+                );
+            }
+            Err(e) => {
+                log::warn!(
+                    "Auto-clear of completed task {} failed; timer left bound: {e}",
                     task_id
                 );
             }

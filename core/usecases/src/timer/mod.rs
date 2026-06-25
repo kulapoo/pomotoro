@@ -1,3 +1,4 @@
+pub mod clear_active_task;
 pub mod complete_timer_phase;
 pub mod pause_timer_phase;
 pub mod progress_phase;
@@ -10,6 +11,7 @@ pub mod update_timer_secs;
 
 // #[cfg(test)]
 // mod tests;
+pub use clear_active_task::clear_active_task;
 pub use complete_timer_phase::complete_timer_phase;
 pub use pause_timer_phase::pause_timer_phase;
 pub use progress_phase::{PhaseOutcome, ProgressPhaseCmd, progress_phase};
