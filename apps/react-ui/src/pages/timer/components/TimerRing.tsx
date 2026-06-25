@@ -8,8 +8,8 @@ const CIRC = 2 * Math.PI * RING_R
 
 const PHASE_ARC_COLOR: Record<Phase, string> = {
   [Phase.Work]: 'var(--toro)',
-  [Phase.ShortBreak]: '#10b981',
-  [Phase.LongBreak]: '#3b82f6',
+  [Phase.ShortBreak]: 'var(--break-short)',
+  [Phase.LongBreak]: 'var(--break-long)',
 }
 
 export function TimerRing() {

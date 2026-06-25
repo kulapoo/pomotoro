@@ -118,6 +118,7 @@ type TaskCommand =
 interface TimerStore {
   timer: Timer | null
   error: BackendError | null
+  isBusy: boolean
   fetchTimer: () => Promise<boolean>
   applyTick: (payload: TickPayload) => void
   start: () => Promise<boolean>
@@ -132,8 +133,10 @@ interface TimerStore {
 export const useTimerStore = create<TimerStore>((set, get) => ({
   timer: null,
   error: null,
+  isBusy: false,
 
   fetchTimer: async () => {
+    set({ isBusy: true })
     try {
       const timer = await invokeCmd('get_timer_state')
       set({ timer, error: null })
@@ -142,6 +145,8 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
       logger.error('fetchTimer failed', e)
       set({ error: e as BackendError })
       return false
+    } finally {
+      set({ isBusy: false })
     }
   },
 
@@ -159,20 +164,25 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
 
   start: async () => runWithTask(set, get, 'start_timer'),
   pause: async () => {
-    const timer = get().timer
-    const taskId = timer?.task_id
-    if (!taskId || !timer) return false
+    set({ isBusy: true })
     try {
-      const updated = await invokeCmd('pause_timer', {
-        task_id: taskId,
-        remaining_seconds: getRemainingSeconds(timer),
-      })
-      set({ timer: updated, error: null })
-      return true
-    } catch (e) {
-      logger.error('pause_timer failed', e)
-      set({ error: e as BackendError })
-      return false
+      const timer = get().timer
+      const taskId = timer?.task_id
+      if (!taskId || !timer) return false
+      try {
+        const updated = await invokeCmd('pause_timer', {
+          task_id: taskId,
+          remaining_seconds: getRemainingSeconds(timer),
+        })
+        set({ timer: updated, error: null })
+        return true
+      } catch (e) {
+        logger.error('pause_timer failed', e)
+        set({ error: e as BackendError })
+        return false
+      }
+    } finally {
+      set({ isBusy: false })
     }
   },
   resume: async () => runWithTask(set, get, 'resume_timer'),
@@ -188,8 +198,10 @@ async function runWithTask(
   get: () => TimerStore,
   command: TaskCommand,
 ): Promise<boolean> {
+  if (get().isBusy) return false
   const taskId = get().timer?.task_id
   if (!taskId) return false
+  set({ isBusy: true })
   try {
     const timer = await invokeCmd(command, { task_id: taskId })
     set({ timer, error: null })
@@ -198,5 +210,7 @@ async function runWithTask(
     logger.error(`${command} failed`, e)
     set({ error: e as BackendError })
     return false
+  } finally {
+    set({ isBusy: false })
   }
 }

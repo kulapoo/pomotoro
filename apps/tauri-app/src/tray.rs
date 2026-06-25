@@ -7,7 +7,10 @@
 //! The context menu mirrors the in-app actions from the React `TimerPage`:
 //! play/pause, restart phase, skip phase, reset task, and complete task.
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 use domain::{
     ConfigRepository, GeneralConfig, Phase, Task, TaskId, TaskRepository,
@@ -36,6 +39,25 @@ use crate::commands::task_cmd::complete_task_flow;
 
 /// Stable id for our tray icon so it can be retrieved later.
 pub const TRAY_ID: &str = "pomotoro-tray";
+
+/// Tracks the *intended* visibility of the main window. `window.is_visible()`
+/// does not update synchronously right after `hide()`/`show()` on Linux/GTK,
+/// so reading it immediately after toggling yields stale data and the Show/Hide
+/// menu label lags by one click. This atomic is the authoritative source for
+/// `refresh()` and is updated wherever the window is shown/hidden.
+static INTENDED_VISIBLE: AtomicBool = AtomicBool::new(true);
+
+/// Read the intended main-window visibility.
+pub fn intended_visible() -> bool {
+    INTENDED_VISIBLE.load(Ordering::Relaxed)
+}
+
+/// Update the intended main-window visibility. Call this whenever the main
+/// window is shown or hidden from anywhere (tray toggle, close-to-tray,
+/// start-minimized, etc.).
+pub fn set_intended_visible(v: bool) {
+    INTENDED_VISIBLE.store(v, Ordering::Relaxed);
+}
 
 /// Cached decoded toro tray icon (the brand bull-head on an indigo tile).
 static TORO_ICON: std::sync::OnceLock<Image<'static>> =
@@ -400,12 +422,21 @@ fn menu_play_pause(app: &AppHandle) {
     let Some(event_publisher) = event_publisher(app) else {
         return;
     };
+    let Some(tick_service) = tick_service(app) else {
+        return;
+    };
 
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let res = match status {
             TimerStatus::Running => {
-                let remaining = timer.remaining_seconds(None);
+                // Use the live in-memory timer the tick loop mutates each
+                // second. `load_state` reads the *persisted* timer, which is
+                // only saved periodically, so its `remaining_seconds` would be
+                // stale (often the full phase duration) — pausing with that
+                // value makes the countdown appear to "reset".
+                let live = tick_service.get_current_timer().await;
+                let remaining = live.remaining_seconds(None);
                 pause_timer_phase(
                     task_id,
                     remaining,
@@ -635,11 +666,15 @@ fn on_tray_icon_event(tray: &TrayIcon<Wry>, event: TrayIconEvent) {
 /// reflects the new visibility.
 pub fn toggle_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
+        let was_visible =
+            window.is_visible().unwrap_or_else(|_| intended_visible());
+        if was_visible {
             let _ = window.hide();
+            set_intended_visible(false);
         } else {
             let _ = window.show();
             let _ = window.set_focus();
+            set_intended_visible(true);
         }
     }
     let _ = refresh(app, None);
@@ -767,11 +802,11 @@ pub fn refresh(
     }
 
     if let Some(h) = app.try_state::<TrayMenuHandles>() {
-        // Reflect window visibility in the toggle label.
-        let visible = app
-            .get_webview_window("main")
-            .map(|w| w.is_visible().unwrap_or(false))
-            .unwrap_or(true);
+        // Reflect window visibility in the toggle label. Use the tracked
+        // intended visibility rather than `window.is_visible()`, which lags
+        // behind hide()/show() on Linux/GTK and would leave the label stale
+        // for one click.
+        let visible = intended_visible();
         let _ = h.toggle.set_text(if visible {
             "Hide Pomotoro"
         } else {

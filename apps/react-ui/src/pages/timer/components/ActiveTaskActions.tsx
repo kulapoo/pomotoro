@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { CheckCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
@@ -10,10 +9,12 @@ export function ActiveTaskActions() {
   const resetActiveTask = useTaskStore((s) => s.resetActiveTask)
   const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
   const loadTasks = useTaskStore((s) => s.loadTasks)
+  const taskBusy = useTaskStore((s) => s.isBusy)
+  const timerBusy = useTimerStore((s) => s.isBusy)
   // const resetTimer = useTimerStore((s) => s.resetTimer)
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const { activeTask, isLastBreak, isTaskCompleted } = useTimerSession()
-  const [isBusy, setIsBusy] = useState(false)
+  const isBusy = timerBusy || taskBusy
 
   if (!activeTask) return null
 
@@ -21,31 +22,21 @@ export function ActiveTaskActions() {
     if (isBusy) return
 
     if (isTaskCompleted) return
-    setIsBusy(true)
-    try {
-      const ok = await completeActiveTask(activeTask.id)
-      if (ok) {
-        await loadActiveTask()
-        await fetchTimer()
-        await loadTasks()
-        toast.success('Task completed!')
-      }
-    } finally {
-      setIsBusy(false)
+    const ok = await completeActiveTask(activeTask.id)
+    if (ok) {
+      await loadActiveTask()
+      await fetchTimer()
+      await loadTasks()
+      toast.success('Task completed!')
     }
   }
 
   const handleResetTask = async () => {
     if (isBusy) return
-    setIsBusy(true)
-    try {
-      const ok = await resetActiveTask(activeTask.id)
-      if (ok) {
-        await Promise.all([fetchTimer(), loadActiveTask()])
-        toast.info('Task progress reset')
-      }
-    } finally {
-      setIsBusy(false)
+    const ok = await resetActiveTask(activeTask.id)
+    if (ok) {
+      await Promise.all([fetchTimer(), loadActiveTask()])
+      toast.info('Task progress reset')
     }
   }
 

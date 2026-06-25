@@ -77,6 +77,7 @@ interface TaskStore {
   tasks: Task[]
   activeTask: Task | null
   isLoading: boolean
+  isBusy: boolean
   error: BackendError | null
   loadTasks: () => Promise<boolean>
   loadActiveTask: () => Promise<boolean>
@@ -95,6 +96,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   tasks: [],
   activeTask: null,
   isLoading: false,
+  isBusy: false,
   error: null,
 
   loadTasks: async () => {
@@ -124,73 +126,49 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
 
   createTask: async (req) => {
-    try {
+    return runBusy(set, get, 'createTask', async () => {
       await invokeCmd('create_task', { request: req })
       return true
-    } catch (e) {
-      logger.error('createTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   updateTask: async (req) => {
-    try {
+    return runBusy(set, get, 'updateTask', async () => {
       await invokeCmd('update_task', { request: req })
       return true
-    } catch (e) {
-      logger.error('updateTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   deleteTask: async (id) => {
-    try {
+    return runBusy(set, get, 'deleteTask', async () => {
       await invokeCmd('delete_task', { id })
       return true
-    } catch (e) {
-      logger.error('deleteTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   completeTask: async (id) => {
-    try {
+    return runBusy(set, get, 'completeTask', async () => {
       await invokeCmd('complete_task', { task_id: id })
       return true
-    } catch (e) {
-      logger.error('completeTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   resetTask: async (id) => {
-    try {
+    return runBusy(set, get, 'resetTask', async () => {
       await invokeCmd('reset_task', { task_id: id })
       return true
-    } catch (e) {
-      logger.error('resetTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   setActiveTask: async (id, oldTaskId: string | null = null) => {
-    try {
+    return runBusy(set, get, 'setActiveTask', async () => {
       const oldTask = oldTaskId ? { id: oldTaskId } : await invokeCmd('get_active_task')
       await invokeCmd('switch_active_task', {
         task_id: id,
         old_task_id: oldTask?.id ?? null,
       })
       return true
-    } catch (e) {
-      logger.error('setActiveTask failed', e)
-      set({ error: e as BackendError })
-      return false
-    }
+    })
   },
 
   completeActiveTask: async (id) => {
@@ -203,6 +181,25 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }))
+
+async function runBusy(
+  set: (partial: Partial<TaskStore>) => void,
+  get: () => TaskStore,
+  name: string,
+  fn: () => Promise<boolean>,
+): Promise<boolean> {
+  if (get().isBusy) return false
+  set({ isBusy: true })
+  try {
+    return await fn()
+  } catch (e) {
+    logger.error(`${name} failed`, e)
+    set({ error: e as BackendError })
+    return false
+  } finally {
+    set({ isBusy: false })
+  }
+}
 
 export function useTasksEventBus(): void {
   const loadTasks = useTaskStore((s) => s.loadTasks)

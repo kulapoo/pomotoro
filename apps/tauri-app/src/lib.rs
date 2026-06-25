@@ -120,6 +120,7 @@ pub fn run() {
                     if tray::current_general(app.handle()).start_minimized {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.hide();
+                            tray::set_intended_visible(false);
                         }
                         // The tray was already painted (visible) above; re-sync
                         // the Show/Hide label now that the window is hidden.
@@ -163,6 +164,7 @@ pub fn run() {
                 if tray::current_general(window.app_handle()).minimize_to_tray {
                     api.prevent_close();
                     let _ = window.hide();
+                    tray::set_intended_visible(false);
                     let _ = tray::refresh(window.app_handle(), None);
                 }
             }

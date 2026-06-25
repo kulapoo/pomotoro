@@ -25,6 +25,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-toro: var(--toro);
   --color-toro-foreground: var(--toro-foreground);
+  --color-break-short: var(--break-short);
+  --color-break-long: var(--break-long);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -57,6 +59,8 @@
     --accent-foreground: hsl(222.2 47.4% 11.2%);
     --toro: hsl(348 77% 45%);
     --toro-foreground: hsl(0 0% 100%);
+    --break-short: hsl(152 76% 40%);
+    --break-long: hsl(217 91% 60%);
     --destructive: hsl(0 84% 60%);
     --destructive-foreground: hsl(210 40% 98%);
     --border: hsl(214.3 31.8% 91.4%);
@@ -84,6 +88,8 @@
     --accent-foreground: hsl(210 40% 98%);
     --toro: hsl(349 80% 62%);
     --toro-foreground: hsl(0 0% 100%);
+    --break-short: hsl(150 65% 55%);
+    --break-long: hsl(213 94% 68%);
     --destructive: hsl(0 63% 31%);
     --destructive-foreground: hsl(210 40% 98%);
     --border: hsl(216 34% 17%);

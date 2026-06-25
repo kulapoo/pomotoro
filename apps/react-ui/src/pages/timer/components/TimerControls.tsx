@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import { useTimerSession } from '@/pages/timer/useTimerSession'
@@ -9,6 +8,7 @@ export function TimerControls() {
   const resume = useTimerStore((s) => s.resume)
   const resetPhase = useTimerStore((s) => s.resetPhase)
   const skip = useTimerStore((s) => s.skip)
+  const isBusy = useTimerStore((s) => s.isBusy)
   const {
     activeTask,
     idle,
@@ -18,9 +18,9 @@ export function TimerControls() {
     canPlayPause,
     isTaskCompleted,
   } = useTimerSession()
-  const [isBusy, setIsBusy] = useState(false)
 
   const handlePlayPause = async () => {
+    if (isBusy) return
     if (running) await pause()
     else if (paused) await resume()
     else await start()
@@ -28,22 +28,12 @@ export function TimerControls() {
 
   const handleSkip = async () => {
     if (isBusy || idle) return
-    setIsBusy(true)
-    try {
-      await skip()
-    } finally {
-      setIsBusy(false)
-    }
+    await skip()
   }
 
   const handleReset = async () => {
     if (isBusy || idle) return
-    setIsBusy(true)
-    try {
-      await resetPhase()
-    } finally {
-      setIsBusy(false)
-    }
+    await resetPhase()
   }
 
   return (
@@ -59,7 +49,7 @@ export function TimerControls() {
 
       <button
         onClick={handlePlayPause}
-        disabled={!canPlayPause}
+        disabled={!canPlayPause || isBusy}
         className="bg-primary text-primary-foreground flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         title={!activeTask ? 'Select a task to start' : undefined}
       >
