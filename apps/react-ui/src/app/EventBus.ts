@@ -44,6 +44,8 @@ export function useEventBus(): void {
       }, 500)
     }
 
+    reload()
+
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, applyTick),

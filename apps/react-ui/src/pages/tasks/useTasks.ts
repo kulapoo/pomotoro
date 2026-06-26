@@ -215,14 +215,20 @@ export function useTasksEventBus(): void {
   useEffect(() => {
     const reloadTasks = createBatchedLoader(() => loadTasks())
 
-    reloadTasks()
-    loadActiveTask()
+    const reload = () => {
+      window.setTimeout(() => {
+        reloadTasks()
+        loadActiveTask()
+      }, 500)
+    }
+
+    reload()
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
-      onEvent(events.taskListUpdated, reloadTasks),
-      onEvent(events.taskCompleted, reloadTasks),
-      onEvent(events.taskProgressUpdated, reloadTasks),
-      onEvent(events.taskAutoAdvanced, reloadTasks),
+      onEvent(events.taskListUpdated, reload),
+      onEvent(events.taskCompleted, reload),
+      onEvent(events.taskProgressUpdated, reload),
+      onEvent(events.taskAutoAdvanced, reload),
     ]
 
     return () => {
