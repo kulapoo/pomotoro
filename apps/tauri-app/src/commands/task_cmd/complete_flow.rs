@@ -37,6 +37,15 @@ pub async fn complete_task_flow(
     timer_tick_service: Arc<TimerTickService>,
     app_handle: AppHandle,
 ) -> anyhow::Result<Task> {
+    reset_timer_to_idle(
+        task_id,
+        task_repo.clone(),
+        timer_repo.clone(),
+        event_publisher.clone(),
+    )
+    .await
+    .context("Failed to reset timer to idle after completing task")?;
+
     // Complete the task (all sessions).
     complete_task_uc(&task_repo, &event_publisher, task_id)
         .await
@@ -49,15 +58,6 @@ pub async fn complete_task_flow(
         .stop_timer_tick_loop()
         .await
         .context("Failed to stop timer tick loop while completing task")?;
-
-    reset_timer_to_idle(
-        task_id,
-        task_repo.clone(),
-        timer_repo.clone(),
-        event_publisher.clone(),
-    )
-    .await
-    .context("Failed to reset timer to idle after completing task")?;
 
     // Drain the async Reset event handler (stop + load_state).
     tokio::time::sleep(Duration::from_millis(100)).await;
