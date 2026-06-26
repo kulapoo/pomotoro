@@ -218,16 +218,17 @@ async function runBusy(
 }
 
 export function useTasksEventBus(): void {
-  const loadTasks = useTaskStore((s) => s.loadTasks)
-  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
+  const storeLoadTasks = useTaskStore((s) => s.loadTasks)
+  const storeLoadActiveTask = useTaskStore((s) => s.loadActiveTask)
 
   useEffect(() => {
-    const reloadTasks = createBatchedLoader(() => loadTasks())
+    const reloadTasks = createBatchedLoader(() => storeLoadTasks())
+    const reloadActiveTask = createBatchedLoader(() => storeLoadActiveTask())
 
     const reload = () => {
       window.setTimeout(() => {
         reloadTasks()
-        loadActiveTask()
+        reloadActiveTask()
       }, 500)
     }
 
@@ -236,12 +237,12 @@ export function useTasksEventBus(): void {
     const unlisteners: Array<Promise<UnlistenFn>> = [
       onEvent(events.taskListUpdated, reload),
       onEvent(events.taskCompleted, reload),
-      onEvent(events.taskProgressUpdated, reload),
-      onEvent(events.taskAutoAdvanced, reload),
+      onEvent(events.taskProgressUpdated, () => window.setTimeout(reloadActiveTask, 500)),
+      onEvent(events.taskAutoAdvanced, () => window.setTimeout(reloadActiveTask, 500)),
     ]
 
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn())
     }
-  }, [loadTasks, loadActiveTask])
+  }, [storeLoadTasks, storeLoadActiveTask])
 }

@@ -83,16 +83,17 @@ pub async fn switch_task(
     let task_id = task.id();
     task_repo.update(task).await?;
 
-    // Publish TaskUpdated event for new active task
-    event_publisher.publish(Box::new(TaskUpdated::new(
-        task_id, None, None, None, None, 1,
-    )));
-
     // Create a new timer for the new task, preserving the state from the old timer
     // This allows seamless task switching during active sessions
     let new_timer =
         domain::Timer::with_state(cmd.task_id, timer.state().clone());
     timer_repo.save(&new_timer).await?;
+
+    // Publish TaskUpdated event for new active task — after timer save so
+    // listeners see the fully consistent state (timer + task together).
+    event_publisher.publish(Box::new(TaskUpdated::new(
+        task_id, None, None, None, None, 1,
+    )));
 
     // Publish TaskActiveChanged event
     let switch_event = TaskActiveChanged::new(

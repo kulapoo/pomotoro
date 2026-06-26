@@ -364,8 +364,13 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 
     register_event_listeners(app);
 
-    // Initial paint.
+    // Initial paint: try the synchronous path first (blocking, most likely to
+    // work immediately), then schedule an async retry so a transient failure
+    // (e.g. D-Bus not ready on Linux) doesn't leave the tray stuck on the
+    // base icon.  The LAST_LABEL cache is only committed *after* a successful
+    // icon update, so a failed sync attempt won't poison subsequent refreshes.
     let _ = refresh(app, None);
+    schedule_refresh(RefreshSignal::Dirty);
 
     Ok(())
 }
@@ -444,33 +449,65 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     }
 }
 
-// ── managed-state accessor helpers ──────────────────────────────────────────
+// ── menu action context ─────────────────────────────────────────────────────
+//
+// Every tray menu handler follows the identical skeleton: extract repos from
+// Tauri state, load the bound task_id, spawn async work, and schedule a
+// refresh on completion. `TrayCtx` bundles all of that extraction + spawning
+// into a single call so each handler becomes a 3–8 line function.
 
-fn task_repo(app: &AppHandle) -> Option<Arc<dyn TaskRepository + Send + Sync>> {
-    app.try_state::<Arc<dyn TaskRepository + Send + Sync>>()
-        .map(|s| s.inner().clone())
+/// All managed state needed by tray menu actions, extracted once per action.
+struct TrayCtx {
+    app: AppHandle,
+    task_id: TaskId,
+    timer: Timer,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: TimerRepositoryArc,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: EventPublisherArc,
+    tick_service: Arc<TimerTickService>,
 }
 
-fn timer_repo(app: &AppHandle) -> Option<TimerRepositoryArc> {
-    app.try_state::<TimerRepositoryArc>()
-        .map(|s| s.inner().clone())
-}
+impl TrayCtx {
+    fn try_load(app: &AppHandle) -> Option<Self> {
+        let (timer, _, _) = load_state(app)?;
+        let task_id = timer.task_id()?;
+        Some(Self {
+            app: app.clone(),
+            task_id,
+            timer,
+            task_repo: app
+                .try_state::<Arc<dyn TaskRepository + Send + Sync>>()?
+                .inner()
+                .clone(),
+            timer_repo: app.try_state::<TimerRepositoryArc>()?.inner().clone(),
+            config_repo: app
+                .try_state::<Arc<dyn ConfigRepository + Send + Sync>>()?
+                .inner()
+                .clone(),
+            event_publisher: app
+                .try_state::<EventPublisherArc>()?
+                .inner()
+                .clone(),
+            tick_service: app
+                .try_state::<Arc<TimerTickService>>()?
+                .inner()
+                .clone(),
+        })
+    }
 
-fn config_repo(
-    app: &AppHandle,
-) -> Option<Arc<dyn ConfigRepository + Send + Sync>> {
-    app.try_state::<Arc<dyn ConfigRepository + Send + Sync>>()
-        .map(|s| s.inner().clone())
-}
-
-fn event_publisher(app: &AppHandle) -> Option<EventPublisherArc> {
-    app.try_state::<EventPublisherArc>()
-        .map(|s| s.inner().clone())
-}
-
-fn tick_service(app: &AppHandle) -> Option<Arc<TimerTickService>> {
-    app.try_state::<Arc<TimerTickService>>()
-        .map(|s| s.inner().clone())
+    /// Spawn async work on the Tauri runtime; schedules a tray refresh
+    /// (Dirty) once the future completes, regardless of success or error.
+    fn spawn<F, Fut>(self, f: F)
+    where
+        F: FnOnce(Self) -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
+        tauri::async_runtime::spawn(async move {
+            f(self).await;
+            schedule_refresh(RefreshSignal::Dirty);
+        });
+    }
 }
 
 // ── menu action handlers ────────────────────────────────────────────────────
@@ -478,62 +515,39 @@ fn tick_service(app: &AppHandle) -> Option<Arc<TimerTickService>> {
 /// Play / Pause / Resume — a single toggle mirroring the React play-pause
 /// button. Running → pause, Paused → resume, otherwise → start.
 fn menu_play_pause(app: &AppHandle) {
-    let Some((timer, _, _)) = load_state(app) else {
+    let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
-    let status = timer.status();
-    let Some(task_id) = timer.task_id() else {
-        return;
-    };
-
-    let Some(task_repo) = task_repo(app) else {
-        return;
-    };
-    let Some(timer_repo) = timer_repo(app) else {
-        return;
-    };
-    let Some(event_publisher) = event_publisher(app) else {
-        return;
-    };
-    let Some(tick_service) = tick_service(app) else {
-        return;
-    };
-
-    tauri::async_runtime::spawn(async move {
-        let res = match status {
+    ctx.spawn(|ctx| async move {
+        let res = match ctx.timer.status() {
             TimerStatus::Running => {
-                // Use the live in-memory timer the tick loop mutates each
-                // second. `load_state` reads the *persisted* timer, which is
-                // only saved periodically, so its `remaining_seconds` would be
-                // stale (often the full phase duration) — pausing with that
-                // value makes the countdown appear to "reset".
-                let live = tick_service.get_current_timer().await;
+                let live = ctx.tick_service.get_current_timer().await;
                 let remaining = live.remaining_seconds(None);
                 pause_timer_phase(
-                    task_id,
+                    ctx.task_id,
                     remaining,
-                    task_repo,
-                    timer_repo,
-                    event_publisher,
+                    ctx.task_repo,
+                    ctx.timer_repo,
+                    ctx.event_publisher,
                 )
                 .await
                 .map(|_| ())
             }
             TimerStatus::Paused => resume_timer_phase(
-                task_id,
-                task_repo,
-                timer_repo,
-                event_publisher,
+                ctx.task_id,
+                ctx.task_repo,
+                ctx.timer_repo,
+                ctx.event_publisher,
             )
             .await
             .map(|_| ()),
             TimerStatus::Idle | TimerStatus::Stopped => {
                 start_timer_phase(
-                    task_repo,
-                    timer_repo,
-                    event_publisher,
+                    ctx.task_repo,
+                    ctx.timer_repo,
+                    ctx.event_publisher,
                     StartTimerPhaseCmd {
-                        task_id: Some(task_id),
+                        task_id: Some(ctx.task_id),
                     },
                 )
                 .await
@@ -542,7 +556,6 @@ fn menu_play_pause(app: &AppHandle) {
         if let Err(e) = res {
             log::error!("Tray play/pause failed: {}", e);
         }
-        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -551,57 +564,39 @@ fn menu_play_pause(app: &AppHandle) {
 /// tick loop restarted (the Reset event handler stops it); a paused phase is
 /// left paused.
 fn menu_reset_phase(app: &AppHandle) {
-    let Some(task_id) = task_id_for_action(app) else {
+    let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
-    let Some(task_repo) = task_repo(app) else {
-        return;
-    };
-    let Some(timer_repo) = timer_repo(app) else {
-        return;
-    };
-    let Some(event_publisher) = event_publisher(app) else {
-        return;
-    };
-    let Some(tick_service) = tick_service(app) else {
-        return;
-    };
-
-    tauri::async_runtime::spawn(async move {
-        // Task's timer configuration is needed to restart the tick loop.
-        let task = match task_repo.get_by_id(task_id).await {
+    ctx.spawn(|ctx| async move {
+        let task = match ctx.task_repo.get_by_id(ctx.task_id).await {
             Ok(Some(t)) => t,
             Ok(None) => {
-                log::error!("Tray reset phase: task {} not found", task_id);
-                schedule_refresh(RefreshSignal::Dirty);
+                log::error!("Tray reset phase: task {} not found", ctx.task_id);
                 return;
             }
             Err(e) => {
                 log::error!("Tray reset phase: failed to load task: {}", e);
-                schedule_refresh(RefreshSignal::Dirty);
                 return;
             }
         };
 
         if let Err(e) = reset_timer_phase(
-            task_id,
-            task_repo.clone(),
-            timer_repo.clone(),
-            event_publisher.clone(),
+            ctx.task_id,
+            ctx.task_repo.clone(),
+            ctx.timer_repo.clone(),
+            ctx.event_publisher.clone(),
         )
         .await
         {
             log::error!("Tray reset phase failed: {}", e);
         }
 
-        // Drain the async Reset event handler (stop_timer_tick_loop + load_state).
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        // Restart the tick loop so a running phase keeps counting down from the
-        // full duration. A paused timer's loop would no-op, so skip it.
-        if let Ok(updated) = timer_repo.get().await {
+        if let Ok(updated) = ctx.timer_repo.get().await {
             if updated.is_running() {
-                if let Err(e) = tick_service
+                if let Err(e) = ctx
+                    .tick_service
                     .start_timer_tick_loop(
                         Some(task.config().timer.clone()),
                         None,
@@ -615,80 +610,51 @@ fn menu_reset_phase(app: &AppHandle) {
                 }
             }
         }
-        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
 /// Skip to the next phase, mirroring the React "Skip Phase" button.
 fn menu_skip(app: &AppHandle) {
-    let Some(task_id) = task_id_for_action(app) else {
+    let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
-    let Some(task_repo) = task_repo(app) else {
-        return;
-    };
-    let Some(timer_repo) = timer_repo(app) else {
-        return;
-    };
-    let Some(event_publisher) = event_publisher(app) else {
-        return;
-    };
-
-    tauri::async_runtime::spawn(async move {
-        if let Err(e) =
-            skip_timer_phase(task_repo, timer_repo, event_publisher, task_id)
-                .await
+    ctx.spawn(|ctx| async move {
+        if let Err(e) = skip_timer_phase(
+            ctx.task_repo,
+            ctx.timer_repo,
+            ctx.event_publisher,
+            ctx.task_id,
+        )
+        .await
         {
             log::error!("Tray skip phase failed: {}", e);
         }
-        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
 /// Reset the active task's progress (completed sessions), mirroring the React
 /// "Reset Task" button. Also resets the timer to idle.
-///
-/// `reset_task_uc` only persists the reset and publishes a `TaskReset`; the
-/// tick loop is stopped and the in-memory timer resynced asynchronously by the
-/// fire-and-forget `TaskResetHandler`. We must drain that handler and stop the
-/// loop ourselves before refreshing — otherwise the still-running loop keeps
-/// emitting `TICK` signals with the stale countdown, which the coalescing
-/// `refresh_loop` keeps painting and makes the reset appear to do nothing
-/// (cf. `menu_reset_phase` / `complete_task_flow`).
 fn menu_reset_task(app: &AppHandle) {
-    let Some(task_id) = task_id_for_action(app) else {
+    let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
-    let Some(task_repo) = task_repo(app) else {
-        return;
-    };
-    let Some(timer_repo) = timer_repo(app) else {
-        return;
-    };
-    let Some(event_publisher) = event_publisher(app) else {
-        return;
-    };
-    let Some(tick_service) = tick_service(app) else {
-        return;
-    };
-
-    tauri::async_runtime::spawn(async move {
-        if let Err(e) =
-            reset_task_uc(task_repo, timer_repo, event_publisher, task_id).await
+    ctx.spawn(|ctx| async move {
+        if let Err(e) = reset_task_uc(
+            ctx.task_repo,
+            ctx.timer_repo,
+            ctx.event_publisher,
+            ctx.task_id,
+        )
+        .await
         {
             log::error!("Tray reset task failed: {}", e);
         }
 
-        // Drain the async TaskReset handler (stop_timer_tick_loop + load_state).
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        // Belt-and-suspenders: ensure the loop is stopped regardless of handler
-        // timing so no stale TICK signals keep the countdown alive. Idempotent.
-        if let Err(e) = tick_service.stop_timer_tick_loop().await {
+        if let Err(e) = ctx.tick_service.stop_timer_tick_loop().await {
             log::error!("Tray reset task: failed to stop tick loop: {}", e);
         }
-
-        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -697,47 +663,24 @@ fn menu_reset_task(app: &AppHandle) {
 /// the Tauri command so behavior is identical (stop + reset timer, optional
 /// auto-advance).
 fn menu_complete(app: &AppHandle) {
-    let Some(task_id) = task_id_for_action(app) else {
+    let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
-    let Some(task_repo) = task_repo(app) else {
-        return;
-    };
-    let Some(timer_repo) = timer_repo(app) else {
-        return;
-    };
-    let Some(config_repo) = config_repo(app) else {
-        return;
-    };
-    let Some(event_publisher) = event_publisher(app) else {
-        return;
-    };
-    let Some(tick_service) = tick_service(app) else {
-        return;
-    };
-
-    let app_handle = app.clone();
-    tauri::async_runtime::spawn(async move {
+    ctx.spawn(|ctx| async move {
         if let Err(e) = complete_task_flow(
-            task_id,
-            task_repo,
-            timer_repo,
-            config_repo,
-            event_publisher,
-            tick_service,
-            app_handle.clone(),
+            ctx.task_id,
+            ctx.task_repo,
+            ctx.timer_repo,
+            ctx.config_repo,
+            ctx.event_publisher,
+            ctx.tick_service,
+            ctx.app,
         )
         .await
         {
             log::error!("Tray complete task failed: {}", e);
         }
-        schedule_refresh(RefreshSignal::Dirty);
     });
-}
-
-/// Extract the bound task_id for menu actions.
-fn task_id_for_action(app: &AppHandle) -> Option<TaskId> {
-    load_state(app).and_then(|(timer, _, _)| timer.task_id())
 }
 
 fn on_tray_icon_event(tray: &TrayIcon<Wry>, event: TrayIconEvent) {
@@ -904,12 +847,14 @@ fn render_refresh(
     });
 
     // Compute the single countdown label to display, gated by platform
-    // conventions (Linux always shows it when a task is attached; macOS/Windows
-    // only while actively counting).
+    // conventions (Linux always shows the countdown while a task is bound,
+    // baking it into the icon; macOS/Windows only while running or paused so
+    // the menu-bar title isn't cluttered when idle).
     let label = if general.show_countdown_in_tray && has_task {
         if is_linux() {
+            let config = task.map(|t| &t.config().timer);
             let secs = remaining_secs_override
-                .unwrap_or_else(|| timer.remaining_seconds(None));
+                .unwrap_or_else(|| timer.remaining_seconds(config));
             Some(format!("{:02}:{:02}", secs / 60, secs % 60))
         } else {
             match status {
@@ -931,26 +876,28 @@ fn render_refresh(
         // Only repaint the icon/title when the displayed text actually
         // changes — coalesced bursts that don't alter the label (e.g. several
         // task events arriving within the same second) become no-ops.
+        //
+        // NOTE: we only *commit* LAST_LABEL after the platform update
+        // succeeds, so a transient failure (e.g. D-Bus not ready on Linux)
+        // doesn't poison the cache and cause all subsequent refreshes with
+        // the same label to be skipped — which would permanently hide the
+        // countdown.
         let label_changed = match LAST_LABEL.lock() {
-            Ok(mut g) => {
-                if *g != label {
-                    *g = label.clone();
-                    true
-                } else {
-                    false
-                }
-            }
-            // Poisoned mutex: be safe and repaint.
+            Ok(g) => *g != label,
             Err(_) => true,
         };
 
         if is_linux() {
-            // Linux tray backends ignore `set_title`, so we bake the countdown
-            // text directly into the icon pixels.
+            // Linux tray backends ignore `set_title`, so we bake the
+            // countdown text directly into the icon pixels.
             if label_changed {
                 let icon =
                     overlay_countdown(toro_base_icon(), label.as_deref());
                 tray.set_icon(Some(icon))?;
+                // Commit only after successful set_icon.
+                if let Ok(mut g) = LAST_LABEL.lock() {
+                    *g = label.clone();
+                }
             }
             let _ = tray.set_title::<&str>(None);
         } else {
@@ -958,6 +905,10 @@ fn render_refresh(
             if label_changed {
                 tray.set_title(label.as_deref())?;
                 tray.set_icon(Some(toro_base_icon().clone()))?;
+                // Commit only after successful updates.
+                if let Ok(mut g) = LAST_LABEL.lock() {
+                    *g = label.clone();
+                }
             }
         }
     }

@@ -20,9 +20,12 @@ export function TimerRing() {
   return (
     <div
       className="relative flex items-center justify-center"
-      style={{ width: 248, height: 248 }}
+      style={{
+        width: 'min(248px, 65vw)',
+        height: 'min(248px, 65vw)',
+      }}
     >
-      <svg className="-rotate-90" viewBox="0 0 200 200" width={248} height={248}>
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 200 200">
         {/* Background track */}
         <circle
           cx="100"
@@ -49,9 +52,16 @@ export function TimerRing() {
           }}
         />
       </svg>
-      <div className="absolute flex flex-col items-center gap-1.5">
-        <ToroIcon size={26} style={{ color: PHASE_ARC_COLOR[phase] }} />
-        <span className="font-mono text-7xl font-bold tracking-tight tabular-nums select-none">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+        <ToroIcon
+          size={0}
+          style={{ color: PHASE_ARC_COLOR[phase] }}
+          className="h-[min(26px,7vw)] w-[min(26px,7vw)]"
+        />
+        <span
+          className="font-mono font-bold tracking-tight tabular-nums select-none"
+          style={{ fontSize: 'min(3.5rem, 16vw)' }}
+        >
           {formatClock(remaining)}
         </span>
       </div>

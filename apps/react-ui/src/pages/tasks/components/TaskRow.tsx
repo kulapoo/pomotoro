@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Trash2, Check, Undo2, Crosshair, RotateCcw, Pencil } from 'lucide-react'
 import { TaskStatus } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
@@ -10,12 +11,13 @@ interface TaskRowProps {
   onSetActive: () => void
   onEdit: () => void
   timerRunning: boolean
+  activeTaskId?: string | null
   onNavigateToTimer: () => void
   isSelected: boolean
   onToggleSelect: () => void
 }
 
-export function TaskRow({
+export const TaskRow = memo(function TaskRow({
   task,
   onComplete,
   onReset,
@@ -23,11 +25,12 @@ export function TaskRow({
   onSetActive,
   onEdit,
   timerRunning,
+  activeTaskId,
   isSelected,
   onToggleSelect,
 }: TaskRowProps) {
   const isCompleted = task.status === TaskStatus.Completed
-  const isActive = task.status === TaskStatus.Active
+  const isActive = task.id === activeTaskId
   const isRunning = isActive && timerRunning
   const progressPct =
     task.max_sessions > 0
@@ -183,5 +186,16 @@ export function TaskRow({
         </div>
       </div>
     </li>
+  )
+}, taskRowPropsEqual)
+
+function taskRowPropsEqual(prev: TaskRowProps, next: TaskRowProps): boolean {
+  return (
+    prev.task === next.task &&
+    prev.timerRunning === next.timerRunning &&
+    prev.activeTaskId === next.activeTaskId &&
+    prev.isSelected === next.isSelected &&
+    prev.onNavigateToTimer === next.onNavigateToTimer &&
+    prev.onToggleSelect === next.onToggleSelect
   )
 }

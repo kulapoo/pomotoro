@@ -45,7 +45,12 @@ export function ActiveTaskActions() {
       <button
         onClick={handleResetTask}
         disabled={isBusy}
-        className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+        className={[
+          'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+          isTaskCompleted
+            ? 'bg-emerald-500 text-white dark:bg-emerald-600'
+            : 'border-border text-muted-foreground hover:text-foreground hover:bg-accent border',
+        ].join(' ')}
         title="Reset task progress"
       >
         <RefreshCw size={12} />

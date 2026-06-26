@@ -1,5 +1,4 @@
 import { TaskRow } from '@/pages/tasks/components/TaskRow'
-import { isTimerRunning, useTimerStore } from '@/pages/timer/useTimer'
 import type { Task } from '@/pages/tasks/useTasks'
 import type { TaskRowHandlers } from '@/pages/tasks/hooks/useTaskActions'
 
@@ -9,6 +8,8 @@ interface IncompleteTaskListProps {
   onNavigateToTimer: () => void
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
+  timerRunning: boolean
+  activeTaskId?: string | null
 }
 
 export function IncompleteTaskList({
@@ -17,8 +18,9 @@ export function IncompleteTaskList({
   onNavigateToTimer,
   selectedIds,
   onToggleSelect,
+  timerRunning,
+  activeTaskId,
 }: IncompleteTaskListProps) {
-  const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
 
   if (tasks.length === 0) return null
 
@@ -34,6 +36,7 @@ export function IncompleteTaskList({
           onDelete={() => handlers.onDelete(task)}
           onSetActive={() => handlers.onSetActive(task)}
           timerRunning={timerRunning}
+          activeTaskId={activeTaskId}
           onNavigateToTimer={onNavigateToTimer}
           isSelected={selectedIds.has(task.id)}
           onToggleSelect={() => onToggleSelect(task.id)}

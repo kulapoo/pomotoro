@@ -13,6 +13,7 @@ import { CompletedTaskList } from '@/pages/tasks/components/CompletedTaskList'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useConfirm } from '@/components/ConfirmProvider'
 import { useSettingsStore } from '@/pages/settings/useSettings'
+import { useTimerStore, isTimerRunning } from '@/pages/timer/useTimer'
 import { DEFAULT_DURATIONS } from '@/lib/duration'
 import type { Page } from '@/app/types'
 
@@ -27,13 +28,15 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const isBusy = useTaskStore((s) => s.isBusy)
+  const activeTaskId = useTimerStore((s) => s.timer?.task_id)
+  const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
   const { confirm } = useConfirm()
 
   const defaultSessions =
     useSettingsStore((s) => s.config?.timer.sessions_until_long_break) ??
     DEFAULT_DURATIONS.sessionsUntilLongBreak
 
-  const filters = useTaskFilters(tasks)
+  const filters = useTaskFilters(tasks, activeTaskId)
   const actions = useTaskActions(onNavigate)
   const selection = useTaskSelection({
     visibleIds: filters.visibleIds,
@@ -122,6 +125,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         onNavigateToTimer={navigateToTimer}
         selectedIds={selection.selectedIds}
         onToggleSelect={selection.toggleSelect}
+        timerRunning={timerRunning}
+        activeTaskId={activeTaskId}
       />
 
       <CompletedTaskList
@@ -132,6 +137,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         isAllCompletedSelected={selection.isAllCompletedSelected}
         onToggleSelect={selection.toggleSelect}
         onToggleSelectAllCompleted={selection.toggleSelectAllCompleted}
+        timerRunning={timerRunning}
+        activeTaskId={activeTaskId}
       />
     </div>
   )

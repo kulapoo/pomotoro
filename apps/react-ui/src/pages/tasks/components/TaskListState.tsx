@@ -32,7 +32,7 @@ export function TaskListState({
     )
   }
 
-  if (isLoading) {
+  if (isLoading && !hasTasks) {
     return <p className="text-muted-foreground py-8 text-center text-sm">Loading…</p>
   }
 

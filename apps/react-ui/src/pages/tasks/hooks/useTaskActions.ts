@@ -28,6 +28,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
 
   const refreshTimer = useCallback(async () => {
     await Promise.all([
+      useTaskStore.getState().loadTasks(),
       useTaskStore.getState().loadActiveTask(),
       useTimerStore.getState().fetchTimer(),
     ])

@@ -4,7 +4,7 @@ import type { Task, TaskStatus as TaskStatusType } from '@/pages/tasks/useTasks'
 
 export type StatusFilter = 'all' | TaskStatusType
 
-export function useTaskFilters(tasks: Task[]) {
+export function useTaskFilters(tasks: Task[], activeTaskId?: string | null) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
@@ -42,8 +42,8 @@ export function useTaskFilters(tasks: Task[]) {
 
   const total = tasks.length
   const activeCount = useMemo(
-    () => tasks.filter((t) => t.status === TaskStatus.Active).length,
-    [tasks],
+    () => (activeTaskId && tasks.some((t) => t.id === activeTaskId) ? 1 : 0),
+    [tasks, activeTaskId],
   )
   const completedCount = useMemo(
     () => tasks.filter((t) => t.status === TaskStatus.Completed).length,

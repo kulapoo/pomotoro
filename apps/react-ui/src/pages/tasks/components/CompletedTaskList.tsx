@@ -2,7 +2,6 @@ import { ChevronRight } from 'lucide-react'
 import { TaskRow } from '@/pages/tasks/components/TaskRow'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
-import { isTimerRunning, useTimerStore } from '@/pages/timer/useTimer'
 import type { TaskRowHandlers } from '@/pages/tasks/hooks/useTaskActions'
 
 interface CompletedTaskListProps {
@@ -13,6 +12,8 @@ interface CompletedTaskListProps {
   isAllCompletedSelected: boolean
   onToggleSelect: (id: string) => void
   onToggleSelectAllCompleted: () => void
+  timerRunning: boolean
+  activeTaskId?: string | null
 }
 
 export function CompletedTaskList({
@@ -23,8 +24,9 @@ export function CompletedTaskList({
   isAllCompletedSelected,
   onToggleSelect,
   onToggleSelectAllCompleted,
+  timerRunning,
+  activeTaskId,
 }: CompletedTaskListProps) {
-  const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
 
   if (tasks.length === 0) return null
@@ -61,6 +63,7 @@ export function CompletedTaskList({
             onDelete={() => handlers.onDelete(task)}
             onSetActive={() => void setActiveTask(task.id)}
             timerRunning={timerRunning}
+            activeTaskId={activeTaskId}
             onNavigateToTimer={onNavigateToTimer}
             isSelected={selectedIds.has(task.id)}
             onToggleSelect={() => onToggleSelect(task.id)}
