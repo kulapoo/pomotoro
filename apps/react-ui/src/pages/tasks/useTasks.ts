@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import { invokeCmd, onEvent, events } from '@/lib/tauri'
 import { BackendError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
@@ -73,6 +74,8 @@ export interface TaskAutoAdvancedPayload {
   to_task_id: string
 }
 
+export const MAX_TASKS = 50
+
 interface TaskStore {
   tasks: Task[]
   activeTask: Task | null
@@ -126,6 +129,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   },
 
   createTask: async (req) => {
+    if (get().tasks.length >= MAX_TASKS) {
+      toast.error(`Task limit reached (${MAX_TASKS}). Delete a task first.`)
+      return false
+    }
     return runBusy(set, get, 'createTask', async () => {
       await invokeCmd('create_task', { request: req })
       return true

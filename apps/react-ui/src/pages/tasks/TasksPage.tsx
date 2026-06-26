@@ -1,17 +1,19 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Plus, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
-import { toast } from 'sonner'
-import { useTaskStore, useTasksEventBus, TaskStatus } from '@/pages/tasks/useTasks'
-import { useTimerStore, isTimerRunning } from '@/pages/timer/useTimer'
+import { useTaskStore, useTasksEventBus } from '@/pages/tasks/useTasks'
+import { useTaskActions } from '@/pages/tasks/hooks/useTaskActions'
+import { useTaskFilters } from '@/pages/tasks/hooks/useTaskFilters'
+import { useTaskSelection } from '@/pages/tasks/hooks/useTaskSelection'
+import { TaskFormModal } from '@/pages/tasks/components/TaskFormModal'
+import { TasksHeader } from '@/pages/tasks/components/TasksHeader'
+import { QuickAddBar } from '@/pages/tasks/components/QuickAddBar'
+import { TaskSearchBar } from '@/pages/tasks/components/TaskSearchBar'
+import { BulkSelectToolbar } from '@/pages/tasks/components/BulkSelectToolbar'
+import { TaskListState } from '@/pages/tasks/components/TaskListState'
+import { IncompleteTaskList } from '@/pages/tasks/components/IncompleteTaskList'
+import { CompletedTaskList } from '@/pages/tasks/components/CompletedTaskList'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useSettingsStore } from '@/pages/settings/useSettings'
 import { DEFAULT_DURATIONS } from '@/lib/duration'
-import { StatBadge } from '@/pages/tasks/components/StatBadge'
-import { TaskRow } from '@/pages/tasks/components/TaskRow'
-import { TaskFormModal } from '@/pages/tasks/components/TaskFormModal'
-import type { Task } from '@/pages/tasks/useTasks'
 import type { Page } from '@/app/types'
-
-type StatusFilter = 'all' | TaskStatus
 
 interface TasksPageProps {
   onNavigate: (page: Page) => void
@@ -21,178 +23,25 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   useTasksEventBus()
 
   const tasks = useTaskStore((s) => s.tasks)
-  const activeTask = useTaskStore((s) => s.activeTask)
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
-  const createTask = useTaskStore((s) => s.createTask)
-  const completeTask = useTaskStore((s) => s.completeTask)
-  const resetTask = useTaskStore((s) => s.resetTask)
-  const deleteTask = useTaskStore((s) => s.deleteTask)
-  const setActiveTask = useTaskStore((s) => s.setActiveTask)
   const isBusy = useTaskStore((s) => s.isBusy)
-  const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
-  const pauseTimer = useTimerStore((s) => s.pause)
 
   const defaultSessions =
     useSettingsStore((s) => s.config?.timer.sessions_until_long_break) ??
     DEFAULT_DURATIONS.sessionsUntilLongBreak
 
-  const [title, setTitle] = useState('')
-  const [sessions, setSessions] = useState(defaultSessions)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [editTask, setEditTask] = useState<Task | undefined>(undefined)
-  const [showModal, setShowModal] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-  const handleQuickAdd = async () => {
-    const name = title.trim()
-    if (!name) return
-    const ok = await createTask({ name, max_sessions: sessions, tags: [] })
-    if (ok) {
-      setTitle('')
-      setSessions(defaultSessions)
-      toast.success('Task added')
-    }
-  }
-
-  const filtered = useMemo(() => {
-    let result = tasks
-    if (statusFilter !== 'all') {
-      result = result.filter((t) => t.status === statusFilter)
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      result = result.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          (t.description ?? '').toLowerCase().includes(q) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(q)),
-      )
-    }
-    return result
-  }, [tasks, statusFilter, search])
-
-  const incomplete = filtered.filter((t) => t.status !== TaskStatus.Completed)
-  const completed = filtered.filter((t) => t.status === TaskStatus.Completed)
-
-  const total = tasks.length
-  const activeCount = tasks.filter((t) => t.status === TaskStatus.Active).length
-  const completedCount = tasks.filter((t) => t.status === TaskStatus.Completed).length
-
-  const visibleTasks = useMemo(
-    () => [...incomplete, ...completed],
-    [incomplete, completed],
-  )
-  const isAllVisibleSelected =
-    visibleTasks.length > 0 && visibleTasks.every((t) => selectedIds.has(t.id))
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const toggleSelectAllVisible = () => {
-    if (isAllVisibleSelected) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(visibleTasks.map((t) => t.id)))
-    }
-  }
-
-  const clearSelection = () => setSelectedIds(new Set())
-
-  const isAllCompletedSelected =
-    completed.length > 0 && completed.every((t) => selectedIds.has(t.id))
-
-  const toggleSelectAllCompleted = () => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      const allSelected = completed.every((t) => next.has(t.id))
-      for (const t of completed) {
-        if (allSelected) next.delete(t.id)
-        else next.add(t.id)
-      }
-      return next
-    })
-  }
-
-  const resetMany = async (ids: string[]) => {
-    let successCount = 0
-    for (const id of ids) {
-      const ok = await resetTask(id)
-      if (ok) successCount += 1
-    }
-    if (successCount > 0) {
-      toast.info(`Reset ${successCount} task${successCount === 1 ? '' : 's'}`)
-      window.setTimeout(refreshTimer, 50)
-    }
-    return successCount
-  }
-
-  const openCreate = () => {
-    setEditTask(undefined)
-    setShowModal(true)
-  }
-
-  const openEdit = (task: Task) => {
-    setEditTask(task)
-    setShowModal(true)
-  }
-
-  const refreshTimer = async () => {
-    await Promise.all([
-      useTaskStore.getState().loadActiveTask(),
-      useTimerStore.getState().fetchTimer(),
-    ])
-  }
-
-  const handleSetActive = async (task: Task) => {
-    if (activeTask?.id === task.id) {
-      onNavigate('timer')
-      return
-    }
-    const ok = await setActiveTask(task.id)
-    if (ok) {
-      toast.info('Focusing on "' + task.name + '"')
-      refreshTimer()
-      if (timerRunning) {
-        window.setTimeout(pauseTimer, 200)
-      }
-      onNavigate('timer')
-    }
-  }
-
-  const handleResetTask = async (task: Task) => {
-    const ok = await resetTask(task.id)
-    if (ok) {
-      toast.info('Task reopened')
-      window.setTimeout(refreshTimer, 50)
-    }
-  }
-
-  const handleCompleteTask = async (task: Task) => {
-    const ok = await completeTask(task.id)
-    if (ok) {
-      toast.info('Task completed')
-      window.setTimeout(refreshTimer, 50)
-    }
-  }
-
-  const handleDeleteTask = async (task: Task) => {
-    const ok = await deleteTask(task.id)
-    if (ok) {
-      toast.info('Task deleted')
-      window.setTimeout(refreshTimer, 50)
-    }
-  }
+  const filters = useTaskFilters(tasks)
+  const actions = useTaskActions(onNavigate)
+  const selection = useTaskSelection({
+    visibleIds: filters.visibleIds,
+    completedIds: filters.completedIds,
+    search: filters.search,
+    statusFilter: filters.statusFilter,
+  })
 
   const handleResetSelected = async () => {
-    const ids = [...selectedIds]
+    const ids = selection.selectedArray
     if (ids.length === 0) return
     if (
       !window.confirm(
@@ -200,8 +49,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
       )
     )
       return
-    const count = await resetMany(ids)
-    if (count > 0) clearSelection()
+    const count = await actions.resetMany(ids)
+    if (count > 0) selection.clearSelection()
   }
 
   const handleResetAll = async () => {
@@ -212,253 +61,74 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
       )
     )
       return
-    clearSelection()
-    await resetMany(tasks.map((t) => t.id))
+    selection.clearSelection()
+    await actions.resetMany(tasks.map((t) => t.id))
   }
 
-  useEffect(() => {
-    clearSelection()
-  }, [search, statusFilter])
+  const navigateToTimer = () => onNavigate('timer')
 
   return (
     <div className="mx-auto w-full max-w-2xl">
-      {showModal && <TaskFormModal task={editTask} onClose={() => setShowModal(false)} />}
+      <LoadingOverlay open={isBusy} />
+      {actions.showModal && (
+        <TaskFormModal task={actions.editTask} onClose={actions.closeModal} />
+      )}
 
-      <div className="mb-5 flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Tasks</h1>
-          {tasks.length > 0 && (
-            <button
-              onClick={handleResetAll}
-              disabled={isBusy}
-              title="Reset every task back to Queued and zero its progress"
-              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <RotateCcw size={12} />
-              Reset all
-            </button>
-          )}
-        </div>
+      <TasksHeader
+        total={filters.total}
+        activeCount={filters.activeCount}
+        completedCount={filters.completedCount}
+        hasTasks={tasks.length > 0}
+        isBusy={isBusy}
+        onResetAll={handleResetAll}
+      />
 
-        <div className="flex gap-2">
-          <StatBadge
-            label="Total"
-            value={total}
-            color="border-border bg-card text-foreground"
-          />
-          <StatBadge
-            label="Active"
-            value={activeCount}
-            color="border-toro/40 bg-toro/10 text-toro"
-          />
-          <StatBadge
-            label="Done"
-            value={completedCount}
-            color="border-emerald-400/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400"
-          />
-        </div>
-      </div>
+      <QuickAddBar defaultSessions={defaultSessions} onOpenCreate={actions.openCreate} />
 
-      <div className="mb-4 flex gap-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-          placeholder="Quick add task…"
-          className="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring min-w-0 flex-1 rounded-xl border px-4 py-2.5 text-sm focus:ring-2 focus:outline-none"
+      <TaskSearchBar
+        search={filters.search}
+        onSearchChange={filters.setSearch}
+        statusFilter={filters.statusFilter}
+        onStatusChange={filters.setStatusFilter}
+      />
+
+      {selection.size > 0 && (
+        <BulkSelectToolbar
+          selectedCount={selection.size}
+          isAllVisibleSelected={selection.isAllVisibleSelected}
+          isBusy={isBusy}
+          onSelectAllVisible={selection.toggleSelectAllVisible}
+          onClear={selection.clearSelection}
+          onResetSelected={handleResetSelected}
         />
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={sessions}
-          onChange={(e) => setSessions(Number(e.target.value))}
-          title="Sessions"
-          className="border-input bg-background text-foreground focus:ring-ring w-16 rounded-xl border px-3 py-2.5 text-center text-sm focus:ring-2 focus:outline-none"
-        />
-        <button
-          onClick={handleQuickAdd}
-          disabled={!title.trim()}
-          className="bg-primary text-primary-foreground flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Plus size={16} />
-          Add
-        </button>
-        <button
-          onClick={openCreate}
-          title="Create task with full details"
-          className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors"
-        >
-          <Pencil size={15} />
-          Detail
-        </button>
-      </div>
-
-      <div className="mb-6 flex gap-2">
-        <div className="relative flex-1">
-          <Search
-            size={14}
-            className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tasks…"
-            className="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-xl border py-2 pr-4 pl-9 text-sm focus:ring-2 focus:outline-none"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-          className="border-input bg-background text-foreground focus:ring-ring rounded-xl border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
-        >
-          <option value="all">All</option>
-          <option value="Active">Active</option>
-          <option value="Queued">Queued</option>
-          <option value="Paused">Paused</option>
-          <option value="Completed">Completed</option>
-        </select>
-      </div>
-
-      {selectedIds.size > 0 && (
-        <div className="border-border bg-card mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="font-medium">{selectedIds.size} selected</span>
-            <button
-              onClick={toggleSelectAllVisible}
-              className="text-muted-foreground hover:text-foreground text-xs underline transition-colors"
-            >
-              {isAllVisibleSelected ? 'Clear' : 'Select all'}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={clearSelection}
-              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleResetSelected}
-              disabled={isBusy}
-              className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <RotateCcw size={12} />
-              Reset selected
-            </button>
-          </div>
-        </div>
       )}
 
-      {error && !isLoading && (
-        <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <span className="text-destructive text-sm">{error.message}</span>
-          <button
-            onClick={() => void useTaskStore.getState().loadTasks()}
-            className="border-border hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+      <TaskListState
+        error={error}
+        isLoading={isLoading}
+        hasTasks={tasks.length > 0}
+        hasResults={filters.filtered.length > 0}
+        onRetry={() => void useTaskStore.getState().loadTasks()}
+        onOpenCreate={actions.openCreate}
+      />
 
-      {isLoading && (
-        <p className="text-muted-foreground py-8 text-center text-sm">Loading…</p>
-      )}
+      <IncompleteTaskList
+        tasks={filters.incomplete}
+        handlers={actions.handlers}
+        onNavigateToTimer={navigateToTimer}
+        selectedIds={selection.selectedIds}
+        onToggleSelect={selection.toggleSelect}
+      />
 
-      {!isLoading && !error && tasks.length === 0 && (
-        <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-          <div className="bg-muted/60 mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-            <ListTodo size={26} className="text-muted-foreground" />
-          </div>
-          <h3 className="mb-1 text-base font-semibold">No tasks yet</h3>
-          <p className="text-muted-foreground mb-5 max-w-xs text-sm">
-            Create your first task to start focusing. You can edit or delete it any time.
-          </p>
-          <button
-            onClick={openCreate}
-            className="bg-primary text-primary-foreground flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm transition-all hover:opacity-90 active:scale-95"
-          >
-            <Plus size={16} />
-            Create task
-          </button>
-        </div>
-      )}
-
-      {!isLoading && !error && tasks.length > 0 && filtered.length === 0 && (
-        <p className="text-muted-foreground py-12 text-center text-sm">
-          No tasks match your search or filter.
-        </p>
-      )}
-
-      {incomplete.length > 0 && (
-        <ul className="mb-6 flex flex-col gap-2">
-          {incomplete.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              onEdit={() => openEdit(task)}
-              onComplete={() => handleCompleteTask(task)}
-              onReset={() => handleResetTask(task)}
-              onDelete={async () => {
-                if (!window.confirm('Delete "' + task.name + '"? This cannot be undone.'))
-                  return
-                await handleDeleteTask(task)
-              }}
-              onSetActive={() => handleSetActive(task)}
-              timerRunning={timerRunning}
-              onNavigateToTimer={() => onNavigate('timer')}
-              isSelected={selectedIds.has(task.id)}
-              onToggleSelect={() => toggleSelect(task.id)}
-            />
-          ))}
-        </ul>
-      )}
-
-      {completed.length > 0 && (
-        <details className="group">
-          <summary className="text-muted-foreground mb-3 flex cursor-pointer list-none items-center gap-1 text-xs font-semibold tracking-wider uppercase select-none">
-            <RotateCcw size={11} className="transition-transform group-open:rotate-180" />
-            Completed ({completed.length})
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleSelectAllCompleted()
-              }}
-              title={isAllCompletedSelected ? 'Clear completed selection' : 'Select all completed tasks'}
-              className="text-muted-foreground hover:text-foreground ml-auto rounded text-xs font-medium tracking-normal underline transition-colors normal-case"
-            >
-              {isAllCompletedSelected ? 'Clear' : 'Select all'}
-            </button>
-          </summary>
-          <ul className="flex flex-col gap-2">
-            {completed.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onEdit={() => openEdit(task)}
-                onComplete={() => handleCompleteTask(task)}
-                onReset={() => handleResetTask(task)}
-                onDelete={async () => {
-                  if (
-                    !window.confirm('Delete "' + task.name + '"? This cannot be undone.')
-                  )
-                    return
-                  await handleDeleteTask(task)
-                }}
-                onSetActive={() => void setActiveTask(task.id)}
-                timerRunning={timerRunning}
-                onNavigateToTimer={() => onNavigate('timer')}
-                isSelected={selectedIds.has(task.id)}
-                onToggleSelect={() => toggleSelect(task.id)}
-              />
-            ))}
-          </ul>
-        </details>
-      )}
+      <CompletedTaskList
+        tasks={filters.completed}
+        handlers={actions.handlers}
+        onNavigateToTimer={navigateToTimer}
+        selectedIds={selection.selectedIds}
+        isAllCompletedSelected={selection.isAllCompletedSelected}
+        onToggleSelect={selection.toggleSelect}
+        onToggleSelectAllCompleted={selection.toggleSelectAllCompleted}
+      />
     </div>
   )
 }
