@@ -11,6 +11,7 @@ import { TaskListState } from '@/pages/tasks/components/TaskListState'
 import { IncompleteTaskList } from '@/pages/tasks/components/IncompleteTaskList'
 import { CompletedTaskList } from '@/pages/tasks/components/CompletedTaskList'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { useConfirm } from '@/components/ConfirmProvider'
 import { useSettingsStore } from '@/pages/settings/useSettings'
 import { DEFAULT_DURATIONS } from '@/lib/duration'
 import type { Page } from '@/app/types'
@@ -26,6 +27,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)
   const isBusy = useTaskStore((s) => s.isBusy)
+  const { confirm } = useConfirm()
 
   const defaultSessions =
     useSettingsStore((s) => s.config?.timer.sessions_until_long_break) ??
@@ -43,24 +45,26 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const handleResetSelected = async () => {
     const ids = selection.selectedArray
     if (ids.length === 0) return
-    if (
-      !window.confirm(
-        `Reset ${ids.length} selected task${ids.length === 1 ? '' : 's'}? This zeroes their progress.`,
-      )
-    )
-      return
+    const confirmed = await confirm({
+      title: 'Reset Tasks',
+      message: `Reset ${ids.length} selected task${ids.length === 1 ? '' : 's'}? This zeroes their progress.`,
+      variant: 'danger',
+      confirmLabel: 'Reset',
+    })
+    if (!confirmed) return
     const count = await actions.resetMany(ids)
     if (count > 0) selection.clearSelection()
   }
 
   const handleResetAll = async () => {
     if (tasks.length === 0) return
-    if (
-      !window.confirm(
-        `Reset ALL ${tasks.length} task${tasks.length === 1 ? '' : 's'}? This zeroes progress on every task.`,
-      )
-    )
-      return
+    const confirmed = await confirm({
+      title: 'Reset All Tasks',
+      message: `Reset ALL ${tasks.length} task${tasks.length === 1 ? '' : 's'}? This zeroes progress on every task.`,
+      variant: 'danger',
+      confirmLabel: 'Reset All',
+    })
+    if (!confirmed) return
     selection.clearSelection()
     await actions.resetMany(tasks.map((t) => t.id))
   }

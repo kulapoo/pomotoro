@@ -1,20 +1,25 @@
 import { Section } from '@/components/ui/Section'
 import { toast } from 'sonner'
 import { useSettingsStore } from '@/pages/settings/useSettings'
+import { useConfirm } from '@/components/ConfirmProvider'
 
 export function StorageTab() {
   const openDataDirectory = useSettingsStore((s) => s.openDataDirectory)
   const clearAllData = useSettingsStore((s) => s.clearAllData)
+  const { confirm } = useConfirm()
 
   const openDataDir = async () => {
     await openDataDirectory()
   }
 
   const handleClearAll = async () => {
-    if (
-      !window.confirm('Delete all tasks, settings, and history? This cannot be undone.')
-    )
-      return
+    const confirmed = await confirm({
+      title: 'Clear All Data',
+      message: 'Delete all tasks, settings, and history? This cannot be undone.',
+      variant: 'danger',
+      confirmLabel: 'Clear',
+    })
+    if (!confirmed) return
     const ok = await clearAllData()
     if (ok) toast.success('All data cleared')
   }

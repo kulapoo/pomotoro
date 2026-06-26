@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
 import { isTimerRunning, useTimerStore } from '@/pages/timer/useTimer'
+import { useConfirm } from '@/components/ConfirmProvider'
 import type { Page } from '@/app/types'
 
 export interface TaskRowHandlers {
@@ -20,6 +21,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
   const resetTasks = useTaskStore((s) => s.resetTasks)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
+  const { confirm } = useConfirm()
 
   const [showModal, setShowModal] = useState(false)
   const [editTask, setEditTask] = useState<Task | undefined>(undefined)
@@ -87,14 +89,20 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
 
   const handleDelete = useCallback(
     async (task: Task) => {
-      if (!window.confirm('Delete "' + task.name + '"? This cannot be undone.')) return
+      const confirmed = await confirm({
+        title: 'Delete Task',
+        message: `Delete "${task.name}"? This cannot be undone.`,
+        variant: 'danger',
+        confirmLabel: 'Delete',
+      })
+      if (!confirmed) return
       const ok = await deleteTask(task.id)
       if (ok) {
         toast.info('Task deleted')
         window.setTimeout(refreshTimer, 50)
       }
     },
-    [deleteTask, refreshTimer],
+    [confirm, deleteTask, refreshTimer],
   )
 
   const resetMany = useCallback(
@@ -106,6 +114,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
         window.setTimeout(refreshTimer, 50)
         return ids.length
       }
+      toast.error('Failed to reset tasks')
       return 0
     },
     [refreshTimer, resetTasks],

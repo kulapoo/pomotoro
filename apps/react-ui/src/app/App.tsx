@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ScreenBlocker } from '@/components/ScreenBlocker'
+import { ConfirmProvider } from '@/components/ConfirmProvider'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Bootstrap } from '@/app/Bootstrap'
 import { ErrorWatcher } from '@/app/ErrorWatcher'
@@ -40,30 +41,32 @@ export function App() {
 
   return (
     <Bootstrap>
-      <ErrorWatcher />
-      <DevPanel />
-      <div className="text-foreground flex h-screen w-full overflow-hidden bg-linear-to-br from-rose-50 via-white to-rose-100 font-sans transition-colors duration-300 dark:from-gray-950 dark:via-gray-900 dark:to-rose-950">
-        <Toaster position={toasterPosition} richColors />
-        <Sidebar currentPage={page} onNavigate={setPage} />
-        <main className="flex-1 overflow-y-auto p-6 md:p-10">
-          {page === 'timer' && (
-            <ErrorBoundary>
-              <TimerPage onNavigate={setPage} />
-            </ErrorBoundary>
-          )}
-          {page === 'tasks' && (
-            <ErrorBoundary>
-              <TasksPage onNavigate={setPage} />
-            </ErrorBoundary>
-          )}
-          {page === 'settings' && (
-            <ErrorBoundary>
-              <SettingsPage />
-            </ErrorBoundary>
-          )}
-        </main>
-      </div>
-      <ScreenBlocker />
+      <ConfirmProvider>
+        <ErrorWatcher />
+        <DevPanel />
+        <div className="text-foreground flex h-screen w-full overflow-hidden bg-linear-to-br from-rose-50 via-white to-rose-100 font-sans transition-colors duration-300 dark:from-gray-950 dark:via-gray-900 dark:to-rose-950">
+          <Toaster position={toasterPosition} richColors />
+          <Sidebar currentPage={page} onNavigate={setPage} />
+          <main className="flex-1 overflow-y-auto p-6 md:p-10">
+            {page === 'timer' && (
+              <ErrorBoundary>
+                <TimerPage onNavigate={setPage} />
+              </ErrorBoundary>
+            )}
+            {page === 'tasks' && (
+              <ErrorBoundary>
+                <TasksPage onNavigate={setPage} />
+              </ErrorBoundary>
+            )}
+            {page === 'settings' && (
+              <ErrorBoundary>
+                <SettingsPage />
+              </ErrorBoundary>
+            )}
+          </main>
+        </div>
+        <ScreenBlocker />
+      </ConfirmProvider>
     </Bootstrap>
   )
 }
