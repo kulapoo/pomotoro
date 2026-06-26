@@ -891,8 +891,11 @@ fn render_refresh(
             let _ = tray.set_title::<&str>(None);
         } else {
             // macOS / Windows: `set_title` renders native crisp text.
+            // NOTE: macOS's tray backend ignores `set_title(None)` — the old
+            // title persists. To actually clear it we must pass `Some("")`.
             if label_changed {
-                tray.set_title(label.as_deref())?;
+                let title = label.as_deref().unwrap_or("");
+                tray.set_title(Some(title))?;
                 tray.set_icon(Some(toro_base_icon().clone()))?;
                 // Commit only after successful updates.
                 if let Ok(mut g) = LAST_LABEL.lock() {
