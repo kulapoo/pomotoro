@@ -37,25 +37,24 @@ export function useEventBus(): void {
     const reloadTimer = createBatchedLoader(() => fetchTimer())
     const reloadActiveTask = createBatchedLoader(() => loadActiveTask())
 
-    const reload = () => {
-      window.setTimeout(() => {
-        reloadTimer()
-        reloadActiveTask()
-      }, 1000)
-    }
-
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, applyTick),
-      onEvent(events.timerPhaseCompleted, reload),
+      onEvent(events.timerPhaseCompleted, () => {
+        window.setTimeout(() => {
+          reloadActiveTask()
+          fetchTimer()
+        }, 500)
+      }),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
       onEvent(events.timerStarted, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),
-      onEvent(events.taskActiveChanged, reload),
+      // onEvent(events.taskActiveChanged, reload),
+      // onEvent(events.taskCompleted, loadActiveTask),
 
       onEvent(events.taskAutoAdvanced, () => {
-        reload()
+        // reload()
         toast.success('Switched to next incomplete task')
       }),
       // Screen blocker: show the focus-enforcement overlay when a work/break

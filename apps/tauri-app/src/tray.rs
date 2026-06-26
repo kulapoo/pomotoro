@@ -8,7 +8,7 @@
 //! play/pause, restart phase, skip phase, reset task, and complete task.
 
 use std::sync::{
-    Arc,
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -57,6 +57,70 @@ pub fn intended_visible() -> bool {
 /// start-minimized, etc.).
 pub fn set_intended_visible(v: bool) {
     INTENDED_VISIBLE.store(v, Ordering::Relaxed);
+}
+
+// ── refresh coalescing ───────────────────────────────────────────────────────
+//
+// Tray event listeners fire synchronously on the thread that *emits* the event
+// — for the per-second timer TICK and most status events that is a tokio worker
+// thread. Doing the repo reads + icon re-render inline there (and worse,
+// `block_on_safe`-ing them, which spawns a fresh OS thread per call because we
+// are already inside a runtime) starves the very runtime that produces the data
+// and visibly "chokes" the client.
+//
+// Instead every listener/menu handler just pushes a cheap signal onto an
+// unbounded channel; a single background task drains it, coalesces bursts, and
+// performs one async `refresh`. That keeps the work off the emitter thread and
+// collapses the half-dozen events a single user action can fan out into one
+// re-render.
+
+/// A request to re-sync the tray UI.
+enum RefreshSignal {
+    /// Timer tick carrying the live remaining-seconds override (avoids reading
+    /// the periodically-persisted timer, which is stale between ticks).
+    Tick(u32),
+    /// Any other change (status / phase / task / config) — re-read everything.
+    Dirty,
+}
+
+static REFRESH_TX: std::sync::OnceLock<
+    tokio::sync::mpsc::UnboundedSender<RefreshSignal>,
+> = std::sync::OnceLock::new();
+
+/// Enqueue a refresh signal. Non-blocking; safe to call from any thread
+/// (listener callbacks, menu handlers, window events).
+fn schedule_refresh(signal: RefreshSignal) {
+    if let Some(tx) = REFRESH_TX.get() {
+        let _ = tx.send(signal);
+    }
+}
+
+/// Last countdown label painted into the tray. Used to skip the (relatively
+/// expensive) icon pixel rebuild + `set_icon`/`set_title` calls when the
+/// displayed text has not actually changed.
+static LAST_LABEL: Mutex<Option<String>> = Mutex::new(None);
+
+/// Background task owning all tray re-renders. Drains the signal channel,
+/// coalesces a burst into a single refresh, and forwards the most recent tick
+/// override (if any) so the countdown stays live.
+async fn refresh_loop(
+    app: AppHandle,
+    mut rx: tokio::sync::mpsc::UnboundedReceiver<RefreshSignal>,
+) {
+    while let Some(first) = rx.recv().await {
+        // Coalesce everything already queued by the time we get here. Keep the
+        // latest tick override so the countdown reflects the freshest second.
+        let mut override_secs = match first {
+            RefreshSignal::Tick(s) => Some(s),
+            RefreshSignal::Dirty => None,
+        };
+        while let Ok(next) = rx.try_recv() {
+            if let RefreshSignal::Tick(s) = next {
+                override_secs = Some(s);
+            }
+        }
+        let _ = refresh_async(&app, override_secs).await;
+    }
 }
 
 /// Cached decoded toro tray icon (the brand bull-head on an indigo tile).
@@ -279,6 +343,15 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let (menu, handles) = build_menu(app)?;
     app.manage(handles);
 
+    // Spawn the single coalescing refresh loop before registering listeners so
+    // the very first signal has somewhere to go.
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<RefreshSignal>();
+    let _ = REFRESH_TX.set(tx);
+    let app_loop = app.clone();
+    tauri::async_runtime::spawn(async move {
+        refresh_loop(app_loop, rx).await;
+    });
+
     let initial_icon = overlay_countdown(toro_base_icon(), None);
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(initial_icon)
@@ -426,7 +499,6 @@ fn menu_play_pause(app: &AppHandle) {
         return;
     };
 
-    let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let res = match status {
             TimerStatus::Running => {
@@ -470,7 +542,7 @@ fn menu_play_pause(app: &AppHandle) {
         if let Err(e) = res {
             log::error!("Tray play/pause failed: {}", e);
         }
-        let _ = refresh(&app, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -495,19 +567,18 @@ fn menu_reset_phase(app: &AppHandle) {
         return;
     };
 
-    let app = app.clone();
     tauri::async_runtime::spawn(async move {
         // Task's timer configuration is needed to restart the tick loop.
         let task = match task_repo.get_by_id(task_id).await {
             Ok(Some(t)) => t,
             Ok(None) => {
                 log::error!("Tray reset phase: task {} not found", task_id);
-                let _ = refresh(&app, None);
+                schedule_refresh(RefreshSignal::Dirty);
                 return;
             }
             Err(e) => {
                 log::error!("Tray reset phase: failed to load task: {}", e);
-                let _ = refresh(&app, None);
+                schedule_refresh(RefreshSignal::Dirty);
                 return;
             }
         };
@@ -544,7 +615,7 @@ fn menu_reset_phase(app: &AppHandle) {
                 }
             }
         }
-        let _ = refresh(&app, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -563,7 +634,6 @@ fn menu_skip(app: &AppHandle) {
         return;
     };
 
-    let app = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(e) =
             skip_timer_phase(task_repo, timer_repo, event_publisher, task_id)
@@ -571,7 +641,7 @@ fn menu_skip(app: &AppHandle) {
         {
             log::error!("Tray skip phase failed: {}", e);
         }
-        let _ = refresh(&app, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -592,14 +662,13 @@ fn menu_reset_task(app: &AppHandle) {
         return;
     };
 
-    let app = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(e) =
             reset_task_uc(task_repo, timer_repo, event_publisher, task_id).await
         {
             log::error!("Tray reset task failed: {}", e);
         }
-        let _ = refresh(&app, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -642,7 +711,7 @@ fn menu_complete(app: &AppHandle) {
         {
             log::error!("Tray complete task failed: {}", e);
         }
-        let _ = refresh(&app_handle, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
@@ -686,8 +755,11 @@ fn quit_app(app: &AppHandle) {
 }
 
 /// Subscribe to timer + task + config events so the tray stays in sync.
+///
+/// These callbacks run on the emitter's thread (a tokio worker for ticks), so
+/// they must stay cheap: they only push a signal onto the coalescing channel
+/// and let the background `refresh_loop` do the actual work.
 fn register_event_listeners(app: &AppHandle) {
-    let app_tick = app.clone();
     app.listen(ui_listeners::timer::TICK, move |event| {
         let remaining =
             serde_json::from_str::<serde_json::Value>(event.payload())
@@ -697,7 +769,10 @@ fn register_event_listeners(app: &AppHandle) {
                         .and_then(|v| v.as_u64())
                         .map(|v| v as u32)
                 });
-        let _ = refresh(&app_tick, remaining);
+        match remaining {
+            Some(s) => schedule_refresh(RefreshSignal::Tick(s)),
+            None => schedule_refresh(RefreshSignal::Dirty),
+        }
     });
 
     for evt in [
@@ -714,20 +789,23 @@ fn register_event_listeners(app: &AppHandle) {
         ui_listeners::task::ACTIVE_CHANGED,
         ui_listeners::task::AUTO_ADVANCED,
     ] {
-        let app_status = app.clone();
         app.listen(evt, move |_| {
-            let _ = refresh(&app_status, None);
+            schedule_refresh(RefreshSignal::Dirty);
         });
     }
 
-    let app_cfg = app.clone();
     app.listen(ui_listeners::config::CONFIG_UPDATED, move |_| {
-        let _ = refresh(&app_cfg, None);
+        schedule_refresh(RefreshSignal::Dirty);
     });
 }
 
 /// Re-read timer + general config + active task, then update the tray
 /// icon/tooltip/title and the menu item labels/enabled-state.
+///
+/// Synchronous entry point used by the rare callers that are not on the async
+/// runtime path (initial paint in `build_tray`, window close-to-tray). The
+/// listener/menu-handler path goes through the background `refresh_loop`
+/// instead — see `schedule_refresh`.
 ///
 /// When `remaining_secs_override` is `Some`, it is used for the countdown
 /// display instead of reading `remaining_seconds` from the persisted timer
@@ -739,7 +817,51 @@ pub fn refresh(
     let Some((timer, general, task)) = load_state(app) else {
         return Ok(());
     };
+    render_refresh(
+        app,
+        &timer,
+        &general,
+        task.as_ref(),
+        remaining_secs_override,
+    )
+}
 
+/// Async counterpart of [`refresh`] used by the coalescing `refresh_loop`.
+/// Reads repositories directly with `.await` (no `block_on`, no extra OS
+/// thread) so it never stalls the tokio worker that emitted the event.
+async fn refresh_async(
+    app: &AppHandle,
+    remaining_secs_override: Option<u32>,
+) -> tauri::Result<()> {
+    let Some((timer, general, task)) = load_state_async(app).await else {
+        return Ok(());
+    };
+    render_refresh(
+        app,
+        &timer,
+        &general,
+        task.as_ref(),
+        remaining_secs_override,
+    )
+}
+
+/// Apply the loaded state to the tray icon/tooltip/title and the menu items.
+/// Pure UI mutation — no async, no blocking. Shared by the sync and async
+/// refresh entry points.
+///
+/// The countdown label is diffed against [`LAST_LABEL`]; the (relatively
+/// expensive) icon pixel rebuild + `set_icon`/`set_title` calls are skipped
+/// when the displayed text has not changed. For a per-second tick this still
+/// repaints once per second (the label changes each second), but it eliminates
+/// the redundant re-renders from the many status/task events that fan out per
+/// user action, and avoids any work while idle.
+fn render_refresh(
+    app: &AppHandle,
+    timer: &Timer,
+    general: &GeneralConfig,
+    task: Option<&Task>,
+    remaining_secs_override: Option<u32>,
+) -> tauri::Result<()> {
     let status = timer.status();
     let phase = timer.get_current_phase();
     let running = matches!(status, TimerStatus::Running);
@@ -750,54 +872,73 @@ pub fn refresh(
     let has_task = timer.task_id().is_some();
 
     // Mirror the React `useTimerSession` gating flags.
-    let is_task_completed = task.as_ref().is_some_and(|t| {
+    let is_task_completed = task.is_some_and(|t| {
         matches!(t.status(), TaskStatus::Completed)
             && t.completed_at().is_some()
     });
     let is_break = matches!(phase, Phase::ShortBreak | Phase::LongBreak);
-    let is_last_break = task.as_ref().is_some_and(|t| {
+    let is_last_break = task.is_some_and(|t| {
         t.completed_at().is_none()
             && matches!(t.status(), TaskStatus::Completed)
             && is_break
     });
 
+    // Compute the single countdown label to display, gated by platform
+    // conventions (Linux always shows it when a task is attached; macOS/Windows
+    // only while actively counting).
+    let label = if general.show_countdown_in_tray && has_task {
+        if is_linux() {
+            let secs = remaining_secs_override
+                .unwrap_or_else(|| timer.remaining_seconds(None));
+            Some(format!("{:02}:{:02}", secs / 60, secs % 60))
+        } else {
+            match status {
+                TimerStatus::Running | TimerStatus::Paused => {
+                    let secs = remaining_secs_override
+                        .unwrap_or_else(|| timer.remaining_seconds(None));
+                    Some(format!("{:02}:{:02}", secs / 60, secs % 60))
+                }
+                TimerStatus::Idle | TimerStatus::Stopped => None,
+            }
+        }
+    } else {
+        None
+    };
+
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         tray.set_tooltip(Some(tooltip_text(status, phase, has_task)))?;
 
+        // Only repaint the icon/title when the displayed text actually
+        // changes — coalesced bursts that don't alter the label (e.g. several
+        // task events arriving within the same second) become no-ops.
+        let label_changed = match LAST_LABEL.lock() {
+            Ok(mut g) => {
+                if *g != label {
+                    *g = label.clone();
+                    true
+                } else {
+                    false
+                }
+            }
+            // Poisoned mutex: be safe and repaint.
+            Err(_) => true,
+        };
+
         if is_linux() {
-            // Linux tray backends ignore `set_title`, so we bake the
-            // countdown text directly into the icon pixels. When a task is
-            // attached we always show the countdown — even for Idle/Stopped
-            // — so the user sees the full phase duration at a glance.
-            let countdown = if general.show_countdown_in_tray && has_task {
-                let secs = remaining_secs_override
-                    .unwrap_or_else(|| timer.remaining_seconds(None));
-                Some(format!("{:02}:{:02}", secs / 60, secs % 60))
-            } else {
-                None
-            };
-            let icon =
-                overlay_countdown(toro_base_icon(), countdown.as_deref());
-            tray.set_icon(Some(icon))?;
+            // Linux tray backends ignore `set_title`, so we bake the countdown
+            // text directly into the icon pixels.
+            if label_changed {
+                let icon =
+                    overlay_countdown(toro_base_icon(), label.as_deref());
+                tray.set_icon(Some(icon))?;
+            }
             let _ = tray.set_title::<&str>(None);
         } else {
-            // macOS / Windows: `set_title` renders native crisp text
-            // next to the tray icon. Only show the countdown while the
-            // timer is actively counting (Running or Paused).
-            let title = if general.show_countdown_in_tray {
-                match status {
-                    TimerStatus::Running | TimerStatus::Paused => {
-                        let secs = remaining_secs_override
-                            .unwrap_or_else(|| timer.remaining_seconds(None));
-                        Some(format!("{:02}:{:02}", secs / 60, secs % 60))
-                    }
-                    TimerStatus::Idle | TimerStatus::Stopped => None,
-                }
-            } else {
-                None
-            };
-            tray.set_title(title.as_deref())?;
-            tray.set_icon(Some(toro_base_icon().clone()))?;
+            // macOS / Windows: `set_title` renders native crisp text.
+            if label_changed {
+                tray.set_title(label.as_deref())?;
+                tray.set_icon(Some(toro_base_icon().clone()))?;
+            }
         }
     }
 
@@ -861,11 +1002,12 @@ fn tooltip_text(status: TimerStatus, phase: Phase, has_task: bool) -> String {
 ///
 /// `tauri::async_runtime::block_on` panics with "Cannot start a runtime
 /// from within a runtime" when the caller is already on a tokio worker
-/// thread — which is exactly where our `app.listen` callbacks fire (timer
-/// ticks and similar events are emitted from async background tasks). When
-/// we detect an active runtime we hop onto a bare OS thread so `block_on`
-/// is driven from outside the worker pool; otherwise we call it directly
-/// (e.g. from the main thread handling a menu/tray click).
+/// thread. The only remaining callers of [`load_state`] are synchronous setup
+/// (`build_tray` initial paint) and window event handlers, which usually run
+/// on the main thread — but defensively, when an active runtime is detected we
+/// hop onto a bare OS thread so `block_on` is driven from outside the worker
+/// pool. The hot listener path no longer touches this; it goes through
+/// [`refresh_async`] on the runtime directly.
 fn block_on_safe<F>(fut: F) -> F::Output
 where
     F: std::future::Future + Send + 'static,
@@ -884,6 +1026,10 @@ where
 
 /// Load the current timer, general config, and active task from managed Tauri
 /// state. The task is `None` when no task is bound to the timer.
+///
+/// Synchronous wrapper used by the non-async refresh path (`build_tray` initial
+/// paint, window close-to-tray, [`current_general`]). It borrows the repos and
+/// drives the inner future via [`block_on_safe`].
 fn load_state(app: &AppHandle) -> Option<(Timer, GeneralConfig, Option<Task>)> {
     let timer_repo = app.try_state::<TimerRepositoryArc>()?.inner().clone();
     let config_repo = app
@@ -895,15 +1041,40 @@ fn load_state(app: &AppHandle) -> Option<(Timer, GeneralConfig, Option<Task>)> {
         .inner()
         .clone();
 
-    block_on_safe(async move {
-        let timer = timer_repo.get().await.ok()?;
-        let general = config_repo.get_config().await.ok()?.general;
-        let task = match timer.task_id() {
-            Some(tid) => task_repo.get_by_id(tid).await.ok().flatten(),
-            None => None,
-        };
-        Some((timer, general, task))
-    })
+    block_on_safe(load_state_inner(timer_repo, config_repo, task_repo))
+}
+
+/// Async load used by the coalescing `refresh_loop`; identical to
+/// [`load_state`] but without the `block_on` hop so it never stalls a tokio
+/// worker.
+async fn load_state_async(
+    app: &AppHandle,
+) -> Option<(Timer, GeneralConfig, Option<Task>)> {
+    let timer_repo = app.try_state::<TimerRepositoryArc>()?.inner().clone();
+    let config_repo = app
+        .try_state::<Arc<dyn ConfigRepository + Send + Sync>>()?
+        .inner()
+        .clone();
+    let task_repo = app
+        .try_state::<Arc<dyn TaskRepository + Send + Sync>>()?
+        .inner()
+        .clone();
+    load_state_inner(timer_repo, config_repo, task_repo).await
+}
+
+/// Shared repository reads backing both the sync and async load paths.
+async fn load_state_inner(
+    timer_repo: TimerRepositoryArc,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+) -> Option<(Timer, GeneralConfig, Option<Task>)> {
+    let timer = timer_repo.get().await.ok()?;
+    let general = config_repo.get_config().await.ok()?.general;
+    let task = match timer.task_id() {
+        Some(tid) => task_repo.get_by_id(tid).await.ok().flatten(),
+        None => None,
+    };
+    Some((timer, general, task))
 }
 
 /// Read the current `GeneralConfig` (best-effort; falls back to defaults if

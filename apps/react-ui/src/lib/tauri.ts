@@ -86,13 +86,51 @@ interface CommandMap {
 }
 
 /**
+ * True once the webview has started tearing down (reload, navigation, or Vite
+ * HMR module swap). While set, {@link invokeCmd} refuses to dispatch new IPC
+ * calls so they cannot register callback ids that Rust will later be unable
+ * to deliver to (the `[TAURI] Couldn't find callback id <n>` warning).
+ *
+ * NOTE: this cannot suppress the warning for calls that were ALREADY in flight
+ * when the teardown began — those JS promises are gone, and Rust will still
+ * log when it fails to find their callback. This only prevents the cascade of
+ * NEW invokes fired by event listeners/effects during the teardown window.
+ */
+let isTearingDown = false
+
+if (typeof window !== 'undefined') {
+  for (const evtName of ['pagehide', 'beforeunload'] as const) {
+    window.addEventListener(evtName, () => {
+      isTearingDown = true
+    })
+  }
+}
+
+// Vite HMR: a module swap re-runs effects/listeners that may immediately
+// fire invokes. Mark teardown during dispose so the new module knows to
+// stay quiet until the page settles.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    isTearingDown = true
+  })
+}
+
+/**
  * Type-safe wrapper around `@tauri-apps/api/core` `invoke`.
  * Rejects with {@link BackendError} on failure (never a raw string).
+ *
+ * During webview teardown (reload / HMR) this returns a forever-pending
+ * promise instead of dispatching IPC, so no orphaned Rust callback is
+ * registered. Callers with `.catch` handlers (e.g. fire-and-forget screen
+ * blocker) are unaffected; they simply never hear back.
  */
 export function invokeCmd<K extends keyof CommandMap>(
   command: K,
   ...rest: CommandMap[K]['args'] extends void ? [] : [CommandMap[K]['args']]
 ): Promise<CommandMap[K]['ret']> {
+  if (isTearingDown) {
+    return new Promise<CommandMap[K]['ret']>(() => {})
+  }
   const args = rest[0] as Record<string, unknown> | undefined
   return invoke<CommandMap[K]['ret']>(command, args).catch((cause: unknown) => {
     throw new BackendError({ command, args, cause })
@@ -151,4 +189,20 @@ export function onEvent<K extends keyof EventPayloadMap>(
   handler: (payload: EventPayloadMap[K]) => void,
 ): Promise<UnlistenFn> {
   return listen(name, (e) => handler(e.payload as EventPayloadMap[K]))
+}
+
+/**
+ * Subscribes to every event in {@link events} and logs each payload to the
+ * browser console. Returns a cleanup that unlistens all of them.
+ * Dev aid for inspecting incoming Tauri events.
+ */
+export function logTauriEvents(): () => void {
+  const unlisteners = Object.values(events).map((name) =>
+    listen(name, (e) =>
+      console.log(`%c[tauri ${name}]`, 'color:#6ab0ff;font-weight:bold', e.payload),
+    ),
+  )
+  return () => {
+    for (const p of unlisteners) void p.then((fn) => fn())
+  }
 }
