@@ -9,42 +9,42 @@ default:
 # ==============================================================================
 
 # Run development server (starts Vite + Tauri together)
-dev:
-    #!/usr/bin/env bash
-    set -e
-    ROOT="{{justfile_directory()}}"
-    # Start Vite in its own process group so we can reliably tear it down.
-    # `npm run dev` spawns `sh -> vite` as children; killing just npm leaves
-    # vite orphaned and still bound to port 5173 (strictPort), which makes the
-    # next `just dev` fail with "port already in use" — e.g. after quitting the
-    # app from the tray (app.exit terminates Tauri but not the npm child tree).
-    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
-    VITE_PGID=$!
-    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
-    trap cleanup EXIT INT TERM
-    cd "$ROOT/apps/tauri-app" && RUST_LOG=info cargo tauri dev
+dev: (_dev "info")
 
 # Run development server with debug-level logging
-dev-debug:
-    #!/usr/bin/env bash
-    set -e
-    ROOT="{{justfile_directory()}}"
-    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
-    VITE_PGID=$!
-    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
-    trap cleanup EXIT INT TERM
-    cd "$ROOT/apps/tauri-app" && RUST_LOG=debug cargo tauri dev
+dev-debug: (_dev "debug")
 
 # Run development server with trace-level logging (very verbose)
-dev-trace:
+dev-trace: (_dev "trace")
+
+# (private) Shared dev recipe — starts Vite then launches Tauri.
+# `npm run dev` spawns `sh -> vite` as children; killing just npm leaves vite
+# orphaned and still bound to port 5173 (strictPort), which makes the next
+# `just dev` fail with "port already in use" — e.g. after quitting the app from
+# the tray (app.exit terminates Tauri but not the npm child tree).
+# `setsid` creates a new session so we can kill the whole process group on
+# Linux; on macOS (where `setsid` is unavailable) we fall back to freeing the
+# port directly via `lsof`.
+_dev level:
     #!/usr/bin/env bash
     set -e
     ROOT="{{justfile_directory()}}"
-    setsid bash -c "cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev" &
-    VITE_PGID=$!
-    cleanup() { kill -- "-$VITE_PGID" 2>/dev/null || true; }
+    VITE_CMD="cd \"$ROOT/apps/react-ui\" && npm install --silent 2>/dev/null && npm run dev"
+    if command -v setsid >/dev/null 2>&1; then
+        setsid bash -c "$VITE_CMD" &
+    else
+        bash -c "$VITE_CMD" &
+    fi
+    VITE_PID=$!
+    cleanup() {
+        kill "$VITE_PID" 2>/dev/null || true
+        pkill -P "$VITE_PID" 2>/dev/null || true
+        if command -v lsof >/dev/null 2>&1; then
+            lsof -ti:5173 2>/dev/null | xargs kill 2>/dev/null || true
+        fi
+    }
     trap cleanup EXIT INT TERM
-    cd "$ROOT/apps/tauri-app" && RUST_LOG=trace cargo tauri dev
+    cd "$ROOT/apps/tauri-app" && RUST_LOG="{{level}}" cargo tauri dev
 
 # Build for production (builds React UI first, then Tauri app)
 build: clippy fmt-check build-react
