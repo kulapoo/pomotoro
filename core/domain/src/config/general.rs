@@ -16,6 +16,8 @@ pub struct GeneralConfig {
     pub start_minimized: bool,
     #[serde(default = "default_show_countdown_in_tray")]
     pub show_countdown_in_tray: bool,
+    #[serde(default = "default_always_show_countdown_in_tray")]
+    pub always_show_countdown_in_tray: bool,
     #[serde(default = "default_persistence_interval_seconds")]
     pub persistence_interval_seconds: u32,
     #[serde(default)]
@@ -36,6 +38,10 @@ fn default_show_countdown_in_tray() -> bool {
     true
 }
 
+fn default_always_show_countdown_in_tray() -> bool {
+    true
+}
+
 fn default_block_screen_after_work_message() -> String {
     "Work session complete. Time for a break.".to_string()
 }
@@ -53,6 +59,8 @@ impl Default for GeneralConfig {
             minimize_to_tray: true,
             start_minimized: false,
             show_countdown_in_tray: default_show_countdown_in_tray(),
+            always_show_countdown_in_tray:
+                default_always_show_countdown_in_tray(),
             persistence_interval_seconds: default_persistence_interval_seconds(
             ),
             block_screen_after_work: false,

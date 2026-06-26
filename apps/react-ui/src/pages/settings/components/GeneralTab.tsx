@@ -105,6 +105,22 @@ export function GeneralTab({ config, patch }: GeneralTabProps) {
             }
           />
         </Row>
+        {!navigator.userAgent.includes('Linux') && (
+          <Row
+            label="Always show countdown in tray"
+            hint="Show remaining time beside the tray icon even when idle"
+          >
+            <Toggle
+              checked={general.always_show_countdown_in_tray}
+              onChange={(v) =>
+                patch({
+                  ...config,
+                  general: { ...general, always_show_countdown_in_tray: v },
+                })
+              }
+            />
+          </Row>
+        )}
       </Section>
 
       <Section title="Screen Blocking">

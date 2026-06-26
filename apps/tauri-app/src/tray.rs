@@ -848,8 +848,9 @@ fn render_refresh(
 
     // Compute the single countdown label to display, gated by platform
     // conventions (Linux always shows the countdown while a task is bound,
-    // baking it into the icon; macOS/Windows only while running or paused so
-    // the menu-bar title isn't cluttered when idle).
+    // baking it into the icon; macOS/Windows show it beside the icon as text,
+    // and `always_show_countdown_in_tray` controls whether it stays visible
+    // when the timer is idle/stopped).
     let label = if general.show_countdown_in_tray && has_task {
         if is_linux() {
             let config = task.map(|t| &t.config().timer);
@@ -857,13 +858,20 @@ fn render_refresh(
                 .unwrap_or_else(|| timer.remaining_seconds(config));
             Some(format!("{:02}:{:02}", secs / 60, secs % 60))
         } else {
-            match status {
-                TimerStatus::Running | TimerStatus::Paused => {
-                    let secs = remaining_secs_override
-                        .unwrap_or_else(|| timer.remaining_seconds(None));
-                    Some(format!("{:02}:{:02}", secs / 60, secs % 60))
+            if general.always_show_countdown_in_tray {
+                let config = task.map(|t| &t.config().timer);
+                let secs = remaining_secs_override
+                    .unwrap_or_else(|| timer.remaining_seconds(config));
+                Some(format!("{:02}:{:02}", secs / 60, secs % 60))
+            } else {
+                match status {
+                    TimerStatus::Running | TimerStatus::Paused => {
+                        let secs = remaining_secs_override
+                            .unwrap_or_else(|| timer.remaining_seconds(None));
+                        Some(format!("{:02}:{:02}", secs / 60, secs % 60))
+                    }
+                    TimerStatus::Idle | TimerStatus::Stopped => None,
                 }
-                TimerStatus::Idle | TimerStatus::Stopped => None,
             }
         }
     } else {
