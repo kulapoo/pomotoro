@@ -66,7 +66,7 @@ export function useEventBus(): void {
 
       onEvent(events.taskAutoAdvanced, () => {
         // reload()
-        toast.success('Switched to next incomplete task')
+        toast.success('Switched to next task')
       }),
       // Screen blocker: show the focus-enforcement overlay when a work/break
       // phase expires and blocking is enabled for that phase.
