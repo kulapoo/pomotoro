@@ -1,13 +1,13 @@
 # Pomotoro 🍅🐂
 
-**A keyboard-first Pomodoro timer that charges through distractions like a determined toro.**
+**A focused Pomodoro timer that charges through distractions like a determined 🐂 torro.**
 
 Pomotoro pairs the classic Pomodoro Technique with task management, ambient focus
 sounds, screen-blocking break enforcement, and rich notifications — all wrapped in a
 fast, native desktop app powered by Rust.
 
-> **Learning Project**: Built intentionally to practice Clean Architecture, DDD, and
-> AI-assisted development. See [docs/verdict.md](docs/verdict.md) for context.
+> **Learning Project**: Built intentionally to experiment with AI-assisted
+> development. See [docs/verdict.md](docs/verdict.md) for context.
 
 ---
 
@@ -20,7 +20,6 @@ fast, native desktop app powered by Rust.
 | 🎵 **Focus audio** | Ambient background sounds (rain, forest, ocean, white noise, café, fireplace, thunderstorm) plus distinct work/break notification chimes. |
 | 🔔 **Smart notifications** | Desktop notifications, sound alerts, phase-transition & task-completion alerts, with position and auto-dismiss control. |
 | 🚫 **Screen blocker** | Optional full-screen overlay that forces you to actually take your break — with custom messages. |
-| ⌨️ **Keyboard-first** | `Ctrl/Meta+Tab` cycles incomplete tasks; `Shift` reverses. |
 | 🎛️ **Deeply configurable** | Timer durations, automation, appearance, window, audio, and storage — all in one settings hub. |
 | ⚡ **Native speed** | Tauri + Rust core with SQLite persistence. Minimal resources, instant response. |
 | 🖥️ **Cross-platform** | Windows, macOS, and Linux from a single codebase. |

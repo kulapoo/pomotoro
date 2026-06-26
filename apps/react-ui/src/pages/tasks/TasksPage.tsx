@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, RotateCcw, Pencil, Search, ListTodo } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTaskStore, useTasksEventBus, TaskStatus } from '@/pages/tasks/useTasks'
@@ -29,6 +29,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const resetTask = useTaskStore((s) => s.resetTask)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
+  const isBusy = useTaskStore((s) => s.isBusy)
   const timerRunning = useTimerStore((s) => (s.timer ? isTimerRunning(s.timer) : false))
   const pauseTimer = useTimerStore((s) => s.pause)
 
@@ -42,6 +43,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [editTask, setEditTask] = useState<Task | undefined>(undefined)
   const [showModal, setShowModal] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const handleQuickAdd = async () => {
     const name = title.trim()
@@ -77,6 +79,60 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
   const total = tasks.length
   const activeCount = tasks.filter((t) => t.status === TaskStatus.Active).length
   const completedCount = tasks.filter((t) => t.status === TaskStatus.Completed).length
+
+  const visibleTasks = useMemo(
+    () => [...incomplete, ...completed],
+    [incomplete, completed],
+  )
+  const isAllVisibleSelected =
+    visibleTasks.length > 0 && visibleTasks.every((t) => selectedIds.has(t.id))
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllVisible = () => {
+    if (isAllVisibleSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(visibleTasks.map((t) => t.id)))
+    }
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const isAllCompletedSelected =
+    completed.length > 0 && completed.every((t) => selectedIds.has(t.id))
+
+  const toggleSelectAllCompleted = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      const allSelected = completed.every((t) => next.has(t.id))
+      for (const t of completed) {
+        if (allSelected) next.delete(t.id)
+        else next.add(t.id)
+      }
+      return next
+    })
+  }
+
+  const resetMany = async (ids: string[]) => {
+    let successCount = 0
+    for (const id of ids) {
+      const ok = await resetTask(id)
+      if (ok) successCount += 1
+    }
+    if (successCount > 0) {
+      toast.info(`Reset ${successCount} task${successCount === 1 ? '' : 's'}`)
+      window.setTimeout(refreshTimer, 50)
+    }
+    return successCount
+  }
 
   const openCreate = () => {
     setEditTask(undefined)
@@ -135,12 +191,54 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     }
   }
 
+  const handleResetSelected = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    if (
+      !window.confirm(
+        `Reset ${ids.length} selected task${ids.length === 1 ? '' : 's'}? This zeroes their progress.`,
+      )
+    )
+      return
+    const count = await resetMany(ids)
+    if (count > 0) clearSelection()
+  }
+
+  const handleResetAll = async () => {
+    if (tasks.length === 0) return
+    if (
+      !window.confirm(
+        `Reset ALL ${tasks.length} task${tasks.length === 1 ? '' : 's'}? This zeroes progress on every task.`,
+      )
+    )
+      return
+    clearSelection()
+    await resetMany(tasks.map((t) => t.id))
+  }
+
+  useEffect(() => {
+    clearSelection()
+  }, [search, statusFilter])
+
   return (
     <div className="mx-auto w-full max-w-2xl">
       {showModal && <TaskFormModal task={editTask} onClose={() => setShowModal(false)} />}
 
       <div className="mb-5 flex items-start justify-between">
-        <h1 className="text-2xl font-bold">Tasks</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Tasks</h1>
+          {tasks.length > 0 && (
+            <button
+              onClick={handleResetAll}
+              disabled={isBusy}
+              title="Reset every task back to Queued and zero its progress"
+              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RotateCcw size={12} />
+              Reset all
+            </button>
+          )}
+        </div>
 
         <div className="flex gap-2">
           <StatBadge
@@ -224,6 +322,36 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
         </select>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="border-border bg-card mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
+          <div className="flex items-center gap-3 text-sm">
+            <span className="font-medium">{selectedIds.size} selected</span>
+            <button
+              onClick={toggleSelectAllVisible}
+              className="text-muted-foreground hover:text-foreground text-xs underline transition-colors"
+            >
+              {isAllVisibleSelected ? 'Clear' : 'Select all'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={clearSelection}
+              className="border-border text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg border px-3 py-1.5 text-xs transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleResetSelected}
+              disabled={isBusy}
+              className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RotateCcw size={12} />
+              Reset selected
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && !isLoading && (
         <div className="flex flex-col items-center gap-2 py-8 text-center">
           <span className="text-destructive text-sm">{error.message}</span>
@@ -282,6 +410,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
               onSetActive={() => handleSetActive(task)}
               timerRunning={timerRunning}
               onNavigateToTimer={() => onNavigate('timer')}
+              isSelected={selectedIds.has(task.id)}
+              onToggleSelect={() => toggleSelect(task.id)}
             />
           ))}
         </ul>
@@ -292,6 +422,17 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
           <summary className="text-muted-foreground mb-3 flex cursor-pointer list-none items-center gap-1 text-xs font-semibold tracking-wider uppercase select-none">
             <RotateCcw size={11} className="transition-transform group-open:rotate-180" />
             Completed ({completed.length})
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleSelectAllCompleted()
+              }}
+              title={isAllCompletedSelected ? 'Clear completed selection' : 'Select all completed tasks'}
+              className="text-muted-foreground hover:text-foreground ml-auto rounded text-xs font-medium tracking-normal underline transition-colors normal-case"
+            >
+              {isAllCompletedSelected ? 'Clear' : 'Select all'}
+            </button>
           </summary>
           <ul className="flex flex-col gap-2">
             {completed.map((task) => (
@@ -311,6 +452,8 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
                 onSetActive={() => void setActiveTask(task.id)}
                 timerRunning={timerRunning}
                 onNavigateToTimer={() => onNavigate('timer')}
+                isSelected={selectedIds.has(task.id)}
+                onToggleSelect={() => toggleSelect(task.id)}
               />
             ))}
           </ul>

@@ -1,4 +1,4 @@
-import { Trash2, CheckSquare, Square, Crosshair, RotateCcw, Pencil } from 'lucide-react'
+import { Trash2, Check, Undo2, Crosshair, RotateCcw, Pencil } from 'lucide-react'
 import { TaskStatus } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
 
@@ -11,6 +11,8 @@ interface TaskRowProps {
   onEdit: () => void
   timerRunning: boolean
   onNavigateToTimer: () => void
+  isSelected: boolean
+  onToggleSelect: () => void
 }
 
 export function TaskRow({
@@ -21,6 +23,8 @@ export function TaskRow({
   onSetActive,
   onEdit,
   timerRunning,
+  isSelected,
+  onToggleSelect,
 }: TaskRowProps) {
   const isCompleted = task.status === TaskStatus.Completed
   const isActive = task.status === TaskStatus.Active
@@ -34,36 +38,31 @@ export function TaskRow({
     <li
       className={[
         'flex flex-col gap-2 rounded-xl border px-4 py-3.5 transition-colors',
-        isActive
-          ? 'border-toro/40 bg-toro/10'
-          : 'border-border bg-card',
+        isActive ? 'border-toro/40 bg-toro/10' : 'border-border bg-card',
         isCompleted ? 'opacity-55' : '',
       ].join(' ')}
     >
-      <div className="flex items-center gap-3">
-        {/* Complete toggle */}
-        <button
-          onClick={isCompleted ? onReset : onComplete}
-          className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-          title={isCompleted ? 'Reopen' : 'Complete'}
-        >
-          {isCompleted ? (
-            <CheckSquare size={20} className="text-toro" />
-          ) : (
-            <Square size={20} />
-          )}
-        </button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* Selection checkbox */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          aria-label={isSelected ? 'Deselect task' : 'Select task'}
+          className="border-input text-primary focus:ring-ring h-4 w-4 shrink-0 cursor-pointer rounded focus:ring-2 focus:outline-none"
+        />
 
         {/* Title + meta */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+        <div className="min-w-0 flex-1 basis-40">
+          <div className="flex min-w-0 items-center gap-1.5">
             {isActive && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-primary-foreground uppercase">
+              <span className="bg-primary text-primary-foreground inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                 Active
               </span>
             )}
             <span
+              title={task.name}
               className={[
                 'block truncate text-sm font-medium',
                 isCompleted ? 'text-muted-foreground line-through' : '',
@@ -92,74 +91,96 @@ export function TaskRow({
           {task.max_sessions > 1 && (
             <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-toro transition-all duration-300"
+                className="bg-toro h-full rounded-full transition-all duration-300"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           )}
         </div>
 
-        {/* Session count */}
-        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-          {task.current_sessions}/{task.max_sessions}
-        </span>
+        {/* Session count + actions (wrap to second line on narrow widths) */}
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          {/* Session count */}
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {task.current_sessions}/{task.max_sessions}
+          </span>
 
-        {/* Focus */}
-        {!isCompleted && (
-          <button
-            onClick={onSetActive}
-            title={timerRunning ? 'Go to running timer' : 'Focus on this task'}
-            className={[
-              'shrink-0 rounded p-1 transition-colors',
-              isActive
-                ? 'text-toro'
-                : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            <Crosshair size={15} />
-          </button>
-        )}
+          <div className="flex items-center gap-0.5">
+            {/* Focus */}
+            {!isCompleted && (
+              <button
+                onClick={onSetActive}
+                title={timerRunning ? 'Go to running timer' : 'Focus on this task'}
+                className={[
+                  'shrink-0 rounded p-1 transition-colors',
+                  isActive ? 'text-toro' : 'text-muted-foreground hover:text-foreground',
+                ].join(' ')}
+              >
+                <Crosshair size={15} />
+              </button>
+            )}
 
-        {/* Reset progress */}
-        {task.current_sessions > 0 && !isCompleted && (
-          <button
-            onClick={onReset}
-            title="Reset progress"
-            className="text-muted-foreground hover:text-foreground shrink-0 p-1 transition-colors"
-          >
-            <RotateCcw size={15} />
-          </button>
-        )}
+            {/* Reset progress */}
+            {task.current_sessions > 0 && !isCompleted && (
+              <button
+                onClick={onReset}
+                title="Reset progress"
+                className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1 transition-colors"
+              >
+                <RotateCcw size={15} />
+              </button>
+            )}
 
-        {/* Edit */}
-        <button
-          onClick={onEdit}
-          disabled={isRunning}
-          title={isRunning ? 'Stop the timer to edit' : 'Edit task'}
-          className={[
-            'shrink-0 p-1 transition-colors',
-            isRunning
-              ? 'text-muted-foreground/40 cursor-not-allowed'
-              : 'text-muted-foreground hover:text-foreground',
-          ].join(' ')}
-        >
-          <Pencil size={15} />
-        </button>
+            {/* Complete / Reopen */}
+            {isCompleted ? (
+              <button
+                onClick={onReset}
+                title="Reopen"
+                className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1 transition-colors"
+              >
+                <Undo2 size={15} />
+              </button>
+            ) : (
+              <button
+                onClick={onComplete}
+                title="Complete"
+                className="text-muted-foreground hover:text-toro shrink-0 rounded p-1 transition-colors"
+              >
+                <Check size={15} />
+              </button>
+            )}
 
-        {/* Delete */}
-        <button
-          onClick={onDelete}
-          disabled={isRunning}
-          title={isRunning ? 'Stop the timer to delete' : 'Delete'}
-          className={[
-            'shrink-0 p-1 transition-colors',
-            isRunning
-              ? 'text-muted-foreground/40 cursor-not-allowed'
-              : 'text-muted-foreground hover:text-destructive',
-          ].join(' ')}
-        >
-          <Trash2 size={15} />
-        </button>
+            {/* Edit */}
+            <button
+              onClick={onEdit}
+              disabled={isRunning}
+              title={isRunning ? 'Stop the timer to edit' : 'Edit task'}
+              className={[
+                'shrink-0 rounded p-1 transition-colors',
+                isRunning
+                  ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : 'text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              <Pencil size={15} />
+            </button>
+
+            {/* Delete */}
+            <button
+              onClick={onDelete}
+              disabled={isRunning}
+              title={isRunning ? 'Stop the timer to delete' : 'Delete'}
+              className={[
+                'shrink-0 rounded p-1 transition-colors',
+                isRunning
+                  ? 'text-muted-foreground/40 cursor-not-allowed'
+                  : 'text-muted-foreground hover:text-destructive',
+              ].join(' ')}
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        </div>
       </div>
     </li>
   )
