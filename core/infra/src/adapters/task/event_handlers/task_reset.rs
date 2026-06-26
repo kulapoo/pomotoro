@@ -43,7 +43,10 @@ impl EventHandler for TaskResetHandler {
         })?;
 
         self.emitter
-            .emit(domain::event_names::task::RESET_TASK, json!(task_reset))
+            .emit(
+                domain::event_names::ui_listeners::task::TASK_RESET,
+                json!(task_reset),
+            )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit task reset event: {e}"),
             })?;

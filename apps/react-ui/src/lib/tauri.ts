@@ -147,6 +147,7 @@ export const events = {
   taskListUpdated: 'task:list_updated',
   taskActiveChanged: 'task:active_changed',
   taskCompleted: 'task:task_completed',
+  taskReset: 'task:task_reset',
   taskProgressUpdated: 'task:progress_updated',
   taskAutoAdvanced: 'task:auto_advanced',
   timerTick: 'timer:tick',
@@ -177,6 +178,7 @@ interface EventPayloadMap {
   'timer:timer_started': TimerStateData
   'timer:timer_paused': TimerStateData
   'timer:timer_resumed': TimerStateData
+  'task:task_reset': unknown
   'screen_blocker:activate': { message: string }
 }
 

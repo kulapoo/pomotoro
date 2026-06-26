@@ -37,21 +37,30 @@ export function useEventBus(): void {
     const reloadTimer = createBatchedLoader(() => fetchTimer())
     const reloadActiveTask = createBatchedLoader(() => loadActiveTask())
 
+    const reload = () => {
+      window.setTimeout(() => {
+        reloadActiveTask()
+        fetchTimer()
+      }, 500)
+    }
+
     const unlisteners: Array<Promise<UnlistenFn>> = [
       // Real-time countdown; pure local state update, no network.
       onEvent(events.timerTick, applyTick),
-      onEvent(events.timerPhaseCompleted, () => {
-        window.setTimeout(() => {
-          reloadActiveTask()
-          fetchTimer()
-        }, 500)
-      }),
+      onEvent(events.timerPhaseCompleted, reload),
       onEvent(events.timerReset, reloadTimer),
       onEvent(events.timerPaused, reloadTimer),
       onEvent(events.timerStarted, reloadTimer),
       onEvent(events.timerResumed, reloadTimer),
-      // onEvent(events.taskActiveChanged, reload),
-      // onEvent(events.taskCompleted, loadActiveTask),
+      onEvent(events.taskActiveChanged, reload),
+      onEvent(events.taskCompleted, () => {
+        reload()
+        toast.success('Task completed!')
+      }),
+      onEvent(events.taskReset, () => {
+        reload()
+        toast.info('Task progress reset')
+      }),
 
       onEvent(events.taskAutoAdvanced, () => {
         // reload()

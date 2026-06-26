@@ -646,8 +646,15 @@ fn menu_skip(app: &AppHandle) {
 }
 
 /// Reset the active task's progress (completed sessions), mirroring the React
-/// "Reset Task" button. Also resets the timer to idle; the Reset event handler
-/// stops the tick loop.
+/// "Reset Task" button. Also resets the timer to idle.
+///
+/// `reset_task_uc` only persists the reset and publishes a `TaskReset`; the
+/// tick loop is stopped and the in-memory timer resynced asynchronously by the
+/// fire-and-forget `TaskResetHandler`. We must drain that handler and stop the
+/// loop ourselves before refreshing — otherwise the still-running loop keeps
+/// emitting `TICK` signals with the stale countdown, which the coalescing
+/// `refresh_loop` keeps painting and makes the reset appear to do nothing
+/// (cf. `menu_reset_phase` / `complete_task_flow`).
 fn menu_reset_task(app: &AppHandle) {
     let Some(task_id) = task_id_for_action(app) else {
         return;
@@ -661,6 +668,9 @@ fn menu_reset_task(app: &AppHandle) {
     let Some(event_publisher) = event_publisher(app) else {
         return;
     };
+    let Some(tick_service) = tick_service(app) else {
+        return;
+    };
 
     tauri::async_runtime::spawn(async move {
         if let Err(e) =
@@ -668,6 +678,16 @@ fn menu_reset_task(app: &AppHandle) {
         {
             log::error!("Tray reset task failed: {}", e);
         }
+
+        // Drain the async TaskReset handler (stop_timer_tick_loop + load_state).
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Belt-and-suspenders: ensure the loop is stopped regardless of handler
+        // timing so no stale TICK signals keep the countdown alive. Idempotent.
+        if let Err(e) = tick_service.stop_timer_tick_loop().await {
+            log::error!("Tray reset task: failed to stop tick loop: {}", e);
+        }
+
         schedule_refresh(RefreshSignal::Dirty);
     });
 }
