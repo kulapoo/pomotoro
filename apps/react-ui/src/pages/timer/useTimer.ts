@@ -115,6 +115,15 @@ type TaskCommand =
   | 'reset_timer_phase'
   | 'skip_phase'
 
+// Re-entry control for fetchTimer: coalesce concurrent callers into a single
+// in-flight `get_timer_state` IPC and re-run once after it settles (trailing
+// "last-writer-wins"). This keeps a burst of callers (Retry button + Tauri
+// events) from firing overlapping reads, while still guaranteeing the store is
+// never left stale. Mirrors the contract of createBatchedLoader (lib/async.ts)
+// but integrates with the shared isBusy flag.
+let fetchTimerPending = false
+let fetchTimerDirty = false
+
 interface TimerStore {
   timer: Timer | null
   error: BackendError | null
@@ -136,18 +145,11 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
   isBusy: false,
 
   fetchTimer: async () => {
-    set({ isBusy: true })
-    try {
-      const timer = await invokeCmd('get_timer_state')
-      set({ timer, error: null })
-      return true
-    } catch (e) {
-      logger.error('fetchTimer failed', e)
-      set({ error: e as BackendError })
+    if (fetchTimerPending) {
+      fetchTimerDirty = true
       return false
-    } finally {
-      set({ isBusy: false })
     }
+    return runFetchTimer(set)
   },
 
   applyTick: (payload) => {
@@ -164,23 +166,22 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
 
   start: async () => runWithTask(set, get, 'start_timer'),
   pause: async () => {
+    if (get().isBusy) return false
+    const timer = get().timer
+    const taskId = timer?.task_id
+    if (!taskId || !timer) return false
     set({ isBusy: true })
     try {
-      const timer = get().timer
-      const taskId = timer?.task_id
-      if (!taskId || !timer) return false
-      try {
-        const updated = await invokeCmd('pause_timer', {
-          task_id: taskId,
-          remaining_seconds: getRemainingSeconds(timer),
-        })
-        set({ timer: updated, error: null })
-        return true
-      } catch (e) {
-        logger.error('pause_timer failed', e)
-        set({ error: e as BackendError })
-        return false
-      }
+      const updated = await invokeCmd('pause_timer', {
+        task_id: taskId,
+        remaining_seconds: getRemainingSeconds(timer),
+      })
+      set({ timer: updated, error: null })
+      return true
+    } catch (e) {
+      logger.error('pause_timer failed', e)
+      set({ error: e as BackendError })
+      return false
     } finally {
       set({ isBusy: false })
     }
@@ -212,5 +213,28 @@ async function runWithTask(
     return false
   } finally {
     set({ isBusy: false })
+  }
+}
+
+async function runFetchTimer(
+  set: (partial: Partial<TimerStore>) => void,
+): Promise<boolean> {
+  fetchTimerPending = true
+  set({ isBusy: true })
+  try {
+    const timer = await invokeCmd('get_timer_state')
+    set({ timer, error: null })
+    return true
+  } catch (e) {
+    logger.error('fetchTimer failed', e)
+    set({ error: e as BackendError })
+    return false
+  } finally {
+    set({ isBusy: false })
+    fetchTimerPending = false
+    if (fetchTimerDirty) {
+      fetchTimerDirty = false
+      void runFetchTimer(set)
+    }
   }
 }
