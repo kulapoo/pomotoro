@@ -846,34 +846,15 @@ fn render_refresh(
             && is_break
     });
 
-    // Compute the single countdown label to display, gated by platform
-    // conventions (Linux always shows the countdown while a task is bound,
-    // baking it into the icon; macOS/Windows show it beside the icon as text,
-    // and `always_show_countdown_in_tray` controls whether it stays visible
-    // when the timer is idle/stopped).
+    // Compute the single countdown label to display. When
+    // `show_countdown_in_tray` is on and a task is bound, the remaining time
+    // is always shown — baked into the icon on Linux, as title text beside
+    // the icon on macOS/Windows.
     let label = if general.show_countdown_in_tray && has_task {
-        if is_linux() {
-            let config = task.map(|t| &t.config().timer);
-            let secs = remaining_secs_override
-                .unwrap_or_else(|| timer.remaining_seconds(config));
-            Some(format!("{:02}:{:02}", secs / 60, secs % 60))
-        } else {
-            if general.always_show_countdown_in_tray {
-                let config = task.map(|t| &t.config().timer);
-                let secs = remaining_secs_override
-                    .unwrap_or_else(|| timer.remaining_seconds(config));
-                Some(format!("{:02}:{:02}", secs / 60, secs % 60))
-            } else {
-                match status {
-                    TimerStatus::Running | TimerStatus::Paused => {
-                        let secs = remaining_secs_override
-                            .unwrap_or_else(|| timer.remaining_seconds(None));
-                        Some(format!("{:02}:{:02}", secs / 60, secs % 60))
-                    }
-                    TimerStatus::Idle | TimerStatus::Stopped => None,
-                }
-            }
-        }
+        let config = task.map(|t| &t.config().timer);
+        let secs = remaining_secs_override
+            .unwrap_or_else(|| timer.remaining_seconds(config));
+        Some(format!("{:02}:{:02}", secs / 60, secs % 60))
     } else {
         None
     };

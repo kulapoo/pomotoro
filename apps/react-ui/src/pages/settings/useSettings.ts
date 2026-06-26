@@ -39,7 +39,6 @@ export interface GeneralConfig {
   minimize_to_tray: boolean
   start_minimized: boolean
   show_countdown_in_tray: boolean
-  always_show_countdown_in_tray: boolean
   persistence_interval_seconds: number
   block_screen_after_work: boolean
   block_screen_after_work_message: string
