@@ -1,13 +1,12 @@
 # Pomotoro 🍅🐂
 
-**A focused Pomodoro timer that charges through distractions like a determined 🐂 torro.**
+**Pomodoro focus timer with task queues, automatic work/break cycling, and screen-blocking break enforcement. Built native with Rust + Tauri.**
 
-Pomotoro pairs the classic Pomodoro Technique with task management, ambient focus
-sounds, screen-blocking break enforcement, and rich notifications — all wrapped in a
-fast, native desktop app powered by Rust.
+*Charges through your work like a determined 🐂 torro — and locks the screen so you actually rest.*
 
-> **Learning Project**: Built intentionally to experiment with AI-assisted
-> development. See [docs/verdict.md](docs/verdict.md) for context.
+Pomotoro pairs the Pomodoro Technique with task management, ambient focus audio, and
+rich notifications in a fast, native desktop app. Everything runs locally — private
+data, instant response, and a timer that keeps working even when you're deep in flow.
 
 ---
 
@@ -20,6 +19,8 @@ fast, native desktop app powered by Rust.
 | 🎵 **Focus audio** | Ambient background sounds (rain, forest, ocean, white noise, café, fireplace, thunderstorm) plus distinct work/break notification chimes. |
 | 🔔 **Smart notifications** | Desktop notifications, sound alerts, phase-transition & task-completion alerts, with position and auto-dismiss control. |
 | 🚫 **Screen blocker** | Optional full-screen overlay that forces you to actually take your break — with custom messages. |
+| 🪟 **System tray** | Minimize to tray, start minimized, and watch the live countdown baked into the tray icon & tooltip. |
+| ⌨️ **Keyboard shortcuts** | Cycle incomplete tasks instantly with `Ctrl/Meta+Tab` — no mouse needed. |
 | 🎛️ **Deeply configurable** | Timer durations, automation, appearance, window, audio, and storage — all in one settings hub. |
 | ⚡ **Native speed** | Tauri + Rust core with SQLite persistence. Minimal resources, instant response. |
 | 🖥️ **Cross-platform** | Windows, macOS, and Linux from a single codebase. |
@@ -201,6 +202,20 @@ Artifacts land in `target/release/bundle/`:
 - **Linux:** `.deb` / `.AppImage`
 - **macOS:** `.dmg`
 - **Windows:** `.msi`
+
+---
+
+## 💡 Why Pomotoro?
+
+Pomotoro exists because I wanted a native desktop app with the feature set above —
+and nothing out there covered it cleanly without being Electron, closed-source, or
+freemium. So I built it, and it's free (MIT).
+
+It also happens to be a sandbox for exploring **Clean Architecture + DDD in Rust +
+Tauri**, and for **agentic AI-assisted development**. Those shape the code but aren't
+the reason the app exists.
+
+Full story: **[docs/MOTIVATION.md](docs/MOTIVATION.md)**.
 
 ---
 
