@@ -18,6 +18,7 @@ pub mod delete_task;
 pub mod get_task;
 pub mod reset_task;
 pub mod reset_task_settings;
+pub mod reset_tasks;
 pub mod search_tasks;
 pub mod switch_active_task;
 pub mod switch_task;
@@ -34,6 +35,7 @@ pub use get_task::{
 };
 pub use reset_task::reset_task;
 pub use reset_task_settings::reset_task_settings_to_defaults;
+pub use reset_tasks::reset_tasks;
 pub use search_tasks::{
     FilterTasksByStatusQuery, SearchTasksQuery, filter_tasks_by_status,
     search_tasks, search_tasks_fuzzy,

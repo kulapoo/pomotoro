@@ -17,6 +17,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
   const activeTask = useTaskStore((s) => s.activeTask)
   const completeTask = useTaskStore((s) => s.completeTask)
   const resetTask = useTaskStore((s) => s.resetTask)
+  const resetTasks = useTaskStore((s) => s.resetTasks)
   const deleteTask = useTaskStore((s) => s.deleteTask)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
 
@@ -98,18 +99,16 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
 
   const resetMany = useCallback(
     async (ids: string[]) => {
-      let successCount = 0
-      for (const id of ids) {
-        const ok = await resetTask(id)
-        if (ok) successCount += 1
-      }
-      if (successCount > 0) {
-        toast.info(`Reset ${successCount} task${successCount === 1 ? '' : 's'}`)
+      if (ids.length === 0) return 0
+      const ok = await resetTasks(ids)
+      if (ok) {
+        toast.info(`Reset ${ids.length} task${ids.length === 1 ? '' : 's'}`)
         window.setTimeout(refreshTimer, 50)
+        return ids.length
       }
-      return successCount
+      return 0
     },
-    [refreshTimer, resetTask],
+    [refreshTimer, resetTasks],
   )
 
   const handlers = useMemo<TaskRowHandlers>(

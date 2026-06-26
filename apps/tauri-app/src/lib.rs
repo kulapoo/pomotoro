@@ -191,6 +191,7 @@ pub fn run() {
             get_tasks_by_tags,
             complete_task,
             reset_task,
+            reset_tasks,
             search_tasks,
             search_tasks_fuzzy,
             filter_tasks_by_status,

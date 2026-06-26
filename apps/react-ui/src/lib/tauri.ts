@@ -42,6 +42,7 @@ export const commands = {
   deleteTask: 'delete_task',
   completeTask: 'complete_task',
   resetTask: 'reset_task',
+  resetTasks: 'reset_tasks',
   getGlobalConfig: 'get_global_config',
   saveGlobalConfig: 'save_global_config',
   resetConfigToDefaults: 'reset_config_to_defaults',
@@ -75,6 +76,7 @@ interface CommandMap {
   delete_task: { args: { id: string }; ret: void }
   complete_task: { args: { task_id: string }; ret: Task }
   reset_task: { args: { task_id: string }; ret: [Timer, Task] }
+  reset_tasks: { args: { task_ids: string[] }; ret: [Timer, Task[]] }
   get_global_config: { args: void; ret: Config }
   save_global_config: { args: { config: Config }; ret: void }
   reset_config_to_defaults: { args: void; ret: Config }

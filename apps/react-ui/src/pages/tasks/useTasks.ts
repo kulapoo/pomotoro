@@ -89,6 +89,7 @@ interface TaskStore {
   deleteTask: (id: string) => Promise<boolean>
   completeTask: (id: string) => Promise<boolean>
   resetTask: (id: string) => Promise<boolean>
+  resetTasks: (ids: string[]) => Promise<boolean>
   setActiveTask: (id: string, oldTaskId?: string | null) => Promise<boolean>
   completeActiveTask: (id: string) => Promise<boolean>
   resetActiveTask: (id: string) => Promise<boolean>
@@ -163,6 +164,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   resetTask: async (id) => {
     return runBusy(set, get, 'resetTask', async () => {
       await invokeCmd('reset_task', { task_id: id })
+      return true
+    })
+  },
+
+  resetTasks: async (ids) => {
+    if (ids.length === 0) return false
+    return runBusy(set, get, 'resetTasks', async () => {
+      await invokeCmd('reset_tasks', { task_ids: ids })
       return true
     })
   },
