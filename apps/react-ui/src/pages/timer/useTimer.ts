@@ -146,11 +146,17 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
   isBusy: false,
 
   fetchTimer: async () => {
-    if (fetchTimerPending) {
-      fetchTimerDirty = true
+    try {
+      const timer = await invokeCmd('get_timer_state')
+      set({ timer, error: null })
+      return true
+    } catch (e) {
+      logger.error('fetchTimer failed', e)
+      set({ error: e as BackendError })
       return false
+    } finally {
+      set({ isBusy: false })
     }
-    return runFetchTimer(set)
   },
 
   applyTick: (payload) => {
@@ -220,28 +226,5 @@ async function runWithTask(
     return false
   } finally {
     set({ isBusy: false })
-  }
-}
-
-async function runFetchTimer(
-  set: (partial: Partial<TimerStore>) => void,
-): Promise<boolean> {
-  fetchTimerPending = true
-  set({ isBusy: true })
-  try {
-    const timer = await invokeCmd('get_timer_state')
-    set({ timer, error: null })
-    return true
-  } catch (e) {
-    logger.error('fetchTimer failed', e)
-    set({ error: e as BackendError })
-    return false
-  } finally {
-    set({ isBusy: false })
-    fetchTimerPending = false
-    if (fetchTimerDirty) {
-      fetchTimerDirty = false
-      void runFetchTimer(set)
-    }
   }
 }
