@@ -32,6 +32,7 @@ pub fn register_timer_handlers(
     event_bus.subscribe(Box::new(PhaseSkippedHandler::new(
         emitter.clone(),
         timer_srv.clone(),
+        task_repo.clone(),
     )))?;
     event_bus
         .subscribe(Box::new(TimerStatusChangedHandler::new(emitter.clone())))?;

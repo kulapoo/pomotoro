@@ -303,3 +303,68 @@ async fn phase_completed_payload_embeds_task_and_timer() {
     assert_eq!(task["id"], task_id.to_string());
     assert_eq!(task["name"], expected_name);
 }
+
+/// Manual phase skip must also embed the bound Task in PHASE_COMPLETED so
+/// the payload shape is uniform across emitters. The task is unchanged
+/// (skipping a phase does not increment sessions), but the field must be
+/// present and consistent with the natural-expiry path.
+#[tokio::test]
+async fn phase_skipped_payload_embeds_task() {
+    use domain::{Phase, timer::events::PhaseSkipped};
+
+    let ctx = setup_ctx("phase_skipped_payload_embeds_task").await;
+
+    let task = TaskBuilder::new()
+        .name("Skip me")
+        .max_sessions(3)
+        .status(TaskStatus::Active)
+        .config(Config::default())
+        .build();
+    let task_id = task.id();
+    let expected_name = task.name().to_string();
+    ctx.task_repo.create(task).await.unwrap();
+
+    // Bind the task to the timer so the handler can read its state.
+    use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task_id),
+        },
+    )
+    .await
+    .expect("start");
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    ctx.ui_simulator.app_handle().clear_events();
+
+    ctx.event_bus.publish(Box::new(PhaseSkipped::new(
+        task_id,
+        Phase::Work,
+        Phase::ShortBreak,
+        1,
+    )));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    let events = ctx
+        .ui_simulator
+        .app_handle()
+        .events_of_type(event_names::timer::PHASE_COMPLETED);
+    assert!(
+        !events.is_empty(),
+        "timer:phase_completed was not emitted from PhaseSkippedHandler"
+    );
+
+    let payload = &events[0].payload;
+    assert!(
+        payload.get("timer").is_some(),
+        "payload missing `timer` envelope field"
+    );
+    let embedded = payload
+        .get("task")
+        .expect("payload missing `task` envelope field");
+    assert_eq!(embedded["id"], task_id.to_string());
+    assert_eq!(embedded["name"], expected_name);
+}
