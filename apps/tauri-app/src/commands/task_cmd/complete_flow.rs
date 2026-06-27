@@ -142,11 +142,23 @@ pub async fn complete_task_flow(
 
                 active_task_id = plan.next_task_id;
 
+                let to_task = task_repo
+                    .get_by_id(plan.next_task_id)
+                    .await
+                    .context("Failed to load next task for auto-advanced emit")?
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "Next task {} not found after auto-advance",
+                            plan.next_task_id
+                        )
+                    })?;
+
                 let _ = app_handle.emit(
                     domain::event_names::task::AUTO_ADVANCED,
                     json!({
                         "from_task_id": task_id.to_string(),
                         "to_task_id": plan.next_task_id.to_string(),
+                        "to_task": to_task,
                     }),
                 );
             }

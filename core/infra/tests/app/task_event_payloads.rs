@@ -1,10 +1,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use domain::{Config, EventPublisher, TaskRepository, TaskStatus, event_names};
+use domain::{
+    Config, ConfigRepository, EventPublisher, Phase, TaskRepository,
+    TaskStatus, event_names,
+};
 use usecases::task::complete_task;
 
-use crate::{TaskBuilder, utils::setup::setup_ctx};
+use crate::{AppContextBuilder, TaskBuilder, utils::setup::setup_ctx};
 
 /// `task:task_completed` payload must carry the full Task object (not just
 /// audit fields) so the React EventBus can direct-map it into the
@@ -150,4 +153,88 @@ async fn task_reset_payload_embeds_full_task() {
     assert_eq!(embedded["id"], task_id.to_string());
     assert_eq!(embedded["name"], task_name);
     assert_eq!(embedded["current_sessions"], 0);
+}
+
+/// `task:auto_advanced` payload must carry the full next Task so the React
+/// EventBus can `set({ activeTask: payload.to_task })` directly. Verified
+/// via the CountdownExpiredHandler path (the cycle source for auto-advance).
+#[tokio::test]
+async fn auto_advanced_payload_embeds_to_task() {
+    use domain::{TaskCyclingBehavior, timer::events::CountdownExpired};
+    use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};
+
+    let ctx = AppContextBuilder::new()
+        .with_name("auto_advanced_payload_embeds_to_task")
+        .build()
+        .await
+        .expect("build ctx");
+
+    // AutoAdvance + auto_start_work_after_break so the cycle fires. Field
+    // names verified at core/domain/src/config/general.rs:11-14 — all on
+    // `config.general` (no `cycling` sub-struct).
+    let mut cfg = Config::default();
+    cfg.general.task_cycling_behavior = TaskCyclingBehavior::AutoAdvance;
+    cfg.general.auto_start_breaks = true;
+    cfg.general.auto_start_work_after_break = true;
+    ctx.config_repo.save_config(&cfg).await.unwrap();
+
+    let task1 = TaskBuilder::new()
+        .name("First")
+        .max_sessions(1)
+        .status(TaskStatus::Active)
+        .config(cfg.clone())
+        .build();
+    let task1_id = task1.id();
+    ctx.task_repo.create(task1).await.unwrap();
+
+    let task2 = TaskBuilder::new()
+        .name("Second")
+        .max_sessions(2)
+        .status(TaskStatus::Active)
+        .config(cfg.clone())
+        .build();
+    let task2_id = task2.id();
+    let task2_name = task2.name().to_string();
+    ctx.task_repo.create(task2).await.unwrap();
+
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task1_id),
+        },
+    )
+    .await
+    .expect("start");
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    ctx.ui_simulator.app_handle().clear_events();
+
+    // First expiry: Work phase ends. task1's only session is consumed
+    // (max_sessions=1 → status becomes Completed), timer auto-transitions
+    // to ShortBreak (auto_start_breaks = true). Cycling does NOT happen
+    // here — `progress_phase` only cycles when from_phase is a break.
+    ctx.event_bus
+        .publish(Box::new(CountdownExpired::new(Phase::Work, task1_id)));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    // Second expiry: ShortBreak ends. `finish_break` finalizes task1 and
+    // AutoAdvance cycles to task2 → emits task:auto_advanced.
+    ctx.event_bus
+        .publish(Box::new(CountdownExpired::new(Phase::ShortBreak, task1_id)));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    let events = ctx
+        .ui_simulator
+        .app_handle()
+        .events_of_type(event_names::task::AUTO_ADVANCED);
+    assert!(!events.is_empty(), "task:auto_advanced was not emitted");
+
+    let payload = &events[0].payload;
+    let embedded = payload
+        .get("to_task")
+        .expect("payload missing `to_task` field");
+    assert_eq!(embedded["id"], task2_id.to_string());
+    assert_eq!(embedded["name"], task2_name);
 }
