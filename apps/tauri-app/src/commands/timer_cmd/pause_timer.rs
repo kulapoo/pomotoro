@@ -1,5 +1,6 @@
 use super::*;
 use domain::TaskId;
+use infra::adapters::TimerTickService;
 use usecases::timer::pause_timer_phase;
 
 #[tauri::command(rename_all = "snake_case")]
@@ -9,8 +10,10 @@ pub async fn pause_timer(
     task_repo: State<'_, Arc<dyn TaskRepository + Send + Sync>>,
     timer_repo: State<'_, TimerRepositoryArc>,
     event_publisher: State<'_, EventPublisherArc>,
+    timer_tick_service: State<'_, Arc<TimerTickService>>,
 ) -> Result<Timer, String> {
     let timer_repo_arc = timer_repo.inner().clone();
+    let timer_tick_service_arc = timer_tick_service.inner().clone();
 
     let task_id_parsed = TaskId::from_string(&task_id)
         .map_err(|_| format!("Invalid task ID: {}", task_id))?;
@@ -27,6 +30,28 @@ pub async fn pause_timer(
     .await
     .context("infra::commands::timer_cmd::pause_timer - Failed to toggle pause state")
     .map_err(|e| e.to_string())?;
+
+    // Per the tick-loop ownership contract, this orchestrator owns the stop.
+    // Refresh the in-memory cache so UI payloads reflect the paused state.
+    timer_tick_service_arc
+        .load_state()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::pause_timer - Failed to load timer state: {}",
+                e
+            )
+        })?;
+
+    timer_tick_service_arc
+        .stop_timer_tick_loop()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::pause_timer - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
 
     timer_repo_arc
         .get()
