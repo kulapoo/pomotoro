@@ -122,6 +122,7 @@ interface TimerStore {
   fetchTimer: () => Promise<boolean>
   applyTick: (payload: TickPayload) => void
   applyTimerState: (state: TimerStateData) => void
+  applyTimer: (timer: Timer) => void
   start: () => Promise<boolean>
   pause: () => Promise<boolean>
   resume: () => Promise<boolean>
@@ -167,6 +168,8 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     if (!timer) return
     set({ timer: { task_id: timer.task_id, state } })
   },
+
+  applyTimer: (timer) => set({ timer }),
 
   start: async () => runWithTask(set, get, 'start_timer'),
   pause: async () => {
