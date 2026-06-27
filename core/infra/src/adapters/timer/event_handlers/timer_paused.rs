@@ -34,12 +34,8 @@ impl EventHandler for TimerPausedHandler {
                 message: "Failed to pause timer".to_string(),
             })?;
 
-        // Load the current state to get the full TimerState
-        self.timer_srv.load_state().await?;
-
-        self.timer_srv.stop_timer_tick_loop().await?;
-
-        // Get only the timer state to emit to UI (avoids cloning entire Timer)
+        // The orchestrator that called `pause_timer_phase` is responsible for
+        // stop_timer_tick_loop + load_state. This handler is a UI-only emitter.
         let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;
 
         self.emitter

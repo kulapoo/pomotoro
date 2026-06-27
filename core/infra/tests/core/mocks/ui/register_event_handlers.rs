@@ -29,7 +29,6 @@ pub fn register_test_handlers(
         event_bus.clone(),
         emitter.clone(),
         task_repository.clone(),
-        timer_tick_service.clone(),
     )?;
     register_timer_handlers(
         event_bus.clone(),

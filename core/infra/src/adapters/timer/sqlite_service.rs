@@ -203,7 +203,11 @@ impl TimerTickService {
     /// Production code MUST NOT branch on this — it exists so regression tests
     /// can assert that an orchestration left the loop in the expected state
     /// without relying on flaky timing.
-    #[cfg(test)]
+    ///
+    /// Note: deliberately NOT gated on `#[cfg(test)]`. Such gating makes the
+    /// helper invisible to integration tests under `tests/` (the library is
+    /// not compiled with `cfg(test)` when linked into an integration binary),
+    /// which would defeat its purpose.
     pub async fn is_tick_loop_alive(&self) -> bool {
         let guard = self.cancel_handle.lock().await;
         match guard.as_ref() {
