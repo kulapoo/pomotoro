@@ -14,6 +14,7 @@ import type {
   Task,
   CreateTaskRequest,
   UpdateTaskRequest,
+  PhaseCompletedPayload,
   TaskActiveChangedPayload,
   TaskCompletedPayload,
   TaskResetPayload,
@@ -175,7 +176,7 @@ interface EventPayloadMap {
   'task:auto_advanced': TaskAutoAdvancedPayload
   'timer:tick': TickPayload
   'timer:status_changed': TimerStatusChangedPayload
-  'timer:phase_completed': TimerStateData
+  'timer:phase_completed': PhaseCompletedPayload
   'timer:phase_skipped': PhaseSkippedPayload
   'timer:timer_reset': TimerStateData
   'timer:timer_started': TimerStateData

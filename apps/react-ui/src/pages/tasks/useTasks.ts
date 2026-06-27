@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { createBatchedLoader } from '@/lib/async'
 import type { Config } from '@/pages/settings/useSettings'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { TimerStateData, Timer } from '@/pages/timer/useTimer'
 
 export const TaskStatus = {
   Active: 'Active',
@@ -82,10 +83,16 @@ export interface TaskResetPayload {
   task: Task
 }
 
+export interface PhaseCompletedPayload {
+  timer: TimerStateData
+  task: Task
+}
+
 export interface TaskAutoAdvancedPayload {
   from_task_id: string
   to_task_id: string
   to_task: Task
+  timer: Timer
 }
 
 export const MAX_TASKS = 50
