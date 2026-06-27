@@ -83,10 +83,9 @@ pub async fn switch_task(
     let task_id = task.id();
     task_repo.update(task).await?;
 
-    // Create a new timer for the new task, preserving the state from the old timer
-    // This allows seamless task switching during active sessions
-    let new_timer =
-        domain::Timer::with_state(cmd.task_id, timer.state().clone());
+    // Bind the new task in the Idle state. The previous task's phase/remaining
+    // is NOT carried over — invariant matching `switch_active_task`.
+    let new_timer = domain::Timer::new(cmd.task_id);
     timer_repo.save(&new_timer).await?;
 
     // Publish TaskUpdated event for new active task — after timer save so

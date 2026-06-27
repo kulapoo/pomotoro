@@ -1976,3 +1976,66 @@ async fn completed_at_flips_only_after_trailing_break() {
         "completed_at must be stamped once the trailing break is taken"
     );
 }
+
+// Test 33: Strict switch_task from a Paused timer resets the new task to
+// Idle. validate_task_switch allows Paused (not running), so the Paused
+// phase must not carry over to the new task.
+#[tokio::test]
+async fn should_switch_task_from_paused_resets_to_idle() {
+    let ctx = setup_ctx("should_switch_task_from_paused_resets_to_idle").await;
+
+    let task1 = TaskBuilder::new()
+        .name("Paused task")
+        .max_sessions(4)
+        .status(TaskStatus::Active)
+        .build();
+    ctx.task_repo
+        .create(task1.clone())
+        .await
+        .expect("Failed to create task1");
+
+    let task2 = TaskBuilder::new()
+        .name("Next task")
+        .max_sessions(4)
+        .status(TaskStatus::Queued)
+        .build();
+    ctx.task_repo
+        .create(task2.clone())
+        .await
+        .expect("Failed to create task2");
+
+    // task1's timer is Paused — not running, so validate_task_switch allows it.
+    let paused_timer = domain::Timer::with_state(
+        task1.id(),
+        TimerState::Paused {
+            paused_from: Box::new(TimerState::Working {
+                remaining_seconds: 600,
+            }),
+            remaining_seconds: 600,
+        },
+    );
+    ctx.timer_repo
+        .save(&paused_timer)
+        .await
+        .expect("Failed to save paused timer");
+
+    let switch_result = usecases::task::switch_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        usecases::task::SwitchTaskCmd {
+            task_id: task2.id(),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let timer_after = get_timer(&ctx).await;
+    assert!(switch_result.is_ok(), "Failed to switch task");
+    assert_eq!(timer_after.task_id(), Some(task2.id()));
+    assert!(
+        timer_after.state().is_idle(),
+        "Timer should be Idle after switch_task, not a carried-over Paused state"
+    );
+}
