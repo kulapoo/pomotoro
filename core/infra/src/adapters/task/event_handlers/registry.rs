@@ -24,13 +24,15 @@ pub fn register_task_handlers(
     )))?;
     event_bus.subscribe(Box::new(TaskUpdatedHandler::new(
         emitter.clone(),
-        task_repository,
+        task_repository.clone(),
     )))?;
     event_bus.subscribe(Box::new(TaskDeletedHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(TaskStatusChangedHandler::new(emitter.clone())))?;
-    event_bus
-        .subscribe(Box::new(TaskActiveChangedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskActiveChangedHandler::new(
+        emitter.clone(),
+        task_repository.clone(),
+    )))?;
     event_bus.subscribe(Box::new(TaskResetHandler::new(emitter.clone())))?;
 
     Ok(())
