@@ -18,6 +18,8 @@ pub async fn reset_timer_phase(
     event_publisher: State<'_, EventPublisherArc>,
     timer_tick_service: State<'_, Arc<TimerTickService>>,
 ) -> Result<Timer, String> {
+    let _orchestration_lock =
+        timer_tick_service.inner().orchestration_lock().await;
     let timer_repo_arc = timer_repo.inner().clone();
     let timer_tick_service_arc = timer_tick_service.inner().clone();
 

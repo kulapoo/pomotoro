@@ -521,6 +521,7 @@ fn menu_play_pause(app: &AppHandle) {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
         // Wrapped in an inner async block so `?` propagates to a single
         // Result we can log uniformly. `Result::and_then(|_| async move {…})`
         // does NOT type-check (the closure must return a Result, not a
@@ -617,6 +618,7 @@ fn menu_reset_phase(app: &AppHandle) {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
         let task = match ctx.task_repo.get_by_id(ctx.task_id).await {
             Ok(Some(t)) => t,
             Ok(None) => {
@@ -683,6 +685,7 @@ fn menu_skip(app: &AppHandle) {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
         let task = match ctx.task_repo.get_by_id(ctx.task_id).await {
             Ok(Some(t)) => t,
             Ok(None) => {
@@ -745,6 +748,7 @@ fn menu_reset_task(app: &AppHandle) {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
         if let Err(e) = reset_task_uc(
             ctx.task_repo.clone(),
             ctx.timer_repo.clone(),
@@ -776,13 +780,14 @@ fn menu_complete(app: &AppHandle) {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
         if let Err(e) = complete_task_flow(
             ctx.task_id,
             ctx.task_repo,
             ctx.timer_repo,
             ctx.config_repo,
             ctx.event_publisher,
-            ctx.tick_service,
+            ctx.tick_service.clone(),
             ctx.app,
         )
         .await

@@ -64,6 +64,8 @@ impl EventHandler for CountdownExpiredHandler {
                     .to_string(),
             })?;
 
+        let _orchestration_lock = self.timer_srv.orchestration_lock().await;
+
         let outcome = progress_phase(
             self.task_repository.clone(),
             self.timer_repository.clone(),

@@ -15,6 +15,8 @@ pub async fn reset_tasks(
     event_publisher: State<'_, Arc<dyn EventPublisher + Send + Sync>>,
     timer_tick_service: State<'_, Arc<TimerTickService>>,
 ) -> Result<(Timer, Vec<Task>), String> {
+    let _orchestration_lock =
+        timer_tick_service.inner().orchestration_lock().await;
     info!("Resetting {} tasks", task_ids.len());
 
     let timer_tick_service_arc = timer_tick_service.inner().clone();

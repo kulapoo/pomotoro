@@ -12,6 +12,8 @@ pub async fn start_timer(
     timer_tick_service: State<'_, Arc<TimerTickService>>,
     _app_handle: AppHandle,
 ) -> Result<Timer, String> {
+    let _orchestration_lock =
+        timer_tick_service.inner().orchestration_lock().await;
     let timer_repo_arc = timer_repo.inner().clone();
     let timer_tick_service_arc = timer_tick_service.inner().clone();
 

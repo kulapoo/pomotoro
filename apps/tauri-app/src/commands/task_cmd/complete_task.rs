@@ -23,6 +23,8 @@ pub async fn complete_task(
     timer_tick_service: State<'_, Arc<TimerTickService>>,
     app_handle: AppHandle,
 ) -> Result<Task, String> {
+    let _orchestration_lock =
+        timer_tick_service.inner().orchestration_lock().await;
     info!("Completing task: id={}", task_id);
 
     let task_id_parsed = TaskId::from_string(&task_id)

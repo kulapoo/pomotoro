@@ -15,6 +15,8 @@ pub async fn switch_active_task(
     event_publisher: State<'_, EventPublisherArc>,
     timer_tick_service_arc: State<'_, Arc<TimerTickService>>,
 ) -> Result<Timer, String> {
+    let _orchestration_lock =
+        timer_tick_service_arc.inner().orchestration_lock().await;
     let timer_repo_arc = timer_repo.inner().clone();
     let task_repo_arc = task_repo.inner().clone();
 
