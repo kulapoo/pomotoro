@@ -115,15 +115,6 @@ type TaskCommand =
   | 'reset_timer_phase'
   | 'skip_phase'
 
-// Re-entry control for fetchTimer: coalesce concurrent callers into a single
-// in-flight `get_timer_state` IPC and re-run once after it settles (trailing
-// "last-writer-wins"). This keeps a burst of callers (Retry button + Tauri
-// events) from firing overlapping reads, while still guaranteeing the store is
-// never left stale. Mirrors the contract of createBatchedLoader (lib/async.ts)
-// but integrates with the shared isBusy flag.
-let fetchTimerPending = false
-let fetchTimerDirty = false
-
 interface TimerStore {
   timer: Timer | null
   error: BackendError | null
