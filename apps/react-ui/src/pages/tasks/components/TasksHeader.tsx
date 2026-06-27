@@ -19,7 +19,7 @@ export function TasksHeader({
   onResetAll,
 }: TasksHeaderProps) {
   return (
-    <div className="mb-5 flex items-start justify-between">
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">Tasks</h1>
         {hasTasks && (
