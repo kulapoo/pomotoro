@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { onEvent, events } from '@/lib/tauri'
-import { createBatchedLoader } from '@/lib/async'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { useTaskStore } from '@/pages/tasks/useTasks'
@@ -10,66 +9,70 @@ import { useScreenBlockerStore } from '@/app/useScreenBlocker'
 /**
  * Global, always-on backend event subscriptions.
  *
- * Scope rules:
- *  - Timer events are global: the timer must keep reconciling even while the
- *    Timer page is unmounted, so navigating back always shows fresh state.
- *  - Task events that flip the active task also refresh the timer here,
- *    because the timer is bound to the active task.
- *  - `task:list_updated` and `task:task_completed` reload the *active task*
- *    (not the full list) so actions triggered outside the UI — the tray menu,
- *    auto-cycling, background use cases — keep the Timer page in sync. The full
- *    task-list reload is still scoped to the Tasks page via
- *    `useTasksEventBus`.
- *  - `timer:status_changed` covers start/resume/reset/expiry transitions
- *    regardless of trigger source (it is what the tray-emitted transitions
- *    surface as; `timer:timer_started` / `timer:timer_resumed` are dead).
+ * Each handler maps its payload directly into the relevant store slice —
+ * no IPC round-trip. `fetchTimer` is still called on the four task events
+ * because the orchestrators (`switch_active_task`, `reset_task`, etc.) do
+ * not emit `timer:*` events after `load_state` (documented gap,
+ * docs/superpowers/specs/2026-06-27-task-switch-resets-timer-design.md).
+ * Non-calling windows therefore need an explicit timer re-read to stay
+ * in sync with the new task's bound timer.
  *
- * All re-fetches are coalesced through {@link createBatchedLoader} so a burst
- * of related events collapses into one fetch and overlapping fetches cannot
- * leave the store in a stale state.
+ * Scope rules:
+ *  - Timer events are global: the timer must keep reconciling even while
+ *    the Timer page is unmounted.
+ *  - `task:task_completed` and `task:task_reset` may target a non-active
+ *    task; the conditional setter (`applyTaskIfActiveForId`) leaves
+ *    `activeTask` untouched in that case.
+ *  - `timer:status_changed` is covered by the start/pause/resume/reset
+ *    family below (no separate handler needed here).
  */
 export function useEventBus(): void {
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const applyTick = useTimerStore((s) => s.applyTick)
-  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
+  const applyTimerState = useTimerStore((s) => s.applyTimerState)
+  const applyActiveTask = useTaskStore((s) => s.applyActiveTask)
+  const applyTaskIfActiveForId = useTaskStore((s) => s.applyTaskIfActiveForId)
 
   useEffect(() => {
-    const reloadTimer = createBatchedLoader(() => fetchTimer())
-    const reloadActiveTask = createBatchedLoader(() => loadActiveTask())
-
-    const reload = () => {
-      window.setTimeout(() => {
-        reloadActiveTask()
-        fetchTimer()
-      }, 500)
-    }
-
-    reload()
+    fetchTimer()
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
-      // Real-time countdown; pure local state update, no network.
+      // Real-time countdown; pure local state update.
       onEvent(events.timerTick, applyTick),
-      onEvent(events.timerPhaseCompleted, reload),
-      onEvent(events.timerReset, reloadTimer),
-      onEvent(events.timerPaused, reloadTimer),
-      onEvent(events.timerStarted, reloadTimer),
-      onEvent(events.timerResumed, reloadTimer),
-      onEvent(events.taskActiveChanged, reload),
-      onEvent(events.taskCompleted, () => {
-        reload()
+
+      // Timer lifecycle: payload is `TimerStateData`; preserve task_id.
+      onEvent(events.timerPhaseCompleted, applyTimerState),
+      onEvent(events.timerReset, applyTimerState),
+      onEvent(events.timerPaused, applyTimerState),
+      onEvent(events.timerStarted, applyTimerState),
+      onEvent(events.timerResumed, applyTimerState),
+
+      // Task events: direct-map the embedded Task; re-fetch the timer
+      // because the timer state is bound to the active task and the
+      // orchestrator does not emit a timer:* event after load_state.
+      onEvent(events.taskActiveChanged, (payload) => {
+        if (payload) {
+          applyActiveTask(payload.task)
+          fetchTimer()
+        }
+      }),
+      onEvent(events.taskCompleted, (payload) => {
+        applyTaskIfActiveForId(payload.task_id, payload.task)
+        fetchTimer()
         toast.success('Task completed!')
       }),
-      onEvent(events.taskReset, () => {
-        reload()
+      onEvent(events.taskReset, (payload) => {
+        applyTaskIfActiveForId(payload.task_id, payload.task)
+        fetchTimer()
         toast.info('Task progress reset')
       }),
-
-      onEvent(events.taskAutoAdvanced, () => {
-        // reload()
+      onEvent(events.taskAutoAdvanced, (payload) => {
+        applyActiveTask(payload.to_task)
+        fetchTimer()
         toast.success('Switched to next task')
       }),
-      // Screen blocker: show the focus-enforcement overlay when a work/break
-      // phase expires and blocking is enabled for that phase.
+
+      // Screen blocker: show the focus-enforcement overlay.
       onEvent(events.screenBlockerActivate, (payload) => {
         useScreenBlockerStore.getState().activate(payload.message)
       }),
@@ -78,5 +81,5 @@ export function useEventBus(): void {
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn())
     }
-  }, [fetchTimer, applyTick, loadActiveTask])
+  }, [fetchTimer, applyTick, applyTimerState, applyActiveTask, applyTaskIfActiveForId])
 }
