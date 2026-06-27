@@ -13,7 +13,7 @@ They shape the structure, not the existence.
 Much of this code was written *with* AI agents — but not hands-off. The real work was
 exploration: choosing trade-offs, reviewing output, debugging when agents went wrong,
 and learning enough Rust/Tauri/DDD to judge the results. The
-[commit history](../../commits) is the paper trail — terse messages, fix-then-iterate
+[commit history](../commits) is the paper trail — terse messages, fix-then-iterate
 cycles, the rhythm of someone actually engaged, not blindly accepting output.
 
 ## 🏗️ Clean Architecture & DDD

@@ -356,6 +356,6 @@ pub fn test_timer() -> Timer {
 ```
 
 ## Next Steps
-- Understand [Use Cases Layer](../usecases/)
-- Learn about [Domain Events](../../connections/events.md)
-- See [Testing Guide](../../workflows/testing.md)
+- Understand [Use Cases Layer](./usecases-layer.md)
+- Learn about [Domain Events](./events.md)
+- See [Testing Guide](../workflows/testing.md)

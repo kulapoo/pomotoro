@@ -547,5 +547,5 @@ DELETE /api/tasks/{task_id}/notes/{note_id}
 
 ## Next Steps
 - See [Testing Workflow](./testing.md)
-- Learn [Fixing Bugs](./fixing-bugs.md)
+- Learn [Fixing Bugs](./fixing-a-bug.md)
 - Review [Code Review Process](./code-review.md)

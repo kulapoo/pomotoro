@@ -443,6 +443,10 @@ cargo tarpaulin -p infra --min 80
 
 ## Test Commands
 
+> All commands below also have `just` wrappers — see the
+> [root README](../../README.md#-development) (`just test`, `just test-domain`,
+> `just test-usecases`, `just test-infra`).
+
 ### Running Tests
 ```bash
 # All tests
@@ -450,6 +454,8 @@ cargo test --workspace
 
 # Specific package
 cargo test -p domain
+cargo test -p usecases
+cargo test -p infra
 
 # Specific test
 cargo test timer_starts_from_idle
@@ -464,6 +470,37 @@ cargo test --release
 cargo test -- --test-threads=4
 ```
 
+### By Module / Name Pattern
+```bash
+# Domain — specific aggregate
+cargo test -p domain task
+cargo test -p domain timer
+cargo test -p domain audio
+
+# Infra — integration tests by module path
+cargo test -p infra app::task
+cargo test -p infra app::timer
+
+# Run a single test with full output
+cargo test -p infra app::timer::timer_should_start_from_idle_state -- --exact --nocapture --show-output
+
+# Match a name pattern
+cargo test timer -- --nocapture
+```
+
+### Debugging Flaky / Stateful Tests
+```bash
+# Serial execution (for stateful tests)
+cargo test -- --test-threads=1
+
+# Run ignored tests only
+cargo test -- --ignored
+
+# Backtrace on failure
+RUST_BACKTRACE=1 cargo test
+RUST_BACKTRACE=full cargo test
+```
+
 ### Watch Mode
 ```bash
 # Install cargo-watch
@@ -474,6 +511,7 @@ cargo watch -x test
 
 # Watch specific package
 cargo watch -x "test -p domain"
+cargo watch -x "test -p infra"
 ```
 
 ## Best Practices
@@ -526,5 +564,5 @@ fn debug_test() {
 
 ## Next Steps
 - See [Code Review](./code-review.md)
-- Learn [Adding Features](./adding-feature.md)
-- Review [Fixing Bugs](./fixing-bugs.md)
+- Learn [Adding Features](./adding-a-feature.md)
+- Review [Fixing Bugs](./fixing-a-bug.md)

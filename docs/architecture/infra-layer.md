@@ -118,35 +118,37 @@ impl EventBus for MemoryEventBus {
 ```
 
 ## File Structure
+
+Persistence is **SQLite via Diesel** (with r2d2 pooling). The infra crate holds
+adapters, repositories, and the event bus; Tauri commands live in the thin
+`apps/tauri-app` wrapper.
+
 ```
-infra/src/
+core/infra/src/
 ├── adapters/
-│   ├── audio/
-│   │   ├── mod.rs
-│   │   ├── audio_srv.rs       # Audio service adapter
-│   │   └── library_service.rs # Sound library management
-│   ├── config/
-│   │   ├── mod.rs
-│   │   ├── file_repo.rs       # File-based config storage
-│   │   └── memory_repo.rs     # In-memory config (testing)
-│   ├── task/
-│   │   ├── mod.rs
-│   │   ├── file_repo.rs       # File-based task storage
-│   │   ├── task_dto.rs        # Serialization DTOs
-│   │   └── memory_repo.rs     # In-memory tasks (testing)
-│   └── notifications.rs       # System notifications
-├── commands/
-│   ├── mod.rs
-│   ├── timer_cmd.rs           # Timer Tauri commands
-│   ├── task_cmd.rs            # Task Tauri commands
-│   └── config_cmd.rs          # Config Tauri commands
-├── events/
-│   ├── mod.rs
-│   ├── mem_event_bus.rs       # In-memory event bus
-│   └── event_subscriber.rs    # Event handling
-├── bootstrap.rs               # Dependency injection
-└── main.rs                   # Application entry point
+│   ├── audio/              # audio_service_adapter, library_service, asset_provider
+│   ├── config/             # config adapter + event_handlers/
+│   ├── database/           # connection.rs (r2d2 pool), models.rs, sqlite_config_repository.rs
+│   ├── events/             # mem_event_bus, event_handler, event_subscriber, emitters
+│   ├── notifications/      # service.rs + event_handlers.rs
+│   ├── task/               # sqlite_repository.rs + event_handlers/
+│   └── timer/              # sqlite_repository.rs, sqlite_service.rs, timer_dto.rs + event_handlers/
+├── bin/                    # test_db.rs (DB inspection tooling)
+├── bootstrap.rs            # AppState wiring / dependency injection
+├── schema.rs               # Diesel schema (generated)
+└── lib.rs
+
+apps/tauri-app/src/
+├── adapters/               # emitter.rs, notification_service.rs (Tauri-side bridges)
+├── commands/               # Tauri #[tauri::command] handlers
+├── tray.rs                 # System tray integration
+└── lib.rs / main.rs        # App entry + invoke_handler registration
 ```
+
+> The illustrative repository/adapter examples below use generic names
+> (`FileTaskRepository`, `SmtpEmailAdapter`) to demonstrate the patterns. The
+> real implementations are `Sqlite*Repository` types — see
+> [reference/module-map](../reference/module-map.md) for the exact file list.
 
 ## Creating Infrastructure Components
 
@@ -509,6 +511,6 @@ impl TaskRepository for CachedTaskRepository {
 ```
 
 ## Next Steps
-- Explore [UI Layer](../ui/)
-- Learn about [Event System](../../connections/events.md)
-- See [Adding Features](../../workflows/adding-feature.md)
+- Review the [Architecture Overview](./overview.md)
+- Learn about [Event System](./events.md)
+- See [Adding Features](../workflows/adding-a-feature.md)

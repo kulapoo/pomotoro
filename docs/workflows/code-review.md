@@ -405,5 +405,5 @@ cargo outdated
 
 ## Next Steps
 - See [Testing Workflow](./testing.md)
-- Learn [Adding Features](./adding-feature.md)
-- Review [Git Workflow](../overview/workflow.md)
+- Learn [Adding Features](./adding-a-feature.md)
+- Review [Git Workflow](./development.md)

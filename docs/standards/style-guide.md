@@ -82,7 +82,7 @@ Follow this order:
 
 ### File Structure
 
-@docs/dev/dvelop
+See the [file-structure guide](./file-structure.md).
 
 ### Naming Conventions
 
@@ -105,12 +105,12 @@ If the module path provides sufficient context, use the generic name. The path t
 
 #### File Organization Rules
 
-@docs/development/file-structure.md
+See the [file-structure guide](./file-structure.md) for the full layout.
 
 
 ## Code Templates
 
-@docs/development/code-templates.md
+See the [code templates](./code-templates.md) for copy-paste entity/repository/use-case skeletons.
 
 ## Error Handling
 

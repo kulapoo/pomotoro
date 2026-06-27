@@ -1,5 +1,25 @@
 # 🏛️ Architecture Overview
 
+## Technology Stack
+
+- **Frontend:** [React](https://react.dev/) + TypeScript, bundled with [Vite](https://vite.dev/)
+- **Backend / desktop shell:** [Tauri](https://tauri.app/)
+- **Core language:** Rust (framework-agnostic `core/` engine)
+- **Persistence:** SQLite via [Diesel](https://diesel.rs/) ORM with r2d2 connection pooling
+- **Audio:** `rodio` for playback
+- **Async runtime:** Tokio
+- **Build:** Cargo workspace + Tauri CLI; all tasks wrapped in [`just`](../../justfile)
+
+## Core Features at a Glance
+
+- **Timer** — configurable work / short-break / long-break cycles, state machine, pause/skip/reset
+- **Tasks** — multi-session tasks, status tracking, cycling strategies, search & filters
+- **Audio** — ambient background sounds + phase-transition notification chimes
+- **Configuration** — general, audio, notifications, appearance, window/tray, screen-blocking
+- **Events** — domain events drive loose coupling (timer, task, session, app lifecycle events)
+
+See the [feature docs](../reference/features/) for per-feature design notes.
+
 ## Clean Architecture Principles
 
 Pomotoro follows **Clean Architecture** principles with a clear separation of concerns:
@@ -165,24 +185,19 @@ async fn start_timer(state: State<'_, AppState>) -> Result<()> {
 
 ```
 pomotoro/
-├── domain/           # Core business logic
-│   ├── timer/       # Timer aggregate
-│   ├── task/        # Task aggregate
-│   ├── config/      # Configuration aggregate
-│   └── shared_kernel/ # Shared types
-├── usecases/        # Application logic
-│   ├── timer/       # Timer use cases
-│   ├── task/        # Task use cases
-│   └── config/      # Config use cases
-├── infra/           # External adapters
-│   ├── adapters/    # Repository implementations
-│   ├── commands/    # Tauri commands
-│   └── bootstrap.rs # Dependency injection
-└── ui/              # Presentation
-    ├── components/  # Reusable UI components
-    ├── pages/       # Page components
-    └── store/       # State management
+├── core/                       # Framework-agnostic core engine
+│   ├── domain/                 #   Business logic & entities (Timer, Task, Config, Audio)
+│   │   ├── timer/  task/  config/  audio/  shared_kernel/  event_names/
+│   ├── usecases/               #   Application services (orchestrates domain)
+│   │   └── timer/  task/  config/  audio/
+│   └── infra/                  #   Adapters, SQLite repos, event bus (zero Tauri deps)
+│       └── adapters/{database, timer, task, config, audio, notifications, events}
+└── apps/                       # Client applications (thin wrappers over core)
+    ├── tauri-app/              #   Tauri desktop client (commands, tray, UI emission)
+    └── react-ui/               #   React + TypeScript frontend (Vite)
 ```
+
+See the [Module Map](../reference/module-map.md) for the full file-by-file breakdown.
 
 ## Data Flow Example
 
@@ -223,6 +238,6 @@ Each layer has its own testing approach:
 ## Next Steps
 
 Now that you understand the architecture:
-1. Read [Getting Started](./getting-started.md) to set up your environment
-2. Explore specific [Layer Guides](../layers/)
-3. Learn about [Data Flow](../connections/data-flow.md)
+1. Read [Getting Started](../getting-started.md) to set up your environment
+2. Explore specific layer guides: [Domain](./domain-layer.md) · [Use Cases](./usecases-layer.md) · [Infrastructure](./infra-layer.md)
+3. Learn about [Data Flow](./data-flow.md)

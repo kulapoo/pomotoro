@@ -78,18 +78,17 @@ pomotoro/
 Start by exploring the domain layer:
 ```bash
 # Read the domain documentation
-cat docs/domain.md
+cat docs/reference/domain-model.md
 
 # Explore key entities
-ls -la domain/src/timer/
-ls -la domain/src/task/
+ls -la core/domain/src/timer/
+ls -la core/domain/src/task/
 ```
 
 ### Step 2: Pick a Task
 Check available issues:
 - Look for `good-first-issue` labels
-- Read the [TODO list](../../todo.md)
-- Check [MVP specs](../../specs/)
+- See the [feature docs](./reference/features/) for what's already built
 
 ### Step 3: Create a Branch
 ```bash
@@ -100,8 +99,8 @@ git checkout -b fix/issue-description
 
 ### Step 4: Make Changes
 Follow the workflow for your task type:
-- [Adding a Feature](../workflows/adding-feature.md)
-- [Fixing Bugs](../workflows/fixing-bugs.md)
+- [Adding a Feature](./workflows/adding-a-feature.md)
+- [Fixing Bugs](./workflows/fixing-a-bug.md)
 
 ### Step 5: Test Your Changes
 ```bash
@@ -224,14 +223,13 @@ cargo tauri dev
 ```
 
 ### Getting Help
-- Check [existing issues](https://github.com/yourusername/pomotoro/issues)
+- Check the [troubleshooting section](../README.md#-troubleshooting) in the README
 - Ask in discussions
-- Read the [FAQ](../FAQ.md)
 
 ## Next Steps
 
 ✅ Environment set up  
 ✅ Project structure understood  
-➡️ Explore [Layer Guides](../layers/)  
-➡️ Learn [Development Workflow](./workflow.md)  
+➡️ Explore the [Architecture](./architecture/overview.md)  
+➡️ Learn the [Development Workflow](./workflows/development.md)  
 ➡️ Start contributing!

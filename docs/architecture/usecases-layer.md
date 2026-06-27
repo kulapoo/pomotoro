@@ -417,6 +417,6 @@ impl GetTaskQueue {
 ```
 
 ## Next Steps
-- Explore [Infrastructure Layer](../infra/)
-- Learn about [Event System](../../connections/events.md)
-- See [Testing Workflows](../../workflows/testing.md)
+- Explore [Infrastructure Layer](./infra-layer.md)
+- Learn about [Event System](./events.md)
+- See [Testing Workflows](../workflows/testing.md)

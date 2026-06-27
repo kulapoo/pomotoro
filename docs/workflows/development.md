@@ -242,12 +242,12 @@ Follow semantic versioning:
 5. **Pair Program**: Work with another contributor
 
 ### Resources
-- [Architecture Overview](./architecture.md)
-- [Layer Guides](../layers/)
-- [Code Templates](../../development/code-templates.md)
-- [Style Guide](../../development/style-guide.md)
+- [Architecture Overview](../architecture/overview.md)
+- [Layer Guides](../architecture/domain-layer.md)
+- [Code Templates](../standards/code-templates.md)
+- [Style Guide](../standards/style-guide.md)
 
 ## Next Steps
-- Set up your [development environment](./getting-started.md)
-- Understand the [architecture](./architecture.md)
-- Pick a [workflow](../workflows/) for your task
+- Set up your [development environment](../getting-started.md)
+- Understand the [architecture](../architecture/overview.md)
+- Pick a [workflow](./) for your task

@@ -280,7 +280,8 @@ After installing missing system libraries, run `cargo clean` then rebuild.
 4. **Commit** with clear messages and open a pull request
 
 See [ROADMAP.md](ROADMAP.md) (if present) for planned features, and
-[docs/contribute](docs/contribute) + [docs/development](docs/development) for guidelines.
+[docs/README.md](docs/README.md) for the full documentation index
+(architecture, reference, coding standards, and workflows).
 
 ---
 

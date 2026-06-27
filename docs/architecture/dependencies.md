@@ -462,6 +462,6 @@ use domain::timer::Timer; // UI shouldn't know domain directly!
 - Don't hardcode dependencies
 
 ## Next Steps
-- Learn [Adding Features](../workflows/adding-feature.md)
+- Learn [Adding Features](../workflows/adding-a-feature.md)
 - See [Testing Guide](../workflows/testing.md)
-- Review [Architecture](../overview/architecture.md)
+- Review [Architecture](./overview.md)

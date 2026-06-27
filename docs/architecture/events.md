@@ -505,5 +505,5 @@ impl BatchedEventBus {
 
 ## Next Steps
 - Understand [Dependencies](./dependencies.md)
-- Learn [Adding Features](../workflows/adding-feature.md)
+- Learn [Adding Features](../workflows/adding-a-feature.md)
 - See [Testing Guide](../workflows/testing.md)
