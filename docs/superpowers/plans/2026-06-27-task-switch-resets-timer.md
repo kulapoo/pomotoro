@@ -313,7 +313,7 @@ async fn should_switch_active_task_from_paused_resets_to_idle() {
 
 - [ ] **Step 3: Run the tests and confirm they FAIL**
 
-Run: `cargo test -p infra --test app -- should_switch_active_task`
+Run: `cargo test -p infra --test main -- should_switch_active_task`
 Expected: FAIL. The Working-path test fails on `status == Stopped` (current behavior is `Running`); the ShortBreak/LongBreak/Paused tests fail on `is_idle()` (current behavior carries the old phase forward).
 
 > If the Working-path test passes, the assertion edits in Step 1 were not applied. If a break/Paused test passes, the starting timer state was not actually saved — re-check the `ctx.timer_repo.save` call.
@@ -358,7 +358,7 @@ This deletes the now-unused `new_timer_remaining` binding and the `with_remainin
 
 - [ ] **Step 5: Run the tests and confirm they PASS**
 
-Run: `cargo test -p infra --test app -- should_switch_active_task`
+Run: `cargo test -p infra --test main -- should_switch_active_task`
 Expected: PASS — all four `switch_active_task` tests now see an Idle timer bound to task2.
 
 - [ ] **Step 6: Run the full workspace test suite**
@@ -465,7 +465,7 @@ async fn should_switch_active_task_to_same_task_is_noop() {
 
 - [ ] **Step 2: Run the test and confirm it FAILS**
 
-Run: `cargo test -p infra --test app -- should_switch_active_task_to_same_task_is_noop`
+Run: `cargo test -p infra --test main -- should_switch_active_task_to_same_task_is_noop`
 Expected: FAIL on `status == Running` — without the guard, Task 1's `Timer::new` resets the running timer to Idle.
 
 - [ ] **Step 3: Implement the idempotency guard**
@@ -486,7 +486,7 @@ In `core/usecases/src/task/switch_active_task.rs`, locate the timer fetch (the l
 
 - [ ] **Step 4: Run the test and confirm it PASSES**
 
-Run: `cargo test -p infra --test app -- should_switch_active_task_to_same_task_is_noop`
+Run: `cargo test -p infra --test main -- should_switch_active_task_to_same_task_is_noop`
 Expected: PASS.
 
 - [ ] **Step 5: Run the full workspace test suite**
@@ -590,7 +590,7 @@ async fn should_switch_task_from_paused_resets_to_idle() {
 
 - [ ] **Step 2: Run the test and confirm it FAILS**
 
-Run: `cargo test -p infra --test app -- should_switch_task_from_paused_resets_to_idle`
+Run: `cargo test -p infra --test main -- should_switch_task_from_paused_resets_to_idle`
 Expected: FAIL on `is_idle()` — current `switch_task` preserves the Paused state onto task2.
 
 - [ ] **Step 3: Implement the alignment**
@@ -616,7 +616,7 @@ The `Timer` import remains in use (it appears in the `validate_task_switch(task:
 
 - [ ] **Step 4: Run the test and confirm it PASSES**
 
-Run: `cargo test -p infra --test app -- should_switch_task_from_paused_resets_to_idle`
+Run: `cargo test -p infra --test main -- should_switch_task_from_paused_resets_to_idle`
 Expected: PASS.
 
 - [ ] **Step 5: Run the full workspace test suite**

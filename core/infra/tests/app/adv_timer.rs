@@ -1004,7 +1004,7 @@ async fn should_switch_active_task_during_timer_session() {
     );
 }
 
-// Test 29: Switching during a ShortBreak resets the new task to Idle —
+// Test 33: Switching during a ShortBreak resets the new task to Idle —
 // the new task must NOT inherit the previous task's (unearned) break.
 #[tokio::test]
 async fn should_switch_active_task_from_short_break_resets_to_idle() {
@@ -1074,7 +1074,7 @@ async fn should_switch_active_task_from_short_break_resets_to_idle() {
     assert_eq!(timer_after.state().remaining_seconds(), 0);
 }
 
-// Test 30: Switching during a LongBreak resets the new task to Idle.
+// Test 34: Switching during a LongBreak resets the new task to Idle.
 #[tokio::test]
 async fn should_switch_active_task_from_long_break_resets_to_idle() {
     let ctx =
@@ -1134,7 +1134,7 @@ async fn should_switch_active_task_from_long_break_resets_to_idle() {
     );
 }
 
-// Test 31: Switching while Paused resets the new task to Idle — the paused
+// Test 35: Switching while Paused resets the new task to Idle — the paused
 // phase is discarded, not transferred.
 #[tokio::test]
 async fn should_switch_active_task_from_paused_resets_to_idle() {
@@ -1197,7 +1197,7 @@ async fn should_switch_active_task_from_paused_resets_to_idle() {
     );
 }
 
-// Test 32: Switching to the task that is already active must be a no-op —
+// Test 36: Switching to the task that is already active must be a no-op —
 // a running timer must NOT be stopped by a redundant switch.
 #[tokio::test]
 async fn should_switch_active_task_to_same_task_is_noop() {
@@ -1977,7 +1977,7 @@ async fn completed_at_flips_only_after_trailing_break() {
     );
 }
 
-// Test 33: Strict switch_task from a Paused timer resets the new task to
+// Test 37: Strict switch_task from a Paused timer resets the new task to
 // Idle. validate_task_switch allows Paused (not running), so the Paused
 // phase must not carry over to the new task.
 #[tokio::test]
