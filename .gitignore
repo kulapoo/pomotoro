@@ -1,6 +1,7 @@
 /dist/
 /target/
 /Cargo.lock
+/.worktrees/
 ui/dist/
 ai_contexts
 !.claude
