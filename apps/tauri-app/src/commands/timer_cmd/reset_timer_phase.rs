@@ -1,5 +1,4 @@
 use super::*;
-use std::time::Duration;
 
 use domain::TaskId;
 use infra::adapters::TimerTickService;
@@ -34,10 +33,8 @@ pub async fn reset_timer_phase(
         .ok_or("infra::commands::timer_cmd::reset_timer_phase - Task not found")?;
 
     // Reset the current phase's countdown to its full duration (business
-    // operation). This publishes a Reset event whose handler stops the tick
-    // loop. The event bus is fire-and-forget (handlers run on spawned tasks),
-    // so drain that handler before restarting the loop below — otherwise its
-    // stop_timer_tick_loop() could abort the loop we are about to start.
+    // operation). The orchestrator owns the tick-loop side effects per the
+    // ownership contract — no sleep, no reliance on the Reset event handler.
     reset_timer_phase_usecase(
         task_id_parsed,
         task_repo.inner().clone(),
@@ -48,7 +45,27 @@ pub async fn reset_timer_phase(
     .context("infra::commands::timer_cmd::reset_timer_phase - Failed to reset timer phase")
     .map_err(|e| e.to_string())?;
 
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // Stop the existing loop and refresh the in-memory cache so a fresh
+    // loop (if any) sees the reset remaining seconds.
+    timer_tick_service_arc
+        .stop_timer_tick_loop()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::reset_timer_phase - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
+
+    timer_tick_service_arc
+        .load_state()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::reset_timer_phase - Failed to load timer state: {}",
+                e
+            )
+        })?;
 
     // Get the updated timer state with the reset remaining seconds.
     let updated_timer = timer_repo_arc
@@ -60,8 +77,8 @@ pub async fn reset_timer_phase(
         .map_err(|e| e.to_string())?;
 
     // Restart the tick loop so a running phase keeps counting down from the
-    // full duration. For a paused timer the loop would no-op, so skip it to
-    // preserve the paused state.
+    // full duration. For a paused timer the loop should not run; leave it
+    // stopped to preserve the paused state.
     if updated_timer.is_running() {
         timer_tick_service_arc
             .start_timer_tick_loop(Some(task.config().timer.clone()), None)
