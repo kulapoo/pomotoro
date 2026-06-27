@@ -513,46 +513,95 @@ impl TrayCtx {
 // ── menu action handlers ────────────────────────────────────────────────────
 
 /// Play / Pause / Resume — a single toggle mirroring the React play-pause
-/// button. Running → pause, Paused → resume, otherwise → start.
+/// button. Running → pause, Paused → resume, otherwise → start. Per the
+/// tick-loop ownership contract, this handler drives the loop directly in
+/// each branch.
 fn menu_play_pause(app: &AppHandle) {
     let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
     ctx.spawn(|ctx| async move {
-        let res = match ctx.timer.status() {
-            TimerStatus::Running => {
-                let live = ctx.tick_service.get_current_timer().await;
-                let remaining = live.remaining_seconds(None);
-                pause_timer_phase(
-                    ctx.task_id,
-                    remaining,
-                    ctx.task_repo,
-                    ctx.timer_repo,
-                    ctx.event_publisher,
-                )
-                .await
-                .map(|_| ())
+        // Wrapped in an inner async block so `?` propagates to a single
+        // Result we can log uniformly. `Result::and_then(|_| async move {…})`
+        // does NOT type-check (the closure must return a Result, not a
+        // Future), so we use a plain inner async block instead — same intent,
+        // clearer.
+        let res: domain::Result<()> = async {
+            match ctx.timer.status() {
+                TimerStatus::Running => {
+                    let live = ctx.tick_service.get_current_timer().await;
+                    let remaining = live.remaining_seconds(None);
+                    pause_timer_phase(
+                        ctx.task_id,
+                        remaining,
+                        ctx.task_repo.clone(),
+                        ctx.timer_repo.clone(),
+                        ctx.event_publisher.clone(),
+                    )
+                    .await?;
+                    // Drive the stop directly. The TimerPaused event handler
+                    // is a UI-only emitter and no longer stops the loop.
+                    ctx.tick_service.load_state().await?;
+                    ctx.tick_service.stop_timer_tick_loop().await?;
+                }
+                TimerStatus::Paused => {
+                    let task_repo = ctx.task_repo.clone();
+                    let task_id = ctx.task_id;
+                    let tick_service = ctx.tick_service.clone();
+                    resume_timer_phase(
+                        ctx.task_id,
+                        ctx.task_repo.clone(),
+                        ctx.timer_repo.clone(),
+                        ctx.event_publisher.clone(),
+                    )
+                    .await?;
+                    let task = task_repo.get_by_id(task_id).await?.ok_or_else(
+                        || domain::Error::TaskNotFound {
+                            id: task_id.to_string(),
+                        },
+                    )?;
+                    tick_service
+                        .start_timer_tick_loop(
+                            Some(task.config().timer.clone()),
+                            None,
+                        )
+                        .await
+                        .map_err(|e| domain::Error::RepositoryError {
+                            message: e,
+                        })?;
+                }
+                TimerStatus::Idle | TimerStatus::Stopped => {
+                    let task_repo = ctx.task_repo.clone();
+                    let task_id = ctx.task_id;
+                    let tick_service = ctx.tick_service.clone();
+                    start_timer_phase(
+                        ctx.task_repo.clone(),
+                        ctx.timer_repo.clone(),
+                        ctx.event_publisher.clone(),
+                        StartTimerPhaseCmd {
+                            task_id: Some(ctx.task_id),
+                        },
+                    )
+                    .await?;
+                    let task = task_repo.get_by_id(task_id).await?.ok_or_else(
+                        || domain::Error::TaskNotFound {
+                            id: task_id.to_string(),
+                        },
+                    )?;
+                    tick_service
+                        .start_timer_tick_loop(
+                            Some(task.config().timer.clone()),
+                            None,
+                        )
+                        .await
+                        .map_err(|e| domain::Error::RepositoryError {
+                            message: e,
+                        })?;
+                }
             }
-            TimerStatus::Paused => resume_timer_phase(
-                ctx.task_id,
-                ctx.task_repo,
-                ctx.timer_repo,
-                ctx.event_publisher,
-            )
-            .await
-            .map(|_| ()),
-            TimerStatus::Idle | TimerStatus::Stopped => {
-                start_timer_phase(
-                    ctx.task_repo,
-                    ctx.timer_repo,
-                    ctx.event_publisher,
-                    StartTimerPhaseCmd {
-                        task_id: Some(ctx.task_id),
-                    },
-                )
-                .await
-            }
-        };
+            Ok(())
+        }
+        .await;
         if let Err(e) = res {
             log::error!("Tray play/pause failed: {}", e);
         }
@@ -560,9 +609,9 @@ fn menu_play_pause(app: &AppHandle) {
 }
 
 /// Restart the current phase's countdown, mirroring the React "Restart Phase"
-/// button (`reset_timer_phase`). After the reset, a running phase must have its
-/// tick loop restarted (the Reset event handler stops it); a paused phase is
-/// left paused.
+/// button (`reset_timer_phase`). Per the tick-loop ownership contract, this
+/// handler drives stop/load/start directly — no sleep, no reliance on the
+/// Reset event handler.
 fn menu_reset_phase(app: &AppHandle) {
     let Some(ctx) = TrayCtx::try_load(app) else {
         return;
@@ -589,12 +638,20 @@ fn menu_reset_phase(app: &AppHandle) {
         .await
         {
             log::error!("Tray reset phase failed: {}", e);
+            return;
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        if let Err(e) = ctx.tick_service.stop_timer_tick_loop().await {
+            log::error!("Tray reset phase: failed to stop tick loop: {}", e);
+            return;
+        }
+        if let Err(e) = ctx.tick_service.load_state().await {
+            log::error!("Tray reset phase: failed to load timer state: {}", e);
+            return;
+        }
 
-        if let Ok(updated) = ctx.timer_repo.get().await {
-            if updated.is_running() {
+        match ctx.timer_repo.get().await {
+            Ok(updated) if updated.is_running() => {
                 if let Err(e) = ctx
                     .tick_service
                     .start_timer_tick_loop(
@@ -609,25 +666,74 @@ fn menu_reset_phase(app: &AppHandle) {
                     );
                 }
             }
+            Ok(_) => { /* paused: leave the loop stopped */ }
+            Err(e) => {
+                log::error!("Tray reset phase: failed to read timer: {}", e)
+            }
         }
     });
 }
 
-/// Skip to the next phase, mirroring the React "Skip Phase" button.
+/// Skip to the next phase, mirroring the React "Skip Phase" button. Per the
+/// tick-loop ownership contract, this handler drives stop/load/start directly.
+/// Previously skip-from-tray never restarted the loop (no handler did), so the
+/// timer appeared stuck after a skip.
 fn menu_skip(app: &AppHandle) {
     let Some(ctx) = TrayCtx::try_load(app) else {
         return;
     };
     ctx.spawn(|ctx| async move {
+        let task = match ctx.task_repo.get_by_id(ctx.task_id).await {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                log::error!("Tray skip: task {} not found", ctx.task_id);
+                return;
+            }
+            Err(e) => {
+                log::error!("Tray skip: failed to load task: {}", e);
+                return;
+            }
+        };
+
         if let Err(e) = skip_timer_phase(
-            ctx.task_repo,
-            ctx.timer_repo,
-            ctx.event_publisher,
+            ctx.task_repo.clone(),
+            ctx.timer_repo.clone(),
+            ctx.event_publisher.clone(),
             ctx.task_id,
         )
         .await
         {
             log::error!("Tray skip phase failed: {}", e);
+            return;
+        }
+
+        if let Err(e) = ctx.tick_service.stop_timer_tick_loop().await {
+            log::error!("Tray skip: failed to stop tick loop: {}", e);
+            return;
+        }
+        if let Err(e) = ctx.tick_service.load_state().await {
+            log::error!("Tray skip: failed to load timer state: {}", e);
+            return;
+        }
+
+        match ctx.timer_repo.get().await {
+            Ok(updated) if updated.is_running() => {
+                if let Err(e) = ctx
+                    .tick_service
+                    .start_timer_tick_loop(
+                        Some(task.config().timer.clone()),
+                        None,
+                    )
+                    .await
+                {
+                    log::error!(
+                        "Tray skip: failed to restart tick loop: {}",
+                        e
+                    );
+                }
+            }
+            Ok(_) => { /* paused: leave the loop stopped */ }
+            Err(e) => log::error!("Tray skip: failed to read timer: {}", e),
         }
     });
 }
@@ -640,9 +746,9 @@ fn menu_reset_task(app: &AppHandle) {
     };
     ctx.spawn(|ctx| async move {
         if let Err(e) = reset_task_uc(
-            ctx.task_repo,
-            ctx.timer_repo,
-            ctx.event_publisher,
+            ctx.task_repo.clone(),
+            ctx.timer_repo.clone(),
+            ctx.event_publisher.clone(),
             ctx.task_id,
         )
         .await
@@ -650,10 +756,13 @@ fn menu_reset_task(app: &AppHandle) {
             log::error!("Tray reset task failed: {}", e);
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
+        // Per the tick-loop ownership contract, drive the stop directly. No
+        // sleep — the TaskReset event handler is a UI-only emitter now.
         if let Err(e) = ctx.tick_service.stop_timer_tick_loop().await {
             log::error!("Tray reset task: failed to stop tick loop: {}", e);
+        }
+        if let Err(e) = ctx.tick_service.load_state().await {
+            log::error!("Tray reset task: failed to load timer state: {}", e);
         }
     });
 }
