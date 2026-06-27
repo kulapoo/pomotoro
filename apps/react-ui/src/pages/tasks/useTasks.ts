@@ -59,6 +59,7 @@ export interface TaskActiveChangedPayload {
   workflow_result: string
   version: number
   occurred_at: string
+  task: Task
 }
 
 export interface TaskCompletedPayload {
@@ -67,11 +68,24 @@ export interface TaskCompletedPayload {
   completed_at: string
   version: number
   occurred_at: string
+  task: Task
+}
+
+export interface TaskResetPayload {
+  task_id: string
+  name: string | null
+  description: string | null
+  max_sessions: number | null
+  tags: string[] | null
+  version: number
+  occurred_at: string
+  task: Task
 }
 
 export interface TaskAutoAdvancedPayload {
   from_task_id: string
   to_task_id: string
+  to_task: Task
 }
 
 export const MAX_TASKS = 50
@@ -84,6 +98,8 @@ interface TaskStore {
   error: BackendError | null
   loadTasks: () => Promise<boolean>
   loadActiveTask: () => Promise<boolean>
+  applyActiveTask: (task: Task) => void
+  applyTaskIfActiveForId: (taskId: string, task: Task) => void
   createTask: (req: CreateTaskRequest) => Promise<boolean>
   updateTask: (req: UpdateTaskRequest) => Promise<boolean>
   deleteTask: (id: string) => Promise<boolean>
@@ -126,6 +142,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       logger.error('loadActiveTask failed', e)
       set({ error: e as BackendError, isLoading: false })
       return false
+    }
+  },
+
+  applyActiveTask: (task) => set({ activeTask: task }),
+
+  applyTaskIfActiveForId: (taskId, task) => {
+    if (get().activeTask?.id === taskId) {
+      set({ activeTask: task })
     }
   },
 

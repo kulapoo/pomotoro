@@ -16,6 +16,7 @@ import type {
   UpdateTaskRequest,
   TaskActiveChangedPayload,
   TaskCompletedPayload,
+  TaskResetPayload,
   TaskAutoAdvancedPayload,
 } from '@/pages/tasks/useTasks'
 
@@ -180,7 +181,7 @@ interface EventPayloadMap {
   'timer:timer_started': TimerStateData
   'timer:timer_paused': TimerStateData
   'timer:timer_resumed': TimerStateData
-  'task:task_reset': unknown
+  'task:task_reset': TaskResetPayload
   'screen_blocker:activate': { message: string }
 }
 
