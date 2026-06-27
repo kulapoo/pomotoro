@@ -1,12 +1,9 @@
-import { useEffect } from 'react'
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import { invokeCmd, onEvent, events } from '@/lib/tauri'
+import { invokeCmd } from '@/lib/tauri'
 import { BackendError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
-import { createBatchedLoader } from '@/lib/async'
 import type { Config } from '@/pages/settings/useSettings'
-import type { UnlistenFn } from '@tauri-apps/api/event'
 import type { TimerStateData, Timer } from '@/pages/timer/useTimer'
 
 export const TaskStatus = {
@@ -246,34 +243,4 @@ async function runBusy(
   } finally {
     set({ isBusy: false })
   }
-}
-
-export function useTasksEventBus(): void {
-  const storeLoadTasks = useTaskStore((s) => s.loadTasks)
-  const storeLoadActiveTask = useTaskStore((s) => s.loadActiveTask)
-
-  useEffect(() => {
-    const reloadTasks = createBatchedLoader(() => storeLoadTasks())
-    const reloadActiveTask = createBatchedLoader(() => storeLoadActiveTask())
-
-    const reload = () => {
-      window.setTimeout(() => {
-        reloadTasks()
-        reloadActiveTask()
-      }, 500)
-    }
-
-    reload()
-
-    const unlisteners: Array<Promise<UnlistenFn>> = [
-      onEvent(events.taskListUpdated, reload),
-      onEvent(events.taskCompleted, reload),
-      onEvent(events.taskProgressUpdated, () => window.setTimeout(reloadActiveTask, 500)),
-      onEvent(events.taskAutoAdvanced, () => window.setTimeout(reloadActiveTask, 500)),
-    ]
-
-    return () => {
-      for (const p of unlisteners) void p.then((fn) => fn())
-    }
-  }, [storeLoadTasks, storeLoadActiveTask])
 }
