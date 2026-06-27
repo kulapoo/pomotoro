@@ -35,6 +35,12 @@ pub async fn switch_active_task(
     // Get the single timer instance
     let timer = timer_repo.get().await?;
 
+    // No-op: switching to the task that is already active must not stop a
+    // running timer or churn task status.
+    if timer.task_id() == Some(cmd.task_id) {
+        return Ok(());
+    }
+
     let old_task_id = cmd
         .old_task_id
         .unwrap_or_else(|| timer.task_id().unwrap_or_default());
