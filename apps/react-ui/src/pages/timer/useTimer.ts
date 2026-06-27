@@ -130,6 +130,7 @@ interface TimerStore {
   isBusy: boolean
   fetchTimer: () => Promise<boolean>
   applyTick: (payload: TickPayload) => void
+  applyTimerState: (state: TimerStateData) => void
   start: () => Promise<boolean>
   pause: () => Promise<boolean>
   resume: () => Promise<boolean>
@@ -162,6 +163,12 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
     }
 
     set({ timer })
+  },
+
+  applyTimerState: (state) => {
+    const timer = get().timer
+    if (!timer) return
+    set({ timer: { task_id: timer.task_id, state } })
   },
 
   start: async () => runWithTask(set, get, 'start_timer'),
