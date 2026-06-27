@@ -368,3 +368,81 @@ async fn phase_skipped_payload_embeds_task() {
     assert_eq!(embedded["id"], task_id.to_string());
     assert_eq!(embedded["name"], expected_name);
 }
+
+/// `task:auto_advanced` payload must carry the new task's timer state so
+/// the React EventBus can applyTimerState directly without `fetchTimer`.
+#[tokio::test]
+async fn auto_advanced_payload_embeds_timer() {
+    use domain::{TaskCyclingBehavior, timer::events::CountdownExpired};
+    use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};
+
+    let ctx = AppContextBuilder::new()
+        .with_name("auto_advanced_payload_embeds_timer")
+        .build()
+        .await
+        .expect("build ctx");
+
+    let mut cfg = Config::default();
+    cfg.general.task_cycling_behavior = TaskCyclingBehavior::AutoAdvance;
+    cfg.general.auto_start_breaks = true;
+    cfg.general.auto_start_work_after_break = true;
+    ctx.config_repo.save_config(&cfg).await.unwrap();
+
+    let task1 = TaskBuilder::new()
+        .name("First")
+        .max_sessions(1)
+        .status(TaskStatus::Active)
+        .config(cfg.clone())
+        .build();
+    let task1_id = task1.id();
+    ctx.task_repo.create(task1).await.unwrap();
+
+    let task2 = TaskBuilder::new()
+        .name("Second")
+        .max_sessions(2)
+        .status(TaskStatus::Active)
+        .config(cfg.clone())
+        .build();
+    let task2_id = task2.id();
+    ctx.task_repo.create(task2).await.unwrap();
+
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task1_id),
+        },
+    )
+    .await
+    .expect("start");
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    ctx.ui_simulator.app_handle().clear_events();
+
+    // Work expiry consumes task1's only session; transitions to ShortBreak.
+    ctx.event_bus
+        .publish(Box::new(CountdownExpired::new(Phase::Work, task1_id)));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    // ShortBreak expiry finalizes task1 and cycles to task2 → emits
+    // task:auto_advanced with the new task's timer state embedded.
+    ctx.event_bus
+        .publish(Box::new(CountdownExpired::new(Phase::ShortBreak, task1_id)));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    let events = ctx
+        .ui_simulator
+        .app_handle()
+        .events_of_type(event_names::task::AUTO_ADVANCED);
+    assert!(!events.is_empty(), "task:auto_advanced was not emitted");
+
+    let payload = &events[0].payload;
+    let timer = payload.get("timer").expect("payload missing `timer` field");
+    assert!(
+        timer.get("state").is_some(),
+        "timer field must carry TimerState"
+    );
+    // The post-cycle timer should be bound to task2.
+    assert_eq!(timer["task_id"], task2_id.to_string());
+}

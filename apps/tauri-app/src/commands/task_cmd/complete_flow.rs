@@ -153,12 +153,16 @@ pub async fn complete_task_flow(
                         )
                     })?;
 
+                let timer_json =
+                    timer_tick_service.with_timer(|t| json!(t)).await;
+
                 let _ = app_handle.emit(
                     domain::event_names::task::AUTO_ADVANCED,
                     json!({
                         "from_task_id": task_id.to_string(),
                         "to_task_id": plan.next_task_id.to_string(),
                         "to_task": to_task,
+                        "timer": timer_json,
                     }),
                 );
             }

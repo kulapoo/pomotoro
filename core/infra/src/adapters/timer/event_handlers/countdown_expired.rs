@@ -127,6 +127,7 @@ impl EventHandler for CountdownExpiredHandler {
                                 "from_task_id": countdown_expired.task_id,
                                 "to_task_id": to_task_id,
                                 "to_task": task,
+                                "timer": self.timer_srv.with_timer(|t| json!(t)).await,
                             }),
                         )
                         .map_err(|e| domain::Error::EventPublishingError {
@@ -186,6 +187,7 @@ impl EventHandler for CountdownExpiredHandler {
                                 "from_task_id": countdown_expired.task_id,
                                 "to_task_id": to_task_id,
                                 "to_task": task,
+                                "timer": timer,
                             }),
                         )
                         .map_err(|e| domain::Error::EventPublishingError {
