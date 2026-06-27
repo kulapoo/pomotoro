@@ -52,23 +52,13 @@ pub async fn switch_active_task(
     let task_name = task.name().to_string();
     let task_id = task.id();
 
-    // The new task starts a fresh work phase at its full work duration — the
-    // previous task's in-progress countdown does not carry over.
-    let new_timer_remaining =
-        task.config().timer.work_duration.as_secs() as u32;
-
     task_repo.update(task).await?;
 
-    // Create a new timer for the new task. The phase/status carry over from the
-    // previous task's timer, but the remaining countdown is reset to the new
-    // task's full work duration.
-    let new_timer = domain::Timer::with_state(
-        cmd.task_id,
-        timer
-            .state()
-            .clone()
-            .with_remaining_seconds(new_timer_remaining),
-    );
+    // The new task is bound to the timer in the Idle state — the previous
+    // task's in-progress phase/remaining is NOT carried over. The user starts
+    // the new task's pomodoro explicitly. `Timer::new` encodes this invariant
+    // ("bound to task_id, starting in the Idle state").
+    let new_timer = domain::Timer::new(cmd.task_id);
 
     timer_repo.save(&new_timer).await?;
 

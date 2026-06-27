@@ -8,7 +8,7 @@ use usecases::{
     CreateTaskCmd, create_task,
     timer::{
         StartTimerPhaseCmd, complete_timer_phase, pause_timer_phase,
-        resume_timer_phase, start_timer_phase,
+        start_timer_phase,
     },
 };
 
@@ -901,8 +901,20 @@ async fn should_switch_active_task_during_timer_session() {
     let remaining_after_switch = state_after_switch.remaining_seconds();
     let status_after_switch = state_after_switch.status();
 
-    // Switching tasks resets the new task's timer to its full work duration
-    // (25 minutes = 1500 ticks).
+    // After switching, the timer is Idle and bound to task2. Start a fresh
+    // work phase for task2 so the session-credit check below is meaningful.
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task2.id()),
+        },
+    )
+    .await
+    .expect("Failed to start task2 after switch");
+
+    // task2's work phase is 25 minutes = 1500 ticks.
     let mut ticks_completed = 0;
     for _ in 0..1500 {
         let mut timer = ctx.timer_repo.get().await.unwrap();
@@ -970,14 +982,13 @@ async fn should_switch_active_task_during_timer_session() {
         "Active task should be task2 after switch"
     );
     assert_eq!(
-        remaining_after_switch,
-        25 * 60,
-        "Timer should reset to the new task's full work duration"
+        remaining_after_switch, 0,
+        "Timer should be Idle (0 remaining) after switch"
     );
     assert_eq!(
         status_after_switch,
-        TimerStatus::Running,
-        "Timer should continue running"
+        TimerStatus::Stopped,
+        "Timer should be stopped after switch"
     );
 
     // Only task2 should get session credit
@@ -990,6 +1001,199 @@ async fn should_switch_active_task_during_timer_session() {
         task2_final.current_sessions(),
         1,
         "Task2 should get session credit"
+    );
+}
+
+// Test 29: Switching during a ShortBreak resets the new task to Idle —
+// the new task must NOT inherit the previous task's (unearned) break.
+#[tokio::test]
+async fn should_switch_active_task_from_short_break_resets_to_idle() {
+    let ctx =
+        setup_ctx("should_switch_active_task_from_short_break_resets_to_idle")
+            .await;
+
+    // Arrange: task1 is active and its timer is mid-ShortBreak.
+    let task1 = TaskBuilder::new()
+        .name("Task on break")
+        .max_sessions(4)
+        .status(TaskStatus::Active)
+        .build();
+    ctx.task_repo
+        .create(task1.clone())
+        .await
+        .expect("Failed to create task1");
+
+    let task2 = TaskBuilder::new()
+        .name("Incoming task")
+        .max_sessions(4)
+        .status(TaskStatus::Queued)
+        .build();
+    ctx.task_repo
+        .create(task2.clone())
+        .await
+        .expect("Failed to create task2");
+
+    let break_timer = domain::Timer::with_state(
+        task1.id(),
+        TimerState::ShortBreak {
+            remaining_seconds: 300,
+        },
+    );
+    ctx.timer_repo
+        .save(&break_timer)
+        .await
+        .expect("Failed to save break timer");
+
+    // Act: switch to task2.
+    let switch_result = usecases::task::switch_active_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task2.id(),
+            old_task_id: Some(task1.id()),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Assert: new task is active, timer is Idle (no carried-over break).
+    let timer_after = get_timer(&ctx).await;
+    assert!(switch_result.is_ok(), "Failed to switch task");
+    assert_eq!(
+        timer_after.task_id(),
+        Some(task2.id()),
+        "Active task should be task2 after switch"
+    );
+    assert!(
+        timer_after.state().is_idle(),
+        "Timer should be Idle after switch, not a carried-over ShortBreak"
+    );
+    assert_eq!(timer_after.state().status(), TimerStatus::Stopped);
+    assert_eq!(timer_after.state().remaining_seconds(), 0);
+}
+
+// Test 30: Switching during a LongBreak resets the new task to Idle.
+#[tokio::test]
+async fn should_switch_active_task_from_long_break_resets_to_idle() {
+    let ctx =
+        setup_ctx("should_switch_active_task_from_long_break_resets_to_idle")
+            .await;
+
+    let task1 = TaskBuilder::new()
+        .name("Task on long break")
+        .max_sessions(4)
+        .status(TaskStatus::Active)
+        .build();
+    ctx.task_repo
+        .create(task1.clone())
+        .await
+        .expect("Failed to create task1");
+
+    let task2 = TaskBuilder::new()
+        .name("Incoming task")
+        .max_sessions(4)
+        .status(TaskStatus::Queued)
+        .build();
+    ctx.task_repo
+        .create(task2.clone())
+        .await
+        .expect("Failed to create task2");
+
+    let break_timer = domain::Timer::with_state(
+        task1.id(),
+        TimerState::LongBreak {
+            remaining_seconds: 900,
+        },
+    );
+    ctx.timer_repo
+        .save(&break_timer)
+        .await
+        .expect("Failed to save long-break timer");
+
+    let switch_result = usecases::task::switch_active_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task2.id(),
+            old_task_id: Some(task1.id()),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let timer_after = get_timer(&ctx).await;
+    assert!(switch_result.is_ok(), "Failed to switch task");
+    assert_eq!(timer_after.task_id(), Some(task2.id()));
+    assert!(
+        timer_after.state().is_idle(),
+        "Timer should be Idle after switch, not a carried-over LongBreak"
+    );
+}
+
+// Test 31: Switching while Paused resets the new task to Idle — the paused
+// phase is discarded, not transferred.
+#[tokio::test]
+async fn should_switch_active_task_from_paused_resets_to_idle() {
+    let ctx =
+        setup_ctx("should_switch_active_task_from_paused_resets_to_idle").await;
+
+    let task1 = TaskBuilder::new()
+        .name("Paused task")
+        .max_sessions(4)
+        .status(TaskStatus::Active)
+        .build();
+    ctx.task_repo
+        .create(task1.clone())
+        .await
+        .expect("Failed to create task1");
+
+    let task2 = TaskBuilder::new()
+        .name("Incoming task")
+        .max_sessions(4)
+        .status(TaskStatus::Queued)
+        .build();
+    ctx.task_repo
+        .create(task2.clone())
+        .await
+        .expect("Failed to create task2");
+
+    let paused_timer = domain::Timer::with_state(
+        task1.id(),
+        TimerState::Paused {
+            paused_from: Box::new(TimerState::Working {
+                remaining_seconds: 600,
+            }),
+            remaining_seconds: 600,
+        },
+    );
+    ctx.timer_repo
+        .save(&paused_timer)
+        .await
+        .expect("Failed to save paused timer");
+
+    let switch_result = usecases::task::switch_active_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        usecases::task::SwitchActiveTaskCmd {
+            task_id: task2.id(),
+            old_task_id: Some(task1.id()),
+        },
+    )
+    .await;
+
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    let timer_after = get_timer(&ctx).await;
+    assert!(switch_result.is_ok(), "Failed to switch task");
+    assert_eq!(timer_after.task_id(), Some(task2.id()));
+    assert!(
+        timer_after.state().is_idle(),
+        "Timer should be Idle after switch, not a carried-over Paused state"
     );
 }
 
@@ -1214,8 +1418,8 @@ async fn complete_productivity_workflow_integration() {
     .await
     .expect("Failed to complete break phase");
 
-    // The timer should already be in work phase after completing the break
-    // Just switch the active task to task2
+    // Switching tasks resets the timer to Idle. Switch to task2, then
+    // explicitly start its work phase.
     usecases::task::switch_active_task(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
@@ -1227,6 +1431,17 @@ async fn complete_productivity_workflow_integration() {
     )
     .await
     .expect("Failed to switch to task 2");
+
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task2.id()),
+        },
+    )
+    .await
+    .expect("Failed to start task 2 after switch");
 
     // Work for 1 minute (60 ticks)
     for _ in 0..60 {
@@ -1267,15 +1482,17 @@ async fn complete_productivity_workflow_integration() {
     .await
     .expect("Failed to switch to task 3");
 
-    // Resume timer with task3
-    resume_timer_phase(
-        task3.id(),
+    // Switching reset the timer to Idle; start task3's work phase fresh.
+    start_timer_phase(
         ctx.task_repo.clone(),
         ctx.timer_repo.clone(),
         ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task3.id()),
+        },
     )
     .await
-    .expect("Failed to resume timer with task 3");
+    .expect("Failed to start task 3 after switch");
 
     // Complete remaining 1 minute with task3
     let mut phase_was_completed = false;
