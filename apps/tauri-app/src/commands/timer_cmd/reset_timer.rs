@@ -36,21 +36,21 @@ pub async fn reset_timer(
     .map_err(|e| e.to_string())?;
 
     timer_tick_service_arc
-        .load_state()
-        .await
-        .map_err(|e| {
-            format!(
-                "infra::commands::timer_cmd::reset_timer - Failed to load timer state: {}",
-                e
-            )
-        })?;
-
-    timer_tick_service_arc
         .stop_timer_tick_loop()
         .await
         .map_err(|e| {
             format!(
                 "infra::commands::timer_cmd::reset_timer - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
+
+    timer_tick_service_arc
+        .load_state()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::reset_timer - Failed to load timer state: {}",
                 e
             )
         })?;
