@@ -109,7 +109,10 @@ impl EventHandler for CountdownExpiredHandler {
                     self.timer_srv.with_timer(|t| json!(t.state())).await;
 
                 self.emitter
-                    .emit(ui_listeners::timer::PHASE_COMPLETED, state_json)
+                    .emit(
+                        ui_listeners::timer::PHASE_COMPLETED,
+                        json!({ "timer": state_json, "task": task }),
+                    )
                     .map_err(|e| domain::Error::EventPublishingError {
                         message: format!(
                             "Failed to emit timer phase completed event: {e}"

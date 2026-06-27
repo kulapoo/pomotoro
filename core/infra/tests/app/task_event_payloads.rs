@@ -238,3 +238,68 @@ async fn auto_advanced_payload_embeds_to_task() {
     assert_eq!(embedded["id"], task2_id.to_string());
     assert_eq!(embedded["name"], task2_name);
 }
+
+/// `timer:phase_completed` payload must carry both the new timer state
+/// AND the updated bound Task so the React EventBus can update both
+/// slices without an IPC round-trip. Verified via the natural-expiry
+/// path (CountdownExpiredHandler Started arm).
+#[tokio::test]
+async fn phase_completed_payload_embeds_task_and_timer() {
+    use domain::{Phase, timer::events::CountdownExpired};
+    use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};
+
+    let ctx = AppContextBuilder::new()
+        .with_name("phase_completed_payload_embeds_task_and_timer")
+        .build()
+        .await
+        .expect("build ctx");
+
+    let task = TaskBuilder::new()
+        .name("Embed me")
+        .max_sessions(3)
+        .status(TaskStatus::Active)
+        .config(Config::default())
+        .build();
+    let task_id = task.id();
+    let expected_name = task.name().to_string();
+    ctx.task_repo.create(task).await.unwrap();
+
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(task_id),
+        },
+    )
+    .await
+    .expect("start");
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    ctx.ui_simulator.app_handle().clear_events();
+
+    // Natural work-phase expiry drives CountdownExpiredHandler Started arm.
+    ctx.event_bus
+        .publish(Box::new(CountdownExpired::new(Phase::Work, task_id)));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+
+    let events = ctx
+        .ui_simulator
+        .app_handle()
+        .events_of_type(event_names::timer::PHASE_COMPLETED);
+    assert!(!events.is_empty(), "timer:phase_completed was not emitted");
+
+    let payload = &events[0].payload;
+    let timer = payload
+        .get("timer")
+        .expect("payload missing `timer` envelope field");
+    assert!(
+        timer.get("state").is_some(),
+        "timer field must carry TimerState"
+    );
+    let task = payload
+        .get("task")
+        .expect("payload missing `task` envelope field");
+    assert_eq!(task["id"], task_id.to_string());
+    assert_eq!(task["name"], expected_name);
+}
