@@ -108,3 +108,46 @@ async fn active_changed_payload_embeds_full_task() {
     assert_eq!(embedded["name"], task2_name);
     assert_eq!(embedded["max_sessions"], 4);
 }
+
+/// `task:task_reset` payload must carry the full reset Task so the React
+/// EventBus can reconcile `activeTask` directly (when the reset task is the
+/// active one).
+#[tokio::test]
+async fn task_reset_payload_embeds_full_task() {
+    let ctx = setup_ctx("task_reset_payload_embeds_full_task").await;
+
+    let task = TaskBuilder::new()
+        .name("Reset me")
+        .max_sessions(3)
+        .status(TaskStatus::Active)
+        .current_sessions(2)
+        .config(Config::default())
+        .build();
+    let task_id = task.id();
+    let task_name = task.name().to_string();
+    ctx.task_repo.create(task).await.unwrap();
+
+    use usecases::task::reset_task;
+    reset_task(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_bus.clone(),
+        task_id,
+    )
+    .await
+    .expect("reset_task failed");
+
+    tokio::time::sleep(Duration::from_millis(150)).await;
+
+    let events = ctx
+        .ui_simulator
+        .app_handle()
+        .events_of_type(event_names::task::TASK_RESET);
+    assert!(!events.is_empty(), "task:task_reset was not emitted");
+
+    let payload = &events[0].payload;
+    let embedded = payload.get("task").expect("payload missing `task` field");
+    assert_eq!(embedded["id"], task_id.to_string());
+    assert_eq!(embedded["name"], task_name);
+    assert_eq!(embedded["current_sessions"], 0);
+}

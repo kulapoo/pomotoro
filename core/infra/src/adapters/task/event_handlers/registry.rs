@@ -33,7 +33,10 @@ pub fn register_task_handlers(
         emitter.clone(),
         task_repository.clone(),
     )))?;
-    event_bus.subscribe(Box::new(TaskResetHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskResetHandler::new(
+        emitter.clone(),
+        task_repository.clone(),
+    )))?;
 
     Ok(())
 }
