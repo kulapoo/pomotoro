@@ -18,8 +18,10 @@ pub fn register_task_handlers(
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
-    event_bus
-        .subscribe(Box::new(TaskCompletedHandler::new(emitter.clone())))?;
+    event_bus.subscribe(Box::new(TaskCompletedHandler::new(
+        emitter.clone(),
+        task_repository.clone(),
+    )))?;
     event_bus.subscribe(Box::new(TaskUpdatedHandler::new(
         emitter.clone(),
         task_repository,
