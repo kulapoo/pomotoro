@@ -15,7 +15,7 @@ export function TaskSearchBar({
   onStatusChange,
 }: TaskSearchBarProps) {
   return (
-    <div className="mb-6 flex gap-2">
+    <div className="mb-6 flex flex-wrap gap-2">
       <div className="relative flex-1">
         <Search
           size={14}

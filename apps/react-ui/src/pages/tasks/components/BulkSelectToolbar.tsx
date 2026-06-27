@@ -18,7 +18,7 @@ export function BulkSelectToolbar({
   onResetSelected,
 }: BulkSelectToolbarProps) {
   return (
-    <div className="border-border bg-card mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5">
+    <div className="border-border bg-card mb-4 flex flex-wrap items-center justify-between gap-3 gap-y-2 rounded-xl border px-4 py-2.5">
       <div className="flex items-center gap-3 text-sm">
         <span className="font-medium">{selectedCount} selected</span>
         <button
