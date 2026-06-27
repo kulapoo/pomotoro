@@ -26,6 +26,10 @@ pub struct TimerTickService {
     /// `load_state`, `save_state`) MUST NOT acquire this lock — they assume
     /// the caller holds it. Acquiring it inside those methods would
     /// re-entrantly deadlock.
+    ///
+    /// The shared helper `complete_task_flow` likewise assumes its caller
+    /// holds this lock — both of its callers (`complete_task` command,
+    /// `menu_complete` tray) acquire it. Do not lock inside it.
     orchestration_lock: Arc<tokio::sync::Mutex<()>>,
     event_publisher: EventPublisherArc,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,

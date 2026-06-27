@@ -64,6 +64,10 @@ impl EventHandler for CountdownExpiredHandler {
                     .to_string(),
             })?;
 
+        // Acquire the orchestration lock so we serialize against any
+        // concurrent manual command (skip / pause / etc.) or tray handler.
+        // Without this, a natural expiry racing with a manual skip can
+        // collide on the DB and tick loop.
         let _orchestration_lock = self.timer_srv.orchestration_lock().await;
 
         let outcome = progress_phase(
