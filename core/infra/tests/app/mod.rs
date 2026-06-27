@@ -10,3 +10,4 @@ mod countdown_expired;
 mod manual_complete_cycling;
 mod task_cycling;
 mod tick_loop_invariants;
+mod tick_loop_mutex_contention;

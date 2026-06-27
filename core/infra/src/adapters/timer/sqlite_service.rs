@@ -38,13 +38,23 @@ impl TimerTickService {
         }
     }
 
+    /// Persist the in-memory timer to the repository.
+    ///
+    /// Acquires `timer` only long enough to clone a snapshot, then drops the
+    /// guard BEFORE the repository write. Holding the mutex across the
+    /// `.await` wedges the tick-loop task and any concurrent orchestration on
+    /// slow disk (macOS M1 reproducibly froze here).
     pub async fn save_state(&self) -> DomainResult<()> {
-        let timer_guard = self.timer.lock().await;
-        self.timer_repository.save(&timer_guard).await.map_err(|e| {
-            Error::RepositoryError {
+        let timer_snapshot = {
+            let guard = self.timer.lock().await;
+            guard.clone()
+        };
+        self.timer_repository
+            .save(&timer_snapshot)
+            .await
+            .map_err(|e| Error::RepositoryError {
                 message: e.to_string(),
-            }
-        })
+            })
     }
 
     /// Start the infrastructure timer tick loop.
