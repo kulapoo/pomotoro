@@ -272,6 +272,32 @@ After installing missing system libraries, run `cargo clean` then rebuild.
 
 ---
 
+## 🗺️ Roadmap
+
+Planned features and direction. Items are exploratory and may shift based on
+feedback and contributor interest.
+
+**📊 Statistics** — session-history timelines, daily / weekly / monthly summaries,
+streaks, per-task / tag / project breakdowns, charts & heatmaps, CSV / JSON export,
+and daily or weekly focus-time goals.
+
+**💻 Command-line interface** — drive Pomotoro from the terminal: status & timer
+control (`start`, `pause`, `reset`, `skip`), task management, config access, a
+headless daemon mode, and shell completions for bash / zsh / fish / PowerShell.
+
+**⚡ Command hooks** — run user-defined shell commands on lifecycle events
+(`timer.started`, `task.completed`, `phase.changed`, …) with templated arguments
+(`{phase}`, `{task}`, `{duration_seconds}`), safe opt-in defaults, and a
+diagnostics log view.
+
+**🔭 Longer-term explorations** — end-to-end-encrypted cloud sync, a read-only
+mobile companion, user-built themes & visualizations, a plugin system, and a local
+focus-metrics API for integrations.
+
+Full detail and latest status: **[ROADMAP.md](ROADMAP.md)**.
+
+---
+
 ## 🤝 Contributing
 
 1. **Fork** → `git checkout -b feature-name`
@@ -279,7 +305,7 @@ After installing missing system libraries, run `cargo clean` then rebuild.
 3. **Verify** — `just ci` must pass before pushing
 4. **Commit** with clear messages and open a pull request
 
-See [ROADMAP.md](ROADMAP.md) (if present) for planned features, and
+See the [Roadmap](#-roadmap) for planned features, and
 [docs/README.md](docs/README.md) for the full documentation index
 (architecture, reference, coding standards, and workflows).
 
