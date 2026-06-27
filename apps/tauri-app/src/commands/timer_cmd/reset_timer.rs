@@ -1,5 +1,4 @@
 use super::*;
-use std::time::Duration;
 
 use domain::TaskId;
 use infra::adapters::TimerTickService;
@@ -22,11 +21,10 @@ pub async fn reset_timer(
     let task_id_parsed = TaskId::from_string(&task_id)
         .map_err(|_| format!("Invalid task ID: {}", task_id))?;
 
-    // Reset the timer to idle (business operation). This publishes a Reset
-    // event whose handler stops the tick loop and reloads state. The event
-    // bus is fire-and-forget (handlers run on spawned tasks), so drain that
-    // handler before proceeding — otherwise the tick loop keeps running on
-    // stale in-memory state and races with the handler's stop/load.
+    // Reset the timer to idle (business operation). Publishes a Reset event
+    // that is now a UI-only notification (the handler no longer touches the
+    // tick loop). Per the tick-loop ownership contract, this orchestrator owns
+    // the stop and state refresh.
     reset_timer_to_idle(
         task_id_parsed,
         task_repo.inner().clone(),
@@ -37,17 +35,22 @@ pub async fn reset_timer(
     .context("infra::commands::timer_cmd::reset_timer - Failed to reset timer to idle state")
     .map_err(|e| e.to_string())?;
 
-    // Drain the async Reset handler (stop_timer_tick_loop + load_state).
-    tokio::time::sleep(Duration::from_millis(100)).await;
-
-    // Belt-and-suspenders: ensure the tick loop is stopped even if the
-    // handler hasn't drained yet. stop_timer_tick_loop is idempotent.
     timer_tick_service_arc
         .stop_timer_tick_loop()
         .await
         .map_err(|e| {
             format!(
                 "infra::commands::timer_cmd::reset_timer - Failed to stop tick loop: {}",
+                e
+            )
+        })?;
+
+    timer_tick_service_arc
+        .load_state()
+        .await
+        .map_err(|e| {
+            format!(
+                "infra::commands::timer_cmd::reset_timer - Failed to load timer state: {}",
                 e
             )
         })?;

@@ -10,7 +10,6 @@ use domain::{ConfigRepository, EventPublisher, Task, TaskId, TaskRepository};
 use infra::adapters::{TimerRepositoryArc, TimerTickService};
 use serde_json::json;
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use usecases::task::{
     SwitchActiveTaskCmd, complete_task as complete_task_uc, switch_active_task,
@@ -46,21 +45,17 @@ pub async fn complete_task_flow(
     .await
     .context("Failed to reset timer to idle after completing task")?;
 
-    // Complete the task (all sessions).
-    complete_task_uc(&task_repo, &event_publisher, task_id)
-        .await
-        .with_context(|| format!("Failed to complete task: {}", task_id))?;
-
-    // Stop the tick loop and reset the timer to idle for this task. The
-    // `TaskCompleted` event handler no longer performs this side effect (it
-    // would race with auto-cycling in the timer use cases).
+    // Direct STOP. No sleep, no reliance on the TimerReset event handler —
+    // per the tick-loop ownership contract, orchestrators own the side effect.
     timer_tick_service
         .stop_timer_tick_loop()
         .await
         .context("Failed to stop timer tick loop while completing task")?;
 
-    // Drain the async Reset event handler (stop + load_state).
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // Complete the task (all sessions).
+    complete_task_uc(&task_repo, &event_publisher, task_id)
+        .await
+        .with_context(|| format!("Failed to complete task: {}", task_id))?;
 
     // Auto-advance: if AutoAdvance is configured, switch to the next incomplete
     // task. Whether its work phase auto-starts is governed by
@@ -90,13 +85,20 @@ pub async fn complete_task_flow(
                 .await
                 .context("Failed to reset timer to idle for next task")?;
 
-                // Drain the async Reset event handler (stop + load_state).
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                // Refresh the in-memory cache so UI payloads below are correct,
+                // and ensure the loop is stopped before any start.
+                timer_tick_service
+                    .load_state()
+                    .await
+                    .context("Failed to load timer state after auto-advance")?;
+                timer_tick_service.stop_timer_tick_loop().await.context(
+                    "Failed to stop tick loop after auto-advance reset",
+                )?;
 
                 if plan.auto_start_work {
-                    // `start_timer_phase` publishes `TimerStarted`, which the
-                    // infra `TimerStartedHandler` picks up to spin the tick
-                    // loop — no manual tick-loop start needed here.
+                    // Drive the usecase, then start the tick loop directly.
+                    // TimerStartedHandler is a UI-only emitter and no longer
+                    // starts the loop for us.
                     if let Err(e) = start_timer_phase(
                         task_repo.clone(),
                         timer_repo.clone(),
@@ -111,6 +113,30 @@ pub async fn complete_task_flow(
                             "Auto-start of task {} after auto-advance failed: {e}",
                             plan.next_task_id
                         );
+                    } else {
+                        let next_task = task_repo
+                            .get_by_id(plan.next_task_id)
+                            .await
+                            .context(
+                                "Failed to load next task for tick-loop start",
+                            )?
+                            .ok_or_else(|| {
+                                anyhow!(
+                                    "Next task {} not found after auto-advance",
+                                    plan.next_task_id
+                                )
+                            })?;
+                        timer_tick_service
+                            .start_timer_tick_loop(
+                                Some(next_task.config().timer.clone()),
+                                None,
+                            )
+                            .await
+                            .map_err(|e| {
+                                anyhow!(
+                                    "Failed to start tick loop after auto-advance: {e}"
+                                )
+                            })?;
                     }
                 }
 
@@ -135,9 +161,7 @@ pub async fn complete_task_flow(
 
     // If no new task became active (Manual mode, AutoAdvance with no eligible
     // successor, or the switch failed above), detach the completed task from
-    // the timer so the UI can prompt for a new selection. A completed task
-    // cannot run a timer — this mirrors the delete-task path, which clears the
-    // bound task via the same domain primitive (`Timer::clear_task_id`).
+    // the timer so the UI can prompt for a new selection.
     if active_task_id == task_id {
         match clear_active_task(timer_repo.clone())
             .await

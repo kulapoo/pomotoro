@@ -4,8 +4,7 @@ use domain::{Result, TaskRepository};
 
 use crate::adapters::events::app_emitter::Emitter;
 use crate::adapters::{
-    TimerTickService, events::EventSubscriber,
-    task::event_handlers::TaskResetHandler,
+    events::EventSubscriber, task::event_handlers::TaskResetHandler,
 };
 
 use super::{
@@ -17,7 +16,6 @@ pub fn register_task_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
     emitter: Arc<dyn Emitter>,
     task_repository: Arc<dyn TaskRepository + Send + Sync>,
-    timer_srv: Arc<TimerTickService>,
 ) -> Result<()> {
     event_bus.subscribe(Box::new(TaskCreatedHandler::new(emitter.clone())))?;
     event_bus
@@ -31,10 +29,7 @@ pub fn register_task_handlers(
         .subscribe(Box::new(TaskStatusChangedHandler::new(emitter.clone())))?;
     event_bus
         .subscribe(Box::new(TaskActiveChangedHandler::new(emitter.clone())))?;
-    event_bus.subscribe(Box::new(TaskResetHandler::new(
-        emitter.clone(),
-        timer_srv.clone(),
-    )))?;
+    event_bus.subscribe(Box::new(TaskResetHandler::new(emitter.clone())))?;
 
     Ok(())
 }

@@ -6,6 +6,13 @@ use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
+/// UI-only emitter for `TimerReset`.
+///
+/// Per the tick-loop ownership contract, this handler MUST NOT stop the tick
+/// loop. The orchestrator that called `reset_timer_to_idle` (or equivalent)
+/// owns the stop call. The previous implementation raced with
+/// `TimerStartedHandler` on `cancel_handle` because the event bus dispatches
+/// handlers on detached `tokio::spawn` tasks.
 pub struct TimerResetHandler {
     emitter: Arc<dyn Emitter>,
     timer_srv: Arc<TimerTickService>,
@@ -34,9 +41,8 @@ impl EventHandler for TimerResetHandler {
                 message: "Failed to reset timer".to_string(),
             })?;
 
-        self.timer_srv.stop_timer_tick_loop().await?;
-        self.timer_srv.load_state().await?;
-
+        // Read-only: format the current timer state for the UI. The
+        // orchestrator has already stopped the loop and refreshed state.
         let state_json = self
             .timer_srv
             .with_timer(|t| {

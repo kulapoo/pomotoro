@@ -1,22 +1,25 @@
+use crate::adapters::EventHandler;
 use crate::adapters::events::app_emitter::Emitter;
-use crate::adapters::{EventHandler, TimerTickService};
 use async_trait::async_trait;
 use domain::{Event, Result};
 use serde_json::json;
 use std::any::TypeId;
 use std::sync::Arc;
 
+/// UI-only emitter for `TaskReset`.
+///
+/// Per the tick-loop ownership contract, this handler MUST NOT stop the tick
+/// loop. The orchestrator that called `reset_task` owns the
+/// `stop_timer_tick_loop` + `load_state` side effects. The previous
+/// implementation raced with `TimerStartedHandler` on `cancel_handle` because
+/// the event bus dispatches handlers on detached `tokio::spawn` tasks.
 pub struct TaskResetHandler {
     emitter: Arc<dyn Emitter>,
-    timer_srv: Arc<TimerTickService>,
 }
 
 impl TaskResetHandler {
-    pub fn new(
-        emitter: Arc<dyn Emitter>,
-        timer_srv: Arc<TimerTickService>,
-    ) -> Self {
-        TaskResetHandler { emitter, timer_srv }
+    pub fn new(emitter: Arc<dyn Emitter>) -> Self {
+        TaskResetHandler { emitter }
     }
 }
 
@@ -34,14 +37,8 @@ impl EventHandler for TaskResetHandler {
                 message: "Failed to reset task".to_string(),
             })?;
 
-        self.timer_srv.load_state().await?;
-
-        self.timer_srv.stop_timer_tick_loop().await.map_err(|e| {
-            domain::Error::EventHandlingError {
-                message: format!("Failed to stop timer tick loop: {e}"),
-            }
-        })?;
-
+        // The orchestrator that called `reset_task` is responsible for
+        // stop_timer_tick_loop + load_state. This handler is a UI-only emitter.
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::task::TASK_RESET,
