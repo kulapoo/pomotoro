@@ -16,6 +16,17 @@ use domain::{
 pub struct TimerTickService {
     timer: Arc<Mutex<Timer>>,
     cancel_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    /// Serializes mutating orchestrations (Tauri commands, tray handlers,
+    /// `CountdownExpiredHandler`). Held for the entire body of a command.
+    /// Without this, two concurrent orchestrations race on the DB and the
+    /// tick loop — a race that is invisible on fast hardware but
+    /// reproducibly freezes the app on macOS M1.
+    ///
+    /// Internal methods (`start_timer_tick_loop`, `stop_timer_tick_loop`,
+    /// `load_state`, `save_state`) MUST NOT acquire this lock — they assume
+    /// the caller holds it. Acquiring it inside those methods would
+    /// re-entrantly deadlock.
+    orchestration_lock: Arc<tokio::sync::Mutex<()>>,
     event_publisher: EventPublisherArc,
     timer_repository: Arc<dyn TimerRepository + Send + Sync>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -32,6 +43,7 @@ impl TimerTickService {
         Self {
             timer: Arc::new(Mutex::new(timer)),
             cancel_handle: Arc::new(Mutex::new(None)),
+            orchestration_lock: Arc::new(tokio::sync::Mutex::new(())),
             event_publisher,
             timer_repository,
             config_repository,
@@ -205,6 +217,17 @@ impl TimerTickService {
             }
         }
         Ok(())
+    }
+
+    /// Acquire the global orchestration lock. Hold the returned guard for the
+    /// entire body of a mutating entry point (Tauri command, tray handler,
+    /// `CountdownExpiredHandler::handle`). When the guard drops, the next
+    /// waiter proceeds.
+    ///
+    /// Internal methods on this service do NOT call this — they assume the
+    /// caller has already acquired the lock.
+    pub async fn orchestration_lock(&self) -> tokio::sync::MutexGuard<'_, ()> {
+        self.orchestration_lock.lock().await
     }
 
     /// Test/observability helper. Returns `true` when a tick-loop task is
