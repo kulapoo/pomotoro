@@ -47,8 +47,32 @@ impl TimerTickService {
         })
     }
 
-    /// Start the infrastructure timer tick loop
-    /// This manages the technical aspects of timer ticking
+    /// Start the infrastructure timer tick loop.
+    ///
+    /// # Design Contract — Tick-Loop Ownership
+    ///
+    /// Callers — NOT domain event handlers — own the lifecycle of the tick
+    /// loop. The auto-advance race was eliminated by routing start/stop out of
+    /// detached event-bus handlers and into the orchestrators that drive the
+    /// use cases (Tauri commands, tray handlers, `CountdownExpiredHandler`).
+    ///
+    /// ## Legitimate callers
+    /// 1. App-layer Tauri commands (`apps/tauri-app/src/commands/**`).
+    /// 2. App-layer tray handlers (`apps/tauri-app/src/tray.rs`).
+    /// 3. Infra event handlers that are the ENTRY POINT of an async flow and
+    ///    interpret a usecase outcome (e.g. `CountdownExpiredHandler`).
+    ///    Reactors that merely respond to facts MUST NOT call this method.
+    /// 4. Test setup.
+    ///
+    /// ## Sequencing
+    /// When an orchestration needs both STOP and START:
+    ///     await stop_timer_tick_loop();
+    ///     await start_timer_tick_loop(cfg);
+    /// Never publish events in lieu of these calls.
+    ///
+    /// ## Idempotency
+    /// `start` aborts any prior handle and overwrites it (last-write-wins).
+    /// `stop` is a no-op when no handle is present.
     pub async fn start_timer_tick_loop(
         &self,
         timer_config: Option<TimerConfiguration>,
@@ -171,6 +195,21 @@ impl TimerTickService {
             }
         }
         Ok(())
+    }
+
+    /// Test/observability helper. Returns `true` when a tick-loop task is
+    /// currently registered AND still alive (not aborted, not finished).
+    ///
+    /// Production code MUST NOT branch on this — it exists so regression tests
+    /// can assert that an orchestration left the loop in the expected state
+    /// without relying on flaky timing.
+    #[cfg(test)]
+    pub async fn is_tick_loop_alive(&self) -> bool {
+        let guard = self.cancel_handle.lock().await;
+        match guard.as_ref() {
+            None => false,
+            Some(handle) => !handle.is_finished(),
+        }
     }
 
     /// Get the current timer for infrastructure purposes
