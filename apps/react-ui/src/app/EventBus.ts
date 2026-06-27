@@ -49,7 +49,9 @@ export function useEventBus(): void {
       // preserve the existing task_id via applyTimerState.
       onEvent(events.timerPhaseCompleted, (payload) => {
         applyTimerState(payload.timer)
-        applyTaskIfActiveForId(payload.task.id, payload.task)
+        if (payload.task) {
+          applyTaskIfActiveForId(payload.task.id, payload.task)
+        }
       }),
 
       // Timer lifecycle: payload is bare TimerStateData; preserve task_id.

@@ -82,7 +82,7 @@ export interface TaskResetPayload {
 
 export interface PhaseCompletedPayload {
   timer: TimerStateData
-  task: Task
+  task: Task | null
 }
 
 export interface TaskAutoAdvancedPayload {
