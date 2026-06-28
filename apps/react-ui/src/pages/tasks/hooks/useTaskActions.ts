@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
 import { shortId } from '@/lib/id'
-import { isTimerRunning, useTimerStore } from '@/pages/timer/useTimer'
+import { useTimerStore } from '@/pages/timer/useTimer'
 import { useConfirm } from '@/components/ConfirmProvider'
 import type { Page } from '@/app/types'
 
