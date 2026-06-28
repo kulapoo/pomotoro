@@ -4,8 +4,8 @@ use crate::adapters::{
 };
 use async_trait::async_trait;
 use domain::{
-    ConfigRepository, Event, EventPublisher, Phase, Result, TaskRepository,
-    TimerRepository, event_names::ui_listeners,
+    ConfigRepository, Event, EventPublisher, Phase, Result, Task, TaskId,
+    TaskRepository, TimerRepository, event_names::ui_listeners,
     timer::events::CountdownExpired,
 };
 use serde_json::json;
@@ -46,6 +46,59 @@ impl CountdownExpiredHandler {
             timer_repository,
             event_publisher,
         }
+    }
+
+    /// Shared tail of the `Started` and `Paused` outcomes: emit
+    /// `task:auto_advanced` (when the cycle moved to a new task),
+    /// `task:progress_updated`, and `screen_blocker:activate` (when a
+    /// long-break block message applies). `timer_json` is supplied by the
+    /// caller since each arm sources it differently.
+    async fn emit_post_phase_events(
+        &self,
+        task: &Task,
+        cycled_to: Option<TaskId>,
+        from_task_id: TaskId,
+        timer_json: serde_json::Value,
+        block_message: Option<&str>,
+    ) -> Result<()> {
+        if let Some(to_task_id) = cycled_to {
+            self.emitter
+                .emit(
+                    ui_listeners::task::AUTO_ADVANCED,
+                    json!({
+                        "from_task_id": from_task_id,
+                        "to_task_id": to_task_id,
+                        "to_task": task,
+                        "timer": timer_json,
+                    }),
+                )
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!("Failed to emit auto-advanced event: {e}"),
+                })?;
+        }
+
+        self.emitter
+            .emit(ui_listeners::task::PROGRESS_UPDATED, json!(task))
+            .map_err(|e| domain::Error::EventPublishingError {
+                message: format!(
+                    "Failed to emit task progress updated event: {e}"
+                ),
+            })?;
+
+        if let Some(message) = block_message {
+            self.emitter
+                .emit(
+                    ui_listeners::screen_blocker::ACTIVATE,
+                    json!({ "message": message }),
+                )
+                .map_err(|e| domain::Error::EventPublishingError {
+                    message: format!(
+                        "Failed to emit screen_blocker activate event: {e}"
+                    ),
+                })?;
+        }
+
+        Ok(())
     }
 }
 
@@ -119,44 +172,15 @@ impl EventHandler for CountdownExpiredHandler {
                         ),
                     })?;
 
-                if let Some(to_task_id) = cycled_to {
-                    self.emitter
-                        .emit(
-                            ui_listeners::task::AUTO_ADVANCED,
-                            json!({
-                                "from_task_id": countdown_expired.task_id,
-                                "to_task_id": to_task_id,
-                                "to_task": task,
-                                "timer": self.timer_srv.with_timer(|t| json!(t)).await,
-                            }),
-                        )
-                        .map_err(|e| domain::Error::EventPublishingError {
-                            message: format!(
-                                "Failed to emit auto-advanced event: {e}"
-                            ),
-                        })?;
-                }
-
-                self.emitter
-                    .emit(ui_listeners::task::PROGRESS_UPDATED, json!(task))
-                    .map_err(|e| domain::Error::EventPublishingError {
-                        message: format!(
-                            "Failed to emit task progress updated event: {e}"
-                        ),
-                    })?;
-
-                if let Some(message) = block_message {
-                    self.emitter
-                        .emit(
-                            ui_listeners::screen_blocker::ACTIVATE,
-                            json!({ "message": message }),
-                        )
-                        .map_err(|e| domain::Error::EventPublishingError {
-                            message: format!(
-                                "Failed to emit screen_blocker activate event: {e}"
-                            ),
-                        })?;
-                }
+                let timer_json = self.timer_srv.with_timer(|t| json!(t)).await;
+                self.emit_post_phase_events(
+                    &task,
+                    cycled_to,
+                    countdown_expired.task_id,
+                    timer_json,
+                    block_message.as_deref(),
+                )
+                .await?;
             }
 
             usecases::timer::PhaseOutcome::Paused {
@@ -179,44 +203,14 @@ impl EventHandler for CountdownExpiredHandler {
                         ),
                     })?;
 
-                if let Some(to_task_id) = cycled_to {
-                    self.emitter
-                        .emit(
-                            ui_listeners::task::AUTO_ADVANCED,
-                            json!({
-                                "from_task_id": countdown_expired.task_id,
-                                "to_task_id": to_task_id,
-                                "to_task": task,
-                                "timer": timer,
-                            }),
-                        )
-                        .map_err(|e| domain::Error::EventPublishingError {
-                            message: format!(
-                                "Failed to emit auto-advanced event: {e}"
-                            ),
-                        })?;
-                }
-
-                self.emitter
-                    .emit(ui_listeners::task::PROGRESS_UPDATED, json!(task))
-                    .map_err(|e| domain::Error::EventPublishingError {
-                        message: format!(
-                            "Failed to emit task progress updated event: {e}"
-                        ),
-                    })?;
-
-                if let Some(message) = block_message {
-                    self.emitter
-                        .emit(
-                            ui_listeners::screen_blocker::ACTIVATE,
-                            json!({ "message": message }),
-                        )
-                        .map_err(|e| domain::Error::EventPublishingError {
-                            message: format!(
-                                "Failed to emit screen_blocker activate event: {e}"
-                            ),
-                        })?;
-                }
+                self.emit_post_phase_events(
+                    &task,
+                    cycled_to,
+                    countdown_expired.task_id,
+                    json!(timer),
+                    block_message.as_deref(),
+                )
+                .await?;
             }
 
             usecases::timer::PhaseOutcome::Stopped { .. } => {
