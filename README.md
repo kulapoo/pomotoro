@@ -2,12 +2,6 @@
 
 **Pomodoro focus timer with task queues, automatic work/break cycling, and screen-blocking break enforcement. Built native with Rust + Tauri.**
 
-*Charges through your work like a determined 🐂 Torro.*
-
-Pomotoro pairs the Pomodoro Technique with task management, ambient focus audio, and
-rich notifications in a fast, native desktop app. Everything runs locally — private
-data, instant response, and a timer that keeps working even when you're deep in flow.
-
 ---
 
 ## 🎬 Demo

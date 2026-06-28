@@ -18,6 +18,8 @@
         "width": 490,
         "height": 844,
         "resizable": true,
+        "center": true,
+        "maximized": false,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ],

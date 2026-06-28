@@ -172,7 +172,7 @@ def render(size: int, poly24):
 
 def main():
     poly = build_polygon()
-    for size in (128, 32):
+    for size in (1024, 128, 32):
         rgba = render(size, poly)
         write_png(OUT / f"toro-{size}.png", size, size, rgba)
         print(f"generated toro-{size}.png")
