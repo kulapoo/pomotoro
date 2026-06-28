@@ -57,144 +57,21 @@ pub async fn complete_task_flow(
         .await
         .with_context(|| format!("Failed to complete task: {}", task_id))?;
 
-    // Auto-advance: if AutoAdvance is configured, switch to the next incomplete
-    // task. Whether its work phase auto-starts is governed by
-    // `auto_start_work_after_break` (same flag the timer-driven cycle path uses
-    // in `progress_phase`).
-    let mut active_task_id = task_id;
-    if let Some(plan) = plan_auto_advance(&task_repo, &config_repo).await {
-        match switch_active_task(
-            task_repo.clone(),
-            timer_repo.clone(),
-            event_publisher.clone(),
-            SwitchActiveTaskCmd {
-                task_id: plan.next_task_id,
-                old_task_id: Some(task_id),
-            },
-        )
-        .await
-        .context("Failed to switch to next task after completing")
-        {
-            Ok(()) => {
-                reset_timer_to_idle(
-                    plan.next_task_id,
-                    task_repo.clone(),
-                    timer_repo.clone(),
-                    event_publisher.clone(),
-                )
-                .await
-                .context("Failed to reset timer to idle for next task")?;
+    let active_task_id = advance_to_next_task(
+        task_id,
+        task_repo.clone(),
+        timer_repo.clone(),
+        config_repo.clone(),
+        event_publisher.clone(),
+        timer_tick_service.clone(),
+        &app_handle,
+    )
+    .await?
+    .unwrap_or(task_id);
 
-                // Refresh the in-memory cache so UI payloads below are correct,
-                // and ensure the loop is stopped before any start.
-                timer_tick_service
-                    .load_state()
-                    .await
-                    .context("Failed to load timer state after auto-advance")?;
-                timer_tick_service.stop_timer_tick_loop().await.context(
-                    "Failed to stop tick loop after auto-advance reset",
-                )?;
-
-                if plan.auto_start_work {
-                    // Drive the usecase, then start the tick loop directly.
-                    // TimerStartedHandler is a UI-only emitter and no longer
-                    // starts the loop for us.
-                    if let Err(e) = start_timer_phase(
-                        task_repo.clone(),
-                        timer_repo.clone(),
-                        event_publisher.clone(),
-                        StartTimerPhaseCmd {
-                            task_id: Some(plan.next_task_id),
-                        },
-                    )
-                    .await
-                    {
-                        log::warn!(
-                            "Auto-start of task {} after auto-advance failed: {e}",
-                            plan.next_task_id
-                        );
-                    } else {
-                        let next_task = task_repo
-                            .get_by_id(plan.next_task_id)
-                            .await
-                            .context(
-                                "Failed to load next task for tick-loop start",
-                            )?
-                            .ok_or_else(|| {
-                                anyhow!(
-                                    "Next task {} not found after auto-advance",
-                                    plan.next_task_id
-                                )
-                            })?;
-                        timer_tick_service
-                            .start_timer_tick_loop(Some(
-                                next_task.config().timer.clone(),
-                            ))
-                            .await
-                            .map_err(|e| {
-                                anyhow!(
-                                    "Failed to start tick loop after auto-advance: {e}"
-                                )
-                            })?;
-                    }
-                }
-
-                active_task_id = plan.next_task_id;
-
-                let to_task = task_repo
-                    .get_by_id(plan.next_task_id)
-                    .await
-                    .context("Failed to load next task for auto-advanced emit")?
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Next task {} not found after auto-advance",
-                            plan.next_task_id
-                        )
-                    })?;
-
-                let timer_json =
-                    timer_tick_service.with_timer(|t| json!(t)).await;
-
-                let _ = app_handle.emit(
-                    domain::event_names::task::AUTO_ADVANCED,
-                    json!({
-                        "from_task_id": task_id.to_string(),
-                        "to_task_id": plan.next_task_id.to_string(),
-                        "to_task": to_task,
-                        "timer": timer_json,
-                    }),
-                );
-            }
-            Err(e) => {
-                log::warn!(
-                    "Auto-advance after completing {} failed; staying on completed task: {e}",
-                    task_id
-                );
-            }
-        }
-    }
-
-    // If no new task became active (Manual mode, AutoAdvance with no eligible
-    // successor, or the switch failed above), detach the completed task from
-    // the timer so the UI can prompt for a new selection.
     if active_task_id == task_id {
-        match clear_active_task(timer_repo.clone())
-            .await
-            .context("Failed to clear active task after completing")
-        {
-            Ok(()) => {
-                let _ = app_handle.emit(
-                    domain::event_names::task::ACTIVE_TASK_CLEARED,
-                    json!({ "from_task_id": task_id.to_string() }),
-                );
-            }
-            Err(e) => {
-                log::warn!(
-                    "Auto-clear of completed task {} failed; timer left bound: {e}",
-                    task_id
-                );
-            }
-        }
+        clear_completed_active_task(task_id, timer_repo.clone(), &app_handle)
+            .await;
     }
 
     let task = task_repo
@@ -204,6 +81,155 @@ pub async fn complete_task_flow(
         .ok_or_else(|| anyhow!("Task not found after completing"))?;
 
     Ok(task)
+}
+
+/// Attempt to auto-advance to the next incomplete task. Returns
+/// `Ok(Some(next_task_id))` on success, `Ok(None)` when AutoAdvance is off,
+/// no task is eligible, or the switch failed (failures are logged), and
+/// `Err(...)` when an inner step that previously propagated via `?` fails —
+/// preserving the original top-level error semantics.
+async fn advance_to_next_task(
+    completed_task_id: TaskId,
+    task_repo: Arc<dyn TaskRepository + Send + Sync>,
+    timer_repo: TimerRepositoryArc,
+    config_repo: Arc<dyn ConfigRepository + Send + Sync>,
+    event_publisher: Arc<dyn EventPublisher + Send + Sync>,
+    timer_tick_service: Arc<TimerTickService>,
+    app_handle: &AppHandle,
+) -> anyhow::Result<Option<TaskId>> {
+    let Some(plan) = plan_auto_advance(&task_repo, &config_repo).await else {
+        return Ok(None);
+    };
+
+    match switch_active_task(
+        task_repo.clone(),
+        timer_repo.clone(),
+        event_publisher.clone(),
+        SwitchActiveTaskCmd {
+            task_id: plan.next_task_id,
+            old_task_id: Some(completed_task_id),
+        },
+    )
+    .await
+    .context("Failed to switch to next task after completing")
+    {
+        Ok(()) => {
+            reset_timer_to_idle(
+                plan.next_task_id,
+                task_repo.clone(),
+                timer_repo.clone(),
+                event_publisher.clone(),
+            )
+            .await
+            .context("Failed to reset timer to idle for next task")?;
+
+            // Refresh the in-memory cache so UI payloads below are correct,
+            // and ensure the loop is stopped before any start.
+            timer_tick_service
+                .load_state()
+                .await
+                .context("Failed to load timer state after auto-advance")?;
+            timer_tick_service
+                .stop_timer_tick_loop()
+                .await
+                .context("Failed to stop tick loop after auto-advance reset")?;
+
+            if plan.auto_start_work {
+                // Drive the usecase, then start the tick loop directly.
+                if let Err(e) = start_timer_phase(
+                    task_repo.clone(),
+                    timer_repo.clone(),
+                    event_publisher.clone(),
+                    StartTimerPhaseCmd {
+                        task_id: Some(plan.next_task_id),
+                    },
+                )
+                .await
+                {
+                    log::warn!(
+                        "Auto-start of task {} after auto-advance failed: {e}",
+                        plan.next_task_id
+                    );
+                } else {
+                    let next_task = task_repo
+                        .get_by_id(plan.next_task_id)
+                        .await
+                        .context(
+                            "Failed to load next task for tick-loop start",
+                        )?
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "Next task {} not found after auto-advance",
+                                plan.next_task_id
+                            )
+                        })?;
+                    timer_tick_service
+                        .start_timer_tick_loop(Some(
+                            next_task.config().timer.clone(),
+                        ))
+                        .await
+                        .map_err(|e| {
+                            anyhow!(
+                                "Failed to start tick loop after auto-advance: {e}"
+                            )
+                        })?;
+                }
+            }
+
+            let to_task = task_repo
+                .get_by_id(plan.next_task_id)
+                .await
+                .context("Failed to load next task for auto-advanced emit")?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Next task {} not found after auto-advance",
+                        plan.next_task_id
+                    )
+                })?;
+
+            let timer_json = timer_tick_service.with_timer(|t| json!(t)).await;
+
+            let _ = app_handle.emit(
+                domain::event_names::task::AUTO_ADVANCED,
+                json!({
+                    "from_task_id": completed_task_id.to_string(),
+                    "to_task_id": plan.next_task_id.to_string(),
+                    "to_task": to_task,
+                    "timer": timer_json,
+                }),
+            );
+
+            Ok(Some(plan.next_task_id))
+        }
+        Err(e) => {
+            log::warn!(
+                "Auto-advance after completing {} failed; staying on completed task: {e}",
+                completed_task_id
+            );
+            Ok(None)
+        }
+    }
+}
+
+/// Detach the completed task from the timer so the UI can prompt for a new
+/// selection. Failures are logged (not propagated) — matches the original
+/// behavior where this best-effort clear never failed the whole flow.
+async fn clear_completed_active_task(
+    completed_task_id: TaskId,
+    timer_repo: TimerRepositoryArc,
+    app_handle: &AppHandle,
+) {
+    if let Err(e) = clear_active_task(timer_repo).await {
+        log::warn!(
+            "Auto-clear of completed task {} failed; timer left bound: {e}",
+            completed_task_id
+        );
+        return;
+    }
+    let _ = app_handle.emit(
+        domain::event_names::task::ACTIVE_TASK_CLEARED,
+        json!({ "from_task_id": completed_task_id.to_string() }),
+    );
 }
 
 /// Decides whether to auto-advance after a manual complete.
