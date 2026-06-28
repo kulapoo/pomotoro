@@ -53,13 +53,6 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           )
         })}
       </nav>
-
-      {/* Quiet brand footer */}
-      <div className="flex justify-center pb-5">
-        <span className="text-muted-foreground/40 text-[10px] font-semibold tracking-[0.2em]">
-          v1.0
-        </span>
-      </div>
     </aside>
   )
 }
