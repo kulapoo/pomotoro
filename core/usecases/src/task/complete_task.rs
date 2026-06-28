@@ -2,6 +2,7 @@ use domain::{EventPublisher, Result, TaskCompleted, TaskId, TaskRepository};
 use std::sync::Arc;
 
 use crate::get_task_by_id;
+use crate::task::publish_tasks_completed_if_all_done;
 
 pub async fn complete_task(
     task_repo: &Arc<dyn TaskRepository + Send + Sync>,
@@ -22,6 +23,9 @@ pub async fn complete_task(
     );
 
     event_publisher.publish(Box::new(completed_event));
+
+    publish_tasks_completed_if_all_done(task_repo, event_publisher, task_id)
+        .await?;
 
     Ok(())
 }

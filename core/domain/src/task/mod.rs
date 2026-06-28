@@ -13,7 +13,7 @@ pub use self::task::{Task, TaskPatch};
 pub use builder::Builder;
 pub use events::{
     ActiveChanged, Completed, Created, Reset, StatusChanged, TaskDeleted,
-    Updated,
+    TasksCompleted, TasksReset, Updated,
 };
 pub use id::{Id, Marker};
 pub use repository::Repository;

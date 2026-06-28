@@ -42,6 +42,8 @@ pub async fn skip_timer_phase(
 
     let old_phase = timer.get_current_phase();
 
+    let mut finalized: Option<TaskId> = None;
+
     let next_phase = match old_phase {
         Phase::Work => {
             let next = task.next_break_phase();
@@ -57,6 +59,7 @@ pub async fn skip_timer_phase(
                 let event =
                     TaskCompleted::new(task.id(), task.max_sessions(), 1);
                 event_publisher.publish(Box::new(event));
+                finalized = Some(task.id());
             }
             Phase::Work
         }
@@ -77,6 +80,15 @@ pub async fn skip_timer_phase(
 
     task_repo.update(task).await?;
     timer_repo.save(&timer).await?;
+
+    if let Some(id) = finalized {
+        crate::task::publish_tasks_completed_if_all_done(
+            &task_repo,
+            &event_publisher,
+            id,
+        )
+        .await?;
+    }
 
     let new_phase = timer.get_current_phase();
 

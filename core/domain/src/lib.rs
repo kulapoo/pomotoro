@@ -23,7 +23,7 @@ pub use task::{
     CycleService as TaskCycleService, Id as TaskId, Marker as TaskMarker,
     Repository as TaskRepository, Reset as TaskReset, Status as TaskStatus,
     StatusChanged as TaskStatusChanged, Task, TaskDeleted, TaskPatch,
-    Updated as TaskUpdated,
+    TasksCompleted, TasksReset, Updated as TaskUpdated,
 };
 
 pub use timer::{

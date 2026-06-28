@@ -17,8 +17,10 @@ pub mod task {
     pub const ACTIVE_CHANGED: &str = "task:active_changed";
     pub const PROGRESS_UPDATED: &str = "task:progress_updated";
     pub const TASK_COMPLETED: &str = "task:task_completed";
+    pub const TASKS_COMPLETED: &str = "task:tasks_completed";
     pub const AUTO_ADVANCED: &str = "task:auto_advanced";
     pub const TASK_RESET: &str = "task:task_reset";
+    pub const TASKS_RESET: &str = "task:tasks_reset";
     pub const ACTIVE_TASK_CLEARED: &str = "task:active_task_cleared";
 }
 

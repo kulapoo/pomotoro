@@ -289,6 +289,14 @@ impl<T: EntityMarker> EntityId<T> {
         &self.uuid
     }
 
+    /// First 7 hex characters of the UUID, comparable to a git short SHA.
+    ///
+    /// A UUID's first hyphen sits at index 8, so the leading 7 characters
+    /// are always pure hex — no separator stripping required.
+    pub fn short(&self) -> String {
+        self.uuid.to_string().chars().take(7).collect()
+    }
+
     /// Get the entity type name for debugging purposes.
     ///
     /// Returns the type name defined in the EntityMarker implementation.
@@ -493,5 +501,15 @@ mod tests {
 
         // Should be able to retrieve using the same key
         assert_eq!(map.get(&note_id), Some(&"test_value"));
+    }
+
+    #[test]
+    fn test_short_returns_first_seven_hex_chars() {
+        // Standard UUID: first hyphen sits at index 8, so the first 7
+        // characters are pure hex — comparable to a git short SHA.
+        let uuid_str = "550e8400-e29b-41d4-a716-446655440000";
+        let note_id = TestTaskId::from_string(uuid_str).unwrap();
+        assert_eq!(note_id.short(), "550e840");
+        assert_eq!(note_id.short().len(), 7);
     }
 }

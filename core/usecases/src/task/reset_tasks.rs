@@ -1,6 +1,6 @@
 use domain::{
-    Error, EventPublisher, Result, Task, TaskId, TaskRepository, Timer,
-    TimerConfiguration, TimerRepository,
+    Error, EventPublisher, Result, Task, TaskId, TaskRepository, TasksReset,
+    Timer, TimerConfiguration, TimerRepository,
 };
 use std::sync::Arc;
 
@@ -22,22 +22,14 @@ pub async fn reset_tasks(
             })?;
 
         task.reset();
-
-        let task_event = task.clone();
-
         task_repo.update(task.clone()).await?;
-
-        event_publisher.publish(Box::new(domain::TaskReset::new(
-            task_id,
-            Some(task_event.name().to_string()),
-            task_event.description().map(|s| s.to_string()),
-            Some(task_event.max_sessions()),
-            Some(task_event.tags().to_vec()),
-            1,
-        )));
 
         reset_tasks.push(task);
     }
+
+    // One batch event for the whole reset — the UI shows a single toast and
+    // avoids the per-task `TaskReset` spam (N toasts for N reset tasks).
+    event_publisher.publish(Box::new(TasksReset::new(task_ids)));
 
     let mut timer = timer_repo.get().await?;
     timer.reset(&TimerConfiguration::default())?;

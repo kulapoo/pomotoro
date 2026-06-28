@@ -10,6 +10,7 @@ use crate::adapters::{
 use super::{
     TaskActiveChangedHandler, TaskCompletedHandler, TaskCreatedHandler,
     TaskDeletedHandler, TaskStatusChangedHandler, TaskUpdatedHandler,
+    TasksCompletedHandler, TasksResetHandler,
 };
 
 pub fn register_task_handlers(
@@ -37,6 +38,12 @@ pub fn register_task_handlers(
         emitter.clone(),
         task_repository.clone(),
     )))?;
+    event_bus.subscribe(Box::new(TasksResetHandler::new(
+        emitter.clone(),
+        task_repository.clone(),
+    )))?;
+    event_bus
+        .subscribe(Box::new(TasksCompletedHandler::new(emitter.clone())))?;
 
     Ok(())
 }
@@ -52,5 +59,7 @@ pub fn unregister_task_handlers(
     event_bus
         .clear_handlers_for_type(TypeId::of::<TaskActiveChangedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TaskResetHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<TasksResetHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<TasksCompletedHandler>())?;
     Ok(())
 }

@@ -4,7 +4,6 @@ use domain::TaskRepository;
 use domain::Timer;
 use domain::TimerRepository;
 use infra::adapters::TimerTickService;
-use log::info;
 use usecases::task::reset_tasks as reset_tasks_uc;
 
 #[tauri::command(rename_all = "snake_case")]
@@ -17,7 +16,6 @@ pub async fn reset_tasks(
 ) -> Result<(Timer, Vec<Task>), String> {
     let _orchestration_lock =
         timer_tick_service.inner().orchestration_lock().await;
-    info!("Resetting {} tasks", task_ids.len());
 
     let timer_tick_service_arc = timer_tick_service.inner().clone();
 

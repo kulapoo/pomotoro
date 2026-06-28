@@ -3,6 +3,7 @@ mod task;
 mod timer;
 mod timer_event_payloads;
 
+mod batch_events;
 mod config;
 
 mod adv_timer;

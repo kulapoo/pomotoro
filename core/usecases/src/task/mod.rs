@@ -12,6 +12,7 @@
 // Pure Application Services
 // ============================================================================
 
+pub mod all_completed;
 pub mod complete_task;
 pub mod create_task;
 pub mod delete_task;
@@ -26,6 +27,7 @@ pub mod update_task;
 pub mod update_task_settings;
 
 // Re-export use case functions
+pub use all_completed::publish_tasks_completed_if_all_done;
 pub use complete_task::complete_task;
 pub use create_task::{CreateTaskCmd, create_task};
 pub use delete_task::{DeleteTaskCmd, delete_task};

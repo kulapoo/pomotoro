@@ -162,14 +162,17 @@ impl EventHandler for TimerPausedNotificationHandler {
 
 pub struct TaskCompletedNotificationHandler {
     notification_service: Arc<dyn NotificationServiceTrait>,
+    task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
 }
 
 impl TaskCompletedNotificationHandler {
     pub fn new(
         notification_service: Arc<dyn NotificationServiceTrait>,
+        task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
     ) -> Self {
         Self {
             notification_service,
+            task_repository,
         }
     }
 }
@@ -184,8 +187,20 @@ impl EventHandler for TaskCompletedNotificationHandler {
         if let Some(task_completed) =
             event.as_any().downcast_ref::<TaskCompleted>()
         {
+            // Resolve the real task name for the notification body. Falls
+            // back to the short id when the task is gone (e.g. deleted) so
+            // we never leak the full 36-char UUID.
+            let task_name = self
+                .task_repository
+                .get_all()
+                .await?
+                .into_iter()
+                .find(|t| t.id() == task_completed.task_id)
+                .map(|task| task.name().to_string())
+                .unwrap_or_else(|| task_completed.task_id.short());
+
             let notification_event = NotificationEvent::TaskCompleted {
-                task_name: task_completed.task_id.to_string(),
+                task_name,
                 total_sessions: task_completed.total_sessions as u32,
             };
             self.notification_service
@@ -349,9 +364,11 @@ pub async fn register_notification_handlers(
         notification_service.clone(),
     )));
 
-    let _ = event_bus.subscribe(Box::new(
-        TaskCompletedNotificationHandler::new(notification_service.clone()),
-    ));
+    let _ =
+        event_bus.subscribe(Box::new(TaskCompletedNotificationHandler::new(
+            notification_service.clone(),
+            task_repository.clone(),
+        )));
 
     let _ = event_bus.subscribe(Box::new(
         WorkPhaseCompletedNotificationHandler::new(
