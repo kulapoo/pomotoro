@@ -165,8 +165,7 @@ export const useTimerStore = create<TimerStore>((set, get) => ({
 
   applyTimerState: (state) => {
     const timer = get().timer
-    if (!timer) return
-    set({ timer: { task_id: timer.task_id, state } })
+    set({ timer: { ...timer, task_id: timer.task_id, state } })
   },
 
   applyTimer: (timer) => set({ timer }),

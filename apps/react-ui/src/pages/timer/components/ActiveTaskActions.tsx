@@ -11,7 +11,6 @@ export function ActiveTaskActions() {
   const loadTasks = useTaskStore((s) => s.loadTasks)
   const taskBusy = useTaskStore((s) => s.isBusy)
   const timerBusy = useTimerStore((s) => s.isBusy)
-  // const resetTimer = useTimerStore((s) => s.resetTimer)
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
   const { activeTask, isLastBreak, isTaskCompleted } = useTimerSession()
   const isBusy = timerBusy || taskBusy

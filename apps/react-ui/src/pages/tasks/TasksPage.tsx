@@ -1,4 +1,4 @@
-import { useTaskStore } from '@/pages/tasks/useTasks'
+import { useTaskStore, useTasksEventBus } from '@/pages/tasks/useTasks'
 import { useTaskActions } from '@/pages/tasks/hooks/useTaskActions'
 import { useTaskFilters } from '@/pages/tasks/hooks/useTaskFilters'
 import { useTaskSelection } from '@/pages/tasks/hooks/useTaskSelection'
@@ -22,6 +22,8 @@ interface TasksPageProps {
 }
 
 export function TasksPage({ onNavigate }: TasksPageProps) {
+  useTasksEventBus()
+
   const tasks = useTaskStore((s) => s.tasks)
   const isLoading = useTaskStore((s) => s.isLoading)
   const error = useTaskStore((s) => s.error)

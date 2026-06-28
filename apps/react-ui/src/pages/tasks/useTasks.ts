@@ -1,10 +1,13 @@
+import { useEffect } from 'react'
 import { create } from 'zustand'
 import { toast } from 'sonner'
-import { invokeCmd } from '@/lib/tauri'
+import { invokeCmd, onEvent, events } from '@/lib/tauri'
 import { BackendError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
+import { createBatchedLoader } from '@/lib/async'
 import type { Config } from '@/pages/settings/useSettings'
-import type { TimerStateData, Timer } from '@/pages/timer/useTimer'
+import { type TimerStateData, type Timer, useTimerStore } from '@/pages/timer/useTimer'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 
 export const TaskStatus = {
   Active: 'Active',
@@ -243,4 +246,51 @@ async function runBusy(
   } finally {
     set({ isBusy: false })
   }
+}
+
+export function useTasksEventBus(): void {
+  const storeLoadTasks = useTaskStore((s) => s.loadTasks)
+  const storeLoadActiveTask = useTaskStore((s) => s.loadActiveTask)
+  const applyActiveTask = useTaskStore((s) => s.applyActiveTask)
+  const applyTimer = useTimerStore((s) => s.applyTimer)
+  const applyTaskIfActiveForId = useTaskStore((s) => s.applyTaskIfActiveForId)
+
+  useEffect(() => {
+    const reloadTasks = createBatchedLoader(() => storeLoadTasks())
+    const reloadActiveTask = createBatchedLoader(() => storeLoadActiveTask())
+
+    const reload = () => {
+      window.setTimeout(() => {
+        reloadTasks()
+        reloadActiveTask()
+      }, 500)
+    }
+
+    reload()
+
+    const unlisteners: Array<Promise<UnlistenFn>> = [
+      onEvent(events.taskListUpdated, reload),
+      onEvent(events.taskCompleted, (payload) => {
+        applyTaskIfActiveForId(payload.task_id, payload.task)
+      }),
+      onEvent(events.taskProgressUpdated, (task) => {
+        applyTaskIfActiveForId(task.id, task)
+      }),
+      onEvent(events.taskAutoAdvanced, (payload) => {
+        applyActiveTask(payload.to_task)
+        applyTimer(payload.timer)
+        toast.success('Switched to next task')
+      }),
+    ]
+
+    return () => {
+      for (const p of unlisteners) void p.then((fn) => fn())
+    }
+  }, [
+    storeLoadTasks,
+    storeLoadActiveTask,
+    applyTaskIfActiveForId,
+    applyActiveTask,
+    applyTimer,
+  ])
 }
