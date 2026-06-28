@@ -48,15 +48,21 @@ impl r2d2::CustomizeConnection<DbConnection, r2d2::Error>
 }
 
 /// Test database instance with automatic cleanup
+///
+/// Field order matters: Rust drops fields in declaration order. The pool
+/// (which holds open SQLite file handles) MUST drop before `_temp_dir`,
+/// otherwise Windows refuses to delete the DB file while handles are open.
+/// Keeping `_temp_dir` last guarantees the directory cleanup runs only after
+/// all connections are released — no manual `Drop` impl needed.
 pub struct TestDatabase {
-    /// Temporary directory for the database (kept for RAII cleanup)
-    _temp_dir: TempDir,
     /// Path to the test database
     pub db_path: PathBuf,
     /// Database connection pool
     pub pool: Arc<DbPool>,
     /// Unique test ID for isolation
     pub test_id: String,
+    /// Temporary directory for the database — declared last so it drops last.
+    _temp_dir: TempDir,
 }
 
 impl TestDatabase {
@@ -137,21 +143,6 @@ impl TestDatabase {
     /// Check if the database file exists
     pub fn exists(&self) -> bool {
         self.db_path.exists()
-    }
-}
-
-impl Drop for TestDatabase {
-    fn drop(&mut self) {
-        // Close all connections in the pool before cleanup
-        // This ensures SQLite releases all file locks
-        if let Ok(pool) = Arc::try_unwrap(self.pool.clone()) {
-            // Pool is not shared, we can drop it
-            drop(pool);
-        }
-
-        // Since we're using DELETE journal mode, no WAL/SHM files to clean up
-        // The TempDir will automatically clean up when dropped
-        // This ensures test databases are removed after tests complete
     }
 }
 
