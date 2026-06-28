@@ -46,5 +46,10 @@ chrono = { workspace = true }
 dirs = { workspace = true }
 open = "5.0"
 
+# Linux desktop notifications (used to set the application name shown in the
+# notification header; the Tauri plugin does not expose this).
+[target.'cfg(target_os = "linux")'.dependencies]
+notify-rust = "4.11"
+
 [features]
 default = []

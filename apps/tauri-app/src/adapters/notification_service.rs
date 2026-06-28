@@ -98,21 +98,41 @@ impl NotificationServiceTrait for NotificationService {
             if has_permission {
                 let context = event.to_context();
 
-                let mut builder = self
-                    .app_handle
-                    .notification()
-                    .builder()
-                    .title(&context.title)
-                    .body(&context.body);
-
-                if let Some(icon) = context.icon {
-                    builder = builder.icon(icon);
+                #[cfg(target_os = "linux")]
+                {
+                    let mut notification = notify_rust::Notification::new();
+                    notification
+                        .appname("Pomotoro")
+                        .summary(&context.title)
+                        .body(&context.body);
+                    if let Some(icon) = &context.icon {
+                        notification.icon(icon);
+                    } else {
+                        notification.auto_icon();
+                    }
+                    if let Err(e) = notification.show() {
+                        log::warn!("Failed to show notification: {}", e);
+                    }
                 }
 
-                match builder.show() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        log::warn!("Failed to show notification: {}", e);
+                #[cfg(not(target_os = "linux"))]
+                {
+                    let mut builder = self
+                        .app_handle
+                        .notification()
+                        .builder()
+                        .title(&context.title)
+                        .body(&context.body);
+
+                    if let Some(icon) = context.icon {
+                        builder = builder.icon(icon);
+                    }
+
+                    match builder.show() {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::warn!("Failed to show notification: {}", e);
+                        }
                     }
                 }
             }
