@@ -36,28 +36,35 @@ impl EventHandler for TimerStartedHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let _timer_started = event
+        let timer_started = event
             .as_any()
             .downcast_ref::<domain::TimerStarted>()
             .ok_or(domain::Error::EventHandlingError {
                 message: "Failed to start timer tick loop".to_string(),
             })?;
 
+        let task_id = timer_started.task_id.to_string();
+
         // Read-only access to format the UI payload. No mutation of
         // cancel_handle. The orchestrator has already started the loop.
         let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;
 
+        let payload = json!({
+            "task_id": task_id,
+            "state": state_json,
+        });
+
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::STATUS_CHANGED,
-                state_json.clone(),
+                payload.clone(),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}"),
             })?;
 
         self.emitter
-            .emit(domain::event_names::ui_listeners::timer::START, state_json)
+            .emit(domain::event_names::ui_listeners::timer::START, payload)
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer started event: {e}"),
             })?;

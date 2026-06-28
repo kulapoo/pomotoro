@@ -34,12 +34,14 @@ impl EventHandler for TimerResetHandler {
     }
 
     async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
-        let _timer_reset = event
+        let timer_reset = event
             .as_any()
             .downcast_ref::<domain::TimerReset>()
             .ok_or(domain::Error::EventHandlingError {
-                message: "Failed to reset timer".to_string(),
-            })?;
+            message: "Failed to reset timer".to_string(),
+        })?;
+
+        let task_id = timer_reset.task_id.to_string();
 
         // Read-only: format the current timer state for the UI. The
         // orchestrator has already stopped the loop and refreshed state.
@@ -51,10 +53,15 @@ impl EventHandler for TimerResetHandler {
             })
             .await;
 
+        let payload = json!({
+            "task_id": task_id,
+            "state": state_json,
+        });
+
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::RESET,
-                state_json.clone(),
+                payload.clone(),
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!("Failed to emit timer reset event: {e}"),
@@ -63,7 +70,7 @@ impl EventHandler for TimerResetHandler {
         self.emitter
             .emit(
                 domain::event_names::ui_listeners::timer::STATUS_CHANGED,
-                state_json,
+                payload,
             )
             .map_err(|e| domain::Error::EventPublishingError {
                 message: format!(
