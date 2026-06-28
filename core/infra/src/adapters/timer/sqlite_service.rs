@@ -1,12 +1,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use tokio::time::interval;
 
 use crate::adapters::events::mem_event_bus::EventPublisherArc;
 use domain::TimerRepository;
 use domain::{
-    ConfigRepository, Error, Result as DomainResult, TaskId, Timer,
+    ConfigRepository, Error, Phase, Result as DomainResult, TaskId, Timer,
     TimerConfiguration,
 };
 
@@ -116,79 +115,11 @@ impl TimerTickService {
         // observe an empty handle, spawn separate loops, and orphan one of them.
         let mut cancel_guard = self.abort_existing_loop().await;
 
-        let timer_clone = Arc::clone(&self.timer);
-        let event_publisher_clone = Arc::clone(&self.event_publisher);
-
-        // Move config directly into the spawn — no clone needed.
-        // `tokio::spawn` returns immediately, so holding the async mutex guard
-        // across this call is safe and introduces no deadlock risk.
-        let handle = tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(1));
-            // Skip the first tick which completes immediately
-            interval.tick().await;
-            loop {
-                interval.tick().await;
-
-                // Hold the lock only for tick computation; collect events to publish outside
-                let (should_continue, phase_completed, events_to_publish) = {
-                    let mut timer = timer_clone.lock().await;
-
-                    if !timer.is_running() {
-                        (false, false, Vec::new())
-                    } else {
-                        match timer.as_active_mut() {
-                            Some(active) => match active.tick(&config) {
-                                Ok((phase_complete, events)) => {
-                                    (!phase_complete, phase_complete, events)
-                                }
-                                Err(e) => {
-                                    eprintln!("Timer tick error: {e}");
-                                    (false, false, Vec::new())
-                                }
-                            },
-                            // A running timer always has a task bound; if
-                            // not, stop the loop defensively.
-                            None => (false, false, Vec::new()),
-                        }
-                    }
-                };
-                // Lock released — publish events outside the critical section
-                if !events_to_publish.is_empty() {
-                    event_publisher_clone.publish_batch(events_to_publish);
-                }
-
-                // If phase completed naturally (countdown reached 0), handle completion
-                if phase_completed {
-                    // Get the current phase and task_id before breaking.
-                    // If the timer has no active task (shouldn't happen
-                    // mid-tick, but be defensive), skip the
-                    // CountdownExpired event.
-                    let maybe_event = {
-                        let timer = timer_clone.lock().await;
-                        timer
-                            .task_id()
-                            .map(|tid| (timer.get_current_phase(), tid))
-                    };
-
-                    if let Some((current_phase, task_id)) = maybe_event {
-                        // Publish the generic CountdownExpired event
-                        use domain::timer::events::CountdownExpired;
-
-                        let expiration_event =
-                            CountdownExpired::new(current_phase, task_id);
-
-                        event_publisher_clone
-                            .publish(Box::new(expiration_event));
-                    }
-
-                    break;
-                }
-
-                if !should_continue {
-                    break;
-                }
-            }
-        });
+        let handle = tokio::spawn(run_tick_loop(
+            Arc::clone(&self.timer),
+            Arc::clone(&self.event_publisher),
+            config,
+        ));
 
         // Store the new handle and release the lock.
         *cancel_guard = Some(handle);
@@ -337,5 +268,97 @@ impl TimerTickService {
 
         // Save the reset state to the repository
         self.save_state().await
+    }
+}
+
+struct TickOutcome {
+    should_continue: bool,
+    phase_completed: bool,
+    events_to_publish: Vec<Box<dyn domain::Event>>,
+    expiry_payload: Option<(Phase, TaskId)>,
+}
+
+/// Compute one tick of the timer within a single critical section.
+///
+/// Collapses the previous double-lock (tick computation + post-phase
+/// payload read) into one lock scope, capturing the `CountdownExpired`
+/// payload (`phase`, `task_id`) up front when the phase completes.
+async fn compute_tick_outcome(
+    timer: &tokio::sync::Mutex<Timer>,
+    config: &TimerConfiguration,
+) -> TickOutcome {
+    let mut timer = timer.lock().await;
+    if !timer.is_running() {
+        return TickOutcome {
+            should_continue: false,
+            phase_completed: false,
+            events_to_publish: Vec::new(),
+            expiry_payload: None,
+        };
+    }
+    let Some(active) = timer.as_active_mut() else {
+        return TickOutcome {
+            should_continue: false,
+            phase_completed: false,
+            events_to_publish: Vec::new(),
+            expiry_payload: None,
+        };
+    };
+    match active.tick(config) {
+        Ok((phase_complete, events)) => {
+            let expiry_payload = if phase_complete {
+                timer.task_id().map(|tid| (timer.get_current_phase(), tid))
+            } else {
+                None
+            };
+            TickOutcome {
+                should_continue: !phase_complete,
+                phase_completed: phase_complete,
+                events_to_publish: events,
+                expiry_payload,
+            }
+        }
+        Err(e) => {
+            log::error!("Timer tick error: {e}");
+            TickOutcome {
+                should_continue: false,
+                phase_completed: false,
+                events_to_publish: Vec::new(),
+                expiry_payload: None,
+            }
+        }
+    }
+}
+
+/// Body of the spawned tick loop. Ticks every second, publishes domain
+/// events outside the timer lock, and emits a single `CountdownExpired`
+/// when a phase completes naturally before exiting.
+async fn run_tick_loop(
+    timer: Arc<tokio::sync::Mutex<Timer>>,
+    event_publisher: EventPublisherArc,
+    config: TimerConfiguration,
+) {
+    let mut interval = tokio::time::interval(Duration::from_secs(1));
+    interval.tick().await;
+    loop {
+        interval.tick().await;
+        let outcome = compute_tick_outcome(&timer, &config).await;
+        if !outcome.events_to_publish.is_empty() {
+            event_publisher.publish_batch(outcome.events_to_publish);
+        }
+        if outcome.phase_completed {
+            if let Some((current_phase, task_id)) = outcome.expiry_payload {
+                let expiration_event =
+                    domain::timer::events::CountdownExpired::new(
+                        current_phase,
+                        task_id,
+                    );
+                event_publisher.publish(Box::new(expiration_event));
+            }
+            break;
+        }
+        if !outcome.should_continue {
+            break;
+        }
     }
 }
