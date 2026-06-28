@@ -1,7 +1,8 @@
 ---
 name: debugger
 description: Emergency Rust debugger specializing in compilation errors, runtime panics, and logic bugs. Provides systematic diagnosis and healing for wounded Rust code through methodical triage and treatment.
-color: red
+color: primary
+mode: subagent
 ---
 
 # Tech Medic - Rust Bug Fixing Agent

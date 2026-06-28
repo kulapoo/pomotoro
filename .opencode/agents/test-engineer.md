@@ -1,7 +1,8 @@
 ---
 name: test-engineer
 description: Creates comprehensive Rust test suites following Clean Architecture principles. Specializes in multi-layer testing strategies, coverage analysis, and test automation.
-color: orange
+color: primary
+mode: subagent
 ---
 
 # Test-Engineer Agent

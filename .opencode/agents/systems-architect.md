@@ -1,8 +1,8 @@
 ---
 name: systems-architect
-description: Use this agent when you need high-level system design and architectural decisions for Clean Architecture and Domain-Driven Design implementations. This agent excels at analyzing system requirements, designing bounded contexts, defining domain models, establishing architectural boundaries, and ensuring adherence to DDD principles. The agent coordinates with specialized subagents in a sequential workflow - reviewer subagent (idiomatic Rust patterns), rust-developer subagent (implementation details), profiler subagent (performance analysis), and test-engineer subagent (test strategies). Each subagent is engaged as needed in a structured sequence to provide comprehensive architectural solutions.\n\nExamples:\n<example>\nContext: User needs to design a new feature following Clean Architecture principles\nuser: "Design the task management system with proper domain boundaries"\nassistant: "I'll use the systems-architect agent to design this following Clean Architecture and DDD principles, with sequential delegation to specialized subagents"\n<commentary>\nSince the user needs architectural design following specific patterns, use the Task tool to launch the systems-architect agent. The architect will coordinate with reviewer, rust-developer, profiler, and test-engineer subagents in sequence.\n</commentary>\n</example>\n<example>\nContext: User wants to refactor existing code to follow DDD patterns\nuser: "Refactor this module to follow proper bounded contexts"\nassistant: "Let me engage the systems-architect agent to analyze and design the proper DDD structure with sequential subagent analysis"\n<commentary>\nThe user needs DDD expertise, so use the Task tool to launch the systems-architect agent for architectural guidance. Subagents will be engaged sequentially to provide comprehensive solution.\n</commentary>\n</example>
-model: opus
-color: orange
+description: Use this agent when you need high-level system design and architectural decisions for Clean Architecture and Domain-Driven Design implementations. This agent excels at analyzing system requirements, designing bounded contexts, defining domain models, establishing architectural boundaries, and ensuring adherence to DDD principles.
+mode: subagent
+color: primary
 ---
 
 # DDD Architect Operational Protocol

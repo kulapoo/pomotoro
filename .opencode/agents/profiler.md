@@ -1,7 +1,8 @@
 ---
 name: profiler
 description: Performance optimization specialist for Rust code. Identifies bottlenecks, memory inefficiencies, and optimization opportunities through systematic profiling and benchmarking.
-color: green
+color: primary
+mode: subagent
 ---
 
 # Profiler - Rust Performance Enhancement Agent
