@@ -19,9 +19,14 @@
 
 set -euo pipefail
 
-VERSION="${1:-}"
+# Accept both "0.1.0" and "VERSION=0.1.0" so the recipe works whether
+# invoked positionally (`just release 0.1.0`) or with a named flag
+# (`just release VERSION=0.1.0`).
+RAW="${1:-}"
+VERSION="${RAW#VERSION=}"
 if [ -z "$VERSION" ]; then
     echo "Usage: $0 <version>   (e.g. 0.2.0)"
+    echo "  or: $0 VERSION=<version>"
     exit 1
 fi
 
