@@ -1,15 +1,39 @@
 use async_trait::async_trait;
 use domain::timer::events::{
     BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
-    Started as TimerStarted, WorkPhaseCompleted,
+    Resumed as TimerResumed, Started as TimerStarted, WorkPhaseCompleted,
 };
-use domain::{Event, Result, TaskCompleted};
+use domain::{Event, Phase, Result, TaskCompleted, TaskId};
 use std::any::TypeId;
 use std::sync::Arc;
 
 use super::service::{NotificationEvent, NotificationServiceTrait};
 use crate::adapters::events::EventHandler;
 use crate::adapters::events::EventSubscriber;
+
+/// Shared body of `TimerStartedNotificationHandler` and
+/// `TimerResumedNotificationHandler`. Looks up the task name and posts a
+/// `SessionStarted` OS notification for the given phase.
+async fn send_session_started_notification(
+    notification_service: &Arc<dyn NotificationServiceTrait>,
+    task_repository: &Arc<dyn domain::TaskRepository + Send + Sync>,
+    task_id: TaskId,
+    phase: Phase,
+) -> Result<()> {
+    let task_name = task_repository
+        .get_all()
+        .await?
+        .into_iter()
+        .find(|t| t.id() == task_id)
+        .map(|task| task.name().to_string());
+
+    let notification_event =
+        NotificationEvent::SessionStarted { phase, task_name };
+    notification_service
+        .send_notification(notification_event)
+        .await?;
+    Ok(())
+}
 
 pub struct TimerStartedNotificationHandler {
     notification_service: Arc<dyn NotificationServiceTrait>,
@@ -38,27 +62,62 @@ impl EventHandler for TimerStartedNotificationHandler {
         if let Some(timer_started) =
             event.as_any().downcast_ref::<TimerStarted>()
         {
-            let task_name = self
-                .task_repository
-                .get_all()
-                .await?
-                .into_iter()
-                .find(|t| t.id() == timer_started.task_id)
-                .map(|task| task.name().to_string());
-
-            let notification_event = NotificationEvent::SessionStarted {
-                phase: timer_started.phase,
-                task_name,
-            };
-            self.notification_service
-                .send_notification(notification_event)
-                .await?;
+            send_session_started_notification(
+                &self.notification_service,
+                &self.task_repository,
+                timer_started.task_id,
+                timer_started.phase,
+            )
+            .await?;
         }
         Ok(())
     }
 
     fn name(&self) -> &'static str {
         "TimerStartedNotificationHandler"
+    }
+}
+
+pub struct TimerResumedNotificationHandler {
+    notification_service: Arc<dyn NotificationServiceTrait>,
+    task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
+}
+
+impl TimerResumedNotificationHandler {
+    pub fn new(
+        notification_service: Arc<dyn NotificationServiceTrait>,
+        task_repository: Arc<dyn domain::TaskRepository + Send + Sync>,
+    ) -> Self {
+        Self {
+            notification_service,
+            task_repository,
+        }
+    }
+}
+
+#[async_trait]
+impl EventHandler for TimerResumedNotificationHandler {
+    fn subscribes_to(&self) -> TypeId {
+        TypeId::of::<TimerResumed>()
+    }
+
+    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
+        if let Some(timer_resumed) =
+            event.as_any().downcast_ref::<TimerResumed>()
+        {
+            send_session_started_notification(
+                &self.notification_service,
+                &self.task_repository,
+                timer_resumed.task_id,
+                timer_resumed.phase,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "TimerResumedNotificationHandler"
     }
 }
 
@@ -276,6 +335,12 @@ pub async fn register_notification_handlers(
 ) -> Result<()> {
     let _ =
         event_bus.subscribe(Box::new(TimerStartedNotificationHandler::new(
+            notification_service.clone(),
+            task_repository.clone(),
+        )));
+
+    let _ =
+        event_bus.subscribe(Box::new(TimerResumedNotificationHandler::new(
             notification_service.clone(),
             task_repository.clone(),
         )));
