@@ -119,7 +119,7 @@ interface TaskStore {
   loadTasks: () => Promise<boolean>
   loadActiveTask: () => Promise<boolean>
   applyActiveTask: (task: Task) => void
-  applyTaskIfActiveForId: (taskId: string, task: Task) => void
+  applyTaskIfActiveForId: (taskId: string, task: Task, taskPatch?: Partial<Task>) => void
   createTask: (req: CreateTaskRequest) => Promise<boolean>
   updateTask: (req: UpdateTaskRequest) => Promise<boolean>
   deleteTask: (id: string) => Promise<boolean>
@@ -167,9 +167,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   applyActiveTask: (task) => set({ activeTask: task }),
 
-  applyTaskIfActiveForId: (taskId, task) => {
+  applyTaskIfActiveForId: (taskId, task, taskPatch = {} as Partial<Task>) => {
     if (get().activeTask?.id === taskId) {
-      set({ activeTask: task })
+      set({ activeTask: { ...task, ...taskPatch } })
     }
   },
 

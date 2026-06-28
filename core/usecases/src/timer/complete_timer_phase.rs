@@ -22,7 +22,11 @@ pub async fn complete_timer_phase(
     let current_phase = timer.get_current_phase();
 
     let mut finalized: Option<TaskId> = None;
-
+    log::info!(
+        "COMPLETING PHASE - current: {:?}, task: {:?}",
+        current_phase,
+        format!("{:?} - {:?}", task.completed_at(), task.status())
+    );
     let next_phase = match current_phase {
         Phase::Work => {
             let next = task.next_break_phase();

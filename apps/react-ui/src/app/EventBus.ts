@@ -72,10 +72,6 @@ export function useEventBus(): void {
         fetchTimer()
       }),
 
-      onEvent(events.tasksReset, () => {
-        fetchTimer()
-      }),
-
       onEvent(events.taskAutoAdvanced, (payload) => {
         applyActiveTask(payload.to_task)
         applyTimer(payload.timer)
@@ -84,8 +80,12 @@ export function useEventBus(): void {
         )
       }),
 
-      onEvent(events.tasksCompleted, () => {
-        toast.success('All tasks completed!')
+      onEvent(events.taskCompleted, (payload) => {
+        window.setTimeout(() => {
+          applyTaskIfActiveForId(payload.task_id, payload.task, {
+            completed_at: payload.completed_at,
+          })
+        }, 300)
       }),
 
       onEvent(events.screenBlockerActivate, (payload) => {

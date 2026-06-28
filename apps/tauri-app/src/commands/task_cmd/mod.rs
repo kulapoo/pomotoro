@@ -15,6 +15,7 @@ pub use std::time::Duration;
 pub use tauri::State;
 
 // Declare submodules
+mod auto_advance;
 mod complete_flow;
 mod complete_task;
 mod create_task;

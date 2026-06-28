@@ -46,10 +46,6 @@ pub async fn complete_task(
         e.to_string()
     })?;
 
-    info!(
-        "Successfully completed task: id={}, name={}",
-        task_id,
-        task.name()
-    );
+    info!("Successfully completed task: id={}", task_id,);
     Ok(task)
 }

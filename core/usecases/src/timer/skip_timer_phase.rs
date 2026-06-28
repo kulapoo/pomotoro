@@ -65,14 +65,6 @@ pub async fn skip_timer_phase(
         }
     };
 
-    log::info!(
-        "Skipping to phase: {}-{}-{}-{}",
-        next_phase.name(),
-        task.current_sessions(),
-        task.config().timer.sessions_until_long_break,
-        task.is_completed()
-    );
-
     let events = timer
         .as_active_mut()
         .ok_or(domain::Error::NoActiveTask)?
