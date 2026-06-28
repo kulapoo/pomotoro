@@ -5,7 +5,7 @@
 
 use super::events::{
     BreakPhaseCompleted, BreakPhaseStarted, Paused, PhaseSkipped, Reset,
-    Started, WorkPhaseCompleted, WorkPhaseStarted,
+    Resumed, Started, WorkPhaseCompleted, WorkPhaseStarted,
 };
 use super::state_machine::TimerState;
 use super::{Error, Phase, Result};
@@ -122,7 +122,7 @@ impl StateTransitions {
                 let phase = paused_from.phase();
 
                 // Use the remaining_seconds from the Paused state, not from paused_from
-                let events: Vec<Box<dyn Event>> = vec![Box::new(Started::new(
+                let events: Vec<Box<dyn Event>> = vec![Box::new(Resumed::new(
                     task_id,
                     phase,
                     remaining_seconds,
@@ -552,6 +552,35 @@ mod tests {
             StateTransitions::resume(paused, crate::TaskId::new(), &config)
                 .unwrap();
         assert!(matches!(result.new_state, TimerState::Working { .. }));
+    }
+
+    #[test]
+    fn resume_emits_resumed_event_not_started() {
+        let task_id = crate::TaskId::new();
+        let paused = TimerState::Paused {
+            paused_from: Box::new(TimerState::Working {
+                remaining_seconds: 1500,
+            }),
+            remaining_seconds: 750,
+        };
+
+        let result = StateTransitions::resume(
+            paused,
+            task_id,
+            &TimerConfiguration::default(),
+        )
+        .expect("resume must succeed from Paused");
+
+        assert_eq!(
+            result.events.len(),
+            1,
+            "resume must emit exactly one event"
+        );
+        assert_eq!(
+            result.events[0].event_type(),
+            "Resumed",
+            "resume must emit a Resumed event, not Started"
+        );
     }
 
     #[test]
