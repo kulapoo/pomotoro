@@ -3,7 +3,6 @@ import { StatBadge } from '@/pages/tasks/components/StatBadge'
 
 interface TasksHeaderProps {
   total: number
-  activeCount: number
   completedCount: number
   hasTasks: boolean
   isBusy: boolean
@@ -12,7 +11,6 @@ interface TasksHeaderProps {
 
 export function TasksHeader({
   total,
-  activeCount,
   completedCount,
   hasTasks,
   isBusy,
@@ -40,11 +38,6 @@ export function TasksHeader({
           label="Total"
           value={total}
           color="border-border bg-card text-foreground"
-        />
-        <StatBadge
-          label="Active"
-          value={activeCount}
-          color="border-toro/40 bg-toro/10 text-toro"
         />
         <StatBadge
           label="Done"

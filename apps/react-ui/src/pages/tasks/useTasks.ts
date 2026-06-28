@@ -6,7 +6,7 @@ import { BackendError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 import { createBatchedLoader } from '@/lib/async'
 import type { Config } from '@/pages/settings/useSettings'
-import { type TimerStateData, type Timer } from '@/pages/timer/useTimer'
+import { type TimerStateData, type Timer, useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
 export const TaskStatus = {
@@ -119,7 +119,11 @@ interface TaskStore {
   loadTasks: () => Promise<boolean>
   loadActiveTask: () => Promise<boolean>
   applyActiveTask: (task: Task) => void
-  applyTaskIfActiveForId: (taskId: string, task: Task, taskPatch?: Partial<Task>) => void
+  applyTaskIfActiveForId: (
+    taskId: string,
+    task: Task | null,
+    taskPatch?: Partial<Task>,
+  ) => void
   createTask: (req: CreateTaskRequest) => Promise<boolean>
   updateTask: (req: UpdateTaskRequest) => Promise<boolean>
   deleteTask: (id: string) => Promise<boolean>
@@ -169,7 +173,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   applyTaskIfActiveForId: (taskId, task, taskPatch = {} as Partial<Task>) => {
     if (get().activeTask?.id === taskId) {
-      set({ activeTask: { ...task, ...taskPatch } })
+      set({ activeTask: task ? { ...task, ...taskPatch } : null })
     }
   },
 
@@ -265,15 +269,18 @@ export function useTasksEventBus(): void {
   const storeLoadTasks = useTaskStore((s) => s.loadTasks)
   const storeLoadActiveTask = useTaskStore((s) => s.loadActiveTask)
   const applyTaskIfActiveForId = useTaskStore((s) => s.applyTaskIfActiveForId)
+  const storeLoadTimer = useTimerStore((s) => s.fetchTimer)
 
   useEffect(() => {
     const reloadTasks = createBatchedLoader(() => storeLoadTasks())
     const reloadActiveTask = createBatchedLoader(() => storeLoadActiveTask())
+    const reloadTimer = createBatchedLoader(() => storeLoadTimer())
 
     const reload = () => {
       window.setTimeout(() => {
         reloadTasks()
         reloadActiveTask()
+        reloadTimer()
       }, 500)
     }
 
@@ -292,5 +299,5 @@ export function useTasksEventBus(): void {
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn())
     }
-  }, [storeLoadTasks, storeLoadActiveTask, applyTaskIfActiveForId])
+  }, [storeLoadTasks, storeLoadActiveTask, applyTaskIfActiveForId, storeLoadTimer])
 }

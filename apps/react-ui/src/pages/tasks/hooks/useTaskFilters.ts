@@ -41,10 +41,6 @@ export function useTaskFilters(tasks: Task[], activeTaskId?: string | null) {
   const completedIds = useMemo(() => completed.map((t) => t.id), [completed])
 
   const total = tasks.length
-  const activeCount = useMemo(
-    () => (activeTaskId && tasks.some((t) => t.id === activeTaskId) ? 1 : 0),
-    [tasks, activeTaskId],
-  )
   const completedCount = useMemo(
     () => tasks.filter((t) => t.status === TaskStatus.Completed).length,
     [tasks],
@@ -61,7 +57,6 @@ export function useTaskFilters(tasks: Task[], activeTaskId?: string | null) {
     visibleIds,
     completedIds,
     total,
-    activeCount,
     completedCount,
   }
 }

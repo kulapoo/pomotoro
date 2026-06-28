@@ -35,7 +35,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               aria-label={label}
               aria-current={active ? 'page' : undefined}
               className={[
-                'group focus-visible:ring-ring relative flex h-11 items-center justify-center rounded-xl transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2',
+                'group focus-visible:ring-ring relative flex h-11 items-center justify-center rounded-xl transition-colors duration-200 focus-visible:ring-2 focus-visible:outline-none',
                 active
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -57,7 +57,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       {/* Quiet brand footer */}
       <div className="flex justify-center pb-5">
         <span className="text-muted-foreground/40 text-[10px] font-semibold tracking-[0.2em]">
-          TORO
+          v1.0
         </span>
       </div>
     </aside>

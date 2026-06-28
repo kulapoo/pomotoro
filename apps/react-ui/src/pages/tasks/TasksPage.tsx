@@ -83,7 +83,6 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
 
       <TasksHeader
         total={filters.total}
-        activeCount={filters.activeCount}
         completedCount={filters.completedCount}
         hasTasks={tasks.length > 0}
         isBusy={isBusy}

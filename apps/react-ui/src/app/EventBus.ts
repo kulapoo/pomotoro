@@ -4,7 +4,7 @@ import { onEvent, events } from '@/lib/tauri'
 import { shortId } from '@/lib/id'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { useTaskStore } from '@/pages/tasks/useTasks'
+import { Task, TaskStatus, useTaskStore } from '@/pages/tasks/useTasks'
 import { useScreenBlockerStore } from '@/app/useScreenBlocker'
 
 /**
@@ -82,9 +82,15 @@ export function useEventBus(): void {
 
       onEvent(events.taskCompleted, (payload) => {
         window.setTimeout(() => {
-          applyTaskIfActiveForId(payload.task_id, payload.task, {
+          const patchPayload = {
             completed_at: payload.completed_at,
-          })
+          } as Partial<Task>
+
+          if (payload.completed_at) {
+            patchPayload.status = TaskStatus.Completed
+          }
+
+          applyTaskIfActiveForId(payload.task_id, payload.task, patchPayload)
         }, 300)
       }),
 
