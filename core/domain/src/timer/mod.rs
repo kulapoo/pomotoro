@@ -7,6 +7,8 @@ pub mod state_machine;
 pub mod timer;
 pub mod transitions;
 
+use std::fmt::Display;
+
 // Re-export core types
 pub use error::{Error, Result};
 pub use repository::TimerRepository;
@@ -71,6 +73,17 @@ pub enum Status {
     Running,
     Paused,
     Stopped,
+}
+
+impl Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Status::Idle => write!(f, "Idle"),
+            Status::Running => write!(f, "Running"),
+            Status::Paused => write!(f, "Paused"),
+            Status::Stopped => write!(f, "Stopped"),
+        }
+    }
 }
 
 // Re-export events

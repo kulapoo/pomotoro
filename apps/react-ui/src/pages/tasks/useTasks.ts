@@ -123,6 +123,7 @@ interface TaskStore {
     taskId: string,
     task: Task | null,
     taskPatch?: Partial<Task>,
+    applyToList?: boolean,
   ) => void
   createTask: (req: CreateTaskRequest) => Promise<boolean>
   updateTask: (req: UpdateTaskRequest) => Promise<boolean>
@@ -171,9 +172,28 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   applyActiveTask: (task) => set({ activeTask: task }),
 
-  applyTaskIfActiveForId: (taskId, task, taskPatch = {} as Partial<Task>) => {
-    if (get().activeTask?.id === taskId) {
-      set({ activeTask: task ? { ...task, ...taskPatch } : null })
+  applyTaskIfActiveForId: (
+    taskId,
+    task,
+    taskPatch = {} as Partial<Task>,
+    applyToList = false,
+  ) => {
+    if (get().activeTask?.id !== taskId) {
+      return
+    }
+
+    const newTask = { ...task, ...taskPatch } as Task
+    set({ activeTask: task ? newTask : null })
+
+    if (applyToList) {
+      set({
+        tasks: (get().tasks || []).map((t: Task) => {
+          if (t.id === taskId) {
+            return task
+          }
+          return t
+        }) as Task[],
+      })
     }
   },
 

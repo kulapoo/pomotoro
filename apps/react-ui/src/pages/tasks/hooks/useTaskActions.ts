@@ -57,10 +57,10 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
       if (ok) {
         toast.info(`Focusing on "${task.name}" (${shortId(task.id)})`)
         void refreshTimer()
-        const timer = useTimerStore.getState().timer
-        if (timer && isTimerRunning(timer)) {
-          window.setTimeout(() => useTimerStore.getState().pause(), 200)
-        }
+        // const timer = useTimerStore.getState().timer
+        // if (timer && isTimerRunning(timer) ) {
+        //   window.setTimeout(() => useTimerStore.getState().pause(), 200)
+        // }
         onNavigate('timer')
       }
     },

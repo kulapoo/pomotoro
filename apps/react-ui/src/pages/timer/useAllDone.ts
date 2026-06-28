@@ -11,7 +11,7 @@ export function useAllDone(): boolean {
   const tasks = useTaskStore((s) => s.tasks)
 
   if (!activeTask) return false
-  if (activeTask.status === TaskStatus.Completed && activeTask.completed_at) return true
+  if (activeTask.status !== TaskStatus.Completed) return false
   if (tasks.length === 0) return false
 
   return tasks.every((t) => t.status === TaskStatus.Completed || !!t.completed_at)

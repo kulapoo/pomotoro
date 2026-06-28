@@ -81,17 +81,15 @@ export function useEventBus(): void {
       }),
 
       onEvent(events.taskCompleted, (payload) => {
-        window.setTimeout(() => {
-          const patchPayload = {
-            completed_at: payload.completed_at,
-          } as Partial<Task>
+        const patchPayload = {
+          completed_at: payload.completed_at,
+        } as Partial<Task>
 
-          if (payload.completed_at) {
-            patchPayload.status = TaskStatus.Completed
-          }
+        if (payload.completed_at) {
+          patchPayload.status = TaskStatus.Completed
+        }
 
-          applyTaskIfActiveForId(payload.task_id, payload.task, patchPayload)
-        }, 300)
+        applyTaskIfActiveForId(payload.task_id, payload.task, patchPayload, true)
       }),
 
       onEvent(events.screenBlockerActivate, (payload) => {
