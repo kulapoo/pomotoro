@@ -49,6 +49,7 @@ Conventions every contribution should follow.
 Step-by-step guides for common activities.
 
 - [Development Workflow](./workflows/development.md) — git branches, commits, CI, release process
+- [Releasing](./workflows/releasing.md) — cut a release, version bumping, recovery, how the pipeline is wired
 - [Adding a Feature](./workflows/adding-a-feature.md) — full Clean-Architecture feature walkthrough
 - [Fixing a Bug](./workflows/fixing-a-bug.md) — reproduce → failing test → root cause → fix
 - [Testing](./workflows/testing.md) — test pyramid, layer-specific tests, commands

@@ -199,20 +199,23 @@ cargo tarpaulin --min 80
 
 ## Release Process
 
+Releases are fully automated and **tag-triggered**. From a clean `main`:
+
+```bash
+just release VERSION=0.2.0
+```
+
+This bumps version, commits, tags `v0.2.0`, pushes, and triggers CI to build
+Windows / macOS (universal) / Linux installers automatically.
+
 ### Version Bumping
 Follow semantic versioning:
 - **Major**: Breaking changes
 - **Minor**: New features (backward compatible)
 - **Patch**: Bug fixes
 
-### Release Checklist
-1. [ ] Update version in `Cargo.toml`
-2. [ ] Update CHANGELOG.md
-3. [ ] Run full test suite
-4. [ ] Build release binaries
-5. [ ] Tag release
-6. [ ] Create GitHub release
-7. [ ] Update documentation
+See **[Releasing Workflow](./releasing.md)** for the full step-by-step guide,
+changelog conventions, and recovery procedures.
 
 ## Best Practices
 
