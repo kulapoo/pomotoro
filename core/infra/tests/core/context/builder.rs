@@ -166,10 +166,7 @@ impl AppContextBuilder {
 
             // Start the tick loop
             ctx.timer_tick_service
-                .start_timer_tick_loop(
-                    Some(task.config().timer.clone()),
-                    Some(task.id()),
-                )
+                .start_timer_tick_loop(Some(task.config().timer.clone()))
                 .await
                 .map_err(|e| domain::Error::RepositoryError { message: e })?;
         }

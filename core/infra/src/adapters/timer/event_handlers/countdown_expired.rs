@@ -95,7 +95,7 @@ impl EventHandler for CountdownExpiredHandler {
                 if !(task.is_completed() && next_phase == Phase::Work) {
                     let timer_config = task.config().timer.clone();
                     self.timer_srv
-                        .start_timer_tick_loop(Some(timer_config), None)
+                        .start_timer_tick_loop(Some(timer_config))
                         .await
                         .map_err(|e| domain::Error::RepositoryError {
                             message: format!(

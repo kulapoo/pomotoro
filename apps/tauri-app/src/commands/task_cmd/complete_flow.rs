@@ -127,10 +127,9 @@ pub async fn complete_task_flow(
                                 )
                             })?;
                         timer_tick_service
-                            .start_timer_tick_loop(
-                                Some(next_task.config().timer.clone()),
-                                None,
-                            )
+                            .start_timer_tick_loop(Some(
+                                next_task.config().timer.clone(),
+                            ))
                             .await
                             .map_err(|e| {
                                 anyhow!(

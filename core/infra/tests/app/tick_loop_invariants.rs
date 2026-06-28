@@ -56,7 +56,7 @@ async fn domain_events_do_not_mutate_tick_loop() {
     // Drive the loop manually as well, to be certain a handle exists
     // independent of any handler.
     ctx.timer_tick_service
-        .start_timer_tick_loop(Some(timer_config.clone()), None)
+        .start_timer_tick_loop(Some(timer_config.clone()))
         .await
         .expect("Failed to start tick loop");
 

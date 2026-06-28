@@ -101,7 +101,6 @@ impl TimerTickService {
     pub async fn start_timer_tick_loop(
         &self,
         timer_config: Option<TimerConfiguration>,
-        _task_id: Option<TaskId>,
     ) -> Result<(), String> {
         // Reload timer from repository to ensure we have the latest state
         // This is crucial because the use case just saved the timer

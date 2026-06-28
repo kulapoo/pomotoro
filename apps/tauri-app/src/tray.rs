@@ -562,10 +562,9 @@ fn menu_play_pause(app: &AppHandle) {
                         },
                     )?;
                     tick_service
-                        .start_timer_tick_loop(
-                            Some(task.config().timer.clone()),
-                            None,
-                        )
+                        .start_timer_tick_loop(Some(
+                            task.config().timer.clone(),
+                        ))
                         .await
                         .map_err(|e| domain::Error::RepositoryError {
                             message: e,
@@ -590,10 +589,9 @@ fn menu_play_pause(app: &AppHandle) {
                         },
                     )?;
                     tick_service
-                        .start_timer_tick_loop(
-                            Some(task.config().timer.clone()),
-                            None,
-                        )
+                        .start_timer_tick_loop(Some(
+                            task.config().timer.clone(),
+                        ))
                         .await
                         .map_err(|e| domain::Error::RepositoryError {
                             message: e,
@@ -656,10 +654,7 @@ fn menu_reset_phase(app: &AppHandle) {
             Ok(updated) if updated.is_running() => {
                 if let Err(e) = ctx
                     .tick_service
-                    .start_timer_tick_loop(
-                        Some(task.config().timer.clone()),
-                        None,
-                    )
+                    .start_timer_tick_loop(Some(task.config().timer.clone()))
                     .await
                 {
                     log::error!(
@@ -723,10 +718,7 @@ fn menu_skip(app: &AppHandle) {
             Ok(updated) if updated.is_running() => {
                 if let Err(e) = ctx
                     .tick_service
-                    .start_timer_tick_loop(
-                        Some(task.config().timer.clone()),
-                        None,
-                    )
+                    .start_timer_tick_loop(Some(task.config().timer.clone()))
                     .await
                 {
                     log::error!(

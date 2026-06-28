@@ -83,7 +83,7 @@ async fn mimic_skip_phase_command(
         .map_err(|e| format!("get: {e}"))?;
     if updated.is_running() {
         deps.timer_tick_service
-            .start_timer_tick_loop(Some(timer_cfg), None)
+            .start_timer_tick_loop(Some(timer_cfg))
             .await
             .map_err(|e| format!("start: {e}"))?;
     }
@@ -131,7 +131,7 @@ async fn concurrent_skip_phase_does_not_deadlock() {
         .await
         .expect("start_timer_phase");
         ctx.timer_tick_service
-            .start_timer_tick_loop(Some(timer_cfg.clone()), None)
+            .start_timer_tick_loop(Some(timer_cfg.clone()))
             .await
             .expect("start tick loop");
 
@@ -221,7 +221,7 @@ async fn manual_skip_racing_with_natural_expiry_does_not_deadlock() {
         .await
         .expect("start_timer_phase");
         ctx.timer_tick_service
-            .start_timer_tick_loop(Some(timer_cfg.clone()), None)
+            .start_timer_tick_loop(Some(timer_cfg.clone()))
             .await
             .expect("start tick loop");
 
@@ -315,7 +315,7 @@ async fn rapid_sequential_skips_leave_loop_responsive() {
     .await
     .expect("start_timer_phase");
     ctx.timer_tick_service
-        .start_timer_tick_loop(Some(timer_cfg.clone()), None)
+        .start_timer_tick_loop(Some(timer_cfg.clone()))
         .await
         .expect("start tick loop");
 

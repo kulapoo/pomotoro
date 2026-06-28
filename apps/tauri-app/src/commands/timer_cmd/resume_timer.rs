@@ -47,7 +47,7 @@ pub async fn resume_timer(
         .ok_or_else(|| format!("Task {} not found", task_id))?;
 
     timer_tick_service_arc
-        .start_timer_tick_loop(Some(task.config().timer.clone()), None)
+        .start_timer_tick_loop(Some(task.config().timer.clone()))
         .await
         .map_err(|e| {
             format!(

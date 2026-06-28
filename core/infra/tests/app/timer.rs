@@ -238,7 +238,7 @@ async fn timer_should_stay_running_after_phase_reset() {
     // Restart the tick loop so the running phase keeps counting down. This
     // mirrors the countdown_expired handler pattern.
     ctx.timer_tick_service
-        .start_timer_tick_loop(Some(task.config().timer.clone()), None)
+        .start_timer_tick_loop(Some(task.config().timer.clone()))
         .await
         .expect("Failed to restart tick loop");
 

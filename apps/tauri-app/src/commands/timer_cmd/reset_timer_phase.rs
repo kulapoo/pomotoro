@@ -83,7 +83,7 @@ pub async fn reset_timer_phase(
     // stopped to preserve the paused state.
     if updated_timer.is_running() {
         timer_tick_service_arc
-            .start_timer_tick_loop(Some(task.config().timer.clone()), None)
+            .start_timer_tick_loop(Some(task.config().timer.clone()))
             .await
             .map_err(|e| {
                 format!(
