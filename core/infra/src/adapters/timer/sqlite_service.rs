@@ -110,25 +110,11 @@ impl TimerTickService {
             .await
             .map_err(|e| format!("Failed to reload timer state: {}", e))?;
 
-        // Get configuration from parameter or default from config repository
-        let config = if let Some(config) = timer_config {
-            config
-        } else {
-            self.config_repository
-                .get_config()
-                .await
-                .map_err(|e| e.to_string())?
-                .timer
-        };
+        let config = self.resolve_timer_config(timer_config).await?;
         // Hold the cancel_handle lock for the entire abort→spawn→store sequence so
         // that concurrent calls are serialized. Without this, two callers could both
         // observe an empty handle, spawn separate loops, and orphan one of them.
-        let mut cancel_guard = self.cancel_handle.lock().await;
-
-        // Cancel any existing timer task while still holding the lock
-        if let Some(handle) = cancel_guard.take() {
-            handle.abort();
-        }
+        let mut cancel_guard = self.abort_existing_loop().await;
 
         let timer_clone = Arc::clone(&self.timer);
         let event_publisher_clone = Arc::clone(&self.event_publisher);
@@ -213,14 +199,38 @@ impl TimerTickService {
 
     /// Stop the timer tick loop
     pub async fn stop_timer_tick_loop(&self) -> DomainResult<()> {
-        // Cancel the timer task
-        {
-            let mut cancel_guard = self.cancel_handle.lock().await;
-            if let Some(handle) = cancel_guard.take() {
-                handle.abort();
-            }
-        }
+        let _guard = self.abort_existing_loop().await;
         Ok(())
+    }
+
+    /// Abort any running tick-loop task and return the `cancel_handle` guard
+    /// so the caller can hold it across the subsequent spawn+store sequence
+    /// (serialization contract documented on `start_timer_tick_loop`).
+    async fn abort_existing_loop(
+        &self,
+    ) -> tokio::sync::MutexGuard<'_, Option<tokio::task::JoinHandle<()>>> {
+        let mut guard = self.cancel_handle.lock().await;
+        if let Some(handle) = guard.take() {
+            handle.abort();
+        }
+        guard
+    }
+
+    /// Resolve the timer config from the caller's explicit value, falling
+    /// back to the persisted config repository default.
+    async fn resolve_timer_config(
+        &self,
+        timer_config: Option<TimerConfiguration>,
+    ) -> Result<TimerConfiguration, String> {
+        if let Some(config) = timer_config {
+            Ok(config)
+        } else {
+            self.config_repository
+                .get_config()
+                .await
+                .map_err(|e| e.to_string())
+                .map(|c| c.timer)
+        }
     }
 
     /// Acquire the global orchestration lock. Hold the returned guard for the
