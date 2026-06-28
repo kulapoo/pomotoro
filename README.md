@@ -10,18 +10,29 @@ data, instant response, and a timer that keeps working even when you're deep in 
 
 ---
 
+## 🎬 Demo
+
+<p align="center">
+  <a href="./demo.mp4" title="Watch the full demo">
+    <img src="./demo.gif" alt="Pomotoro demo" width="480" />
+  </a>
+</p>
+<p align="center"><em>A quick loop of Pomotoro in action — <a href="./demo.mp4">watch the full demo</a> (1m40s).<br>Timer phases, task queues, ambient audio, notifications, and the break screen blocker.</em></p>
+
+---
+
 ## ✨ What it does
 
 | | |
 |---|---|
 | 🍅 **Pomodoro engine** | Configurable focus / short-break / long-break cycles with smooth visual ring and session dots. |
 | ✅ **Task management** | Multi-session tasks with tags, search, status filters, and live progress. A starter *Focus Session* is auto-created on first boot. |
-| 🎵 **Focus audio** | Ambient background sounds (rain, forest, ocean, white noise, café, fireplace, thunderstorm) plus distinct work/break notification chimes. |
+| 🎵 **Focus audio** | Ambient background sounds (rain, forest, ocean, white noise, café, fireplace, thunderstorm, brown noise) plus distinct work/break notification chimes. |
 | 🔔 **Smart notifications** | Desktop notifications, sound alerts, phase-transition & task-completion alerts, with position and auto-dismiss control. |
 | 🚫 **Screen blocker** | Optional full-screen overlay that forces you to actually take your break — with custom messages. |
 | 🪟 **System tray** | Minimize to tray, start minimized, and watch the live countdown baked into the tray icon & tooltip. |
 | ⌨️ **Keyboard shortcuts** | Cycle incomplete tasks instantly with `Ctrl/Meta+Tab` — no mouse needed. |
-| 🎛️ **Deeply configurable** | Timer durations, automation, appearance, window, audio, and storage — all in one settings hub. |
+| 🎛️ **Deeply configurable** | Timer durations, automation, appearance, window, audio, and screen blocking — all in one settings hub. |
 | ⚡ **Native speed** | Tauri + Rust core with SQLite persistence. Minimal resources, instant response. |
 | 🖥️ **Cross-platform** | Windows, macOS, and Linux |
 
@@ -97,7 +108,7 @@ The app opens automatically. Run `just` with no arguments to see every command.
 3. **Focus** — pick a task, hit play, and let ambient audio keep you in flow.
 4. **Cycle tasks** instantly with `Ctrl/Meta+Tab`.
 5. **Take your break** — the screen blocker (if enabled) makes sure you do.
-6. **Tune everything** in **Settings → Timer / Notifications / Audio / General / Storage**.
+6. **Tune everything** in **Settings → General / Timer / Notifications / Audio**.
 
 ### Timer controls
 Start · Pause · Resume · Skip phase · Reset countdown · Reset task
@@ -133,10 +144,6 @@ All settings live in **Settings** and persist to local SQLite.
 
 **🎨 Appearance**
 - Theme: System / Light / Dark
-- Show seconds in timer
-- Always on top
-- Compact mode
-- Animated progress
 
 **🪟 Window & tray**
 - Minimize to system tray
@@ -146,8 +153,6 @@ All settings live in **Settings** and persist to local SQLite.
 **🚫 Screen blocking**
 - Block screen after work (with custom message)
 - Block screen after break (with custom message)
-
-**💾 Storage** — manage local data from the app.
 
 ---
 
