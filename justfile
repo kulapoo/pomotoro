@@ -128,6 +128,32 @@ install: install-hooks
     cargo build --workspace
 
 # ==============================================================================
+# Releases
+# ==============================================================================
+
+# Cut a new release: bumps version, updates changelog, tags, and pushes.
+#
+# Usage:
+#   just release VERSION=0.2.0
+#
+# Bumps version in the shipping crates only:
+#   - apps/tauri-app/tauri.conf.json
+#   - apps/tauri-app/Cargo.toml
+#   - apps/react-ui/package.json
+#
+# The pomotoro-cli and cosmic-de crates are stubs (see ROADMAP.md) and are
+# intentionally left at 0.1.0 until they are real.
+#
+# Pushing the tag triggers .github/workflows/release.yml, which builds
+# Windows, macOS (universal), and Linux installers and attaches them to
+# the GitHub Release automatically.
+release VERSION:
+    #!/usr/bin/env bash
+    set -e
+    exec "{{justfile_directory()}}/scripts/release.sh" "{{VERSION}}"
+
+
+# ==============================================================================
 # Cleanup
 # ==============================================================================
 

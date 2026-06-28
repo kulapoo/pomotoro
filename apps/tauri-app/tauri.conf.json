@@ -18,7 +18,7 @@
         "width": 490,
         "height": 844,
         "resizable": true,
-        "additionalBrowserArgs": "--auto-open-devtools-for-tabs --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ],
     "security": {
@@ -27,9 +27,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb", "appimage", "app", "dmg", "msi", "nsis"],
     "shortDescription": "A Pomodoro timer for focused work sessions with task tracking and system tray integration",
     "longDescription": "Pomotoro helps you stay productive with customizable Pomodoro work/break intervals, task tracking, notifications, audio cues, and a system tray controller — all in a clean cross-platform desktop app.",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libssl3",
+          "libayatana-appindicator3-1"
+        ]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -38,6 +38,30 @@ data, instant response, and a timer that keeps working even when you're deep in 
 
 ---
 
+## 📦 Download prebuilt binaries
+
+Prebuilt installers for Windows, macOS, and Linux are published with every
+release on the [Releases page](https://github.com/kulapoo/pomotoro/releases).
+
+| Platform        | Installer                                                        |
+| --------------- | ---------------------------------------------------------------- |
+| **Linux**       | `*.AppImage` (portable) or `*.deb` (Debian/Ubuntu)               |
+| **macOS**       | `*.dmg` (universal — Intel + Apple Silicon)                      |
+| **Windows**     | `*.msi` or `*.exe` (NSIS) installer                              |
+
+> ⚠️ **Builds are currently unsigned.** This is normal for an early project.
+> Your OS will show a security prompt the first time you run Pomotoro:
+>
+> - **macOS:** after dragging to Applications, run:
+>   `xattr -dr com.apple.quarantine /Applications/Pomotoro.app`
+>   (or right-click → Open → Open Anyway from Finder).
+> - **Windows:** click **More info → Run anyway** on the SmartScreen prompt.
+> - **Linux (AppImage):** `chmod +x Pomotoro_*.AppImage` then double-click.
+>
+> Code signing (Apple Developer ID + Windows Authenticode) is planned before 1.0.
+
+---
+
 ## 🚀 Quick start
 
 ### Prerequisites
@@ -205,8 +229,26 @@ just build        # or: cd apps/tauri-app && cargo tauri build
 
 Artifacts land in `target/release/bundle/`:
 - **Linux:** `.deb` / `.AppImage`
-- **macOS:** `.dmg`
-- **Windows:** `.msi`
+- **macOS:** `.dmg` (universal — Intel + Apple Silicon)
+- **Windows:** `.msi` / `.exe` (NSIS)
+
+To cut a published release instead, see [Cutting a release](#-cutting-a-release) below.
+
+---
+
+## 🏷️ Cutting a release
+
+Releases are tag-triggered. From a clean `main`:
+
+```bash
+just release VERSION=0.2.0
+```
+
+This bumps the version in the shipping crates (`apps/tauri-app/tauri.conf.json`,
+`apps/tauri-app/Cargo.toml`, `apps/react-ui/package.json`), commits, tags
+`v0.2.0`, and pushes. The `Release` workflow then builds Windows, macOS
+(universal), and Linux installers and attaches them to the GitHub Release
+automatically — see [CHANGELOG.md](CHANGELOG.md) for the version history.
 
 ---
 

@@ -36,7 +36,7 @@ export function TasksPage({ onNavigate }: TasksPageProps) {
     useSettingsStore((s) => s.config?.timer.sessions_until_long_break) ??
     DEFAULT_DURATIONS.sessionsUntilLongBreak
 
-  const filters = useTaskFilters(tasks, activeTaskId)
+  const filters = useTaskFilters(tasks)
   const actions = useTaskActions(onNavigate)
   const selection = useTaskSelection({
     visibleIds: filters.visibleIds,

@@ -4,7 +4,7 @@ import type { Task, TaskStatus as TaskStatusType } from '@/pages/tasks/useTasks'
 
 export type StatusFilter = 'all' | TaskStatusType
 
-export function useTaskFilters(tasks: Task[], activeTaskId?: string | null) {
+export function useTaskFilters(tasks: Task[]) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
