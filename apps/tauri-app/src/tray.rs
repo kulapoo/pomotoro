@@ -512,6 +512,61 @@ impl TrayCtx {
 
 // ── menu action handlers ────────────────────────────────────────────────────
 
+async fn start_loop_for_task(ctx: &TrayCtx) -> domain::Result<()> {
+    let task =
+        ctx.task_repo.get_by_id(ctx.task_id).await?.ok_or_else(|| {
+            domain::Error::TaskNotFound {
+                id: ctx.task_id.to_string(),
+            }
+        })?;
+    ctx.tick_service
+        .start_timer_tick_loop(Some(task.config().timer.clone()))
+        .await
+        .map_err(|e| domain::Error::RepositoryError { message: e })
+}
+
+async fn pause_running_timer(ctx: &TrayCtx) -> domain::Result<()> {
+    let live = ctx.tick_service.get_current_timer().await;
+    let remaining = live.remaining_seconds(None);
+    pause_timer_phase(
+        ctx.task_id,
+        remaining,
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_publisher.clone(),
+    )
+    .await?;
+    // Drive the stop directly. The TimerPaused event handler is a UI-only
+    // emitter and no longer stops the loop.
+    ctx.tick_service.load_state().await?;
+    ctx.tick_service.stop_timer_tick_loop().await?;
+    Ok(())
+}
+
+async fn resume_paused_timer(ctx: &TrayCtx) -> domain::Result<()> {
+    resume_timer_phase(
+        ctx.task_id,
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_publisher.clone(),
+    )
+    .await?;
+    start_loop_for_task(ctx).await
+}
+
+async fn start_idle_timer(ctx: &TrayCtx) -> domain::Result<()> {
+    start_timer_phase(
+        ctx.task_repo.clone(),
+        ctx.timer_repo.clone(),
+        ctx.event_publisher.clone(),
+        StartTimerPhaseCmd {
+            task_id: Some(ctx.task_id),
+        },
+    )
+    .await?;
+    start_loop_for_task(ctx).await
+}
+
 /// Play / Pause / Resume — a single toggle mirroring the React play-pause
 /// button. Running → pause, Paused → resume, otherwise → start. Per the
 /// tick-loop ownership contract, this handler drives the loop directly in
@@ -522,85 +577,13 @@ fn menu_play_pause(app: &AppHandle) {
     };
     ctx.spawn(|ctx| async move {
         let _orchestration_lock = ctx.tick_service.orchestration_lock().await;
-        // Wrapped in an inner async block so `?` propagates to a single
-        // Result we can log uniformly. `Result::and_then(|_| async move {…})`
-        // does NOT type-check (the closure must return a Result, not a
-        // Future), so we use a plain inner async block instead — same intent,
-        // clearer.
-        let res: domain::Result<()> = async {
-            match ctx.timer.status() {
-                TimerStatus::Running => {
-                    let live = ctx.tick_service.get_current_timer().await;
-                    let remaining = live.remaining_seconds(None);
-                    pause_timer_phase(
-                        ctx.task_id,
-                        remaining,
-                        ctx.task_repo.clone(),
-                        ctx.timer_repo.clone(),
-                        ctx.event_publisher.clone(),
-                    )
-                    .await?;
-                    // Drive the stop directly. The TimerPaused event handler
-                    // is a UI-only emitter and no longer stops the loop.
-                    ctx.tick_service.load_state().await?;
-                    ctx.tick_service.stop_timer_tick_loop().await?;
-                }
-                TimerStatus::Paused => {
-                    let task_repo = ctx.task_repo.clone();
-                    let task_id = ctx.task_id;
-                    let tick_service = ctx.tick_service.clone();
-                    resume_timer_phase(
-                        ctx.task_id,
-                        ctx.task_repo.clone(),
-                        ctx.timer_repo.clone(),
-                        ctx.event_publisher.clone(),
-                    )
-                    .await?;
-                    let task = task_repo.get_by_id(task_id).await?.ok_or_else(
-                        || domain::Error::TaskNotFound {
-                            id: task_id.to_string(),
-                        },
-                    )?;
-                    tick_service
-                        .start_timer_tick_loop(Some(
-                            task.config().timer.clone(),
-                        ))
-                        .await
-                        .map_err(|e| domain::Error::RepositoryError {
-                            message: e,
-                        })?;
-                }
-                TimerStatus::Idle | TimerStatus::Stopped => {
-                    let task_repo = ctx.task_repo.clone();
-                    let task_id = ctx.task_id;
-                    let tick_service = ctx.tick_service.clone();
-                    start_timer_phase(
-                        ctx.task_repo.clone(),
-                        ctx.timer_repo.clone(),
-                        ctx.event_publisher.clone(),
-                        StartTimerPhaseCmd {
-                            task_id: Some(ctx.task_id),
-                        },
-                    )
-                    .await?;
-                    let task = task_repo.get_by_id(task_id).await?.ok_or_else(
-                        || domain::Error::TaskNotFound {
-                            id: task_id.to_string(),
-                        },
-                    )?;
-                    tick_service
-                        .start_timer_tick_loop(Some(
-                            task.config().timer.clone(),
-                        ))
-                        .await
-                        .map_err(|e| domain::Error::RepositoryError {
-                            message: e,
-                        })?;
-                }
+        let res: domain::Result<()> = match ctx.timer.status() {
+            TimerStatus::Running => pause_running_timer(&ctx).await,
+            TimerStatus::Paused => resume_paused_timer(&ctx).await,
+            TimerStatus::Idle | TimerStatus::Stopped => {
+                start_idle_timer(&ctx).await
             }
-            Ok(())
-        }
-        .await;
+        };
         if let Err(e) = res {
             log::error!("Tray play/pause failed: {}", e);
         }
