@@ -2,11 +2,271 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Pomotoro — scaffold check</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomotoro — Native Pomodoro focus timer</title>
+  <meta name="description" content="Pomotoro is a native Pomodoro focus timer with task queues, ambient audio, and screen-blocking break enforcement. Built fast and private with Rust + Tauri.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>scaffold</h1>
-  <img src="assets/logo.svg" alt="logo" height="64">
-  <img src="assets/demo.gif" alt="demo" height="200">
+  <header class="hero">
+    <div class="container hero__inner">
+      <a class="wordmark" href="#">
+        <img src="assets/logo.svg" alt="" width="40" height="40">
+        <span>Pomotoro</span>
+      </a>
+
+      <div class="hero__content reveal">
+        <h1 class="hero__headline">Charge through your focus sessions.</h1>
+        <p class="hero__subhead">
+          Native Pomodoro focus timer with task queues, ambient audio, and
+          screen-blocking breaks. Built fast and private with Rust + Tauri.
+        </p>
+
+        <div class="hero__cta">
+          <a id="download-btn" class="btn btn--primary"
+             href="https://github.com/kulapoo/pomotoro/releases/latest">
+            Download
+          </a>
+          <button id="other-platforms-toggle" class="btn btn--link" type="button"
+                  aria-expanded="false" aria-controls="other-platforms">
+            Other platforms <span aria-hidden="true">↓</span>
+          </button>
+          <a class="btn btn--secondary"
+             href="https://github.com/kulapoo/pomotoro">
+            ★ Star on GitHub
+          </a>
+        </div>
+
+        <div id="other-platforms" class="hero__platforms">
+          <a class="platform-link" data-os="macos"
+             href="https://github.com/kulapoo/pomotoro/releases/latest">
+            macOS (.dmg)
+          </a>
+          <a class="platform-link" data-os="windows"
+             href="https://github.com/kulapoo/pomotoro/releases/latest">
+            Windows (.msi / .exe)
+          </a>
+          <a class="platform-link" data-os="linux"
+             href="https://github.com/kulapoo/pomotoro/releases/latest">
+            Linux (.AppImage / .deb)
+          </a>
+        </div>
+      </div>
+
+      <div class="hero__demo reveal">
+        <a href="assets/demo.mp4" target="_blank" rel="noopener"
+           title="Watch the full 1m40s demo">
+          <img src="assets/demo.gif" alt="Pomotoro in action — timer phases, task queues, ambient audio, notifications, and the break screen blocker.">
+        </a>
+        <p class="hero__demo-caption">
+          A quick loop of Pomotoro in action —
+          <a href="assets/demo.mp4" target="_blank" rel="noopener">watch the full demo</a> (1m40s).
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="features" class="section">
+      <div class="container">
+        <h2 class="section__title reveal">Everything you need to focus</h2>
+        <p class="section__lede reveal">A complete Pomodoro toolkit that gets out of your way.</p>
+
+        <ul class="feature-grid">
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🍅</div>
+            <h3 class="feature-card__title">Pomodoro engine</h3>
+            <p class="feature-card__text">Configurable focus and break cycles with a smooth ring and session dots.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">✅</div>
+            <h3 class="feature-card__title">Task management</h3>
+            <p class="feature-card__text">Multi-session tasks with tags, search, and live progress.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🎵</div>
+            <h3 class="feature-card__title">Focus audio</h3>
+            <p class="feature-card__text">Rain, forest, ocean, white noise, café, fireplace, thunderstorm, brown noise.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🔔</div>
+            <h3 class="feature-card__title">Smart notifications</h3>
+            <p class="feature-card__text">Desktop and sound alerts with position and auto-dismiss control.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🚫</div>
+            <h3 class="feature-card__title">Screen blocker</h3>
+            <p class="feature-card__text">A full-screen overlay that actually forces you to take your break.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🪟</div>
+            <h3 class="feature-card__title">System tray</h3>
+            <p class="feature-card__text">Minimize to tray with the live countdown baked into the icon.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">⌨️</div>
+            <h3 class="feature-card__title">Keyboard shortcuts</h3>
+            <p class="feature-card__text">Cycle tasks instantly with <kbd>Ctrl</kbd>/<kbd>Meta</kbd>+<kbd>Tab</kbd>. No mouse needed.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🎛️</div>
+            <h3 class="feature-card__title">Deeply configurable</h3>
+            <p class="feature-card__text">Timer, automation, audio, appearance, window, and blocking settings.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">⚡</div>
+            <h3 class="feature-card__title">Native speed</h3>
+            <p class="feature-card__text">Tauri + Rust core with SQLite persistence. Minimal resources, instant response.</p>
+          </li>
+          <li class="feature-card reveal">
+            <div class="feature-card__icon" aria-hidden="true">🖥️</div>
+            <h3 class="feature-card__title">Cross-platform</h3>
+            <p class="feature-card__text">Windows, macOS, and Linux. The same app everywhere you work.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="how" class="section section--alt">
+      <div class="container">
+        <h2 class="section__title reveal">How it works</h2>
+        <p class="section__lede reveal">Three steps from install to flow.</p>
+
+        <ol class="steps">
+          <li class="step reveal">
+            <div class="step__number" aria-hidden="true">1</div>
+            <h3 class="step__title">Start</h3>
+            <p class="step__text">Hit play. A default focus session is ready out of the box — no setup, no sign-in.</p>
+          </li>
+          <li class="step reveal">
+            <div class="step__number" aria-hidden="true">2</div>
+            <h3 class="step__title">Add tasks</h3>
+            <p class="step__text">Quick-add a task, or open the detail modal for tags, descriptions, and a custom session count.</p>
+          </li>
+          <li class="step reveal">
+            <div class="step__number" aria-hidden="true">3</div>
+            <h3 class="step__title">Focus</h3>
+            <p class="step__text">Pick a task, hit play, and let ambient audio keep you in flow. Cycle tasks with <kbd>Ctrl</kbd>/<kbd>Meta</kbd>+<kbd>Tab</kbd>.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="why" class="section">
+      <div class="container">
+        <h2 class="section__title reveal">Why Pomotoro?</h2>
+        <p class="section__lede reveal">Built to be the focus tool I wanted and couldn't find.</p>
+
+        <ul class="value-grid">
+          <li class="value-card reveal">
+            <div class="value-card__icon" aria-hidden="true">🦀</div>
+            <h3 class="value-card__title">Native</h3>
+            <p class="value-card__text">Tauri + Rust, not Electron. Tiny footprint, instant response.</p>
+          </li>
+          <li class="value-card reveal">
+            <div class="value-card__icon" aria-hidden="true">🔒</div>
+            <h3 class="value-card__title">Private</h3>
+            <p class="value-card__text">Everything runs locally. Your data never leaves your machine.</p>
+          </li>
+          <li class="value-card reveal">
+            <div class="value-card__icon" aria-hidden="true">🎁</div>
+            <h3 class="value-card__title">Free</h3>
+            <p class="value-card__text">MIT-licensed open source. No freemium tiers, no upsells, no tracking.</p>
+          </li>
+          <li class="value-card reveal">
+            <div class="value-card__icon" aria-hidden="true">💚</div>
+            <h3 class="value-card__title">Yours</h3>
+            <p class="value-card__text">Hack on it, learn from it, bend it to your workflow. It's yours.</p>
+          </li>
+        </ul>
+
+        <p class="section__link reveal">
+          <a href="https://github.com/kulapoo/pomotoro/blob/main/docs/MOTIVATION.md" target="_blank" rel="noopener">
+            Read the full story →
+          </a>
+        </p>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section section--alt">
+      <div class="container">
+        <h2 class="section__title reveal">What's coming</h2>
+        <p class="section__lede reveal">Pomotoro is actively developed. A peek at the roadmap:</p>
+
+        <ul class="roadmap-grid">
+          <li class="roadmap-card reveal">
+            <div class="roadmap-card__icon" aria-hidden="true">📊</div>
+            <h3 class="roadmap-card__title">Statistics</h3>
+            <p class="roadmap-card__text">Session timelines, streaks, per-task and per-tag breakdowns, charts, and export.</p>
+          </li>
+          <li class="roadmap-card reveal">
+            <div class="roadmap-card__icon" aria-hidden="true">💻</div>
+            <h3 class="roadmap-card__title">CLI</h3>
+            <p class="roadmap-card__text">Drive Pomotoro from the terminal: status, timer control, tasks, and config.</p>
+          </li>
+          <li class="roadmap-card reveal">
+            <div class="roadmap-card__icon" aria-hidden="true">⚡</div>
+            <h3 class="roadmap-card__title">Command hooks</h3>
+            <p class="roadmap-card__text">Run shell commands on lifecycle events with templated arguments.</p>
+          </li>
+        </ul>
+
+        <p class="section__link reveal">
+          <a href="https://github.com/kulapoo/pomotoro/blob/main/ROADMAP.md" target="_blank" rel="noopener">
+            See the full roadmap →
+          </a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a class="wordmark wordmark--footer" href="#">
+          <img src="assets/logo.svg" alt="" width="32" height="32">
+          <span>Pomotoro</span>
+        </a>
+        <p class="footer__tagline">🍅🐂 Charge through your focus sessions.</p>
+      </div>
+
+      <nav class="footer__nav" aria-label="Footer">
+        <div class="footer__col">
+          <h4 class="footer__heading">Product</h4>
+          <ul>
+            <li><a href="https://github.com/kulapoo/pomotoro/releases/latest">Download</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro/releases">Releases</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro/blob/main/ROADMAP.md">Roadmap</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__heading">Develop</h4>
+          <ul>
+            <li><a href="https://github.com/kulapoo/pomotoro">GitHub repo</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro/blob/main/docs/README.md">Docs</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro#-contributing">Contributing</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h4 class="footer__heading">Project</h4>
+          <ul>
+            <li><a href="https://github.com/kulapoo/pomotoro/blob/main/LICENSE">License (MIT)</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro/blob/main/docs/MOTIVATION.md">Motivation</a></li>
+            <li><a href="https://github.com/kulapoo/pomotoro#-acknowledgments">Acknowledgments</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <div class="container footer__bottom">
+      <p>Built with <a href="https://tauri.app/">Tauri</a> + <a href="https://react.dev/">React</a> · Powered by Rust · MIT License.</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
 </body>
 </html>
