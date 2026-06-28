@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use domain::timer::events::{
     BreakPhaseCompleted, BreakPhaseStarted, Paused as TimerPaused,
-    Started as TimerStarted, Tick as TimerTick, WorkPhaseCompleted,
-    WorkPhaseStarted,
+    Resumed as TimerResumed, Started as TimerStarted, Tick as TimerTick,
+    WorkPhaseCompleted, WorkPhaseStarted,
 };
 use domain::{ConfigRepository, Event, Phase, PlaybackRequest, Result};
 use std::any::TypeId;
@@ -245,6 +245,37 @@ impl EventHandler for BreakPhaseCompletedAudioHandler {
     }
 }
 
+/// Shared body of `TimerStartedAudioHandler` and `TimerResumedAudioHandler`.
+/// Plays the phase-start sound asset configured for `phase` (work vs. break)
+/// unless audio is muted.
+async fn play_phase_start_audio(
+    audio_service: &AudioServiceWrapper,
+    config_repository: &Arc<dyn ConfigRepository + Send + Sync>,
+    phase: Phase,
+) -> Result<()> {
+    let config = config_repository.get_config().await?;
+
+    if config.audio.muted {
+        return Ok(());
+    }
+
+    let asset_id = match phase {
+        Phase::Work => config
+            .audio
+            .work_notification_sound
+            .unwrap_or_else(|| "bell".to_string()),
+        Phase::ShortBreak | Phase::LongBreak => config
+            .audio
+            .break_notification_sound
+            .unwrap_or_else(|| "gentle-bell".to_string()),
+    };
+
+    let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
+
+    audio_service.play_audio(request)?;
+    Ok(())
+}
+
 pub struct TimerStartedAudioHandler {
     audio_service: Arc<AudioServiceWrapper>,
     config_repository: Arc<dyn ConfigRepository + Send + Sync>,
@@ -272,32 +303,60 @@ impl EventHandler for TimerStartedAudioHandler {
         if let Some(timer_started) =
             event.as_any().downcast_ref::<TimerStarted>()
         {
-            let config = self.config_repository.get_config().await?;
-
-            if config.audio.muted {
-                return Ok(());
-            }
-
-            let asset_id = match timer_started.phase {
-                Phase::Work => config
-                    .audio
-                    .work_notification_sound
-                    .unwrap_or_else(|| "bell".to_string()),
-                Phase::ShortBreak | Phase::LongBreak => config
-                    .audio
-                    .break_notification_sound
-                    .unwrap_or_else(|| "gentle-bell".to_string()),
-            };
-
-            let request = PlaybackRequest::new(asset_id, config.audio.volume)?;
-
-            self.audio_service.play_audio(request)?;
+            play_phase_start_audio(
+                &self.audio_service,
+                &self.config_repository,
+                timer_started.phase,
+            )
+            .await?;
         }
         Ok(())
     }
 
     fn name(&self) -> &'static str {
         "TimerStartedAudioHandler"
+    }
+}
+
+pub struct TimerResumedAudioHandler {
+    audio_service: Arc<AudioServiceWrapper>,
+    config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+}
+
+impl TimerResumedAudioHandler {
+    pub fn new(
+        audio_service: Arc<AudioServiceWrapper>,
+        config_repository: Arc<dyn ConfigRepository + Send + Sync>,
+    ) -> Self {
+        Self {
+            audio_service,
+            config_repository,
+        }
+    }
+}
+
+#[async_trait]
+impl EventHandler for TimerResumedAudioHandler {
+    fn subscribes_to(&self) -> TypeId {
+        TypeId::of::<TimerResumed>()
+    }
+
+    async fn handle(&self, event: Box<dyn Event>) -> Result<()> {
+        if let Some(timer_resumed) =
+            event.as_any().downcast_ref::<TimerResumed>()
+        {
+            play_phase_start_audio(
+                &self.audio_service,
+                &self.config_repository,
+                timer_resumed.phase,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        "TimerResumedAudioHandler"
     }
 }
 
@@ -415,6 +474,11 @@ pub fn register_audio_event_handlers(
         )));
 
     let _ = event_bus.subscribe(Box::new(TimerStartedAudioHandler::new(
+        audio_service.clone(),
+        config_repository.clone(),
+    )));
+
+    let _ = event_bus.subscribe(Box::new(TimerResumedAudioHandler::new(
         audio_service.clone(),
         config_repository.clone(),
     )));
