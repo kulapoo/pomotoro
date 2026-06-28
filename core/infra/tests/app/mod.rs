@@ -1,6 +1,7 @@
 mod setup;
 mod task;
 mod timer;
+mod timer_event_payloads;
 
 mod config;
 

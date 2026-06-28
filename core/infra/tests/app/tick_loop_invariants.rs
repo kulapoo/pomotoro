@@ -16,11 +16,12 @@ use usecases::timer::{StartTimerPhaseCmd, start_timer_phase};
 
 use crate::{AppContextBuilder, TaskBuilder};
 
-/// Publishing `TimerReset`, `TimerPaused`, `TimerStarted`, or `TaskReset` must
-/// NOT stop (or start) an already-running tick loop. Before the fix,
-/// `TimerResetHandler` / `TimerPausedHandler` / `TaskResetHandler` aborted the
-/// handle via `stop_timer_tick_loop`, and `TimerStartedHandler` raced with
-/// them on `start_timer_tick_loop`.
+/// Publishing `TimerReset`, `TimerPaused`, `TimerStarted`, `TimerResumed`, or
+/// `TaskReset` must NOT stop (or start) an already-running tick loop. Before
+/// the fix, `TimerResetHandler` / `TimerPausedHandler` / `TaskResetHandler`
+/// aborted the handle via `stop_timer_tick_loop`, and `TimerStartedHandler`
+/// raced with them on `start_timer_tick_loop`. `TimerResumedHandler` is a new
+/// UI-only emitter and must obey the same invariant.
 #[tokio::test]
 async fn domain_events_do_not_mutate_tick_loop() {
     let ctx = AppContextBuilder::new()
@@ -93,12 +94,19 @@ async fn domain_events_do_not_mutate_tick_loop() {
         timer_config.work_duration.as_secs() as u32,
         1,
     ));
+    let resumed_event = Box::new(domain::TimerResumed::new(
+        task_id,
+        phase,
+        timer_config.work_duration.as_secs() as u32,
+        1,
+    ));
     let task_reset_event =
         Box::new(domain::TaskReset::new(task_id, None, None, None, None, 1));
 
     ctx.event_bus.publish(reset_event);
     ctx.event_bus.publish(paused_event);
     ctx.event_bus.publish(started_event);
+    ctx.event_bus.publish(resumed_event);
     ctx.event_bus.publish(task_reset_event);
 
     // Give the spawned handlers time to (incorrectly) mutate the handle.
