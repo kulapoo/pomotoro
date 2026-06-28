@@ -45,6 +45,7 @@ impl EventHandler for TimerStartedHandler {
 
         let task_id = timer_started.task_id.to_string();
 
+        self.timer_srv.load_state().await?;
         // Read-only access to format the UI payload. No mutation of
         // cancel_handle. The orchestrator has already started the loop.
         let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;

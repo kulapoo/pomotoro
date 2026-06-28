@@ -40,9 +40,11 @@ export function useEventBus(): void {
   const applyTimer = useTimerStore((s) => s.applyTimer)
   const applyActiveTask = useTaskStore((s) => s.applyActiveTask)
   const applyTaskIfActiveForId = useTaskStore((s) => s.applyTaskIfActiveForId)
+  const loadActiveTask = useTaskStore((s) => s.loadActiveTask)
 
   useEffect(() => {
     fetchTimer()
+    loadActiveTask()
 
     const unlisteners: Array<Promise<UnlistenFn>> = [
       onEvent(events.timerTick, applyTick),
@@ -76,11 +78,6 @@ export function useEventBus(): void {
         toast.success('Switched to next task')
       }),
 
-      onEvent(events.taskCompleted, (payload) => {
-        applyTaskIfActiveForId(payload.task_id, payload.task)
-        fetchTimer()
-      }),
-
       onEvent(events.screenBlockerActivate, (payload) => {
         useScreenBlockerStore.getState().activate(payload.message)
       }),
@@ -91,6 +88,7 @@ export function useEventBus(): void {
     }
   }, [
     fetchTimer,
+    loadActiveTask,
     applyTick,
     applyTimerState,
     applyTimer,

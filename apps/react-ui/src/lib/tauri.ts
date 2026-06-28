@@ -193,7 +193,19 @@ export function onEvent<K extends keyof EventPayloadMap>(
   name: K,
   handler: (payload: EventPayloadMap[K]) => void,
 ): Promise<UnlistenFn> {
-  return listen(name, (e) => handler(e.payload as EventPayloadMap[K]))
+  return listen(name, (e) => {
+    if (
+      [
+        'timer:timer_reset',
+        'timer:timer_started',
+        'timer:timer_paused',
+        'timer:timer_resumed',
+      ].includes(name)
+    ) {
+      console.log(name, e.payload)
+    }
+    handler(e.payload as EventPayloadMap[K])
+  })
 }
 
 /**

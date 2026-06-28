@@ -36,6 +36,7 @@ impl EventHandler for TimerPausedHandler {
 
         let task_id = timer_paused.task_id.to_string();
 
+        self.timer_srv.load_state().await?;
         // The orchestrator that called `pause_timer_phase` is responsible for
         // stop_timer_tick_loop + load_state. This handler is a UI-only emitter.
         let state_json = self.timer_srv.with_timer(|t| json!(t.state())).await;

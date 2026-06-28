@@ -141,18 +141,20 @@ pub fn run() {
                 }
             }
 
-            // Optional: Open devtools in debug mode with better timing
+            // Open devtools only when launched via `just dev-debug` or `just dev-trace`,
+            // which set RUST_LOG=debug (or trace). `just dev` (RUST_LOG=info) skips this.
             #[cfg(debug_assertions)]
             {
-                let app_handle = app.handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    // Wait a bit for the window to be ready
-                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        window.open_devtools();
-                    }
-                });
+                let level = std::env::var("RUST_LOG").unwrap_or_default();
+                if level == "debug" || level == "trace" {
+                    let app_handle = app.handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            window.open_devtools();
+                        }
+                    });
+                }
             }
 
             Ok(())

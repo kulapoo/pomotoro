@@ -37,6 +37,19 @@ export function useTimerSession() {
   const canPlayPause =
     !!activeTask && !activeTask?.completed_at && (canStart || running || paused)
 
+  // console.log({
+  //   activeTask,
+  //   timerCfg,
+  //   phase,
+  //   running,
+  //   paused,
+  //   idle,
+  //   isTaskCompleted,
+  //   isLastBreak,
+  //   canStart,
+  //   canPlayPause,
+  // })
+
   return {
     activeTask,
     timerCfg,

@@ -42,7 +42,7 @@ impl EventHandler for TimerResetHandler {
         })?;
 
         let task_id = timer_reset.task_id.to_string();
-
+        self.timer_srv.load_state().await?;
         // Read-only: format the current timer state for the UI. The
         // orchestrator has already stopped the loop and refreshed state.
         let state_json = self
