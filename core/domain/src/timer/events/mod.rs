@@ -6,6 +6,7 @@ pub mod phase_skipped;
 pub mod session_flow_reset;
 pub mod timer_paused;
 pub mod timer_reset;
+pub mod timer_resumed;
 pub mod timer_started;
 pub mod timer_status_changed;
 pub mod timer_tick;
@@ -20,6 +21,7 @@ pub use phase_skipped::PhaseSkipped;
 pub use session_flow_reset::SessionFlowReset;
 pub use timer_paused::Paused;
 pub use timer_reset::Reset;
+pub use timer_resumed::Resumed;
 pub use timer_started::Started;
 pub use timer_status_changed::StatusChanged;
 pub use timer_tick::Tick;
@@ -71,5 +73,18 @@ mod tests {
             serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(event, deserialized);
+    }
+
+    #[test]
+    fn resumed_event_has_correct_event_type_and_serializes() {
+        let resumed = Resumed::new(crate::TaskId::new(), Phase::Work, 1500, 1);
+
+        assert_eq!(resumed.event_type(), "Resumed");
+        assert_eq!(resumed.version(), 1);
+
+        let serialized = serde_json::to_string(&resumed).unwrap();
+        let deserialized: Resumed = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(resumed, deserialized);
     }
 }

@@ -29,11 +29,11 @@ pub use task::{
 pub use timer::{
     ActiveTaskSwitched, ActiveTimer, BreakPhaseCompleted, BreakPhaseStarted,
     Error as TimerError, Paused as TimerPaused, Phase, PhaseSkipped,
-    Reset as TimerReset, Result as TimerResult, SessionFlowReset,
-    Started as TimerStarted, StateTransitions, Status as TimerStatus,
-    StatusChanged as TimerStatusChanged, TIMER_ROW_ID, Tick as TimerTick,
-    Timer, TimerRepository, TimerState, TransitionResult, TransitionType,
-    WorkPhaseCompleted, WorkPhaseStarted,
+    Reset as TimerReset, Result as TimerResult, Resumed as TimerResumed,
+    SessionFlowReset, Started as TimerStarted, StateTransitions,
+    Status as TimerStatus, StatusChanged as TimerStatusChanged, TIMER_ROW_ID,
+    Tick as TimerTick, Timer, TimerRepository, TimerState, TransitionResult,
+    TransitionType, WorkPhaseCompleted, WorkPhaseStarted,
 };
 
 pub use config::{
