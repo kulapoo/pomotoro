@@ -213,11 +213,7 @@ impl TimerTickService {
     where
         F: FnOnce(&mut Timer) -> DomainResult<()>,
     {
-        {
-            let mut timer = self.timer.lock().await;
-            update_fn(&mut timer)?;
-        }
-        self.save_state().await
+        self.mutate_and_persist(update_fn).await
     }
 
     /// Load timer state from repository
@@ -238,34 +234,43 @@ impl TimerTickService {
         &self,
         timer_config: TimerConfiguration,
     ) -> DomainResult<()> {
-        // Reset the timer using the domain method (but we won't publish the events)
-        {
-            let mut timer = self.timer.lock().await;
+        self.mutate_and_persist(|timer| {
             // Call reset on the timer - this returns events but we ignore them
             // since the requirement is no event publishing
             let _ = timer.reset(&timer_config)?;
-        }
-
-        // Save the reset state to the repository
-        self.save_state().await
+            Ok(())
+        })
+        .await
     }
 
     pub async fn reset_timer_phase(
         &self,
         timer_config: TimerConfiguration,
     ) -> DomainResult<()> {
-        // Reset the timer using the domain method (but we won't publish the events)
-        {
-            let mut timer = self.timer.lock().await;
+        self.mutate_and_persist(|timer| {
             // Call reset on the timer - this returns events but we ignore them
             // since the requirement is no event publishing
             let _ = timer
                 .as_active_mut()
                 .ok_or(Error::NoActiveTask)?
                 .reset_phase(&timer_config)?;
-        }
+            Ok(())
+        })
+        .await
+    }
 
-        // Save the reset state to the repository
+    /// Mutate the in-memory timer under its lock, then persist the snapshot.
+    ///
+    /// The lock guard is dropped BEFORE the repository write (see the
+    /// `save_state` invariant). Errors from `f` propagate without persisting.
+    async fn mutate_and_persist<F>(&self, f: F) -> DomainResult<()>
+    where
+        F: FnOnce(&mut Timer) -> DomainResult<()>,
+    {
+        {
+            let mut timer = self.timer.lock().await;
+            f(&mut timer)?;
+        }
         self.save_state().await
     }
 }
@@ -275,6 +280,19 @@ struct TickOutcome {
     phase_completed: bool,
     events_to_publish: Vec<Box<dyn domain::Event>>,
     expiry_payload: Option<(Phase, TaskId)>,
+}
+
+impl TickOutcome {
+    /// A tick that produced no progress, no events, and must not continue.
+    /// Used for all early-stop conditions (not running, no active task, error).
+    fn stopped() -> Self {
+        Self {
+            should_continue: false,
+            phase_completed: false,
+            events_to_publish: Vec::new(),
+            expiry_payload: None,
+        }
+    }
 }
 
 /// Compute one tick of the timer within a single critical section.
@@ -288,20 +306,10 @@ async fn compute_tick_outcome(
 ) -> TickOutcome {
     let mut timer = timer.lock().await;
     if !timer.is_running() {
-        return TickOutcome {
-            should_continue: false,
-            phase_completed: false,
-            events_to_publish: Vec::new(),
-            expiry_payload: None,
-        };
+        return TickOutcome::stopped();
     }
     let Some(active) = timer.as_active_mut() else {
-        return TickOutcome {
-            should_continue: false,
-            phase_completed: false,
-            events_to_publish: Vec::new(),
-            expiry_payload: None,
-        };
+        return TickOutcome::stopped();
     };
     match active.tick(config) {
         Ok((phase_complete, events)) => {
@@ -319,12 +327,7 @@ async fn compute_tick_outcome(
         }
         Err(e) => {
             log::error!("Timer tick error: {e}");
-            TickOutcome {
-                should_continue: false,
-                phase_completed: false,
-                events_to_publish: Vec::new(),
-                expiry_payload: None,
-            }
+            TickOutcome::stopped()
         }
     }
 }
