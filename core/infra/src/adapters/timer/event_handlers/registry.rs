@@ -10,8 +10,8 @@ use crate::adapters::{TimerTickService, events::app_emitter::Emitter};
 
 use super::{
     BreakPhaseCompletedHandler, CountdownExpiredHandler, PhaseSkippedHandler,
-    TimerPausedHandler, TimerStartedHandler, TimerStatusChangedHandler,
-    TimerTickHandler, WorkPhaseCompletedHandler,
+    TimerPausedHandler, TimerResumedHandler, TimerStartedHandler,
+    TimerStatusChangedHandler, TimerTickHandler, WorkPhaseCompletedHandler,
 };
 
 pub fn register_timer_handlers(
@@ -48,6 +48,10 @@ pub fn register_timer_handlers(
         emitter.clone(),
         timer_srv.clone(),
     )))?;
+    event_bus.subscribe(Box::new(TimerResumedHandler::new(
+        emitter.clone(),
+        timer_srv.clone(),
+    )))?;
     event_bus.subscribe(Box::new(BreakPhaseCompletedHandler::new(
         emitter.clone(),
     )))?;
@@ -70,6 +74,7 @@ pub fn unregister_timer_handlers(
     event_bus: Arc<dyn EventSubscriber + Send + Sync>,
 ) -> Result<()> {
     event_bus.clear_handlers_for_type(TypeId::of::<TimerStartedHandler>())?;
+    event_bus.clear_handlers_for_type(TypeId::of::<TimerResumedHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<TimerTickHandler>())?;
     event_bus.clear_handlers_for_type(TypeId::of::<PhaseSkippedHandler>())?;
     event_bus
