@@ -50,10 +50,10 @@ export function useEventBus(): void {
         }
       }),
 
-      onEvent(events.timerReset, applyTimerState),
-      onEvent(events.timerPaused, applyTimerState),
-      onEvent(events.timerStarted, applyTimerState),
-      onEvent(events.timerResumed, applyTimerState),
+      onEvent(events.timerReset, applyTimer),
+      onEvent(events.timerPaused, applyTimer),
+      onEvent(events.timerStarted, applyTimer),
+      onEvent(events.timerResumed, applyTimer),
 
       onEvent(events.taskActiveChanged, (payload) => {
         if (payload) {

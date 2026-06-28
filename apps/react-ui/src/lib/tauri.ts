@@ -5,7 +5,6 @@ import { BackendError } from '@/lib/errors'
 import type {
   Timer,
   TickPayload,
-  TimerStateData,
   TimerStatusChangedPayload,
   PhaseSkippedPayload,
 } from '@/pages/timer/useTimer'
@@ -178,10 +177,10 @@ interface EventPayloadMap {
   'timer:status_changed': TimerStatusChangedPayload
   'timer:phase_completed': PhaseCompletedPayload
   'timer:phase_skipped': PhaseSkippedPayload
-  'timer:timer_reset': TimerStateData
-  'timer:timer_started': TimerStateData
-  'timer:timer_paused': TimerStateData
-  'timer:timer_resumed': TimerStateData
+  'timer:timer_reset': Timer
+  'timer:timer_started': Timer
+  'timer:timer_paused': Timer
+  'timer:timer_resumed': Timer
   'task:task_reset': TaskResetPayload
   'screen_blocker:activate': { message: string }
 }
