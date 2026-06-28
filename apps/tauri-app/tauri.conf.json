@@ -27,9 +27,16 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage", "app", "dmg", "msi", "nsis"],
+    "targets": [
+      "deb",
+      "appimage",
+      "app",
+      "dmg",
+      "msi",
+      "nsis"
+    ],
     "shortDescription": "A Pomodoro timer for focused work sessions with task tracking and system tray integration",
-    "longDescription": "Pomotoro helps you stay productive with customizable Pomodoro work/break intervals, task tracking, notifications, audio cues, and a system tray controller — all in a clean cross-platform desktop app.",
+    "longDescription": "Pomotoro helps you stay productive with customizable Pomodoro work/break intervals, task tracking, notifications, audio cues, and a system tray controller \u2014 all in a clean cross-platform desktop app.",
     "linux": {
       "deb": {
         "depends": [
