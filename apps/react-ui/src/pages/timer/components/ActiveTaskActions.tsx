@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import { useTimerSession } from '@/pages/timer/useTimerSession'
+import { shortId } from '@/lib/id'
 
 export function ActiveTaskActions() {
   const completeActiveTask = useTaskStore((s) => s.completeActiveTask)
@@ -26,7 +27,9 @@ export function ActiveTaskActions() {
       await loadActiveTask()
       await fetchTimer()
       await loadTasks()
-      toast.success('Task completed!')
+      toast.success(
+        `"${activeTask.name}" (${shortId(activeTask.id)}) completed!`,
+      )
     }
   }
 
@@ -35,7 +38,7 @@ export function ActiveTaskActions() {
     const ok = await resetActiveTask(activeTask.id)
     if (ok) {
       await Promise.all([fetchTimer(), loadActiveTask()])
-      toast.info('Task progress reset')
+      toast.info(`"${activeTask.name}" (${shortId(activeTask.id)}) reset`)
     }
   }
 

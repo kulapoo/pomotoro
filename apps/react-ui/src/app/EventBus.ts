@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { onEvent, events } from '@/lib/tauri'
+import { shortId } from '@/lib/id'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import { useTaskStore } from '@/pages/tasks/useTasks'
@@ -69,13 +70,22 @@ export function useEventBus(): void {
       onEvent(events.taskReset, (payload) => {
         applyTaskIfActiveForId(payload.task_id, payload.task)
         fetchTimer()
-        toast.info('Task progress reset')
+      }),
+
+      onEvent(events.tasksReset, () => {
+        fetchTimer()
       }),
 
       onEvent(events.taskAutoAdvanced, (payload) => {
         applyActiveTask(payload.to_task)
         applyTimer(payload.timer)
-        toast.success('Switched to next task')
+        toast.success(
+          `Switched to "${payload.to_task.name}" (${shortId(payload.to_task.id)})`,
+        )
+      }),
+
+      onEvent(events.tasksCompleted, () => {
+        toast.success('All tasks completed!')
       }),
 
       onEvent(events.screenBlockerActivate, (payload) => {

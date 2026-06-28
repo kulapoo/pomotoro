@@ -17,6 +17,8 @@ import type {
   TaskActiveChangedPayload,
   TaskCompletedPayload,
   TaskResetPayload,
+  TasksResetPayload,
+  TasksCompletedPayload,
   TaskAutoAdvancedPayload,
 } from '@/pages/tasks/useTasks'
 
@@ -150,7 +152,9 @@ export const events = {
   taskListUpdated: 'task:list_updated',
   taskActiveChanged: 'task:active_changed',
   taskCompleted: 'task:task_completed',
+  tasksCompleted: 'task:tasks_completed',
   taskReset: 'task:task_reset',
+  tasksReset: 'task:tasks_reset',
   taskProgressUpdated: 'task:progress_updated',
   taskAutoAdvanced: 'task:auto_advanced',
   timerTick: 'timer:tick',
@@ -171,6 +175,7 @@ interface EventPayloadMap {
   'task:list_updated': unknown
   'task:active_changed': TaskActiveChangedPayload | null
   'task:task_completed': TaskCompletedPayload
+  'task:tasks_completed': TasksCompletedPayload
   'task:progress_updated': Task
   'task:auto_advanced': TaskAutoAdvancedPayload
   'timer:tick': TickPayload
@@ -182,6 +187,7 @@ interface EventPayloadMap {
   'timer:timer_paused': Timer
   'timer:timer_resumed': Timer
   'task:task_reset': TaskResetPayload
+  'task:tasks_reset': TasksResetPayload
   'screen_blocker:activate': { message: string }
 }
 
@@ -200,6 +206,9 @@ export function onEvent<K extends keyof EventPayloadMap>(
         'timer:timer_started',
         'timer:timer_paused',
         'timer:timer_resumed',
+        'task:task_reset',
+        'task:task_completed',
+        'timer:phase_completed',
       ].includes(name)
     ) {
       console.log(name, e.payload)

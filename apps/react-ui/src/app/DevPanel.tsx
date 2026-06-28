@@ -3,6 +3,7 @@ import { Bug } from 'lucide-react'
 import { useTimerStore } from '@/pages/timer/useTimer'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import { useSettingsStore } from '@/pages/settings/useSettings'
+import { shortId } from '@/lib/id'
 
 /**
  * Dev-only debug overlay showing live store snapshots.
@@ -43,7 +44,7 @@ function DevPanelInner() {
             <pre className="text-muted-foreground/80 text-[10px] leading-tight break-all whitespace-pre-wrap">
               {JSON.stringify(
                 tasks.map((t) => ({
-                  id: t.id.slice(0, 8),
+                  id: shortId(t.id),
                   name: t.name,
                   status: t.status,
                   sess: `${t.current_sessions}/${t.max_sessions}`,

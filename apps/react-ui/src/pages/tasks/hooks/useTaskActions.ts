@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useTaskStore } from '@/pages/tasks/useTasks'
 import type { Task } from '@/pages/tasks/useTasks'
+import { shortId } from '@/lib/id'
 import { isTimerRunning, useTimerStore } from '@/pages/timer/useTimer'
 import { useConfirm } from '@/components/ConfirmProvider'
 import type { Page } from '@/app/types'
@@ -54,7 +55,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
       }
       const ok = await setActiveTask(task.id)
       if (ok) {
-        toast.info('Focusing on "' + task.name + '"')
+        toast.info(`Focusing on "${task.name}" (${shortId(task.id)})`)
         void refreshTimer()
         const timer = useTimerStore.getState().timer
         if (timer && isTimerRunning(timer)) {
@@ -70,7 +71,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
     async (task: Task) => {
       const ok = await resetTask(task.id)
       if (ok) {
-        toast.info('Task reopened')
+        toast.info(`"${task.name}" (${shortId(task.id)}) reopened`)
         window.setTimeout(refreshTimer, 50)
       }
     },
@@ -81,7 +82,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
     async (task: Task) => {
       const ok = await completeTask(task.id)
       if (ok) {
-        toast.info('Task completed')
+        toast.info(`"${task.name}" (${shortId(task.id)}) completed`)
         window.setTimeout(refreshTimer, 50)
       }
     },
@@ -99,7 +100,7 @@ export function useTaskActions(onNavigate: (page: Page) => void) {
       if (!confirmed) return
       const ok = await deleteTask(task.id)
       if (ok) {
-        toast.info('Task deleted')
+        toast.info(`"${task.name}" (${shortId(task.id)}) deleted`)
         window.setTimeout(refreshTimer, 50)
       }
     },
