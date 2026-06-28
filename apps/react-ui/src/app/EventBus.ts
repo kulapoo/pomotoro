@@ -25,9 +25,13 @@ import { useScreenBlockerStore } from '@/app/useScreenBlocker'
  *  - `task:task_completed` and `task:task_reset` may target a non-active
  *   task; the conditional setter (`applyTaskIfActiveForId`) leaves
  *   `activeTask` untouched in that case.
- *  - `applyTimerState` (preserves task_id) is used for events where the
- *   bound task is unchanged; `applyTimer` (replaces whole timer) is used
- *   for `task:auto_advanced` where the cycle swaps the bound task.
+ *  - `applyTimer` (replaces the whole Timer, including task_id) is used
+ *   for the four timer UI events (`timer:timer_started/paused/reset/
+ *   resumed`, whose payloads now carry task_id) and for
+ *   `task:auto_advanced` where the cycle swaps the bound task.
+ *  - `applyTimerState` (preserves task_id) is used only by
+ *   `timer:phase_completed`, whose payload carries a separate `timer`
+ *   field and whose bound task is unchanged.
  */
 export function useEventBus(): void {
   const fetchTimer = useTimerStore((s) => s.fetchTimer)
