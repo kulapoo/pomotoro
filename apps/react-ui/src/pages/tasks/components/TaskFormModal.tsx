@@ -105,7 +105,7 @@ export function TaskFormModal({ task, onClose }: TaskFormModalProps) {
         const ok = await updateTask({
           id: task.id,
           name: name.trim(),
-          description: description.trim() || undefined,
+          description: description.trim(),
           max_sessions: maxSessions,
           tags,
           ...custom,
