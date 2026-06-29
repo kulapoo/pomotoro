@@ -59,6 +59,83 @@ pub fn set_intended_visible(v: bool) {
     INTENDED_VISIBLE.store(v, Ordering::Relaxed);
 }
 
+// ── screen-block visibility bookkeeping ──────────────────────────────────────
+//
+// When the focus-enforcement screen blocker fires while the main window is
+// hidden (tray "Show/Hide", close-to-tray, or start-minimized), the blocker
+// overlay renders inside the hidden webview and is invisible. To fix that we
+// force the window visible on activate, and — per the user's chosen UX —
+// restore the *prior* hidden state on dismiss.
+//
+// `PRIOR_INTENDED_VISIBLE` records `intended_visible()` at the moment the
+// blocker activated, so `deactivate_screen_block` can hide the window again
+// only when the user had explicitly hidden it. We deliberately key off
+// `intended_visible()` rather than `window.is_visible()`, which lags on
+// Linux/GTK (see the note on `INTENDED_VISIBLE` above) and would make this
+// decision unreliable on Linux.
+
+static PRIOR_INTENDED_VISIBLE: Mutex<Option<bool>> = Mutex::new(None);
+
+/// Surface the main window for the screen blocker.
+///
+/// Records the current intended visibility so
+/// [`restore_visibility_after_screen_block`] can undo this on dismiss, then —
+/// if the window was hidden — shows + focuses it and flips the tray's
+/// Show/Hide label. Safe to call when the window is already visible (no-op
+/// on visibility, still records prior = `true`).
+///
+/// Platform notes: `show()`/`set_focus()` failures are logged as warnings
+/// rather than propagated, because a transient window-manager hiccup
+/// (notably common on Linux compositors) must not prevent the subsequent
+/// fullscreen/always-on-top calls from running — those still provide partial
+/// focus enforcement once the window is shown by any other means.
+pub fn ensure_visible_for_screen_block(app: &AppHandle) {
+    let prior = intended_visible();
+    if let Ok(mut g) = PRIOR_INTENDED_VISIBLE.lock() {
+        *g = Some(prior);
+    }
+
+    if !prior {
+        if let Some(window) = app.get_webview_window("main") {
+            if let Err(e) = window.show() {
+                log::warn!("screen-block: failed to show window: {e}");
+            }
+            if let Err(e) = window.set_focus() {
+                log::warn!("screen-block: failed to focus window: {e}");
+            }
+        }
+        set_intended_visible(true);
+        schedule_refresh(RefreshSignal::Dirty);
+    }
+}
+
+/// Restore the main window's visibility after the screen blocker is dismissed.
+///
+/// If [`ensure_visible_for_screen_block`] found the window hidden and forced
+/// it visible, this hides it again and re-syncs the tray label. If the window
+/// was already visible when the blocker fired (prior = `true`), or no prior
+/// was recorded (dismiss without a matching activate, e.g. after a restart),
+/// this is a no-op.
+pub fn restore_visibility_after_screen_block(app: &AppHandle) {
+    let prior = PRIOR_INTENDED_VISIBLE
+        .lock()
+        .map(|mut g| g.take())
+        .ok()
+        .flatten();
+
+    if prior == Some(false) {
+        if let Some(window) = app.get_webview_window("main") {
+            if let Err(e) = window.hide() {
+                log::warn!(
+                    "screen-block: failed to hide window after dismiss: {e}"
+                );
+            }
+        }
+        set_intended_visible(false);
+        schedule_refresh(RefreshSignal::Dirty);
+    }
+}
+
 // ── refresh coalescing ───────────────────────────────────────────────────────
 //
 // Tray event listeners fire synchronously on the thread that *emits* the event
