@@ -293,6 +293,41 @@ kbd {
   font-size: 1rem;
 }
 
+/* ----- Use cases ----- */
+.use-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.use-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.use-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+.use-card__icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.use-card__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.use-card__text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
 /* ----- Value grid (Why Pomotoro) ----- */
 .value-grid {
   display: grid;
@@ -429,6 +464,7 @@ kbd {
   .feature-grid { grid-template-columns: repeat(2, 1fr); }
   .value-grid { grid-template-columns: repeat(2, 1fr); }
   .roadmap-grid { grid-template-columns: repeat(2, 1fr); }
+  .use-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -447,7 +483,8 @@ kbd {
 @media (max-width: 560px) {
   .feature-grid,
   .value-grid,
-  .roadmap-grid { grid-template-columns: 1fr; }
+  .roadmap-grid,
+  .use-grid { grid-template-columns: 1fr; }
   .footer__nav { grid-template-columns: 1fr; gap: 32px; }
 }
 

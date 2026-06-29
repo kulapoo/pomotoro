@@ -49,10 +49,35 @@ Run user-defined shell commands in response to Pomotoro lifecycle events.
 
 ---
 
+## 📱 Mobile apps (Android & iOS)
+
+Bring the Pomodoro engine to phones and tablets with cloud sync to the desktop app.
+
+- **Native shells** — Android (Kotlin/Jetpack Compose) and iOS (Swift/SwiftUI)
+  thin clients over a shared timer engine.
+- **Cross-device sync** — optional end-to-end-encrypted sync so tasks, sessions,
+  and settings follow you between desktop and mobile.
+- **Live activity / lock screen** — Live Activities on iOS and a persistent
+  notification with countdown + phase on Android.
+- **Widgets** — home-screen and lock-screen widgets to start/pause sessions and
+  see today's focus progress at a glance.
+- **Push & break reminders** — local notifications for session end and enforced
+  break prompts when the phone is the active device.
+- **Background timer** — reliable background execution that survives screen lock
+  and app suspension.
+- **Offline-first** — full timer, task, and audio functionality without a network
+  connection; sync reconciles when back online.
+- **Wearables (later)** — Android Wear OS and Apple Watch companions for
+  glanceable countdowns and wrist control.
+- **App Store & Play Store distribution** — signed, notarized builds via CI with
+  public beta tracks.
+
+---
+
 ## 🔭 Longer-term explorations
 
-- **Cloud sync** — optional end-to-end-encrypted sync across devices.
-- **Mobile companion** — read-only status + push notifications.
+- **Cloud sync** — optional end-to-end-encrypted sync across devices (foundation
+  for the mobile apps).
 - **Themes & customization** — user-built color schemes and timer visualizations.
 - **Plugin system** — extend Pomotoro with user-authored event handlers and widgets.
 - **Focus metrics API** — local HTTP/socket endpoint for integration with other tools.
